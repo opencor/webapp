@@ -1,0 +1,20 @@
+{
+  "author": {
+    "name": "Alan Garny",
+    "email": "a.garny@auckland.ac.nz"
+  },
+  "bugs": {
+    "url": "https://github.com/opencor/webapp/issues"
+  },
+  "description": "A Web-based modelling environment, which can be used to organise, edit, simulate and analyse CellML files.",
+  "homepage": "https://opencor.ws/",
+  "license": "Apache-2.0",
+  "name": "opencor",
+  "productName": "OpenCOR",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opencor/webapp.git"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}
