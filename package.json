@@ -35,7 +35,7 @@
     "test:unit": "vitest",
     "test:e2e": "start-server-and-test 'electron-vite preview' http://localhost:4173 'cypress run --e2e'",
     "test:e2e:dev": "start-server-and-test 'electron-vite dev --port 4173' http://localhost:4173 'cypress open --e2e'",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck": "run-p typecheck:*",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false"
   },
@@ -67,6 +67,7 @@
     "eslint-plugin-cypress": "^3.5.0",
     "eslint-plugin-vue": "^9.28.0",
     "jsdom": "^25.0.1",
+    "npm-run-all2": "^6.2.3",
     "prettier": "^3.3.3",
     "rimraf": "^6.0.1",
     "start-server-and-test": "^2.0.8",
