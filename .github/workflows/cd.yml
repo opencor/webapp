@@ -1,0 +1,53 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  cd:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            script: win
+          - name: Linux
+            os: ubuntu-latest
+            script: linux
+          - name: macOS (Intel)
+            os: macos-13
+            script: mac
+          - name: macOS (ARM)
+            os: macos-latest
+            script: mac
+    steps:
+      - name: Check out OpenCOR
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install Yarn
+        run: npm install -g yarn
+      - name: Install Snapcraft (Linux only)
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo snap install snapcraft --classic
+      - name: Build OpenCOR
+        run: |
+          yarn
+          yarn build:${{ matrix.script }}
+      - name: Remove blockmap files
+        shell: bash
+        run: find ./dist -name '*.blockmap' -delete
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ./dist/OpenCOR-*.*

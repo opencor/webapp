@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            script: win
+          - name: Linux
+            os: ubuntu-latest
+            script: linux
+          - name: macOS (Intel)
+            os: macos-13
+            script: mac
+          - name: macOS (ARM)
+            os: macos-latest
+            script: mac
+    steps:
+      - name: Check out OpenCOR
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install Yarn
+        run: npm install -g yarn
+      - name: Yarn install
+        run: yarn
+      - name: Yarn format
+        run: |
+          yarn format
+          git diff --quiet
+      - name: Yarn lint
+        run: yarn lint
+      - name: Yarn build
+        run: yarn build
+      - name: Yarn build:win (Windows only)
+        if: ${{ runner.os == 'Windows' }}
+        run: yarn build:win
+      - name: Yarn build:linux (Linux only)
+        if: ${{ runner.os == 'Linux' }}
+        run: yarn build:linux
+      - name: Yarn build:mac (macOS only)
+        if: ${{ runner.os == 'macOS' }}
+        run: yarn build:mac
+      - name: Yarn build:unpack
+        run: yarn build:unpack
+      - name: Yarn build:web
+        run: yarn build:web
+      - name: Yarn clean
+        run: yarn clean
