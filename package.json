@@ -24,17 +24,20 @@
     "build:linux": "npm run build && electron-builder --linux",
     "build:mac": "npm run build && electron-builder --mac",
     "build:unpack": "npm run build && electron-builder --dir",
+    "build:web": "(cd ./src/renderer && tsc && vite build)",
     "build:win": "npm run build && electron-builder --win",
-    "clean": "rimraf dist node_modules out",
+    "clean": "rimraf dist node_modules out src/renderer/dist src/renderer/node_modules",
     "debug": "electron-vite --inspect --sourcemap dev --watch",
     "dev": "electron-vite dev --watch",
     "format": "prettier --write .",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "publish:web": "yarn publish ./src/renderer",
     "start": "electron-vite preview",
+    "start:web": "(cd ./src/renderer && vite preview)",
     "typecheck": "run-p typecheck:*",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
-    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false"
+    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
+    "web": "(cd ./src/renderer && vite)"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
