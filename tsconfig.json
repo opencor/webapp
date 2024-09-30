@@ -8,13 +8,7 @@
       "path": "./tsconfig.node.json"
     },
     {
-      "path": "./tsconfig.vitest.json"
-    },
-    {
       "path": "./tsconfig.web.json"
     }
-  ],
-  "compilerOptions": {
-    "module": "NodeNext"
-  }
+  ]
 }
