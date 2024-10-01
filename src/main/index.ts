@@ -1,74 +1,286 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { electronApp, is, optimizer, platform } from '@electron-toolkit/utils'
+import { app, BrowserWindow, dialog, Menu, MenuItemConstructorOptions, screen, shell } from 'electron'
+import * as settings from 'electron-settings'
+import * as fs from 'fs'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from './assets/icon.png?asset'
 
-function createWindow(): void {
-  // Create the browser window.
+function developmentMode(): boolean {
+  return is.dev && process.env['ELECTRON_RENDERER_URL'] !== undefined
+}
+
+function configureMenu(mainWindow): void {
+  // Some common menu items.
+
+  const settingsMenuItem = {
+    label: 'Settings...',
+    click: () => {
+      console.log('Settings...')
+    }
+  }
+  const checkForUpdatesMenuItem = {
+    label: 'Check For Updates...',
+    click: () => {
+      console.log('Check For Updates...')
+    }
+  }
+  const aboutOpencorMenuItem = {
+    label: 'About OpenCOR',
+    click: () => {
+      console.log('About OpenCOR...')
+    }
+  }
+
+  // App menu.
+
+  let appMenu: MenuItemConstructorOptions = {}
+
+  if (platform.isMacOS) {
+    appMenu = {
+      label: app.name,
+      submenu: [
+        aboutOpencorMenuItem,
+        checkForUpdatesMenuItem,
+        { type: 'separator' },
+        settingsMenuItem,
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    }
+  }
+
+  // File menu.
+
+  const fileMenu: MenuItemConstructorOptions = {
+    label: 'File',
+    submenu: [{ role: 'quit' }]
+  }
+
+  // View menu.
+
+  const viewMenu: MenuItemConstructorOptions = {
+    label: 'View',
+    submenu: [
+      { role: 'resetZoom' },
+      { role: 'zoomIn' },
+      { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' }
+    ]
+  }
+
+  // Tools menu.
+
+  const toolsSubMenu: MenuItemConstructorOptions[] = []
+  const toolsMenu: MenuItemConstructorOptions = {
+    label: 'Tools',
+    submenu: toolsSubMenu
+  }
+
+  if (!platform.isMacOS) {
+    toolsSubMenu.push(settingsMenuItem)
+    toolsSubMenu.push({ type: 'separator' })
+  }
+
+  toolsSubMenu.push({
+    label: 'Reset All',
+    click: () => {
+      if (
+        dialog.showMessageBoxSync(mainWindow, {
+          type: 'question',
+          title: 'Reset All',
+          icon: icon,
+          message: 'You are about to reset all of your settings. Do you want to proceed?',
+          buttons: ['OK', 'Cancel'],
+          defaultId: 0
+        }) === 0
+      ) {
+        settings.setSync('resetAll', true)
+
+        app.relaunch()
+        app.quit()
+      }
+    }
+  })
+
+  // Help menu.
+
+  const helpSubMenu: MenuItemConstructorOptions[] = []
+  const helpMenu: MenuItemConstructorOptions = {
+    label: 'Help',
+    submenu: helpSubMenu
+  }
+
+  helpSubMenu.push({
+    label: 'Home Page',
+    click: () => {
+      shell.openExternal('https://opencor.ws/')
+    }
+  })
+  helpSubMenu.push({ type: 'separator' })
+  helpSubMenu.push({
+    label: 'Report Issue',
+    click: () => {
+      shell.openExternal('https://github.com/opencor/webapp/issues/new')
+    }
+  })
+
+  if (!platform.isMacOS) {
+    helpSubMenu.push({ type: 'separator' })
+    helpSubMenu.push(checkForUpdatesMenuItem)
+    helpSubMenu.push({ type: 'separator' })
+    helpSubMenu.push(aboutOpencorMenuItem)
+  }
+
+  // Set our main window's menu.
+
+  const menu: MenuItemConstructorOptions[] = []
+
+  if (platform.isMacOS) {
+    menu.push(appMenu)
+  } else {
+    menu.push(fileMenu)
+  }
+
+  menu.push(viewMenu)
+  menu.push(toolsMenu)
+  menu.push(helpMenu)
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menu))
+
+  // Make sure that our main window's menu bar is always visible.
+
+  mainWindow.setAutoHideMenuBar(false)
+  mainWindow.setMenuBarVisibility(true)
+}
+
+function createMainWindow(): void {
+  // Retrieve our main window's state.
+
+  const workAreaSize = screen.getPrimaryDisplay().workAreaSize
+  const horizontalSpace = Math.round(workAreaSize.width / 13)
+  const verticalSpace = Math.round(workAreaSize.height / 13)
+  const mainWindowState = {
+    x: settings.getSync('mainWindowState.x') || horizontalSpace,
+    y: settings.getSync('mainWindowState.y') || verticalSpace,
+    width: settings.getSync('mainWindowState.width') || workAreaSize.width - 2 * horizontalSpace,
+    height: settings.getSync('mainWindowState.height') || workAreaSize.height - 2 * verticalSpace,
+    isMaximized: settings.getSync('mainWindowState.isMaximized') || false,
+    isFullScreen: settings.getSync('mainWindowState.isFullScreen') || false
+  }
+
+  // Create our main window.
+
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    x: parseInt(mainWindowState.x.toString(), 10),
+    y: parseInt(mainWindowState.y.toString(), 10),
+    width: parseInt(mainWindowState.width.toString(), 10),
+    height: parseInt(mainWindowState.height.toString(), 10),
     show: false,
-    autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...(!platform.isMacOS ? { icon: icon } : {}),
+    useContentSize: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
   })
 
+  // Set our dock icon (macOS only).
+
+  if (platform.isMacOS) {
+    app.dock.setIcon(icon)
+  }
+
+  // Restore our main window's state, if needed.
+
+  if (mainWindowState.isMaximized) {
+    mainWindow.maximize()
+  } else if (mainWindowState.isFullScreen) {
+    mainWindow.setFullScreen(true)
+  }
+
+  // Show our main window when we are ready to show it.
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
+  // Keep track of our main window's new state upon closing.
+
+  mainWindow.on('close', () => {
+    if (!mainWindow.isMaximized() && !mainWindow.isMinimized() && !mainWindow.isFullScreen()) {
+      mainWindowState.x = mainWindow.getPosition()[0]
+      mainWindowState.y = mainWindow.getPosition()[1]
+      mainWindowState.width = mainWindow.getContentSize()[0]
+      mainWindowState.height = mainWindow.getContentSize()[1]
+    }
+
+    mainWindowState.isMaximized = mainWindow.isMaximized()
+    mainWindowState.isFullScreen = mainWindow.isFullScreen()
+
+    settings.setSync('mainWindowState', mainWindowState)
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  // Configure our menu.
+
+  configureMenu(mainWindow)
+
+  // Open external links in the default browser.
+
+  mainWindow.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url)
+
+    return {
+      action: 'deny'
+    }
+  })
+
+  // Load the remote URL for development or the local HTML file for production.
+
+  if (developmentMode()) {
+    // @ts-ignore (developmentMode() is true which means that process.env['ELECTRON_RENDERER_URL'] is defined)
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+// Prettify our settings.
+
+settings.configure({
+  prettify: true
+})
+
+// Resetting all of our settings, if needed.
+
+if (settings.getSync('resetAll')) {
+  fs.rmSync(join(app.getPath('userData'), 'Preferences'))
+  fs.rmSync(join(app.getPath('userData'), 'settings.json'))
+}
+
+// This method is called when Electron has finished its initialisation and is ready to create browser windows. Some APIs
+// can only be used after this event occurs.
+
 app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  // Set our app user model id for Windows.
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
+  electronApp.setAppUserModelId('ws.opencor.app')
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  // Enable the F12 shortcut (to show/hide the developer tools) if we are in development.
 
-  createWindow()
-
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
-
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
+  if (developmentMode()) {
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
   }
-})
 
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.
+  // Create our main window.
+
+  createMainWindow()
+})

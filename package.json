@@ -41,9 +41,8 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
-    "electron-updater": "^6.3.4",
-    "pinia": "^2.2.2",
-    "vue-router": "^4.4.5"
+    "electron-settings": "^4.0.4",
+    "electron-updater": "^6.3.4"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",
@@ -60,7 +59,6 @@
     "electron-builder-squirrel-windows": "^25.0.5",
     "electron-vite": "^2.3.0",
     "eslint": "^8.57.0",
-    "eslint-plugin-cypress": "^3.5.0",
     "eslint-plugin-vue": "^9.28.0",
     "npm-run-all2": "^6.2.3",
     "prettier": "^3.3.3",
