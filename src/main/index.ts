@@ -166,13 +166,19 @@ function createMainWindow(): void {
   const workAreaSize = screen.getPrimaryDisplay().workAreaSize
   const horizontalSpace = Math.round(workAreaSize.width / 13)
   const verticalSpace = Math.round(workAreaSize.height / 13)
+  const x = settings.getSync('mainWindowState.x')
+  const y = settings.getSync('mainWindowState.y')
+  const width = settings.getSync('mainWindowState.width')
+  const height = settings.getSync('mainWindowState.height')
+  const isMaximized = settings.getSync('mainWindowState.isMaximized')
+  const isFullScreen = settings.getSync('mainWindowState.isFullScreen')
   const mainWindowState = {
-    x: settings.getSync('mainWindowState.x') || horizontalSpace,
-    y: settings.getSync('mainWindowState.y') || verticalSpace,
-    width: settings.getSync('mainWindowState.width') || workAreaSize.width - 2 * horizontalSpace,
-    height: settings.getSync('mainWindowState.height') || workAreaSize.height - 2 * verticalSpace,
-    isMaximized: settings.getSync('mainWindowState.isMaximized') || false,
-    isFullScreen: settings.getSync('mainWindowState.isFullScreen') || false
+    x: x !== undefined && x !== null ? x : horizontalSpace,
+    y: y !== undefined && y !== null ? y : verticalSpace,
+    width: width !== undefined && width !== null ? width : workAreaSize.width - 2 * horizontalSpace,
+    height: height !== undefined && height !== null ? height : workAreaSize.height - 2 * verticalSpace,
+    isMaximized: isMaximized !== undefined && isMaximized !== null ? isMaximized : false,
+    isFullScreen: isFullScreen !== undefined && isFullScreen !== null ? isFullScreen : false
   }
 
   // Create our main window.
