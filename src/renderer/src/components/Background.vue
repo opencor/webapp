@@ -1,5 +1,7 @@
+import './assets/base.css'
+
 <template>
-  <img class="logo" src="../assets/logo.png" />
+  <img class="logo" src="../assets/logo.svg" />
 </template>
 
 <style>
@@ -13,8 +15,11 @@
 
 <style scoped>
 .logo {
-  border-radius: 3%;
-  background-color: white;
-  padding: 1rem;
+  width: 308px;
+  height: 264px;
+  border-radius: 5%;
+  background: var(--background);
+  padding: 8px;
+  box-shadow: 0 0 10px 5px var(--shadow);
 }
 </style>
