@@ -184,10 +184,10 @@ function createMainWindow(): void {
   // Create our main window.
 
   const mainWindow = new BrowserWindow({
-    x: parseInt(mainWindowState.x.toString(), 10),
-    y: parseInt(mainWindowState.y.toString(), 10),
-    width: parseInt(mainWindowState.width.toString(), 10),
-    height: parseInt(mainWindowState.height.toString(), 10),
+    x: mainWindowState.x,
+    y: mainWindowState.y,
+    width: mainWindowState.width,
+    height: mainWindowState.height,
     show: false,
     ...(!platform.isMacOS ? { icon: icon } : {}),
     useContentSize: true,
