@@ -1,24 +1,34 @@
 :root {
-  --light-color: #24292e;
   --light-background: #ffffff;
+  --light-color: #24292e;
+  --light-inverted-background: #24292e11;
+  --light-inverted-color: var(--light-color);
   --light-shadow: #24292e13;
 
-  --dark-color: #f6f8fa;
   --dark-background: #24292e;
+  --dark-color: #f6f8fa;
+  --dark-inverted-background: #f6f8fa11;
+  --dark-inverted-color: var(--dark-color);
   --dark-shadow: #f6f8fa13;
 }
 
 :root {
-  --color: var(--light-color);
   --background: var(--light-background);
+  --color: var(--light-color);
   --shadow: var(--light-shadow);
+
+  --inverted-background: var(--light-inverted-background);
+  --inverted-color: var(--light-inverted-color);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color: var(--dark-color);
     --background: var(--dark-background);
+    --color: var(--dark-color);
     --shadow: var(--dark-shadow);
+
+    --inverted-background: var(--dark-inverted-background);
+    --inverted-color: var(--dark-inverted-color);
   }
 }
 
@@ -31,6 +41,24 @@
 }
 
 body {
+  background-color: var(--background);
   color: var(--color);
-  background: var(--background);
+  line-height: 1.6;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 15px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

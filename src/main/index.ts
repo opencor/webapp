@@ -27,12 +27,14 @@ if (settings.getSync('resetAll')) {
 // can only be used after this event occurs.
 
 app.whenReady().then(() => {
-  // Create our splash window, if we are not in development mode.
+  // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
 
   let splashScreenWindow: SplashScreenWindow = null as unknown as SplashScreenWindow
 
   if (!developmentMode()) {
-    splashScreenWindow = new SplashScreenWindow()
+    const currentYear = new Date().getFullYear()
+
+    splashScreenWindow = new SplashScreenWindow(currentYear === 2024 ? '2024' : `2024-${currentYear}`, app.getVersion())
   }
 
   // Set our app user model id for Windows.

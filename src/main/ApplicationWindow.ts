@@ -1,4 +1,4 @@
-import { BrowserWindow, BrowserWindowConstructorOptions } from 'electron'
+import { BrowserWindow, BrowserWindowConstructorOptions, nativeTheme } from 'electron'
 import { join } from 'path'
 
 export class ApplicationWindow extends BrowserWindow {
@@ -6,7 +6,10 @@ export class ApplicationWindow extends BrowserWindow {
 
   constructor(options: BrowserWindowConstructorOptions) {
     // Add some common options and call our parent constructor.
+    // Note: we use backgroundColor to minimise the flickering that may occur when first showing a window. This means
+    //       that the colours used here should be the same as the ones used in our CSS file.
 
+    options.backgroundColor = nativeTheme.shouldUseDarkColors ? '#24292e' : '#ffffff'
     options.show = false
     options.useContentSize = true
     options.webPreferences = {

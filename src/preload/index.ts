@@ -1,4 +1,4 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {}
@@ -18,3 +18,10 @@ if (process.contextIsolated) {
   // @ts-ignore (defined in lib.dom.d.ts)
   window.api = api
 }
+
+// Some bridging between our main process and renderer process.
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  onInitSplashScreenWindow: (callback) =>
+    ipcRenderer.on('init-splash-screen-window', (_event, value) => callback(value))
+})
