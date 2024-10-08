@@ -198,7 +198,7 @@ export class MainWindow extends ApplicationWindow {
       y: mainWindowState.y,
       width: mainWindowState.width,
       height: mainWindowState.height,
-      ...(!platform.isMacOS ? { icon: icon } : {})
+      ...(platform.isMacOS ? {} : { icon: icon })
     })
 
     // Set our dock icon (macOS only).
