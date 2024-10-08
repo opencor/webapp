@@ -28,6 +28,7 @@
     "clean": "rimraf dist node_modules out src/renderer/dist src/renderer/node_modules",
     "debug": "electron-vite --inspect --sourcemap dev --watch",
     "dev": "electron-vite dev --watch",
+    "dev:web": "(cd ./src/renderer && vite dev)",
     "format": "prettier --write .",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "publish:web": "yarn publish ./src/renderer",
