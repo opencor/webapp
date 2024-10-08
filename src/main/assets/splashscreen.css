@@ -1,0 +1,37 @@
+@import '../../renderer/src/assets/base.css';
+
+body {
+  display: flex;
+  place-items: center;
+  place-content: center;
+  overflow: hidden;
+}
+
+.contents {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.copyright,
+.version {
+  border-top: 1px solid var(--inverted-background);
+  padding: 0px 8px;
+  background-color: var(--inverted-background);
+  color: var(--inverted-color);
+}
+
+img.logo {
+  width: 413px;
+  height: 351px;
+  margin: 8px;
+}
+
+td.logo {
+  padding: 0;
+  line-height: 0;
+  text-align: center;
+}
+
+.version {
+  text-align: right;
+}
