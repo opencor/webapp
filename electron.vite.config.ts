@@ -1,5 +1,7 @@
+import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, bytecodePlugin, externalizeDepsPlugin } from 'electron-vite'
+import Components from 'unplugin-vue-components/vite'
 
 export default defineConfig({
   main: {
@@ -9,6 +11,11 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
-    plugins: [vue()]
+    plugins: [
+      vue(),
+      Components({
+        resolvers: [PrimeVueResolver()]
+      })
+    ]
   }
 })

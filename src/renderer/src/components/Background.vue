@@ -1,5 +1,3 @@
-import './assets/base.css'
-
 <template>
   <img class="logo" src="../assets/logo.svg" />
 </template>
