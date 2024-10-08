@@ -17,6 +17,7 @@
     "type": "git",
     "url": "git+https://github.com/opencor/webapp.git"
   },
+  "type": "module",
   "version": "0.0.0",
   "scripts": {
     "build": "npm run typecheck && electron-vite build",
