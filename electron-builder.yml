@@ -14,7 +14,6 @@ linux:
   target:
     - AppImage
     - deb
-    - snap
     - tar.gz
 mac:
   artifactName: ${productName}-${version}-macOS-${arch}.${ext}
