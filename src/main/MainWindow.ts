@@ -119,21 +119,23 @@ export class MainWindow extends ApplicationWindow {
     toolsSubMenu.push({
       label: 'Reset All',
       click: () => {
-        if (
-          dialog.showMessageBoxSync(this, {
+        dialog
+          .showMessageBox(this, {
             type: 'question',
             title: 'Reset All',
             icon: icon,
             message: 'You are about to reset all of your settings. Do you want to proceed?',
             buttons: ['OK', 'Cancel'],
             defaultId: 0
-          }) === 0
-        ) {
-          settings.setSync('resetAll', true)
+          })
+          .then((result) => {
+            if (result.response === 0) {
+              settings.setSync('resetAll', true)
 
-          app.relaunch()
-          app.quit()
-        }
+              app.relaunch()
+              app.quit()
+            }
+          })
       }
     })
 
