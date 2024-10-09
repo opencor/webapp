@@ -6,6 +6,13 @@ import Components from 'unplugin-vue-components/vite'
 
 export default defineConfig({
   main: {
+    build: {
+      rollupOptions: {
+        output: {
+          format: 'cjs'
+        }
+      }
+    },
     plugins: [bytecodePlugin(), externalizeDepsPlugin()]
   },
   preload: {
