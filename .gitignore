@@ -26,3 +26,6 @@ out
 *.sw?
 
 *.tsbuildinfo
+
+# PrimeVue auto import
+src/renderer/components.d.ts

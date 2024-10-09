@@ -9,7 +9,7 @@
   "description": "A Web-based modelling environment, which can be used to organise, edit, simulate and analyse CellML files.",
   "homepage": "https://opencor.ws/",
   "license": "Apache-2.0",
-  "main": "./out/main/index.js",
+  "main": "./out/main/index.cjs",
   "name": "opencor",
   "private": true,
   "productName": "OpenCOR",
@@ -17,6 +17,7 @@
     "type": "git",
     "url": "git+https://github.com/opencor/webapp.git"
   },
+  "type": "module",
   "version": "0.0.0",
   "scripts": {
     "build": "npm run typecheck && electron-vite build",
@@ -25,9 +26,10 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:web": "(cd ./src/renderer && tsc && vite build)",
     "build:win": "npm run build && electron-builder --win",
-    "clean": "rimraf dist node_modules out src/renderer/dist src/renderer/node_modules",
+    "clean": "rimraf dist node_modules out src/renderer/components.d.ts src/renderer/dist src/renderer/node_modules",
     "debug": "electron-vite --inspect --sourcemap dev --watch",
     "dev": "electron-vite dev --watch",
+    "dev:web": "(cd ./src/renderer && vite dev)",
     "format": "prettier --write .",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "publish:web": "yarn publish ./src/renderer",
@@ -44,6 +46,7 @@
     "@primevue/themes": "^4.1.0",
     "electron-settings": "^4.0.4",
     "electron-updater": "^6.3.4",
+    "primeicons": "^7.0.0",
     "primevue": "^4.1.0"
   },
   "devDependencies": {
