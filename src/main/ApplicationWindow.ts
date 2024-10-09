@@ -13,7 +13,7 @@ export class ApplicationWindow extends BrowserWindow {
     options.show = false
     options.useContentSize = true
     options.webPreferences = {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false
     }
 
