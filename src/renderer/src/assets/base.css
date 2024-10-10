@@ -1,49 +1,5 @@
-:root {
-  --light-background: #ffffff;
-  --light-color: #24292e;
-  --light-inverted-background: #24292e11;
-  --light-inverted-color: var(--light-color);
-  --light-shadow: #24292e13;
-
-  --dark-background: #24292e;
-  --dark-color: #f6f8fa;
-  --dark-inverted-background: #f6f8fa11;
-  --dark-inverted-color: var(--dark-color);
-  --dark-shadow: #f6f8fa13;
-}
-
-:root {
-  --background: var(--light-background);
-  --color: var(--light-color);
-  --shadow: var(--light-shadow);
-
-  --inverted-background: var(--light-inverted-background);
-  --inverted-color: var(--light-inverted-color);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--dark-background);
-    --color: var(--dark-color);
-    --shadow: var(--dark-shadow);
-
-    --inverted-background: var(--dark-inverted-background);
-    --inverted-color: var(--dark-inverted-color);
-  }
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
-
 body {
-  background-color: var(--background);
-  color: var(--color);
-  line-height: 1.6;
+  margin: 0;
   font-family:
     Inter,
     -apple-system,
@@ -57,7 +13,6 @@ body {
     'Droid Sans',
     'Helvetica Neue',
     sans-serif;
-  font-size: 15px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
