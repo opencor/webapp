@@ -17,6 +17,6 @@
   height: 264px;
   border-radius: 5%;
   padding: 8px;
-  box-shadow: 0 0 10px 5px var(--shadow);
+  box-shadow: 0 0 10px 5px var(--p-content-border-color);
 }
 </style>

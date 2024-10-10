@@ -7,9 +7,10 @@ export class ApplicationWindow extends BrowserWindow {
   constructor(options: BrowserWindowConstructorOptions) {
     // Add some common options and call our parent constructor.
     // Note: we use backgroundColor to minimise the flickering that may occur when first showing a window. This means
-    //       that the colours used here should be the same as the ones used in our CSS file.
+    //       that the colours used here should be the same as the ones used by --p-content-background in PrimeVue, i.e.
+    //       what we are using as a background for our app (see src/renderer/src/assets/app.css).
 
-    options.backgroundColor = nativeTheme.shouldUseDarkColors ? '#24292e' : '#ffffff'
+    options.backgroundColor = nativeTheme.shouldUseDarkColors ? '#18181b' : '#ffffff'
     options.show = false
     options.useContentSize = true
     options.webPreferences = {
