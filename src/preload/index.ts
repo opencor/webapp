@@ -22,6 +22,13 @@ if (process.contextIsolated) {
 // Some bridging between our main process and renderer process.
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Handlers.
+
+  resetAll: () => ipcRenderer.invoke('reset-all'),
+
+  // Callbacks.
+
   onInitSplashScreenWindow: (callback) =>
-    ipcRenderer.on('init-splash-screen-window', (_event, value) => callback(value))
+    ipcRenderer.on('init-splash-screen-window', (_event, value) => callback(value)),
+  onResetAll: (callback) => ipcRenderer.on('reset-all', () => callback())
 })
