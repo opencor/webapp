@@ -1,5 +1,5 @@
 import { platform } from '@electron-toolkit/utils'
-import { app, BrowserWindow, dialog, Menu, MenuItemConstructorOptions, screen, shell } from 'electron'
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, screen, shell } from 'electron'
 import * as settings from 'electron-settings'
 import { join } from 'path'
 import icon from './assets/icon.png?asset'
@@ -32,6 +32,13 @@ export function retrieveMainWindowState(): {
     isMaximized: (isMaximized !== undefined && isMaximized !== null ? isMaximized : false) as boolean,
     isFullScreen: (isFullScreen !== undefined && isFullScreen !== null ? isFullScreen : false) as boolean
   }
+}
+
+export function resetAll(): void {
+  settings.setSync('resetAll', true)
+
+  app.relaunch()
+  app.quit()
 }
 
 export class MainWindow extends ApplicationWindow {
@@ -119,21 +126,7 @@ export class MainWindow extends ApplicationWindow {
     toolsSubMenu.push({
       label: 'Reset All',
       click: () => {
-        if (
-          dialog.showMessageBoxSync(this, {
-            type: 'question',
-            title: 'Reset All',
-            icon: icon,
-            message: 'You are about to reset all of your settings. Do you want to proceed?',
-            buttons: ['OK', 'Cancel'],
-            defaultId: 0
-          }) === 0
-        ) {
-          settings.setSync('resetAll', true)
-
-          app.relaunch()
-          app.quit()
-        }
+        this.webContents.send('reset-all')
       }
     })
 

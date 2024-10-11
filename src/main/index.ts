@@ -1,9 +1,9 @@
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import { app } from 'electron'
+import { app, ipcMain } from 'electron'
 import * as settings from 'electron-settings'
 import * as fs from 'fs'
 import { join } from 'path'
-import { MainWindow } from './MainWindow'
+import { MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
 export function developmentMode(): boolean {
@@ -48,6 +48,10 @@ app.whenReady().then(() => {
       optimizer.watchWindowShortcuts(window)
     })
   }
+
+  // Handle some requests from our renderer process.
+
+  ipcMain.handle('reset-all', resetAll)
 
   // Create our main window.
 
