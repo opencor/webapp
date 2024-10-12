@@ -6,7 +6,7 @@ const confirm = useConfirm()
 if (window.electronAPI !== undefined) {
   window.electronAPI.onResetAll(() => {
     confirm.require({
-      header: 'Reset All',
+      header: 'OpenCOR',
       icon: 'pi pi-question-circle',
       message: 'You are about to reset all of your settings. Do you want to proceed?',
       acceptProps: {
