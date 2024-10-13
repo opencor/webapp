@@ -13,9 +13,9 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-ignore (defined in lib.dom.d.ts)
+  // @ts-ignore (window.electron is defined in lib.dom.d.ts)
   window.electron = electronAPI
-  // @ts-ignore (defined in lib.dom.d.ts)
+  // @ts-ignore (window.api is defined in lib.dom.d.ts)
   window.api = api
 }
 
