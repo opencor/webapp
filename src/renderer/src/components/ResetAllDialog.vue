@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog style="max-width: 75vw" />
+  <ConfirmDialog style="width: 37rem" />
 </template>
 
 <script setup>
