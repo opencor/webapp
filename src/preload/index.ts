@@ -28,7 +28,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Callbacks.
 
-  onInitSplashScreenWindow: (callback) =>
-    ipcRenderer.on('init-splash-screen-window', (_event, value) => callback(value)),
-  onResetAll: (callback) => ipcRenderer.on('reset-all', () => callback())
+  onInitSplashScreenWindow: (callback) => ipcRenderer.on('init-splash-screen-window', (_event, info) => callback(info)),
+  onResetAll: (callback) => ipcRenderer.on('reset-all', () => callback()),
+  onAbout: (callback) => ipcRenderer.on('about', () => callback())
 })
