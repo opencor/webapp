@@ -19,6 +19,9 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
+    define: {
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version)
+    },
     plugins: [
       vue(),
       Components({

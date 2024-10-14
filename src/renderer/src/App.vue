@@ -1,30 +1,11 @@
-<script setup>
-import { useConfirm } from 'primevue/useconfirm'
-
-const confirm = useConfirm()
-
-if (window.electronAPI !== undefined) {
-  window.electronAPI.onResetAll(() => {
-    confirm.require({
-      header: 'Reset All',
-      icon: 'pi pi-question-circle',
-      message: 'You are about to reset all of your settings. Do you want to proceed?',
-      acceptProps: {
-        severity: 'danger'
-      },
-      rejectProps: {
-        severity: 'secondary',
-        outlined: true
-      },
-      accept: () => {
-        window.electronAPI.resetAll()
-      }
-    })
-  })
-}
-</script>
-
 <template>
   <Background />
-  <ConfirmDialog style="max-width: 75vw" />
+  <ResetAllDialog />
+  <AboutDialog :version="version" :copyright="copyright" />
 </template>
+
+<script setup lang="ts">
+const version = __APP_VERSION__
+const currentYear = new Date().getFullYear()
+const copyright = currentYear === 2024 ? '2024' : `2024-${currentYear}`
+</script>

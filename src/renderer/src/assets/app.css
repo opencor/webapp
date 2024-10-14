@@ -4,3 +4,7 @@ body {
   background-color: var(--p-content-background);
   color: var(--p-content-color);
 }
+
+a {
+  color: var(--p-button-link-color);
+}

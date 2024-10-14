@@ -62,7 +62,7 @@ export class MainWindow extends ApplicationWindow {
     const aboutOpencorMenuItem = {
       label: 'About OpenCOR',
       click: () => {
-        console.log('About OpenCOR...')
+        this.webContents.send('about')
       }
     }
 
