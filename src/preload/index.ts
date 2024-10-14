@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Handlers.
 
   resetAll: () => ipcRenderer.invoke('reset-all'),
+  enableMenu: () => ipcRenderer.invoke('enable-menu'),
+  disableMenu: () => ipcRenderer.invoke('disable-menu'),
 
   // Callbacks.
 

@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:visible="visible" header="About" style="width: 36rem" :modal="true">
+  <Dialog v-model:visible="visible" header="About" style="width: 36rem" :modal="true" @show="onShow" @hide="onHide">
     <div class="space-y-7">
       <div class="text-center">
         <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
@@ -44,5 +44,17 @@ if (electronAPI !== undefined) {
 
 const closeAbout = () => {
   visible.value = false
+}
+
+const onShow = () => {
+  if (electronAPI !== undefined) {
+    electronAPI.disableMenu()
+  }
+}
+
+const onHide = () => {
+  if (electronAPI !== undefined) {
+    electronAPI.enableMenu()
+  }
 }
 </script>

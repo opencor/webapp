@@ -41,24 +41,48 @@ export function resetAll(): void {
   app.quit()
 }
 
+function doEnableDisableMenu(enabled: boolean): void {
+  const menu = Menu.getApplicationMenu()
+
+  if (menu !== null) {
+    menu.items.forEach((menuItem) => {
+      menuItem.enabled = enabled
+    })
+
+    Menu.setApplicationMenu(menu)
+  }
+}
+
+export function enableMenu(): void {
+  doEnableDisableMenu(true)
+}
+
+export function disableMenu(): void {
+  doEnableDisableMenu(false)
+}
+
 export class MainWindow extends ApplicationWindow {
   splashScreenWindowClosed: boolean = false
 
   configureMenu(): void {
     // Some common menu items.
 
+    /*---OPENCOR---
     const settingsMenuItem = {
       label: 'Settings...',
       click: () => {
         console.log('Settings...')
       }
     }
+    */
+    /*---OPENCOR---
     const checkForUpdatesMenuItem = {
       label: 'Check For Updates...',
       click: () => {
         console.log('Check For Updates...')
       }
     }
+    */
     const aboutOpencorMenuItem = {
       label: 'About OpenCOR',
       click: () => {
@@ -75,9 +99,13 @@ export class MainWindow extends ApplicationWindow {
         label: app.name,
         submenu: [
           aboutOpencorMenuItem,
+          /*---OPENCOR---
           checkForUpdatesMenuItem,
+          */
           { type: 'separator' },
+          /*---OPENCOR---
           settingsMenuItem,
+          */
           { type: 'separator' },
           { role: 'services' },
           { type: 'separator' },
@@ -118,10 +146,12 @@ export class MainWindow extends ApplicationWindow {
       submenu: toolsSubMenu
     }
 
+    /*---OPENCOR---
     if (!platform.isMacOS) {
       toolsSubMenu.push(settingsMenuItem)
       toolsSubMenu.push({ type: 'separator' })
     }
+    */
 
     toolsSubMenu.push({
       label: 'Reset All',
@@ -153,8 +183,10 @@ export class MainWindow extends ApplicationWindow {
     })
 
     if (!platform.isMacOS) {
+      /*---OPENCOR---
       helpSubMenu.push({ type: 'separator' })
       helpSubMenu.push(checkForUpdatesMenuItem)
+      */
       helpSubMenu.push({ type: 'separator' })
       helpSubMenu.push(aboutOpencorMenuItem)
     }
