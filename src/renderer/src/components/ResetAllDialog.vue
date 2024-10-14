@@ -1,5 +1,5 @@
 <template>
-  <ConfirmDialog style="width: 37rem" />
+  <ConfirmDialog style="width: 37rem" @show="onShow" @hide="onHide" />
 </template>
 
 <script setup lang="ts">
@@ -28,5 +28,17 @@ if (electronAPI !== undefined) {
       }
     })
   })
+}
+
+const onShow = () => {
+  if (electronAPI !== undefined) {
+    electronAPI.disableMenu()
+  }
+}
+
+const onHide = () => {
+  if (electronAPI !== undefined) {
+    electronAPI.enableMenu()
+  }
 }
 </script>

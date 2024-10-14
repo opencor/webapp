@@ -41,6 +41,26 @@ export function resetAll(): void {
   app.quit()
 }
 
+function doEnableDisableMenu(enabled: boolean): void {
+  const menu = Menu.getApplicationMenu()
+
+  if (menu !== null) {
+    menu.items.forEach((menuItem) => {
+      menuItem.enabled = enabled
+    })
+
+    Menu.setApplicationMenu(menu)
+  }
+}
+
+export function enableMenu(): void {
+  doEnableDisableMenu(true)
+}
+
+export function disableMenu(): void {
+  doEnableDisableMenu(false)
+}
+
 export class MainWindow extends ApplicationWindow {
   splashScreenWindowClosed: boolean = false
 
