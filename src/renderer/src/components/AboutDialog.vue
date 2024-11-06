@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:visible="visible" header="About" style="width: 36rem" :modal="true" @show="onShow" @hide="onHide">
+  <Dialog v-model:visible="visible" header=" " style="width: 36rem" :modal="true" @show="onShow" @hide="onHide">
     <div class="space-y-7">
       <div class="text-center">
         <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
