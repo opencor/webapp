@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:visible="visible" header=" " style="width: 36rem" :modal="true" @show="onShow" @hide="onHide">
+  <BaseDialog v-model:visible="visible" header=" " style="width: 36rem">
     <div class="space-y-7">
       <div class="text-center">
         <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
@@ -15,11 +15,10 @@
     <template #footer>
       <Button label="OK" autofocus @click="closeAbout" />
     </template>
-  </Dialog>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
-import { onShow, onHide } from './common.js'
 import { ref } from 'vue'
 
 defineProps({

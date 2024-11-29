@@ -1,9 +1,8 @@
 <template>
-  <ConfirmDialog style="width: 37rem" @show="onShow" @hide="onHide" />
+  <BaseConfirmDialog style="width: 37rem" />
 </template>
 
 <script setup lang="ts">
-import { onShow, onHide } from './common.js'
 import { useConfirm } from 'primevue/useconfirm'
 
 // @ts-ignore (window.electronAPI may or not be defined and that is why we test it)
