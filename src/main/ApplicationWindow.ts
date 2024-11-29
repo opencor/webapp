@@ -1,10 +1,11 @@
-import { BrowserWindow, BrowserWindowConstructorOptions, nativeTheme } from 'electron'
+import { BrowserWindow, nativeTheme } from 'electron'
+import * as electron from 'electron'
 import { join } from 'path'
 
 export class ApplicationWindow extends BrowserWindow {
   alreadyShowedWindow: boolean = false
 
-  constructor(options: BrowserWindowConstructorOptions) {
+  constructor(options: electron.BrowserWindowConstructorOptions) {
     // Add some common options and call our parent constructor.
     // Note: we use backgroundColor to minimise the flickering that may occur when first showing a window. This means
     //       that the colours used here should be the same as the ones used by --p-content-background in PrimeVue, i.e.
