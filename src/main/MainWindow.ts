@@ -1,5 +1,6 @@
 import { platform } from '@electron-toolkit/utils'
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions, screen, shell } from 'electron'
+import { app, BrowserWindow, Menu, screen, shell } from 'electron'
+import * as electron from 'electron'
 import * as settings from 'electron-settings'
 import { join } from 'path'
 import icon from './assets/icon.png?asset'
@@ -92,7 +93,7 @@ export class MainWindow extends ApplicationWindow {
 
     // App menu.
 
-    let appMenu: MenuItemConstructorOptions = {}
+    let appMenu: electron.MenuItemConstructorOptions = {}
 
     if (platform.isMacOS) {
       appMenu = {
@@ -120,14 +121,14 @@ export class MainWindow extends ApplicationWindow {
 
     // File menu.
 
-    const fileMenu: MenuItemConstructorOptions = {
+    const fileMenu: electron.MenuItemConstructorOptions = {
       label: 'File',
       submenu: [{ role: 'quit' }]
     }
 
     // View menu.
 
-    const viewMenu: MenuItemConstructorOptions = {
+    const viewMenu: electron.MenuItemConstructorOptions = {
       label: 'View',
       submenu: [
         { role: 'resetZoom' },
@@ -140,8 +141,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Tools menu.
 
-    const toolsSubMenu: MenuItemConstructorOptions[] = []
-    const toolsMenu: MenuItemConstructorOptions = {
+    const toolsSubMenu: electron.MenuItemConstructorOptions[] = []
+    const toolsMenu: electron.MenuItemConstructorOptions = {
       label: 'Tools',
       submenu: toolsSubMenu
     }
@@ -162,8 +163,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Help menu.
 
-    const helpSubMenu: MenuItemConstructorOptions[] = []
-    const helpMenu: MenuItemConstructorOptions = {
+    const helpSubMenu: electron.MenuItemConstructorOptions[] = []
+    const helpMenu: electron.MenuItemConstructorOptions = {
       label: 'Help',
       submenu: helpSubMenu
     }
@@ -193,7 +194,7 @@ export class MainWindow extends ApplicationWindow {
 
     // Set our menu.
 
-    const menu: MenuItemConstructorOptions[] = []
+    const menu: electron.MenuItemConstructorOptions[] = []
 
     if (platform.isMacOS) {
       menu.push(appMenu)
