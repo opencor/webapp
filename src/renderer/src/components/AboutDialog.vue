@@ -19,6 +19,7 @@
 </template>
 
 <script setup lang="ts">
+import { onShow, onHide } from './common.js'
 import { ref } from 'vue'
 
 defineProps({
@@ -44,17 +45,5 @@ if (electronAPI !== undefined) {
 
 const closeAbout = () => {
   visible.value = false
-}
-
-const onShow = () => {
-  if (electronAPI !== undefined) {
-    electronAPI.disableMenu()
-  }
-}
-
-const onHide = () => {
-  if (electronAPI !== undefined) {
-    electronAPI.enableMenu()
-  }
 }
 </script>
