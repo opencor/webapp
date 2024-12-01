@@ -44,7 +44,9 @@ jobs:
         run: yarn typecheck
       - name: Type check OpenCOR's Web app's code
         run: yarn typecheck:web
-      - name: Package OpenCOR
-        run: yarn package
+      - name: Build OpenCOR
+        run: yarn build
+      - name: Build OpenCOR's Web app
+        run: yarn build:web
       - name: Clean OpenCOR's environment
         run: yarn clean
