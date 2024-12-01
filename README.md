@@ -26,6 +26,8 @@ yarn <script>
 
 where `<script>` is one of the following:
 
+- `build`: build OpenCOR;
+- `build:web`: build OpenCOR's Web app;
 - `clean`: clean OpenCOR's environment;
 - `dev`: start OpenCOR and OpenCOR's Web app in development mode;
 - `dev:web`: start OpenCOR's Web app in development mode;
