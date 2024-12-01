@@ -34,28 +34,17 @@ jobs:
           node-version: 'lts/*'
       - name: Install Yarn
         run: npm install -g yarn
-      - name: Yarn install
+      - name: Install all of OpenCOR's dependencies
         run: yarn
-      - name: Yarn format
-        run: |
-          yarn format
-          git diff --quiet
-      - name: Yarn lint
+      - name: Check that OpenCOR's code and OpenCOR's Web app's code are properly formatted
+        run: yarn format:check
+      - name: Lint OpenCOR's code and OpenCOR's Web app's code
         run: yarn lint
-      - name: Yarn build
-        run: yarn build
-      - name: Yarn build:win (Windows only)
-        if: ${{ runner.os == 'Windows' }}
-        run: yarn build:win
-      - name: Yarn build:linux (Linux only)
-        if: ${{ runner.os == 'Linux' }}
-        run: yarn build:linux
-      - name: Yarn build:mac (macOS only)
-        if: ${{ runner.os == 'macOS' }}
-        run: yarn build:mac
-      - name: Yarn build:unpack
-        run: yarn build:unpack
-      - name: Yarn build:web
-        run: yarn build:web
-      - name: Yarn clean
+      - name: Type check OpenCOR's code
+        run: yarn typecheck
+      - name: Type check OpenCOR's Web app's code
+        run: yarn typecheck:web
+      - name: Package OpenCOR
+        run: yarn package
+      - name: Clean OpenCOR's environment
         run: yarn clean
