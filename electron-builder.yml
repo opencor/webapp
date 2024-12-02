@@ -1,5 +1,6 @@
 appId: ws.opencor.app
 productName: OpenCOR
+afterSign: build/notarize.cjs
 win:
   artifactName: ${productName}-${version}-Windows.${ext}
   target:
@@ -17,6 +18,10 @@ linux:
     - tar.gz
 mac:
   artifactName: ${productName}-${version}-macOS-${arch}.${ext}
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  gatekeeperAssess: false
+  hardenedRuntime: true
   target:
     - dmg
     - pkg
