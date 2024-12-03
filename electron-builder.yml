@@ -3,7 +3,7 @@ productName: OpenCOR
 win:
   artifactName: ${productName}-${version}-Windows.${ext}
   target:
-    # - nsis
+    - nsis
     - zip
 nsis:
   uninstallDisplayName: ${productName}
