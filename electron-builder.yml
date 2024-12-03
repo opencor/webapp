@@ -3,7 +3,7 @@ productName: OpenCOR
 win:
   artifactName: ${productName}-${version}-Windows.${ext}
   target:
-    # - nsis
+    - nsis
     - zip
 nsis:
   uninstallDisplayName: ${productName}
@@ -16,10 +16,6 @@ linux:
     - deb
     - tar.gz
 mac:
-  # For notarisation to work, we must specify the following environment variables:
-  #  - APPLE_ID (the email used to login to https://account.apple.com/);
-  #  - APPLE_APP_SPECIFIC_PASSWORD (generated using the App-Specific Passwords tool at https://account.apple.com/account/manage); and
-  #  - APPLE_TEAM_ID (it can be retrieved from https://developer.apple.com/account/resources/certificates/list; see top right).
   artifactName: ${productName}-${version}-macOS-${arch}.${ext}
   target:
     - dmg

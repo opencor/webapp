@@ -17,40 +17,15 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
-          # - name: Linux
-          #   os: ubuntu-latest
-          # - name: macOS (Intel)
-          #   os: macos-13
-          # - name: macOS (ARM)
-          #   os: macos-latest
-    env:
-      EV_CERTIFICATE_BASE64: ${{ secrets.EV_CERTIFICATE_BASE64 }}
+          - name: Linux
+            os: ubuntu-latest
+          - name: macOS (Intel)
+            os: macos-13
+          - name: macOS (ARM)
+            os: macos-latest
     steps:
-      - name: Set the timezone to New Zealand
-        uses: szenius/set-timezone@v2.0
-        with:
-          timezoneWindows: 'New Zealand Standard Time'
-          timezoneLinux: 'Pacific/Auckland'
-          timezoneMacos: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
-      - name: Retrieve the EV certificate (Windows only)
-        if: matrix.name == 'Windows'
-        shell: bash
-        run: echo -n $EV_CERTIFICATE_BASE64 | base64 -d - >  EVCertificate.pfx
-      - name: Make sure that the EV certificate is available (Windows only)
-        if: matrix.name == 'Windows'
-        run: dir
-      - name: Copy EV_CERTIFICATE_BASE64 to EVCertificate.pfx (Windows only)
-        if: matrix.name == 'Windows'
-        shell: bash
-        run: echo $EV_CERTIFICATE_BASE64 > EVCertificate.pfx
-      - name: Output EV_CERTIFICATE_BASE64
-        shell: bash
-        run: echo $EV_CERTIFICATE_BASE64
-      - name: Make sure that the EV certificate is available (Windows only)
-        if: matrix.name == 'Windows'
-        run: dir
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
