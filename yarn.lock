@@ -3108,6 +3108,10 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
+"libopencor@https://opencor.ws/libopencor/downloads/libopencor-0.0.0.tgz":
+  version "0.0.0"
+  resolved "https://opencor.ws/libopencor/downloads/libopencor-0.0.0.tgz#80f7e033e3739ade9d687798ca03090499685ab1"
+
 lilconfig@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/lilconfig/-/lilconfig-2.1.0.tgz#78e23ac89ebb7e1bfbf25b18043de756548e7f52"
