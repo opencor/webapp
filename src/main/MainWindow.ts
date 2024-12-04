@@ -2,6 +2,8 @@ import * as electron from 'electron'
 import { app, BrowserWindow, Menu, screen, shell } from 'electron'
 import * as settings from 'electron-settings'
 import { platform } from '@electron-toolkit/utils'
+import * as fs from 'fs'
+import * as path from 'path'
 import { join } from 'path'
 
 import { ApplicationWindow } from './ApplicationWindow'
@@ -66,6 +68,50 @@ export function disableMenu(): void {
 export class MainWindow extends ApplicationWindow {
   splashScreenWindowClosed: boolean = false
 
+  open(): void {
+    electron.dialog
+      .showOpenDialog(this, {
+        properties: ['openFile', 'multiSelections'],
+        filters: [
+          {
+            name: 'All Files',
+            extensions: ['*']
+          },
+          {
+            name: 'CellML Files',
+            extensions: ['cellml']
+          },
+          {
+            name: 'SED-ML Files',
+            extensions: ['sedml']
+          },
+          {
+            name: 'COMBINE Archives',
+            extensions: ['omex']
+          }
+        ]
+      })
+      .then(({ filePaths }) => {
+        // Read the contents of the files.
+
+        for (const filePath of filePaths) {
+          fs.readFile(filePath, 'base64', (error, data) => {
+            const fileName = path.basename(filePath)
+
+            console.log(`---[ ${fileName} ]---[BEGIN]`)
+
+            if (error) {
+              console.error(`Error: ${error}`)
+            } else {
+              console.log(data)
+            }
+
+            console.log(`---[ ${fileName} ]---[END]`)
+          })
+        }
+      })
+  }
+
   configureMenu(): void {
     // Some common menu items.
 
@@ -127,6 +173,14 @@ export class MainWindow extends ApplicationWindow {
       label: 'File',
       submenu: fileSubMenu
     }
+
+    fileSubMenu.push({
+      label: 'Open...',
+      accelerator: 'CmdOrCtrl+O',
+      click: () => {
+        this.open()
+      }
+    })
 
     if (!platform.isMacOS) {
       fileSubMenu.push({ type: 'separator' })
@@ -205,10 +259,9 @@ export class MainWindow extends ApplicationWindow {
 
     if (platform.isMacOS) {
       menu.push(appMenu)
-    } else {
-      menu.push(fileMenu)
     }
 
+    menu.push(fileMenu)
     menu.push(viewMenu)
     menu.push(toolsMenu)
     menu.push(helpMenu)
