@@ -1,5 +1,5 @@
-import { BrowserWindow, nativeTheme } from 'electron'
 import * as electron from 'electron'
+import { BrowserWindow, nativeTheme } from 'electron'
 import { join } from 'path'
 
 export class ApplicationWindow extends BrowserWindow {

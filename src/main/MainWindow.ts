@@ -1,10 +1,11 @@
-import { platform } from '@electron-toolkit/utils'
-import { app, BrowserWindow, Menu, screen, shell } from 'electron'
 import * as electron from 'electron'
+import { app, BrowserWindow, Menu, screen, shell } from 'electron'
 import * as settings from 'electron-settings'
+import { platform } from '@electron-toolkit/utils'
 import { join } from 'path'
-import icon from './assets/icon.png?asset'
+
 import { ApplicationWindow } from './ApplicationWindow'
+import icon from './assets/icon.png?asset'
 import { developmentMode } from './index'
 
 export function retrieveMainWindowState(): {
@@ -121,9 +122,15 @@ export class MainWindow extends ApplicationWindow {
 
     // File menu.
 
+    const fileSubMenu: electron.MenuItemConstructorOptions[] = []
     const fileMenu: electron.MenuItemConstructorOptions = {
       label: 'File',
-      submenu: [{ role: 'quit' }]
+      submenu: fileSubMenu
+    }
+
+    if (!platform.isMacOS) {
+      fileSubMenu.push({ type: 'separator' })
+      fileSubMenu.push({ role: 'quit' })
     }
 
     // View menu.

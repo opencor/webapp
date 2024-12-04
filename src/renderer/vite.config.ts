@@ -1,8 +1,8 @@
-import { PrimeVueResolver } from '@primevue/auto-import-resolver'
-import vue from '@vitejs/plugin-vue'
 import { join } from 'path'
+import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   base: './',

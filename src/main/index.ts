@@ -1,8 +1,9 @@
-import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { app, ipcMain } from 'electron'
 import * as settings from 'electron-settings'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import * as fs from 'fs'
 import { join } from 'path'
+
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
