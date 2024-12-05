@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {}
@@ -24,9 +24,10 @@ if (process.contextIsolated) {
 contextBridge.exposeInMainWorld('electronAPI', {
   // Handlers.
 
-  resetAll: () => ipcRenderer.invoke('reset-all'),
   enableMenu: () => ipcRenderer.invoke('enable-menu'),
   disableMenu: () => ipcRenderer.invoke('disable-menu'),
+  filePath: (file) => webUtils.getPathForFile(file),
+  resetAll: () => ipcRenderer.invoke('reset-all'),
 
   // Callbacks.
 

@@ -8,3 +8,14 @@ body {
 a {
   color: var(--p-button-link-color);
 }
+
+.dragging {
+  border: 6px dashed;
+  border-color: var(--p-gray-300);
+}
+
+@media (prefers-color-scheme: dark) {
+  .dragging {
+    border-color: var(--p-gray-700);
+  }
+}
