@@ -22,9 +22,15 @@ jobs:
           - name: macOS (ARM)
             os: macos-latest
     env:
-      CSC_LINK: EVCertificate.pfx
-      CSC_KEY_PASSWORD: ${{ secrets.EV_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      WINDOWS_CSC_LINK: EVCertificate.pfx
+      WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.EV_CERTIFICATE_PASSWORD }}
       EV_CERTIFICATE_BASE64: ${{ secrets.EV_CERTIFICATE_BASE64 }}
+      MACOS_CSC_LINK: DeveloperIDApplication.p12
+      MACOS_CSC_KEY_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD }}
+      DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 }}
     steps:
       - name: Set the timezone to New Zealand
         uses: szenius/set-timezone@v2.0
@@ -37,7 +43,16 @@ jobs:
       - name: Retrieve the EV certificate (Windows only)
         if: matrix.name == 'Windows'
         shell: bash
-        run: echo -n $EV_CERTIFICATE_BASE64 | base64 -d - > $CSC_LINK
+        run: |
+          echo "CSC_LINK=$(echo $WINDOWS_CSC_LINK)" >> $GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=$(echo $WINDOWS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
+          echo -n $EV_CERTIFICATE_BASE64 | base64 -d > $WINDOWS_CSC_LINK
+      - name: Import the ABI Developer ID Application certificates (macOS only)
+        if: matrix.name == 'macOS (Intel)' || matrix.name == 'macOS (ARM)'
+        run: |
+          echo "CSC_LINK=$(echo $MACOS_CSC_LINK)" >> $GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=$(echo $MACOS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
+          echo -n $DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 | base64 -d > $MACOS_CSC_LINK
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
