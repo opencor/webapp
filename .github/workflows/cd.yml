@@ -47,7 +47,7 @@ jobs:
           echo "CSC_LINK=$(echo $WINDOWS_CSC_LINK)" >> $GITHUB_ENV
           echo "CSC_KEY_PASSWORD=$(echo $WINDOWS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
           echo -n $EV_CERTIFICATE_BASE64 | base64 -d > $WINDOWS_CSC_LINK
-      - name: Import the ABI Developer ID Application certificates (macOS only)
+      - name: Retrieve the Developer ID Application certificates (macOS only)
         if: matrix.name == 'macOS (Intel)' || matrix.name == 'macOS (ARM)'
         run: |
           echo "CSC_LINK=$(echo $MACOS_CSC_LINK)" >> $GITHUB_ENV
