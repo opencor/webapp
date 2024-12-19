@@ -1,11 +1,28 @@
 <template>
-  <Background />
+  <div class="h-screen">
+    <div class="flex flex-col h-full">
+      <div v-if="electronAPI === undefined" class="main-menu">
+        <MainMenu @about="aboutVisible = true" />
+      </div>
+      <div class="flex grow justify-center items-center">
+        <Background />
+      </div>
+    </div>
+  </div>
   <ResetAllDialog />
-  <AboutDialog :version="version" :copyright="copyright" />
+  <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
 </template>
 
 <script setup lang="ts">
-const version = __APP_VERSION__
-const currentYear = new Date().getFullYear()
-const copyright = currentYear === 2024 ? '2024' : `2024-${currentYear}`
+import { ref } from 'vue'
+
+// @ts-ignore (window.electronAPI may or not be defined and that is why we test it)
+const electronAPI = window.electronAPI
+const aboutVisible = ref(false)
+
+if (electronAPI !== undefined) {
+  electronAPI.onAbout(() => {
+    aboutVisible.value = true
+  })
+}
 </script>
