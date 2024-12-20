@@ -44,11 +44,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-
 defineEmits(['close'])
 
-const version = ref(__APP_VERSION__)
+const version = __APP_VERSION__
 const currentYear = new Date().getFullYear()
-const copyright = ref(currentYear === 2024 ? '2024' : `2024-${currentYear}`)
+const copyright = currentYear === 2024 ? '2024' : `2024-${currentYear}`
 </script>
