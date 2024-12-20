@@ -49,7 +49,7 @@ file(REMOVE ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
 include_directories(${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/include
                     ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/include/libopencor/module)
 
-# Create the C++ add-on as a shared library.
+# Create our Node.js add-on as a shared library.
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
             ${CMAKE_JS_SRC}
@@ -62,7 +62,7 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
                       PREFIX ""
                       SUFFIX ".node")
 
-# Essential library files to link to a Node.js add-on.
+# Link cmake-js and libOpenCOR to our Node.js add-on.
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
                       ${CMAKE_JS_LIB}
@@ -74,8 +74,7 @@ execute_process(COMMAND node -p "require('node-addon-api').include"
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                 OUTPUT_VARIABLE NODE_ADDON_API_DIR)
 
-string(REPLACE "\n" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
-string(REPLACE "\"" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
+string(REGEX REPLACE "[\r\n\"]" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
                            ${NODE_ADDON_API_DIR})
