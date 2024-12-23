@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import * as oc from '../libOpenCOR'
+import * as oc from '../../../libopencor/libOpenCOR'
 
 defineEmits(['close'])
 

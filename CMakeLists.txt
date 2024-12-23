@@ -53,8 +53,8 @@ include_directories(${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/include
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
             ${CMAKE_JS_SRC}
-            src/libopencor/main.cpp
-            src/libopencor/version.cpp)
+            src/libopencor/src/main.cpp
+            src/libopencor/src/version.cpp)
 
 # Don't have a "lib" prefix and use a ".node" suffix.
 
