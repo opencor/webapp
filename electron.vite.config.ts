@@ -3,7 +3,6 @@ import vue from '@vitejs/plugin-vue'
 import { bytecodePlugin, defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { join } from 'path'
 import Components from 'unplugin-vue-components/vite'
-import dotNodeFiles from './src/vite/dotNodeFiles'
 
 export default defineConfig({
   main: {
@@ -24,7 +23,6 @@ export default defineConfig({
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version)
     },
     plugins: [
-      dotNodeFiles(),
       vue(),
       Components({
         resolvers: [PrimeVueResolver()]
