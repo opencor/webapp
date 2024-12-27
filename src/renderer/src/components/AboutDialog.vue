@@ -8,7 +8,7 @@
       <div class="space-y-2">
         <div>
           <a href="https://opencor.ws/" target="_blank" rel="noopener">OpenCOR</a> is a frontend to
-          <a href="https://opencor.ws/libopencor/" target="_blank" rel="noopener">libOpenCOR</a> {{ ocVersion }}, a
+          <a href="https://opencor.ws/libopencor/" target="_blank" rel="noopener">libOpenCOR</a> {{ locVersion }}, a
           library that can be used to organise, edit, simulate, and analyse
           <a href="https://cellml.org/" target="_blank" rel="noopener">CellML</a> files.
         </div>
@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import * as oc from '../../../libopencor/libOpenCOR'
+import * as loc from '../../../libopencor/libOpenCOR'
 
 defineEmits(['close'])
 
@@ -50,5 +50,5 @@ const version = __APP_VERSION__
 const currentYear = new Date().getFullYear()
 const copyright = currentYear === 2024 ? '2024' : `2024-${currentYear}`
 
-const ocVersion = oc.version()
+const locVersion = loc.version()
 </script>

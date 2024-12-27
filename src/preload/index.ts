@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import { default as loc } from '../../out/libOpenCOR/Release/libOpenCOR.node'
 
 // Some bridging between our main process and renderer process.
 
@@ -16,4 +17,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onResetAll: (callback: (info: { message: string }) => void) =>
     ipcRenderer.on('reset-all', (_event, info) => callback(info)),
   onAbout: (callback: (info: { message: string }) => void) => ipcRenderer.on('about', (_event, info) => callback(info))
+})
+
+// Give our renderer process access to the C++ version of libOpenCOR.
+
+contextBridge.exposeInMainWorld('libOpenCOR', {
+  version: () => loc.version()
 })
