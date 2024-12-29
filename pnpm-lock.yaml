@@ -63,6 +63,9 @@ importers:
       '@vue/tsconfig':
         specifier: ^0.5.1
         version: 0.5.1
+      '@wasm-fmt/clang-format':
+        specifier: ^19.1.6
+        version: 19.1.6
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.4.49)
@@ -840,6 +843,11 @@ packages:
 
   '@vue/tsconfig@0.5.1':
     resolution: {integrity: sha512-VcZK7MvpjuTPx2w6blwnwZAu5/LgBUtejFOi3pPGQFXQN5Ela03FUtd2Qtg4yWGGissVL0dr6Ro1LfOFh+PCuQ==}
+
+  '@wasm-fmt/clang-format@19.1.6':
+    resolution: {integrity: sha512-EJ2adunZsBwbs8M1vIufrvLLXV7VyHI2CrIe66ApKSn6uEv5bL8TwiY+0u4M812QkhzoqNeA/Y1RoUSi+AEtrg==}
+    engines: {node: '>=16.17.0'}
+    hasBin: true
 
   '@xmldom/xmldom@0.8.10':
     resolution: {integrity: sha512-2WALfTl4xo2SkGCYRt6rDTFfk9R1czmBvUQy12gK2KuRKIpWEhcbbzy8EZXtz/jkRqHX8bFEc6FC1HjX4TUWYw==}
@@ -3637,6 +3645,8 @@ snapshots:
   '@vue/shared@3.5.13': {}
 
   '@vue/tsconfig@0.5.1': {}
+
+  '@wasm-fmt/clang-format@19.1.6': {}
 
   '@xmldom/xmldom@0.8.10': {}
 
