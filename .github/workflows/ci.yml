@@ -32,21 +32,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-      - name: Install Yarn
-        run: npm install -g yarn
+      - name: Install pnpm
+        run: npm install -g pnpm
       - name: Install all of OpenCOR's dependencies
-        run: yarn
+        run: pnpm install
       - name: Check that OpenCOR's code and OpenCOR's Web app's code are properly formatted
-        run: yarn format:check
+        run: pnpm format:check
       - name: Lint OpenCOR's code and OpenCOR's Web app's code
-        run: yarn lint
+        run: pnpm lint
       - name: Type check OpenCOR's code
-        run: yarn typecheck
+        run: pnpm typecheck
       - name: Type check OpenCOR's Web app's code
-        run: yarn typecheck:web
+        run: pnpm typecheck:web
       - name: Build OpenCOR
-        run: yarn build
+        run: pnpm build
       - name: Build OpenCOR's Web app
-        run: yarn build:web
+        run: pnpm build:web
       - name: Clean OpenCOR's environment
-        run: yarn clean
+        run: pnpm clean

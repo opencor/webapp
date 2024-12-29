@@ -11,10 +11,10 @@ The main difference between the two versions is that models in OpenCOR are, by d
 
 ## Prerequisites
 
-To build OpenCOR, you need to install [node.js](https://nodejs.org/) and [npm](https://npmjs.com/), which you can do from [here](https://nodejs.org/en/download/package-manager). Then, you need to install [yarn](https://yarnpkg.com/):
+To build OpenCOR, you need to install [node.js](https://nodejs.org/) and [npm](https://npmjs.com/), which you can do from [here](https://nodejs.org/en/download/package-manager). Then, you need to install [pnpm](https://pnpm.io/):
 
 ```bash
-npm install -g yarn
+npm install -g pnpm
 ```
 
 ## Scripts
@@ -22,13 +22,13 @@ npm install -g yarn
 Before doing anything, you need to install all of OpenCOR's dependencies:
 
 ```bash
-yarn
+pnpm install
 ```
 
 Then, you can run a given script:
 
 ```bash
-yarn <script>
+pnpm <script>
 ```
 
 where `<script>` is one of the following:
