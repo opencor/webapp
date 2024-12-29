@@ -4,5 +4,5 @@
 
 Napi::String version(const Napi::CallbackInfo &pInfo)
 {
-    return Napi::String::New(pInfo.Env(), libOpenCOR::llvmVersionString());
+    return Napi::String::New(pInfo.Env(), libOpenCOR::versionString());
 }

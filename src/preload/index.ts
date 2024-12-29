@@ -22,5 +22,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 // Give our renderer process access to the C++ version of libOpenCOR.
 
 contextBridge.exposeInMainWorld('libOpenCOR', {
-  version: () => loc.version()
+  versionString: () => loc.version()
 })

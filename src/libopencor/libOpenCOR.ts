@@ -1,6 +1,9 @@
+import libOpenCOR from 'libopencor'
+
 // @ts-ignore (window.libOpenCOR may or not be defined and that is why we test it)
-const loc = window.libOpenCOR
+const loc = window.libOpenCOR !== undefined ? window.libOpenCOR : await libOpenCOR()
 
 export function version() {
-  return (loc !== undefined) ? loc.version() : '1.9.6.9'
+  // @ts-ignore (window.libOpenCOR may or not be defined and that is why we test it)
+  return loc.versionString() + (window.libOpenCOR !== undefined ? ' (compiled or interpreted)' : ' (interpreted)')
 }
