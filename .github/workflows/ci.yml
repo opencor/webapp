@@ -15,12 +15,25 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
+            build: ON
           - name: Linux
             os: ubuntu-latest
+            build: ON
           - name: macOS (Intel)
             os: macos-13
+            build: ON
           - name: macOS (ARM)
             os: macos-latest
+            build: ON
+          - name: Code formatting
+            os: ubuntu-latest
+            build: OFF
+          - name: Linting
+            os: ubuntu-latest
+            build: OFF
+          - name: Type checking
+            os: ubuntu-latest
+            build: OFF
     steps:
       - name: Check out OpenCOR
         uses: actions/checkout@v4
@@ -30,19 +43,24 @@ jobs:
           node-version: 'lts/*'
       - name: Install pnpm
         run: npm install -g pnpm
-      - name: Install all of OpenCOR's dependencies
+      - name: OpenCOR dependencies
         run: pnpm install
-      - name: Check that OpenCOR's code and OpenCOR's Web app's code are properly formatted
-        run: pnpm format:check
-      - name: Lint OpenCOR's code and OpenCOR's Web app's code
-        run: pnpm lint
-      - name: Type check OpenCOR's code
-        run: pnpm typecheck
-      - name: Type check OpenCOR's Web app's code
-        run: pnpm typecheck:web
       - name: Build OpenCOR
+        if: matrix.build == 'ON'
         run: pnpm build
       - name: Build OpenCOR's Web app
+        if: matrix.build == 'ON'
         run: pnpm build:web
-      - name: Clean OpenCOR's environment
+      - name: Code formatting
+        if: matrix.name == 'Code formatting'
+        run: pnpm format:check
+      - name: Linting
+        if: matrix.name == 'Linting'
+        run: pnpm lint
+      - name: Type checking
+        if: matrix.name == 'Type checking'
+        run: |
+          pnpm typecheck
+          pnpm typecheck:web
+      - name: Clean OpenCOR
         run: pnpm clean
