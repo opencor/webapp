@@ -49,6 +49,12 @@ file(REMOVE ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
 include_directories(${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/include
                     ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/include/libopencor/module)
 
+# Use the appropriate C runtime library.
+
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
+
 # Create our Node.js add-on as a shared library.
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
