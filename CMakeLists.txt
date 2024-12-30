@@ -55,6 +55,44 @@ if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
 
+# Don't allow unresolved symbols.
+# Note: MSVC doesn't allow unresolved symbols, so we only need to look for them if we are building using GNU or Clang.
+
+if(BUILDING_USING_GNU)
+    SET(CMAKE_SHARED_LINKER_FLAGS -Wl,--no-undefined)
+elseif(BUILDING_USING_CLANG)
+    # On macOS, only use the -Wl,--no-undefined option if we are not using Xcode 15.0 or later since otherwise the
+    # linker is going to generate some warnings about -undefined error being deprecated.
+
+    if(APPLE)
+        # Get the Xcode version.
+        # Note: CMake has XCODE_VERSION, but it's only available when using the Xcode generator. So, we need to get the
+        #       Xcode version ourselves. And, depending on how Xcode was installed, we may need to get the Xcode version
+        #       using softwareupdate.
+
+        execute_process(COMMAND xcodebuild -version
+                        OUTPUT_VARIABLE XCODE_VERSION
+                        OUTPUT_STRIP_TRAILING_WHITESPACE
+                        RESULT_VARIABLE RESULT
+                        ERROR_QUIET)
+
+        if(NOT RESULT EQUAL 0)
+            execute_process(COMMAND softwareupdate --history
+                            COMMAND awk "/Command Line Tools for Xcode/ {print \$6}"
+                            COMMAND tail -1
+                            OUTPUT_VARIABLE XCODE_VERSION
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            ERROR_QUIET)
+        endif()
+    else()
+        set(XCODE_VERSION 0)
+    endif()
+
+    if(XCODE_VERSION VERSION_LESS 15.0)
+        SET(CMAKE_SHARED_LINKER_FLAGS -Wl,-undefined,error)
+    endif()
+endif()
+
 # Create our Node.js add-on as a shared library.
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
