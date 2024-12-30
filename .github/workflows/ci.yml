@@ -15,16 +15,12 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
-            script: win
           - name: Linux
             os: ubuntu-latest
-            script: linux
           - name: macOS (Intel)
             os: macos-13
-            script: mac
           - name: macOS (ARM)
             os: macos-latest
-            script: mac
     steps:
       - name: Check out OpenCOR
         uses: actions/checkout@v4
