@@ -19,8 +19,16 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
+    build: {
+      target: 'esnext'
+    },
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version)
+    },
+    optimizeDeps: {
+      esbuildOptions: {
+        target: 'esnext'
+      }
     },
     plugins: [
       vue(),
