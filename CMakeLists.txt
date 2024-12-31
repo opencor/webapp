@@ -108,7 +108,7 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
 
 # Link cmake-js and libOpenCOR to our Node.js add-on.
 
-target_link_libraries(${CMAKE_PROJECT_NAME}
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
                       ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/lib/libOpenCOR${CMAKE_STATIC_LIBRARY_SUFFIX})
 
