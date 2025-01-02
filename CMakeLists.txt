@@ -34,7 +34,7 @@ else()
     set(EXTENSION .tar.gz)
 endif()
 
-set(LIBOPENCOR_FILE_NAME_WE libOpenCOR-${PROJECT_VERSION_MAJOR}-${PROJECT_VERSION_MINOR}-${PROJECT_VERSION_PATCH}-${PLATFORM}-${ARCHITECTURE}-Static)
+set(LIBOPENCOR_FILE_NAME_WE libOpenCOR-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${PLATFORM}-${ARCHITECTURE}-Shared)
 set(LIBOPENCOR_FILE_NAME ${LIBOPENCOR_FILE_NAME_WE}${EXTENSION})
 
 file(DOWNLOAD https://opencor.ws/libopencor/downloads/${LIBOPENCOR_FILE_NAME}
@@ -108,9 +108,15 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
 
 # Link cmake-js and libOpenCOR to our Node.js add-on.
 
+if(WIN32)
+    set(LIBOPENCOR_FILENAME libOpenCOR${CMAKE_IMPORT_LIBRARY_SUFFIX})
+else()
+    set(LIBOPENCOR_FILENAME libOpenCOR${CMAKE_SHARED_LIBRARY_SUFFIX})
+endif()
+
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
-                      ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/lib/libOpenCOR${CMAKE_STATIC_LIBRARY_SUFFIX})
+                      ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/lib/${LIBOPENCOR_FILENAME})
 
 # Include the Node-API wrappers.
 
