@@ -3,11 +3,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 
 const emit = defineEmits(['about'])
 
-const items = ref([
+const items = [
   {
     label: 'Help',
     items: [
@@ -33,7 +33,7 @@ const items = ref([
       }
     ]
   }
-])
+]
 
 // Never display our menu as a hamburger menu.
 

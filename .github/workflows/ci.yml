@@ -15,16 +15,25 @@ jobs:
         include:
           - name: Windows
             os: windows-latest
-            script: win
+            build: ON
           - name: Linux
             os: ubuntu-latest
-            script: linux
+            build: ON
           - name: macOS (Intel)
             os: macos-13
-            script: mac
+            build: ON
           - name: macOS (ARM)
             os: macos-latest
-            script: mac
+            build: ON
+          - name: Code formatting
+            os: ubuntu-latest
+            build: OFF
+          - name: Linting
+            os: ubuntu-latest
+            build: OFF
+          - name: Type checking
+            os: ubuntu-latest
+            build: OFF
     steps:
       - name: Check out OpenCOR
         uses: actions/checkout@v4
@@ -32,21 +41,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-      - name: Install Yarn
-        run: npm install -g yarn
-      - name: Install all of OpenCOR's dependencies
-        run: yarn
-      - name: Check that OpenCOR's code and OpenCOR's Web app's code are properly formatted
-        run: yarn format:check
-      - name: Lint OpenCOR's code and OpenCOR's Web app's code
-        run: yarn lint
-      - name: Type check OpenCOR's code
-        run: yarn typecheck
-      - name: Type check OpenCOR's Web app's code
-        run: yarn typecheck:web
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: OpenCOR dependencies
+        run: pnpm install
       - name: Build OpenCOR
-        run: yarn build
+        if: matrix.build == 'ON'
+        run: pnpm build
       - name: Build OpenCOR's Web app
-        run: yarn build:web
-      - name: Clean OpenCOR's environment
-        run: yarn clean
+        if: matrix.build == 'ON'
+        run: pnpm build:web
+      - name: Code formatting
+        if: matrix.name == 'Code formatting'
+        run: pnpm format:check
+      - name: Linting
+        if: matrix.name == 'Linting'
+        run: pnpm lint
+      - name: Type checking
+        if: matrix.name == 'Type checking'
+        run: |
+          pnpm typecheck
+          pnpm typecheck:web
+      - name: Clean OpenCOR
+        run: pnpm clean

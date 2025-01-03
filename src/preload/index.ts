@@ -1,36 +1,26 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
-
-const api = {}
-
-// If context isolation is enabled then expose the Electron API to the renderer otherwise to the global DOM.
-
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (window.electron is defined in lib.dom.d.ts)
-  window.electron = electronAPI
-  // @ts-ignore (window.api is defined in lib.dom.d.ts)
-  window.api = api
-}
+import { default as loc } from '../../out/libOpenCOR/Release/libOpenCOR.node'
 
 // Some bridging between our main process and renderer process.
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Handlers.
+  // Renderer process asking the main process to do something for it.
 
   resetAll: () => ipcRenderer.invoke('reset-all'),
   enableMenu: () => ipcRenderer.invoke('enable-menu'),
   disableMenu: () => ipcRenderer.invoke('disable-menu'),
 
-  // Callbacks.
+  // Renderer process listening to the main process.
 
-  onInitSplashScreenWindow: (callback) => ipcRenderer.on('init-splash-screen-window', (_event, info) => callback(info)),
-  onResetAll: (callback) => ipcRenderer.on('reset-all', () => callback()),
-  onAbout: (callback) => ipcRenderer.on('about', () => callback())
+  onInitSplashScreenWindow: (callback: (info: { message: string }) => void) =>
+    ipcRenderer.on('init-splash-screen-window', (_event, info) => callback(info)),
+  onResetAll: (callback: (info: { message: string }) => void) =>
+    ipcRenderer.on('reset-all', (_event, info) => callback(info)),
+  onAbout: (callback: (info: { message: string }) => void) => ipcRenderer.on('about', (_event, info) => callback(info))
+})
+
+// Give our renderer process access to the C++ version of libOpenCOR.
+
+contextBridge.exposeInMainWorld('libOpenCOR', {
+  versionString: () => loc.version()
 })

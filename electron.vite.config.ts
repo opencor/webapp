@@ -1,6 +1,6 @@
 import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 import vue from '@vitejs/plugin-vue'
-import { defineConfig, bytecodePlugin, externalizeDepsPlugin } from 'electron-vite'
+import { bytecodePlugin, defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { join } from 'path'
 import Components from 'unplugin-vue-components/vite'
 
@@ -19,8 +19,16 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
+    build: {
+      target: 'esnext'
+    },
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version)
+    },
+    optimizeDeps: {
+      esbuildOptions: {
+        target: 'esnext'
+      }
     },
     plugins: [
       vue(),

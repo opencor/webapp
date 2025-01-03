@@ -57,12 +57,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-      - name: Install Yarn
-        run: npm install -g yarn
-      - name: Packages OpenCOR
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: Package OpenCOR
         run: |
-          yarn
-          yarn package
+          pnpm install
+          pnpm package
       - name: Remove blockmap files
         shell: bash
         run: find ./dist -name '*.blockmap' -delete
