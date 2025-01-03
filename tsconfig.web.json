@@ -7,10 +7,5 @@
     }
   },
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": [
-    "src/libopencor/*.ts",
-    "src/renderer/src/**/*",
-    "src/renderer/src/**/*.vue",
-    "src/renderer/vite.config.d.ts"
-  ]
+  "include": ["src/*.ts", "src/libopencor/*.ts", "src/renderer/src/**/*", "src/renderer/vite.config.d.ts"]
 }

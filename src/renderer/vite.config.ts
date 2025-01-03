@@ -25,7 +25,7 @@ export default defineConfig({
   ],
   server: {
     fs: {
-      allow: [join(__dirname, '../..')]
+      allow: [join(import.meta.dirname, '../..')]
     }
   }
 })

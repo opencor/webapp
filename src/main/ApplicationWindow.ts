@@ -3,7 +3,7 @@ import * as electron from 'electron'
 import { join } from 'path'
 
 export class ApplicationWindow extends BrowserWindow {
-  alreadyShowedWindow: boolean = false
+  alreadyShowedWindow = false
 
   constructor(options: electron.BrowserWindowConstructorOptions) {
     // Add some common options and call our parent constructor.
@@ -15,7 +15,7 @@ export class ApplicationWindow extends BrowserWindow {
     options.show = false
     options.useContentSize = true
     options.webPreferences = {
-      preload: join(__dirname, '../preload/index.mjs'),
+      preload: join(import.meta.dirname, '../preload/index.mjs'),
       sandbox: false
     }
 

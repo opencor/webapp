@@ -1,9 +1,16 @@
 import libOpenCOR from 'libopencor'
 
-// @ts-ignore (window.libOpenCOR may or not be defined and that is why we test it)
-const loc = window.libOpenCOR !== undefined ? window.libOpenCOR : await libOpenCOR()
+interface locAPI {
+  versionString: () => string
+}
+
+// @ts-expect-error (window.libOpenCOR may or not be defined and that is why we test it)
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const winLoc = window.libOpenCOR ?? undefined
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+const loc: locAPI = winLoc ?? (await libOpenCOR())
+const cppLoc = winLoc !== undefined
 
 export function version() {
-  // @ts-ignore (window.libOpenCOR may or not be defined and that is why we test it)
-  return loc.versionString() + (window.libOpenCOR !== undefined ? ' (compiled or interpreted)' : ' (interpreted)')
+  return loc.versionString() + (cppLoc ? ' (compiled or interpreted)' : ' (interpreted)')
 }

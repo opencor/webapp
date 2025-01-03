@@ -22,7 +22,9 @@ export class SplashScreenWindow extends ApplicationWindow {
       alwaysOnTop: true
     })
 
-    this.loadFile('./src/main/assets/splashscreen.html')
+    this.loadFile('./src/main/assets/splashscreen.html').catch((err: unknown) => {
+      console.error('Failed to load splash screen:', err)
+    })
 
     // Initialise our Web contents.
 
