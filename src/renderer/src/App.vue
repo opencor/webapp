@@ -5,7 +5,7 @@
         <MainMenu @about="aboutVisible = true" />
       </div>
       <div class="flex grow justify-center items-center">
-        <Background />
+        <BackgroundComponent />
       </div>
     </div>
   </div>
@@ -15,14 +15,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { electronAPI } from '../../electronapi'
 
-// @ts-ignore (window.electronAPI may or not be defined and that is why we test it)
-const electronAPI = window.electronAPI
 const aboutVisible = ref(false)
 
-if (electronAPI !== undefined) {
-  electronAPI.onAbout(() => {
-    aboutVisible.value = true
-  })
-}
+electronAPI?.onAbout(() => {
+  aboutVisible.value = true
+})
 </script>

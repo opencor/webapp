@@ -26,12 +26,12 @@ export function retrieveMainWindowState(): {
   const isFullScreen = settings.getSync('mainWindowState.isFullScreen')
 
   return {
-    x: (x !== undefined && x !== null ? x : horizontalSpace) as number,
-    y: (y !== undefined && y !== null ? y : verticalSpace) as number,
-    width: (width !== undefined && width !== null ? width : workAreaSize.width - 2 * horizontalSpace) as number,
-    height: (height !== undefined && height !== null ? height : workAreaSize.height - 2 * verticalSpace) as number,
-    isMaximized: (isMaximized !== undefined && isMaximized !== null ? isMaximized : false) as boolean,
-    isFullScreen: (isFullScreen !== undefined && isFullScreen !== null ? isFullScreen : false) as boolean
+    x: (x ?? horizontalSpace) as number,
+    y: (y ?? verticalSpace) as number,
+    width: (width ?? workAreaSize.width - 2 * horizontalSpace) as number,
+    height: (height ?? workAreaSize.height - 2 * verticalSpace) as number,
+    isMaximized: (isMaximized ?? false) as boolean,
+    isFullScreen: (isFullScreen ?? false) as boolean
   }
 }
 
@@ -63,7 +63,7 @@ export function disableMenu(): void {
 }
 
 export class MainWindow extends ApplicationWindow {
-  splashScreenWindowClosed: boolean = false
+  splashScreenWindowClosed = false
 
   configureMenu(): void {
     // Some common menu items.
@@ -172,14 +172,18 @@ export class MainWindow extends ApplicationWindow {
     helpSubMenu.push({
       label: 'Home Page',
       click: () => {
-        shell.openExternal('https://opencor.ws/')
+        shell.openExternal('https://opencor.ws/').catch((err: unknown) => {
+          console.error('Failed to open the home page:', err)
+        })
       }
     })
     helpSubMenu.push({ type: 'separator' })
     helpSubMenu.push({
       label: 'Report Issue',
       click: () => {
-        shell.openExternal('https://github.com/opencor/webapp/issues/new')
+        shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((err: unknown) => {
+          console.error('Failed to report an issue:', err)
+        })
       }
     })
 
@@ -214,7 +218,7 @@ export class MainWindow extends ApplicationWindow {
     this.setMenuBarVisibility(true)
   }
 
-  constructor(splashScreenWindow: BrowserWindow) {
+  constructor(splashScreenWindow: BrowserWindow | null) {
     // Initialise ourselves.
 
     const mainWindowState = retrieveMainWindowState()
@@ -226,12 +230,14 @@ export class MainWindow extends ApplicationWindow {
       height: mainWindowState.height,
       minWidth: 640,
       minHeight: 480,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       ...(platform.isMacOS ? {} : { icon: icon })
     })
 
     // Set our dock icon (macOS only).
 
     if (platform.isMacOS) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       app.dock.setIcon(icon)
     }
 
@@ -278,7 +284,9 @@ export class MainWindow extends ApplicationWindow {
     // Open external links in the default browser.
 
     this.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url)
+      shell.openExternal(details.url).catch((err: unknown) => {
+        console.error('Failed to open external URL:', err)
+      })
 
       return {
         action: 'deny'
@@ -288,10 +296,14 @@ export class MainWindow extends ApplicationWindow {
     // Load the remote URL for development or the local HTML file for production.
 
     if (developmentMode()) {
-      // @ts-ignore (developmentMode() is true which means that process.env['ELECTRON_RENDERER_URL'] is defined)
-      this.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      // @ts-expect-error (developmentMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
+      this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((err: unknown) => {
+        console.error('Failed to load URL:', err)
+      })
     } else {
-      this.loadFile(join(__dirname, '../renderer/index.html'))
+      this.loadFile(join(import.meta.dirname, '../renderer/index.html')).catch((err: unknown) => {
+        console.error('Failed to load file:', err)
+      })
     }
   }
 }

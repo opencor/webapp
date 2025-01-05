@@ -48,7 +48,7 @@ defineEmits(['close'])
 
 const version = __APP_VERSION__
 const currentYear = new Date().getFullYear()
-const copyright = currentYear === 2024 ? '2024' : `2024-${currentYear}`
+const copyright = currentYear === 2024 ? '2024' : `2024-${currentYear.toString()}`
 
 const locVersion = loc.version()
 </script>

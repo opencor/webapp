@@ -7,7 +7,7 @@ import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
 export function developmentMode(): boolean {
-  return is.dev && process.env['ELECTRON_RENDERER_URL'] !== undefined
+  return is.dev && process.env.ELECTRON_RENDERER_URL !== undefined
 }
 
 // Prettify our settings.
@@ -26,36 +26,44 @@ if (settings.getSync('resetAll')) {
 // This method is called when Electron has finished its initialisation and is ready to create browser windows. Some APIs
 // can only be used after this event occurs.
 
-app.whenReady().then(() => {
-  // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
+app
+  .whenReady()
+  .then(() => {
+    // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
 
-  let splashScreenWindow: SplashScreenWindow = null as unknown as SplashScreenWindow
+    let splashScreenWindow: SplashScreenWindow = null as unknown as SplashScreenWindow
 
-  if (!developmentMode()) {
-    const currentYear = new Date().getFullYear()
+    if (!developmentMode()) {
+      const currentYear = new Date().getFullYear()
 
-    splashScreenWindow = new SplashScreenWindow(currentYear === 2024 ? '2024' : `2024-${currentYear}`, app.getVersion())
-  }
+      splashScreenWindow = new SplashScreenWindow(
+        currentYear === 2024 ? '2024' : `2024-${currentYear.toString()}`,
+        app.getVersion()
+      )
+    }
 
-  // Set our app user model id for Windows.
+    // Set our app user model id for Windows.
 
-  electronApp.setAppUserModelId('ws.opencor.app')
+    electronApp.setAppUserModelId('ws.opencor.app')
 
-  // Enable the F12 shortcut (to show/hide the developer tools), if we are in development.
+    // Enable the F12 shortcut (to show/hide the developer tools), if we are in development.
 
-  if (developmentMode()) {
-    app.on('browser-window-created', (_, window) => {
-      optimizer.watchWindowShortcuts(window)
-    })
-  }
+    if (developmentMode()) {
+      app.on('browser-window-created', (_, window) => {
+        optimizer.watchWindowShortcuts(window)
+      })
+    }
 
-  // Handle some requests from our renderer process.
+    // Handle some requests from our renderer process.
 
-  ipcMain.handle('reset-all', resetAll)
-  ipcMain.handle('enable-menu', enableMenu)
-  ipcMain.handle('disable-menu', disableMenu)
+    ipcMain.handle('reset-all', resetAll)
+    ipcMain.handle('enable-menu', enableMenu)
+    ipcMain.handle('disable-menu', disableMenu)
 
-  // Create our main window.
+    // Create our main window.
 
-  new MainWindow(splashScreenWindow)
-})
+    new MainWindow(splashScreenWindow)
+  })
+  .catch((err: unknown) => {
+    console.error('Failed to create the main window:', err)
+  })

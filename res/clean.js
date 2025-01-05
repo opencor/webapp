@@ -1,3 +1,4 @@
+import process from 'process'
 import { existsSync, rmSync } from 'fs'
 
 function clean(paths) {

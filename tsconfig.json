@@ -1,5 +1,11 @@
 {
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "strictNullChecks": true
+  },
   "files": [],
+  "include": ["*.ts"],
   "references": [
     {
       "path": "./tsconfig.app.json"
