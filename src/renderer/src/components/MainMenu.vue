@@ -40,7 +40,7 @@ const items = [
 onMounted(() => {
   const mainMenu = document.getElementById('mainMenu')
 
-  if (mainMenu !== null) {
+  if (mainMenu) {
     const observer = new MutationObserver(() => {
       if (mainMenu.className.includes('p-menubar-mobile')) {
         mainMenu.classList.remove('p-menubar-mobile')

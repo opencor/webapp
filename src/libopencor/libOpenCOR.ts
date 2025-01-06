@@ -9,7 +9,7 @@ interface locAPI {
 const winLoc = window.libOpenCOR ?? undefined
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 const loc: locAPI = winLoc ?? (await libOpenCOR())
-const cppLoc = winLoc !== undefined
+const cppLoc = !!winLoc
 
 export function version() {
   return loc.versionString() + (cppLoc ? ' (compiled or interpreted)' : ' (interpreted)')

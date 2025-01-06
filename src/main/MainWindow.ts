@@ -45,7 +45,7 @@ export function resetAll(): void {
 function doEnableDisableMenu(enabled: boolean): void {
   const menu = Menu.getApplicationMenu()
 
-  if (menu !== null) {
+  if (menu) {
     menu.items.forEach((menuItem) => {
       menuItem.enabled = enabled
     })
@@ -252,7 +252,7 @@ export class MainWindow extends ApplicationWindow {
     // Ask for the splash screen window to be closed with a short delay once we are visible.
 
     this.once('show', () => {
-      if (!this.splashScreenWindowClosed && splashScreenWindow !== null) {
+      if (!this.splashScreenWindowClosed && !!splashScreenWindow) {
         this.splashScreenWindowClosed = true
 
         setTimeout(() => {
