@@ -3,9 +3,9 @@ import { app, BrowserWindow, Menu, screen, shell } from 'electron'
 import * as electron from 'electron'
 import * as settings from 'electron-settings'
 import { join } from 'path'
+import { isDevMode } from '../electron'
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'
-import { developmentMode } from './index'
 
 export function retrieveMainWindowState(): {
   x: number
@@ -295,8 +295,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Load the remote URL for development or the local HTML file for production.
 
-    if (developmentMode()) {
-      // @ts-expect-error (developmentMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
+    if (isDevMode()) {
+      // @ts-expect-error (isDevMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
       this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((err: unknown) => {
         console.error('Failed to load URL:', err)
       })
