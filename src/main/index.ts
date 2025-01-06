@@ -2,7 +2,7 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { app, ipcMain } from 'electron'
 import * as settings from 'electron-settings'
 import * as fs from 'fs'
-import { join } from 'path'
+import * as path from 'path'
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
@@ -19,8 +19,8 @@ settings.configure({
 // Resetting all of our settings, if needed.
 
 if (settings.getSync('resetAll')) {
-  fs.rmSync(join(app.getPath('userData'), 'Preferences'))
-  fs.rmSync(join(app.getPath('userData'), 'settings.json'))
+  fs.rmSync(path.join(app.getPath('userData'), 'Preferences'))
+  fs.rmSync(path.join(app.getPath('userData'), 'settings.json'))
 }
 
 // This method is called when Electron has finished its initialisation and is ready to create browser windows. Some APIs
