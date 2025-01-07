@@ -23,7 +23,7 @@
     "build": "pnpm build:libopencor && electron-vite build",
     "build:libopencor": "cmake-js build -B Release -O out/libOpenCOR",
     "build:web": "(cd ./src/renderer && vite build)",
-    "clean": "node res/clean.js dist node_modules out src/main/build src/renderer/components.d.ts src/renderer/dist src/renderer/node_modules",
+    "clean": "node res/clean.js",
     "dev": "pnpm build:libopencor && electron-vite dev --watch",
     "dev:web": "(cd ./src/renderer && vite dev)",
     "format": "prettier --write . && clang-format -i src/libopencor/src/*",
