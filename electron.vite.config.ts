@@ -20,7 +20,7 @@ export default defineConfig({
   preload: {
     plugins: [
       externalizeDepsPlugin(),
-      ...(process.platform === 'win32'
+      ...(process.platform === 'win32' && process.env.npm_lifecycle_event !== 'build'
         ? [
             viteStaticCopy({
               targets: [
