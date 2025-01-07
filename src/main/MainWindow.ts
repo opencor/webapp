@@ -3,9 +3,9 @@ import { app, BrowserWindow, Menu, screen, shell } from 'electron'
 import * as electron from 'electron'
 import * as settings from 'electron-settings'
 import { join } from 'path'
+import { isDevMode } from '../electron'
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'
-import { developmentMode } from './index'
 
 export function retrieveMainWindowState(): {
   x: number
@@ -45,7 +45,7 @@ export function resetAll(): void {
 function doEnableDisableMenu(enabled: boolean): void {
   const menu = Menu.getApplicationMenu()
 
-  if (menu !== null) {
+  if (menu) {
     menu.items.forEach((menuItem) => {
       menuItem.enabled = enabled
     })
@@ -252,7 +252,7 @@ export class MainWindow extends ApplicationWindow {
     // Ask for the splash screen window to be closed with a short delay once we are visible.
 
     this.once('show', () => {
-      if (!this.splashScreenWindowClosed && splashScreenWindow !== null) {
+      if (!this.splashScreenWindowClosed && !!splashScreenWindow) {
         this.splashScreenWindowClosed = true
 
         setTimeout(() => {
@@ -295,8 +295,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Load the remote URL for development or the local HTML file for production.
 
-    if (developmentMode()) {
-      // @ts-expect-error (developmentMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
+    if (isDevMode()) {
+      // @ts-expect-error (isDevMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
       this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((err: unknown) => {
         console.error('Failed to load URL:', err)
       })

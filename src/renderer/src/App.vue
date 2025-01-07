@@ -1,7 +1,7 @@
 <template>
   <div class="h-screen">
     <div class="flex flex-col h-full">
-      <div v-if="electronAPI === undefined" class="main-menu">
+      <div v-if="!electronAPI" class="main-menu">
         <MainMenu @about="aboutVisible = true" />
       </div>
       <div class="flex grow justify-center items-center">
