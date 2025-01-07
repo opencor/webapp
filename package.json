@@ -23,7 +23,7 @@
     "build": "pnpm build:libopencor && electron-vite build",
     "build:libopencor": "cmake-js build -B Release -O out/libOpenCOR",
     "build:web": "(cd ./src/renderer && vite build)",
-    "clean": "node res/clean.js dist node_modules out src/main/build src/renderer/components.d.ts src/renderer/dist src/renderer/node_modules",
+    "clean": "node res/clean.js",
     "dev": "pnpm build:libopencor && electron-vite dev --watch",
     "dev:web": "(cd ./src/renderer && vite dev)",
     "format": "prettier --write . && clang-format -i src/libopencor/src/*",
@@ -77,6 +77,7 @@
     "typescript-eslint": "^8.19.0",
     "unplugin-vue-components": "^0.27.5",
     "vite": "^5.4.11",
+    "vite-plugin-static-copy": "^2.2.0",
     "vue": "^3.5.13",
     "vue-tsc": "^2.2.0"
   }

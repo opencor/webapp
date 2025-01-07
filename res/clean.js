@@ -1,12 +1,19 @@
-import process from 'process'
-import { existsSync, rmSync } from 'fs'
+import * as fs from 'fs'
 
 function clean(paths) {
   for (const path of paths) {
-    if (existsSync(path)) {
-      rmSync(path, { recursive: true, force: true })
+    if (fs.existsSync(path)) {
+      fs.rmSync(path, { recursive: true, force: true })
     }
   }
 }
 
-clean(process.argv.slice(2))
+clean([
+  'dist',
+  'node_modules',
+  'out',
+  'src/main/build',
+  'src/renderer/components.d.ts',
+  'src/renderer/dist',
+  'src/renderer/node_modules'
+])
