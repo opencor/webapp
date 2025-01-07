@@ -1,8 +1,10 @@
 import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 import vue from '@vitejs/plugin-vue'
 import { bytecodePlugin, defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import { join } from 'path'
+import * as path from 'path'
 import Components from 'unplugin-vue-components/vite'
+import { normalizePath } from 'vite'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 export default defineConfig({
   main: {
@@ -16,7 +18,19 @@ export default defineConfig({
     plugins: [bytecodePlugin(), externalizeDepsPlugin()]
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [
+      externalizeDepsPlugin(),
+      viteStaticCopy({
+        targets: [
+          {
+            src: normalizePath(
+              path.resolve(import.meta.dirname, 'out/libOpenCOR/libOpenCOR-0.0.0-Windows-Intel-Shared/bin/libOpenCOR.dll')
+            ),
+            dest: 'chunks'
+          }
+        ]
+      })
+    ]
   },
   renderer: {
     build: {
@@ -38,7 +52,7 @@ export default defineConfig({
     ],
     server: {
       fs: {
-        allow: [join(import.meta.dirname, '..')]
+        allow: [path.join(import.meta.dirname, '..')]
       }
     }
   }
