@@ -20,6 +20,26 @@ if (settings.getSync('resetAll')) {
   fs.rmSync(path.join(app.getPath('userData'), 'settings.json'))
 }
 
+// Allow only one instance of OpenCOR.
+
+const singleInstanceLock = app.requestSingleInstanceLock()
+
+if (!singleInstanceLock) {
+  app.quit()
+}
+
+let mainWindow: MainWindow | null = null
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+
+    mainWindow.focus()
+  }
+})
+
 // This method is called when Electron has finished its initialisation and is ready to create browser windows. Some APIs
 // can only be used after this event occurs.
 
@@ -59,7 +79,7 @@ app
 
     // Create our main window.
 
-    new MainWindow(splashScreenWindow)
+    mainWindow = new MainWindow(splashScreenWindow)
   })
   .catch((err: unknown) => {
     console.error('Failed to create the main window:', err)
