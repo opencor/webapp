@@ -20,16 +20,23 @@ export default defineConfig({
   preload: {
     plugins: [
       externalizeDepsPlugin(),
-      viteStaticCopy({
-        targets: [
-          {
-            src: normalizePath(
-              path.resolve(import.meta.dirname, 'out/libOpenCOR/libOpenCOR-0.0.0-Windows-Intel-Shared/bin/libOpenCOR.dll')
-            ),
-            dest: 'chunks'
-          }
-        ]
-      })
+      ...(process.platform === 'win32'
+        ? [
+            viteStaticCopy({
+              targets: [
+                {
+                  src: normalizePath(
+                    path.resolve(
+                      import.meta.dirname,
+                      'out/libOpenCOR/libOpenCOR-0.0.0-Windows-Intel-Shared/bin/libOpenCOR.dll'
+                    )
+                  ),
+                  dest: 'chunks'
+                }
+              ]
+            })
+          ]
+        : [])
     ]
   },
   renderer: {
