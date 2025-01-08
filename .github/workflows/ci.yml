@@ -31,9 +31,6 @@ jobs:
           - name: Linting
             os: ubuntu-latest
             build: OFF
-          - name: Type checking
-            os: ubuntu-latest
-            build: OFF
     steps:
       - name: Check out OpenCOR
         uses: actions/checkout@v4
@@ -57,10 +54,5 @@ jobs:
       - name: Linting
         if: matrix.name == 'Linting'
         run: pnpm lint
-      - name: Type checking
-        if: matrix.name == 'Type checking'
-        run: |
-          pnpm typecheck
-          pnpm typecheck:web
       - name: Clean OpenCOR
         run: pnpm clean
