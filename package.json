@@ -35,9 +35,7 @@
     "package:win": "pnpm build && electron-builder --win",
     "publish:web": "pnpm publish ./src/renderer",
     "start": "pnpm build:libopencor && electron-vite preview",
-    "start:web": "(cd ./src/renderer && vite preview)",
-    "typecheck": "tsc --noEmit -p tsconfig.node.json --composite false",
-    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false"
+    "start:web": "(cd ./src/renderer && vite preview)"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -78,7 +76,6 @@
     "unplugin-vue-components": "^0.27.5",
     "vite": "^5.4.11",
     "vite-plugin-static-copy": "^2.2.0",
-    "vue": "^3.5.13",
-    "vue-tsc": "^2.2.0"
+    "vue": "^3.5.13"
   }
 }

@@ -47,7 +47,5 @@ where `<script>` is one of the following:
 - `package:mac`: (build and) package OpenCOR for macOS;
 - `package:win`: (build and) package OpenCOR for Windows;
 - `publish:web`: publish OpenCOR's Web app on [npm](https://npmjs.com/);
-- `start`: start OpenCOR in production mode;
-- `start:web`: start OpenCOR's Web app in production mode;
-- `typecheck`: type check OpenCOR's code; and
-- `typecheck:web`: type check OpenCOR's Web app's code.
+- `start`: start OpenCOR in production mode; and
+- `start:web`: start OpenCOR's Web app in production mode.
