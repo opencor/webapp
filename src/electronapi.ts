@@ -6,8 +6,6 @@ interface ElectronAPI {
   disableMenu: () => void
 
   // Renderer process listening to the main process.
-  // Note: no onInitSplashScreenWindow() method since it's only called from our splash screen window and it doesn't seem
-  //       to be able to import this file.
 
   onResetAll: (callback: () => void) => void
   onAbout: (callback: () => void) => void

@@ -48,16 +48,7 @@ app
   .then(() => {
     // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
 
-    let splashScreenWindow: SplashScreenWindow = null as unknown as SplashScreenWindow
-
-    if (!isDevMode()) {
-      const currentYear = new Date().getFullYear()
-
-      splashScreenWindow = new SplashScreenWindow(
-        currentYear === 2024 ? '2024' : `2024-${currentYear.toString()}`,
-        app.getVersion()
-      )
-    }
+    const splashScreenWindow: SplashScreenWindow | null = isDevMode() ? null : new SplashScreenWindow()
 
     // Set our app user model id for Windows.
 

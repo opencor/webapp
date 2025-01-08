@@ -130,3 +130,18 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
                            ${NODE_ADDON_API_DIR})
 
 add_definitions(-DNAPI_VERSION=3)
+
+# Configure our splash screen.
+
+string(TIMESTAMP CURRENT_YEAR "%Y")
+
+if(CURRENT_YEAR EQUAL 2024)
+    set(COPYRIGHT "2024")
+else()
+    set(COPYRIGHT "2024-${CURRENT_YEAR}")
+endif()
+
+set(VERSION ${PROJECT_VERSION})
+
+configure_file(src/main/assets/splashscreen.html.in
+               ${CMAKE_BINARY_DIR}/splashscreen.html)

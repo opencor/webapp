@@ -13,10 +13,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Renderer process listening to the main process.
 
-  onInitSplashScreenWindow: (callback: (info: unknown) => void) =>
-    ipcRenderer.on('init-splash-screen-window', (_event, info) => {
-      callback(info)
-    }),
   onResetAll: (callback: () => void) =>
     ipcRenderer.on('reset-all', () => {
       callback()
