@@ -61,13 +61,11 @@ function handleOpencorUrl(url: string) {
   if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
     // Open our about dialog.
 
-    // mainWindow?.openAboutDialog()
-    console.log('>>> Open our about dialog')
+    mainWindow?.webContents.send('about')
   } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
     // Open our preferences dialog.
-
-    // mainWindow?.openPreferencesDialog()
-    console.log('>>> Open our preferences dialog')
+    //---OPENCOR--- To be disabled once we have a preferences dialog.
+    // mainWindow?.webContents.send('preferences')
   } else {
     // Check whether we have files to open.
 
@@ -78,11 +76,7 @@ function handleOpencorUrl(url: string) {
       (isAction(parsedUrl.hostname, 'openFiles') && paths.length > 1)
     ) {
       // Open the given file(s).
-
-      // mainWindow?.openFiles(paths)
-      for (const path of paths) {
-        console.log(`>>> Open ${path}`)
-      }
+      //---OPENCOR--- To be done.
     }
   }
 }
