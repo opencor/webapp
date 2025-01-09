@@ -43,53 +43,70 @@ app.on('second-instance', () => {
 // This method is called when Electron has finished its initialisation and is ready to create browser windows. Some APIs
 // can only be used after this event occurs.
 
+const URI_SCHEME = 'opencor'
+
+function isOpencorUrl(url: string): boolean {
+  return url.startsWith(`${URI_SCHEME}://`)
+}
+
+function handleOpencorUrl(url: string) {
+  function isAction(action: string, expectedAction: string): boolean {
+    return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
+  }
+
+  // We have been launched with a URL, so we need to parse it and act accordingly.
+
+  const parsedUrl = new URL(url)
+
+  if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
+    // Open our about dialog.
+
+    // mainWindow?.openAboutDialog()
+    console.log('>>> Open our about dialog')
+  } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
+    // Open our preferences dialog.
+
+    // mainWindow?.openPreferencesDialog()
+    console.log('>>> Open our preferences dialog')
+  } else {
+    // Check whether we have files to open.
+
+    const paths = parsedUrl.pathname.substring(1).split('%7C')
+
+    if (
+      (isAction(parsedUrl.hostname, 'openFile') && paths.length === 1) ||
+      (isAction(parsedUrl.hostname, 'openFiles') && paths.length > 1)
+    ) {
+      // Open the given file(s).
+
+      // mainWindow?.openFiles(paths)
+      for (const path of paths) {
+        console.log(`>>> Open ${path}`)
+      }
+    }
+  }
+}
+
 app
   .whenReady()
   .then(() => {
     // Register our URI scheme.
 
-    const URI_SCHEME = 'opencor'
     app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
 
     app.on('open-url', (_, url) => {
-      function isAction(action: string, expectedAction: string): boolean {
-        return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
-      }
-
-      if (url.startsWith(`${URI_SCHEME}://`)) {
-        // We have been launched with a URL, so we need to parse it and act accordingly.
-
-        const parsedUrl = new URL(url)
-
-        if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
-          // Open our about dialog.
-
-          // mainWindow?.openAboutDialog()
-          console.log('>>> Open our about dialog')
-        } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
-          // Open our preferences dialog.
-
-          // mainWindow?.openPreferencesDialog()
-          console.log('>>> Open our preferences dialog')
-        } else {
-          // Check whether we have files to open.
-
-          const paths = parsedUrl.pathname.substring(1).split('%7C')
-
-          if (
-            (isAction(parsedUrl.hostname, 'openFile') && paths.length === 1) ||
-            (isAction(parsedUrl.hostname, 'openFiles') && paths.length > 1)
-          ) {
-            // Open the given file(s).
-
-            // mainWindow?.openFiles(paths)
-            for (const path of paths) {
-              console.log(`>>> Open ${path}`)
-            }
-          }
-        }
+      if (isOpencorUrl(url)) {
+        handleOpencorUrl(url)
       }
     })
+
+    if (isWindows()) {
+      const url = process.argv.find((arg) => isOpencorUrl(arg))
+
+      if (url) {
+        handleOpencorUrl(url)
+      }
+    }
 
     // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
 
