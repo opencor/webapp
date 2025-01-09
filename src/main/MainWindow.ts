@@ -6,6 +6,7 @@ import { join } from 'path'
 import { isDevMode } from '../electron'
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'
+import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {
   x: number
@@ -218,7 +219,7 @@ export class MainWindow extends ApplicationWindow {
     this.setMenuBarVisibility(true)
   }
 
-  constructor(splashScreenWindow: BrowserWindow | null) {
+  constructor(splashScreenWindow: SplashScreenWindow | null) {
     // Initialise ourselves.
 
     const mainWindowState = retrieveMainWindowState()
