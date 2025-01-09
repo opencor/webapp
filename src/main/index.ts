@@ -7,6 +7,10 @@ import { isDevMode, isWindows } from '../electron'
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
+function log(message: string) {
+  fs.writeFileSync('/Users/Alan/Desktop/WebApp.txt', message, { flag: 'a' })
+}
+
 // Prettify our settings.
 
 settings.configure({
@@ -22,6 +26,10 @@ if (settings.getSync('resetAll')) {
 
 // Allow only one instance of OpenCOR.
 
+function findOpencorUrl(url: string[]): string | undefined {
+  return url.find((url) => isOpencorUrl(url))
+}
+
 const singleInstanceLock = app.requestSingleInstanceLock()
 
 if (!singleInstanceLock) {
@@ -30,13 +38,14 @@ if (!singleInstanceLock) {
 
 let mainWindow: MainWindow | null = null
 
-app.on('second-instance', () => {
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore()
-    }
+app.removeAllListeners('second-instance')
+app.on('second-instance', (_event, commandLine) => {
+  log('- second-instance\n')
 
-    mainWindow.focus()
+  const url = findOpencorUrl(commandLine)
+
+  if (url) {
+    handleOpencorUrl(url)
   }
 })
 
@@ -50,11 +59,21 @@ function isOpencorUrl(url: string): boolean {
 }
 
 function handleOpencorUrl(url: string) {
+  if (!app.isReady()) {
+    app.once('ready', () => {
+      handleOpencorUrl(url)
+    })
+
+    return
+  }
+
   function isAction(action: string, expectedAction: string): boolean {
     return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
   }
 
   // We have been launched with a URL, so we need to parse it and act accordingly.
+  log('------------------\n')
+  log(`- url: ${url}\n`)
 
   const parsedUrl = new URL(url)
 
@@ -81,13 +100,21 @@ function handleOpencorUrl(url: string) {
   }
 }
 
+let mainIsReadyResolver: () => void
+const mainIsReadyPromise = new Promise<void>((resolve) => (mainIsReadyResolver = resolve))
+
+function mainIsReady() {
+  mainIsReadyResolver()
+}
+
 app
   .whenReady()
-  .then(() => {
+  .then(async () => {
     // Register our URI scheme.
 
     app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
 
+    app.removeAllListeners('open-url')
     app.on('open-url', (_, url) => {
       if (isOpencorUrl(url)) {
         handleOpencorUrl(url)
@@ -95,7 +122,7 @@ app
     })
 
     if (isWindows()) {
-      const url = process.argv.find((arg) => isOpencorUrl(arg))
+      const url = findOpencorUrl(process.argv)
 
       if (url) {
         handleOpencorUrl(url)
@@ -125,6 +152,10 @@ app
     ipcMain.handle('disable-menu', disableMenu)
 
     // Create our main window.
+
+    mainIsReady()
+
+    await mainIsReadyPromise
 
     mainWindow = new MainWindow(splashScreenWindow)
   })
