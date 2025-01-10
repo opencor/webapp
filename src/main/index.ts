@@ -110,6 +110,14 @@ function mainIsReady() {
 app
   .whenReady()
   .then(async () => {
+    // Set process.env.NODE_ENV to 'production' if we are not the default app.
+    // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they
+    //       should run in development mode (default) or production mode.
+
+    if (!process.defaultApp) {
+      process.env.NODE_ENV = 'production'
+    }
+
     // Register our URI scheme.
 
     app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
