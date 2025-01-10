@@ -49,8 +49,7 @@ app.on('second-instance', (_event, commandLine) => {
   }
 })
 
-// This method is called when Electron has finished its initialisation and is ready to create browser windows. Some APIs
-// can only be used after this event occurs.
+// Some methods to handle the OpenCOR URI scheme.
 
 const URI_SCHEME = 'opencor'
 
@@ -99,6 +98,8 @@ function handleOpencorUrl(url: string) {
     }
   }
 }
+
+// The app is ready, so finalise its initialisation.
 
 let mainIsReadyResolver: () => void
 const mainIsReadyPromise = new Promise<void>((resolve) => (mainIsReadyResolver = resolve))
