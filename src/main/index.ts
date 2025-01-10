@@ -3,7 +3,7 @@ import { app, ipcMain } from 'electron'
 import * as settings from 'electron-settings'
 import * as fs from 'fs'
 import * as path from 'path'
-import { isDevMode } from '../electron'
+import { isDevMode, isWindows } from '../electron'
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
@@ -46,6 +46,11 @@ app.on('second-instance', () => {
 app
   .whenReady()
   .then(() => {
+    // Register our URI scheme.
+
+    const URI_SCHEME = 'opencor'
+    app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
+
     // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
 
     const splashScreenWindow: SplashScreenWindow | null = isDevMode() ? null : new SplashScreenWindow()
