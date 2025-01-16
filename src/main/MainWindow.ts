@@ -1,5 +1,5 @@
 import { platform } from '@electron-toolkit/utils'
-import { app, BrowserWindow, Menu, screen, shell } from 'electron'
+import { app, Menu, screen, shell } from 'electron'
 import * as electron from 'electron'
 import * as settings from 'electron-settings'
 import { join } from 'path'
