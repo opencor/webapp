@@ -14,22 +14,22 @@ jobs:
       matrix:
         include:
           - name: Windows
-            os: windows-latest
+            os: windows-2022
             build: ON
           - name: Linux
-            os: ubuntu-latest
+            os: ubuntu-22.04
             build: ON
           - name: macOS (Intel)
             os: macos-13
             build: ON
           - name: macOS (ARM)
-            os: macos-latest
+            os: macos-14
             build: ON
           - name: Code formatting
-            os: ubuntu-latest
+            os: ubuntu-22.04
             build: OFF
           - name: Linting
-            os: ubuntu-latest
+            os: ubuntu-22.04
             build: OFF
     steps:
       - name: Check out OpenCOR
