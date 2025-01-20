@@ -74,5 +74,11 @@
     "vite": "^5.4.11",
     "vite-plugin-static-copy": "^2.2.0",
     "vue": "^3.5.13"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }

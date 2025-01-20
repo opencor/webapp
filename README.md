@@ -42,7 +42,7 @@ where `<script>` is one of the following:
 - `format`: format OpenCOR's code and OpenCOR's Web app's code;
 - `format:check`: check that OpenCOR's code and OpenCOR's Web app's code are properly formatted;
 - `lint`: lint OpenCOR's code and OpenCOR's Web app's code;
-- `package`: (build and) package OpenCOR for the current platform;
+- `package`: (build and) package OpenCOR for the current platform (on Ubuntu, you need to have `libopenjp2-tools` installed for this script to work);
 - `publish:web`: publish OpenCOR's Web app on [npm](https://npmjs.com/);
 - `start`: start OpenCOR in production mode; and
 - `start:web`: start OpenCOR's Web app in production mode.
