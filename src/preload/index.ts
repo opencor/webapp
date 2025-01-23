@@ -26,6 +26,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 // Give our renderer process access to the C++ version of libOpenCOR.
 
 contextBridge.exposeInMainWorld('libOpenCOR', {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   versionString: () => loc.version()
 })
