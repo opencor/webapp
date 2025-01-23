@@ -230,14 +230,12 @@ export class MainWindow extends ApplicationWindow {
       height: mainWindowState.height,
       minWidth: 640,
       minHeight: 480,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       ...(platform.isMacOS ? {} : { icon: icon })
     })
 
     // Set our dock icon (macOS only).
 
     if (platform.isMacOS) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       app.dock.setIcon(icon)
     }
 
