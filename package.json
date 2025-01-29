@@ -24,6 +24,12 @@
   },
   "type": "module",
   "version": "0.0.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  },
   "scripts": {
     "build": "pnpm build:libopencor && electron-vite build",
     "build:arm": "pnpm build:libopencor:arm && electron-vite build",
@@ -64,8 +70,10 @@
     "electron-builder": "^25.1.8",
     "electron-settings": "^4.0.4",
     "electron-vite": "^2.3.0",
+    "eslint": "^9.19.0",
     "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.0.0.tgz",
     "node-addon-api": "^8.3.0",
+    "prettier": "^3.4.2",
     "primeicons": "^7.0.0",
     "primevue": "^4.2.5",
     "systeminformation": "^5.25.11",
