@@ -19,7 +19,6 @@ linux:
       to: 'libOpenCOR.so.0.0.0'
   target:
     - AppImage
-    - deb
     - tar.gz
 mac:
   # - Code signing:
