@@ -4,7 +4,7 @@
 
 There are two versions of OpenCOR:
 
-1. **OpenCOR:** a desktop application that can be run on [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows), [Linux](https://en.wikipedia.org/wiki/Linux), and [macOS](https://en.wikipedia.org/wiki/MacOS) on [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors) and [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family); and
+1. **OpenCOR:** a desktop application that can be run on [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows), [Linux](https://en.wikipedia.org/wiki/Linux), and [macOS](https://en.wikipedia.org/wiki/MacOS) on [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors)/[ARM](https://en.wikipedia.org/wiki/ARM_architecture_family); and
 2. **OpenCOR's Web app:** a [Web app](https://en.wikipedia.org/wiki/Web_application) that can be run using a Web browser.
 
 The main difference between the two versions is that models in OpenCOR are, by default, compiled while they can only be interpreted in OpenCOR's Web app.
