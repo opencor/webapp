@@ -14,7 +14,7 @@ The main difference between the two versions is that models in OpenCOR are, by d
 To build OpenCOR, you need to install [node.js](https://nodejs.org/) and [npm](https://npmjs.com/), which you can do from [here](https://nodejs.org/en/download/package-manager). Then, you need to install [pnpm](https://pnpm.io/):
 
 ```bash
-npm install -g pnpm
+npm -g install pnpm
 ```
 
 ## Scripts
