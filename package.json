@@ -38,7 +38,7 @@
     "format:check": "prettier --log-level silent --check . && clang-format --dry-run -Werror src/libopencor/src/*",
     "lint": "eslint --fix .",
     "package": "pnpm build && electron-builder",
-    "package:arm": "pnpm build:arm && electron-builder",
+    "package:arm": "pnpm build:arm && electron-builder --arm64",
     "publish:web": "pnpm publish ./src/renderer",
     "start": "pnpm build:libopencor && electron-vite preview",
     "start:arm": "pnpm build:libopencor:arm && electron-vite preview",
