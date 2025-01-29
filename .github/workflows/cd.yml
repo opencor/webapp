@@ -15,22 +15,19 @@ jobs:
         include:
           - name: Windows (Intel)
             os: windows-2022
-            package_script: package
           - name: Windows (ARM)
             os: windows-2019
-            package_script: package:arm
+            install_suffix: ':arm'
+            package_suffix: ':arm'
           - name: Linux (Intel)
             os: ubuntu-22.04
-            package_script: package
           - name: Linux (ARM)
             os: ubuntu-22.04-arm
-            package_script: package
+            install_suffix: ':arm'
           - name: macOS (Intel)
             os: macos-13
-            package_script: package
           - name: macOS (ARM)
             os: macos-latest
-            package_script: package
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -74,10 +71,10 @@ jobs:
         run: |
           sudo apt update
           sudo apt install libopenjp2-tools
+      - name: OpenCOR dependencies
+        run: pnpm install${{ matrix.install_suffix }}
       - name: Package OpenCOR
-        run: |
-          pnpm install
-          pnpm ${{ matrix.package_script }}
+        run: pnpm package${{ matrix.package_suffix }}
       - name: Remove blockmap files
         shell: bash
         run: find ./dist -name '*.blockmap' -delete

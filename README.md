@@ -32,10 +32,10 @@ To build OpenCOR, you also need a C/C++ toolchain:
 
 ## Scripts
 
-Before doing anything, you need to install all of OpenCOR's dependencies:
+Before doing anything, you need to install all of OpenCOR's dependencies (see the [note](#note) below regarding the optional `:arm` suffix):
 
 ```bash
-pnpm install
+pnpm install[:arm]
 ```
 
 Then, you can run a given script:
@@ -52,11 +52,14 @@ where `<script>` is one of the following:
 - `build:libopencor:arm`: build OpenCOR's JavaScript interface to the C++ bindings of libOpenCOR for [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family);
 - `build:web`: build OpenCOR's Web app;
 - `clean`: clean OpenCOR's environment;
+- `clean:all`: clean OpenCOR's environment and then prune `pnpm`'s store (the latter is needed when wanting to use both the `install` and `install:arm` scripts);
 - `dev`: start OpenCOR and OpenCOR's Web app in development mode;
 - `dev:arm`: start OpenCOR for [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) and OpenCOR's Web app in development mode;
 - `dev:web`: start OpenCOR's Web app in development mode;
 - `format`: format OpenCOR's code and OpenCOR's Web app's code;
 - `format:check`: check that OpenCOR's code and OpenCOR's Web app's code are properly formatted;
+- `install`: install OpenCOR's dependencies;
+- `install:arm`: install OpenCOR's dependencies for [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows)/[Linux](https://en.wikipedia.org/wiki/Linux) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family);
 - `lint`: lint OpenCOR's code and OpenCOR's Web app's code;
 - `package`: (build and) package OpenCOR for the current platform;
 - `package:arm`: (build and) package OpenCOR for [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) for the current platform;
@@ -65,4 +68,6 @@ where `<script>` is one of the following:
 - `start:arm`: start OpenCOR for [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) in production mode; and
 - `start:web`: start OpenCOR's Web app in production mode.
 
-**Note:** scripts that have an `:arm` suffix are only to be used when wanting to target [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family). The corresponding generic scripts only target [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors) (and [Linux](https://en.wikipedia.org/wiki/Linux)/[macOS](https://en.wikipedia.org/wiki/MacOS) on [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors)/[ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), depending on the operating system and on the C/C++ toolchain).
+<a name="note" ></a>
+
+**Note:** scripts that have an `:arm` suffix are only to be used when wanting to target [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) or installing on [Linux](https://en.wikipedia.org/wiki/Linux) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family). The corresponding generic scripts only target [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors) (and [Linux](https://en.wikipedia.org/wiki/Linux)/[macOS](https://en.wikipedia.org/wiki/MacOS) on [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors)/[ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), depending on the operating system and on the C/C++ toolchain).

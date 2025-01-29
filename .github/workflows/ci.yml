@@ -15,22 +15,19 @@ jobs:
         include:
           - name: Windows (Intel)
             os: windows-2022
-            build_script: build
           - name: Windows (ARM)
             os: windows-2019
-            build_script: build:arm
+            install_suffix: ':arm'
+            build_suffix: ':arm'
           - name: Linux (Intel)
             os: ubuntu-22.04
-            build_script: build
           - name: Linux (ARM)
             os: ubuntu-22.04-arm
-            build_script: build
+            install_suffix: ':arm'
           - name: macOS (Intel)
             os: macos-13
-            build_script: build
           - name: macOS (ARM)
             os: macos-14
-            build_script: build
           - name: Code formatting
             os: ubuntu-22.04
           - name: Linting
@@ -47,12 +44,12 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
       - name: OpenCOR dependencies
-        run: pnpm install
+        run: pnpm install${{ matrix.install_suffix }}
       - name: Build OpenCOR
-        if: matrix.build_script != null
-        run: pnpm ${{ matrix.build_script }}
+        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
+        run: pnpm build${{ matrix.build_suffix }}
       - name: Build OpenCOR's Web app
-        if: matrix.build_script != null
+        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: pnpm build:web
       - name: Code formatting
         if: matrix.name == 'Code formatting'
