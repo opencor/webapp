@@ -15,8 +15,9 @@ jobs:
         include:
           - name: Windows (Intel)
             os: windows-2022
-          - name: Windows (ARM)
-            os: windows-2019
+          #---OPENCOR--- The below is to be enabled once GitHub Actions has Windows ARM runners.
+          # - name: Windows (ARM)
+          #   os: windows-2019
           - name: Linux (Intel)
             os: ubuntu-22.04
           - name: Linux (ARM)
@@ -42,25 +43,9 @@ jobs:
         run: npm install -g pnpm
       - name: OpenCOR dependencies
         run: pnpm install
-      - name: Fix OpenCOR's dependencies (Windows on ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: |
-          choco install wget unzip
-          cd node_modules/electron
-          Remove-Item -Recurse -Force dist
-          mkdir dist
-          cd dist
-          wget https://github.com/electron/electron/releases/download/v34.0.2/electron-v34.0.2-win32-arm64.zip -O electron.zip
-          unzip electron.zip
-          del electron.zip
-      - name: Build OpenCOR (all platforms except Windows on ARM)
-        if: ${{ (matrix.name != 'Windows (ARM)') && (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
+      - name: Build OpenCOR
+        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: pnpm build
-      - name: Build OpenCOR (Windows on ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: |
-          pnpm cmake-js build -a arm64 -B Release -O out/libOpenCOR
-          pnpm electron-vite build
       - name: Build OpenCOR's Web app
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: pnpm build:web

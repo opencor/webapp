@@ -15,8 +15,9 @@ jobs:
         include:
           - name: Windows (Intel)
             os: windows-2022
-          - name: Windows (ARM)
-            os: windows-2019
+          #---OPENCOR--- The below is to be enabled once GitHub Actions has Windows ARM runners.
+          # - name: Windows (ARM)
+          #   os: windows-2019
           - name: Linux (Intel)
             os: ubuntu-22.04
           - name: Linux (ARM)
@@ -70,26 +71,8 @@ jobs:
           sudo apt install libopenjp2-tools
       - name: OpenCOR dependencies
         run: pnpm install
-      - name: Fix OpenCOR's dependencies (Windows on ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: |
-          choco install wget unzip
-          cd node_modules/electron
-          Remove-Item -Recurse -Force dist
-          mkdir dist
-          cd dist
-          wget https://github.com/electron/electron/releases/download/v34.0.2/electron-v34.0.2-win32-arm64.zip -O electron.zip
-          unzip electron.zip
-          del electron.zip
-      - name: Package OpenCOR (all platforms except Windows on ARM)
-        if: ${{ matrix.name != 'Windows (ARM)' }}
+      - name: Package OpenCOR
         run: pnpm package
-      - name: Package OpenCOR (Windows on ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: |
-          pnpm cmake-js build -a arm64 -B Release -O out/libOpenCOR
-          pnpm electron-vite build
-          pnpm electron-builder --arm64
       - name: Remove blockmap files
         shell: bash
         run: find ./dist -name '*.blockmap' -delete
