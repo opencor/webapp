@@ -130,14 +130,35 @@ endif()
 # Link cmake-js and libOpenCOR to our Node.js add-on.
 
 if(WIN32)
-    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+    set(LIBOPENCOR_DIR bin)
+    set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+elseif(APPLE)
+    set(LIBOPENCOR_DIR lib)
+    set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}.${CMAKE_PROJECT_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX})
 else()
-    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+    set(LIBOPENCOR_DIR lib)
+    set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}.${CMAKE_PROJECT_VERSION})
+endif()
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/${LIBOPENCOR_DIR}/${FULL_LIBOPENCOR_FILENAME}
+                                                 ${CMAKE_BINARY_DIR}/../${FULL_LIBOPENCOR_FILENAME})
+
+if(WIN32)
+    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_FILENAME}
+                                                     ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_FILENAME})
+else()
+    set(LIBOPENCOR_FILENAME ${FULL_LIBOPENCOR_FILENAME})
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
-                      ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_FILENAME})
+                      ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_FILENAME})
+
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
+                                                    ${CMAKE_BINARY_DIR}/../${CMAKE_PROJECT_NAME}.node)
 
 # Configure our splash screen.
 
@@ -152,4 +173,4 @@ endif()
 set(VERSION ${PROJECT_VERSION})
 
 configure_file(src/main/assets/splashscreen.html.in
-               ${CMAKE_BINARY_DIR}/splashscreen.html)
+               ${CMAKE_BINARY_DIR}/../splashscreen.html)

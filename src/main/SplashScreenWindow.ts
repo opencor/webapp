@@ -22,7 +22,7 @@ export class SplashScreenWindow extends ApplicationWindow {
       alwaysOnTop: true
     })
 
-    this.loadFile('./out/libOpenCOR/splashscreen.html').catch((err: unknown) => {
+    this.loadFile('./out/splashscreen.html').catch((err: unknown) => {
       console.error('Failed to load splash screen:', err)
     })
   }
