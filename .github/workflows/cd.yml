@@ -64,7 +64,7 @@ jobs:
           node-version: 'lts/*'
       - name: Install pnpm
         run: npm install -g pnpm
-      - name: Install libopenjp2-tools (Linux ARM only) # To get access to opj_decompress.
+      - name: Install libopenjp2-tools (Linux ARM only)
         if: matrix.name == 'Linux (ARM)'
         run: |
           sudo apt update
