@@ -27,7 +27,7 @@ jobs:
           - name: macOS (Intel)
             os: macos-13
           - name: macOS (ARM)
-            os: macos-latest
+            os: macos-14
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
