@@ -19,15 +19,12 @@ jobs:
           - name: Windows (ARM)
             os: windows-2019
             node_architecture: arm64
-            install_suffix: ':arm'
-            build_suffix: ':arm'
           - name: Linux (Intel)
             os: ubuntu-22.04
             node_architecture: x64
           - name: Linux (ARM)
             os: ubuntu-22.04-arm
             node_architecture: arm64
-            install_suffix: ':arm'
           - name: macOS (Intel)
             os: macos-13
             node_architecture: x64
@@ -53,10 +50,10 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
       - name: OpenCOR dependencies
-        run: pnpm install${{ matrix.install_suffix }}
+        run: pnpm install
       - name: Build OpenCOR
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
-        run: pnpm build${{ matrix.build_suffix }}
+        run: pnpm build
       - name: Build OpenCOR's Web app
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: pnpm build:web

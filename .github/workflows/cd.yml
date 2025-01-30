@@ -19,15 +19,12 @@ jobs:
           - name: Windows (ARM)
             os: windows-2019
             node_architecture: arm64
-            install_suffix: ':arm'
-            package_suffix: ':arm'
           - name: Linux (Intel)
             os: ubuntu-22.04
             node_architecture: x64
           - name: Linux (ARM)
             os: ubuntu-22.04-arm
             node_architecture: arm64
-            install_suffix: ':arm'
           - name: macOS (Intel)
             os: macos-13
             node_architecture: x64
@@ -79,9 +76,9 @@ jobs:
           sudo apt update
           sudo apt install libopenjp2-tools
       - name: OpenCOR dependencies
-        run: pnpm install${{ matrix.install_suffix }}
+        run: pnpm install
       - name: Package OpenCOR
-        run: pnpm package${{ matrix.package_suffix }}
+        run: pnpm package
       - name: Remove blockmap files
         shell: bash
         run: find ./dist -name '*.blockmap' -delete
