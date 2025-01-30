@@ -15,19 +15,25 @@ jobs:
         include:
           - name: Windows (Intel)
             os: windows-2022
+            node_architecture: x64
           - name: Windows (ARM)
             os: windows-2019
+            node_architecture: arm64
             install_suffix: ':arm'
             package_suffix: ':arm'
           - name: Linux (Intel)
             os: ubuntu-22.04
+            node_architecture: x64
           - name: Linux (ARM)
             os: ubuntu-22.04-arm
+            node_architecture: arm64
             install_suffix: ':arm'
           - name: macOS (Intel)
             os: macos-13
+            node_architecture: x64
           - name: macOS (ARM)
             os: macos-14
+            node_architecture: arm64
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -63,6 +69,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
+          architecture: ${{ matrix.node_architecture }}
           node-version: 'lts/*'
       - name: Install pnpm
         run: npm install -g pnpm
