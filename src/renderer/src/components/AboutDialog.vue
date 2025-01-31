@@ -3,7 +3,8 @@
     <div class="space-y-7">
       <div class="text-center">
         <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
-        <div class="italic">Copyright {{ copyright }}</div>
+        <div v-if="electronAPI" class="text-xl italic font-bold">{{ electronAPI?.operatingSystem() }}</div>
+        <div class="text-sm italic">Copyright {{ copyright }}</div>
       </div>
       <div class="space-y-2">
         <div>
@@ -42,13 +43,14 @@
 </template>
 
 <script setup lang="ts">
-import * as loc from '../../../libopencor/libOpenCOR'
+import { electronAPI } from '../../../electronAPI'
+import * as locAPI from '../../../libopencor/locAPI'
 
 defineEmits(['close'])
 
 const version = __APP_VERSION__
 const currentYear = new Date().getFullYear()
-const copyright = currentYear === 2024 ? '2024' : `2024-${currentYear.toString()}`
+const copyright = currentYear === 2025 ? '2025' : `2025-${currentYear.toString()}`
 
-const locVersion = loc.version()
+const locVersion = locAPI.version()
 </script>

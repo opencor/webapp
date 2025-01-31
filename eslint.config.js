@@ -2,23 +2,24 @@
 
 import eslint from '@eslint/js'
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
-import vueTsEslintConfig from '@vue/eslint-config-typescript'
+import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
 import pluginVue from 'eslint-plugin-vue'
 import tseslint from 'typescript-eslint'
 import vueParser from 'vue-eslint-parser'
 
-export default [
+export default defineConfigWithVueTs(
   ...pluginVue.configs['flat/essential'],
   eslint.configs.recommended,
   skipFormatting,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
-  ...vueTsEslintConfig(),
+  vueTsConfigs.recommended,
   {
     languageOptions: {
       parser: vueParser,
       parserOptions: {
         parser: {
+          js: tseslint.parser,
           ts: tseslint.parser
         },
         projectService: {
@@ -36,4 +37,4 @@ export default [
     name: 'app/files-to-ignore',
     ignores: ['out/**']
   }
-]
+)

@@ -1,5 +1,4 @@
-@tailwind base;
-@tailwind utilities;
+@import 'tailwindcss';
 
 :root {
   --border-color: var(--p-content-border-color);
@@ -23,4 +22,5 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  user-select: none;
 }

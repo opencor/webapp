@@ -13,27 +13,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Windows
+          - name: Windows (Intel)
             os: windows-2022
-            build: ON
-          - name: Linux
+          #---OPENCOR--- The below is to be enabled once GitHub Actions has Windows ARM runners.
+          # - name: Windows (ARM)
+          #   os: windows-2019
+          - name: Linux (Intel)
             os: ubuntu-22.04
-            build: ON
+          - name: Linux (ARM)
+            os: ubuntu-22.04-arm
           - name: macOS (Intel)
             os: macos-13
-            build: ON
           - name: macOS (ARM)
             os: macos-14
-            build: ON
           - name: Code formatting
             os: ubuntu-22.04
-            build: OFF
           - name: Linting
             os: ubuntu-22.04
-            build: OFF
     steps:
       - name: Check out OpenCOR
         uses: actions/checkout@v4
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@latest
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -43,10 +44,10 @@ jobs:
       - name: OpenCOR dependencies
         run: pnpm install
       - name: Build OpenCOR
-        if: matrix.build == 'ON'
+        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: pnpm build
       - name: Build OpenCOR's Web app
-        if: matrix.build == 'ON'
+        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: pnpm build:web
       - name: Code formatting
         if: matrix.name == 'Code formatting'

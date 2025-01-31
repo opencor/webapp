@@ -1,6 +1,5 @@
 import { platform } from '@electron-toolkit/utils'
-import { app, Menu, screen, shell } from 'electron'
-import * as electron from 'electron'
+import { app, Menu, screen, shell, type MenuItemConstructorOptions } from 'electron'
 import * as settings from 'electron-settings'
 import { join } from 'path'
 import { isDevMode } from '../electron'
@@ -94,7 +93,7 @@ export class MainWindow extends ApplicationWindow {
 
     // App menu.
 
-    let appMenu: electron.MenuItemConstructorOptions = {}
+    let appMenu: MenuItemConstructorOptions = {}
 
     if (platform.isMacOS) {
       appMenu = {
@@ -122,14 +121,14 @@ export class MainWindow extends ApplicationWindow {
 
     // File menu.
 
-    const fileMenu: electron.MenuItemConstructorOptions = {
+    const fileMenu: MenuItemConstructorOptions = {
       label: 'File',
       submenu: [{ role: 'quit' }]
     }
 
     // View menu.
 
-    const viewMenu: electron.MenuItemConstructorOptions = {
+    const viewMenu: MenuItemConstructorOptions = {
       label: 'View',
       submenu: [
         { role: 'resetZoom' },
@@ -142,8 +141,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Tools menu.
 
-    const toolsSubMenu: electron.MenuItemConstructorOptions[] = []
-    const toolsMenu: electron.MenuItemConstructorOptions = {
+    const toolsSubMenu: MenuItemConstructorOptions[] = []
+    const toolsMenu: MenuItemConstructorOptions = {
       label: 'Tools',
       submenu: toolsSubMenu
     }
@@ -164,8 +163,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Help menu.
 
-    const helpSubMenu: electron.MenuItemConstructorOptions[] = []
-    const helpMenu: electron.MenuItemConstructorOptions = {
+    const helpSubMenu: MenuItemConstructorOptions[] = []
+    const helpMenu: MenuItemConstructorOptions = {
       label: 'Help',
       submenu: helpSubMenu
     }
@@ -199,7 +198,7 @@ export class MainWindow extends ApplicationWindow {
 
     // Set our menu.
 
-    const menu: electron.MenuItemConstructorOptions[] = []
+    const menu: MenuItemConstructorOptions[] = []
 
     if (platform.isMacOS) {
       menu.push(appMenu)
@@ -231,14 +230,12 @@ export class MainWindow extends ApplicationWindow {
       height: mainWindowState.height,
       minWidth: 640,
       minHeight: 480,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       ...(platform.isMacOS ? {} : { icon: icon })
     })
 
     // Set our dock icon (macOS only).
 
     if (platform.isMacOS) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       app.dock.setIcon(icon)
     }
 

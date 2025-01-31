@@ -1,10 +1,28 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import loc from '../../out/libOpenCOR/Release/libOpenCOR.node'
+import loc from '../../out/libOpenCOR.node'
+import * as si from 'systeminformation'
 
 // Some bridging between our main process and renderer process.
-// Note: ../electronapi.ts needs to be in sync with this file.
+// Note: src/electronAPI.ts needs to be in sync with this file.
+
+const osInfo = await si.osInfo()
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Some general methods.
+
+  operatingSystem: () => {
+    const architecture = osInfo.arch === 'x64' ? 'Intel' : 'ARM'
+
+    if (osInfo.platform === 'Windows') {
+      // Note: osInfo.distro returns something like "Microsoft Windows 11 Pro", but we want it to return
+      //       "Windows 11 Pro", so we remove the "Microsoft " part.
+
+      return osInfo.distro.replace('Microsoft ', '') + ' (' + architecture + ')'
+    }
+
+    return osInfo.distro + ' ' + osInfo.release + ' (' + architecture + ')'
+  },
+
   // Renderer process asking the main process to do something for it.
 
   resetAll: () => ipcRenderer.invoke('reset-all'),
@@ -24,8 +42,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 })
 
 // Give our renderer process access to the C++ version of libOpenCOR.
+// Note: src/libopencor/locAPI.ts needs to be in sync with this file.
 
-contextBridge.exposeInMainWorld('libOpenCOR', {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+contextBridge.exposeInMainWorld('locAPI', {
   versionString: () => loc.version()
 })

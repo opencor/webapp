@@ -3,6 +3,11 @@
     "name": "Alan Garny",
     "email": "a.garny@auckland.ac.nz"
   },
+  "binary": {
+    "napi_versions": [
+      7
+    ]
+  },
   "bugs": {
     "url": "https://github.com/opencor/webapp/issues"
   },
@@ -19,59 +24,55 @@
   },
   "type": "module",
   "version": "0.0.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  },
   "scripts": {
     "build": "pnpm build:libopencor && electron-vite build",
     "build:libopencor": "cmake-js build -B Release -O out/libOpenCOR",
-    "build:web": "(cd ./src/renderer && vite build)",
+    "build:web": "cd ./src/renderer && vite build",
     "clean": "node res/clean.js",
     "dev": "pnpm build:libopencor && electron-vite dev --watch",
-    "dev:web": "(cd ./src/renderer && vite dev)",
+    "dev:web": "cd ./src/renderer && vite dev",
     "format": "prettier --log-level silent --write . && clang-format -i src/libopencor/src/*",
     "format:check": "prettier --log-level silent --check . && clang-format --dry-run -Werror src/libopencor/src/*",
     "lint": "eslint --fix .",
-    "package": "pnpm build && electron-builder",
+    "package": "pnpm build && node res/prepare-for-packaging.js && electron-builder",
     "publish:web": "pnpm publish ./src/renderer",
     "start": "pnpm build:libopencor && electron-vite preview",
-    "start:web": "(cd ./src/renderer && vite preview)"
-  },
-  "dependencies": {
-    "@electron-toolkit/preload": "^3.0.1",
-    "@electron-toolkit/utils": "^3.0.0",
-    "@primevue/themes": "^4.2.5",
-    "electron-settings": "^4.0.4",
-    "electron-updater": "^6.3.9",
-    "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.0.0.tgz",
-    "primeicons": "^7.0.0",
-    "primevue": "^4.2.5"
+    "start:web": "pnpm build:web && cd ./src/renderer && vite preview"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
-    "@eslint/js": "^9.17.0",
+    "@electron-toolkit/utils": "^3.0.0",
     "@primevue/auto-import-resolver": "^4.2.5",
-    "@types/node": "^22.10.5",
+    "@primevue/themes": "^4.2.5",
+    "@tailwindcss/postcss": "^4.0.1",
+    "@types/node": "^22.12.0",
     "@vitejs/plugin-vue": "^5.2.1",
-    "@vue/eslint-config-prettier": "^10.1.0",
-    "@vue/eslint-config-typescript": "^14.2.0",
-    "@vue/tsconfig": "^0.5.1",
-    "@wasm-fmt/clang-format": "^19.1.6",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.3.0",
+    "@vue/tsconfig": "^0.7.0",
+    "@wasm-fmt/clang-format": "^19.1.7",
     "autoprefixer": "^10.4.20",
     "cmake-js": "^7.3.0",
-    "electron": "^33.3.1",
+    "electron": "^34.0.2",
     "electron-builder": "^25.1.8",
-    "electron-builder-squirrel-windows": "^25.1.8",
+    "electron-settings": "^4.0.4",
     "electron-vite": "^2.3.0",
-    "eslint": "^9.17.0",
-    "eslint-plugin-vue": "^9.32.0",
+    "eslint": "^9.19.0",
+    "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.0.0.tgz",
     "node-addon-api": "^8.3.0",
-    "postcss": "^8.4.49",
     "prettier": "^3.4.2",
-    "start-server-and-test": "^2.0.9",
-    "tailwindcss": "^3.4.17",
-    "tailwindcss-primeui": "^0.3.4",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.19.1",
-    "unplugin-vue-components": "^0.27.5",
-    "vite": "^5.4.11",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.2.5",
+    "systeminformation": "^5.25.11",
+    "tailwindcss": "^4.0.1",
+    "unplugin-vue-components": "^28.0.0",
+    "vite": "^5.4.14",
     "vite-plugin-static-copy": "^2.2.0",
     "vue": "^3.5.13"
   },
