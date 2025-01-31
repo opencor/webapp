@@ -31,6 +31,7 @@ To build OpenCOR, you also need a C/C++ toolchain:
 **Notes:**
 
 - Yes, OpenCOR for [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) can only be built using [Visual Studio Community 2019](https://apps.microsoft.com/detail/xp8cdjnzkfm06w) (this is because we must use `MSVC v142`; see [here](https://www.electronjs.org/docs/latest/tutorial/windows-arm#native-modules) for more information).
+- On Ubuntu, you need to install the `patchelf` package so that OpenCOR can be properly packaged.
 - On Ubuntu on ARM, you need to install the `libopenjp2-tools` package so that [`electron-builder`](https://www.electron.build/) can get access to [`opj_decompress`](https://manpages.ubuntu.com/manpages/man1/opj_decompress.1.html).
 - On [Ubuntu 24.04 LTS](https://en.wikipedia.org/wiki/Ubuntu_version_history#2404), you need to deactivate restrictions using `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (see [here](https://github.com/electron/electron/issues/42510) for more information).
 
