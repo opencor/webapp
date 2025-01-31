@@ -8,13 +8,13 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     />
-    <link rel="stylesheet" href="../../src/main/assets/splashscreen.css" />
+    <link rel="stylesheet" href="../src/main/assets/splashscreen.css" />
   </head>
   <body>
     <table class="contents">
       <tr>
         <td class="logo" colspan="2">
-          <img class="logo" src="../../src/renderer/src/assets/logo.svg" />
+          <img class="logo" src="../src/renderer/src/assets/logo.svg" />
         </td>
       </tr>
       <tr>

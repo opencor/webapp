@@ -1,7 +1,6 @@
 name: CD
 
 on:
-  push:
   release:
     types: [created]
   workflow_dispatch:
@@ -14,14 +13,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Windows
-            os: windows-latest
-          - name: Linux
-            os: ubuntu-latest
+          - name: Windows (Intel)
+            os: windows-2022
+          #---OPENCOR--- The below is to be enabled once GitHub Actions has Windows ARM runners.
+          # - name: Windows (ARM)
+          #   os: windows-2019
+          - name: Linux (Intel)
+            os: ubuntu-22.04
+          - name: Linux (ARM)
+            os: ubuntu-22.04-arm
           - name: macOS (Intel)
             os: macos-13
           - name: macOS (ARM)
-            os: macos-latest
+            os: macos-14
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -42,14 +46,14 @@ jobs:
       - name: Check out OpenCOR
         uses: actions/checkout@v4
       - name: Retrieve the EV certificate (Windows only)
-        if: matrix.name == 'Windows'
+        if: ${{ (matrix.name == 'Windows (Intel)') || (matrix.name == 'Windows (ARM)') }}
         shell: bash
         run: |
           echo "CSC_LINK=$(echo $WINDOWS_CSC_LINK)" >> $GITHUB_ENV
           echo "CSC_KEY_PASSWORD=$(echo $WINDOWS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
           echo -n $EV_CERTIFICATE_BASE64 | base64 -d > $WINDOWS_CSC_LINK
       - name: Retrieve the Developer ID Application certificates (macOS only)
-        if: matrix.name == 'macOS (Intel)' || matrix.name == 'macOS (ARM)'
+        if: ${{ (matrix.name == 'macOS (Intel)') || (matrix.name == 'macOS (ARM)') }}
         run: |
           echo "CSC_LINK=$(echo $MACOS_CSC_LINK)" >> $GITHUB_ENV
           echo "CSC_KEY_PASSWORD=$(echo $MACOS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
@@ -60,10 +64,15 @@ jobs:
           node-version: 'lts/*'
       - name: Install pnpm
         run: npm install -g pnpm
-      - name: Package OpenCOR
+      - name: Install libopenjp2-tools (Linux ARM only)
+        if: matrix.name == 'Linux (ARM)'
         run: |
-          pnpm install
-          pnpm package
+          sudo apt update
+          sudo apt install libopenjp2-tools
+      - name: OpenCOR dependencies
+        run: pnpm install
+      - name: Package OpenCOR
+        run: pnpm package
       - name: Remove blockmap files
         shell: bash
         run: find ./dist -name '*.blockmap' -delete

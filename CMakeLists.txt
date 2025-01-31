@@ -1,13 +1,18 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(libOpenCOR
-        VERSION 0.0.0)
+project(libOpenCOR VERSION 0.0.0)
 
 # Enable C++20.
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Some common CMake policies.
+
+foreach(POLICY CMP0042 CMP0091)
+    cmake_policy(SET ${POLICY} NEW)
+endforeach()
 
 # Get access to cmake-js.
 
@@ -17,24 +22,30 @@ include_directories(${CMAKE_JS_INC})
 
 if(WIN32)
     set(PLATFORM Windows)
-    set(ARCHITECTURE Intel)
     set(EXTENSION .zip)
 elseif(APPLE)
     set(PLATFORM macOS)
     set(EXTENSION .zip)
+else()
+    set(PLATFORM Linux)
+    set(EXTENSION .tar.gz)
+endif()
 
-    if("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+if(WIN32)
+    if("${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}" STREQUAL "x64")
         set(ARCHITECTURE Intel)
     else()
         set(ARCHITECTURE ARM)
     endif()
 else()
-    set(PLATFORM Linux)
-    set(ARCHITECTURE Intel)
-    set(EXTENSION .tar.gz)
+    if("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+        set(ARCHITECTURE Intel)
+    else()
+        set(ARCHITECTURE ARM)
+    endif()
 endif()
 
-set(LIBOPENCOR_FILE_NAME_WE libOpenCOR-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${PLATFORM}-${ARCHITECTURE}-Shared)
+set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${PLATFORM}-${ARCHITECTURE}-Shared)
 set(LIBOPENCOR_FILE_NAME ${LIBOPENCOR_FILE_NAME_WE}${EXTENSION})
 
 file(DOWNLOAD https://opencor.ws/libopencor/downloads/${LIBOPENCOR_FILE_NAME}
@@ -44,10 +55,14 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_BINARY_DIR}/${LIBOPE
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 OUTPUT_QUIET)
 
+execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${LIBOPENCOR_FILE_NAME_WE} Shared
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                OUTPUT_QUIET)
+
 file(REMOVE ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
 
-include_directories(${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/include
-                    ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/include/libopencor/module)
+include_directories(${CMAKE_BINARY_DIR}/Shared/include
+                    ${CMAKE_BINARY_DIR}/Shared/include/libopencor/module)
 
 # Use the appropriate C runtime library.
 
@@ -106,42 +121,70 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
                       PREFIX ""
                       SUFFIX ".node")
 
+# Generate node.lib.
+
+if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+    execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
+endif()
+
 # Link cmake-js and libOpenCOR to our Node.js add-on.
 
 if(WIN32)
-    set(LIBOPENCOR_FILENAME libOpenCOR${CMAKE_IMPORT_LIBRARY_SUFFIX})
+    set(LIBOPENCOR_DIR bin)
+    set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
 else()
-    set(LIBOPENCOR_FILENAME libOpenCOR${CMAKE_SHARED_LIBRARY_SUFFIX})
+    set(LIBOPENCOR_DIR lib)
+
+    if(APPLE)
+        set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}.${CMAKE_PROJECT_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX})
+    else()
+        set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}.${CMAKE_PROJECT_VERSION})
+    endif()
+endif()
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/${LIBOPENCOR_DIR}/${FULL_LIBOPENCOR_FILENAME}
+                                                 ${CMAKE_BINARY_DIR}/../${FULL_LIBOPENCOR_FILENAME})
+
+if(WIN32)
+    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_FILENAME}
+                                                     ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_FILENAME})
+else()
+    set(LIBOPENCOR_FILENAME ${FULL_LIBOPENCOR_FILENAME})
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
-                      ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}/lib/${LIBOPENCOR_FILENAME})
+                      ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_FILENAME})
 
-# Include the Node-API wrappers.
+set(LIBOPENCOR_NODE_FILENAME ${CMAKE_BINARY_DIR}/../${CMAKE_PROJECT_NAME}.node)
 
-execute_process(COMMAND node -p "require('node-addon-api').include"
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                OUTPUT_VARIABLE NODE_ADDON_API_DIR)
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
+                                                    ${LIBOPENCOR_NODE_FILENAME})
 
-string(REGEX REPLACE "[\r\n\"]" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
+# On Linux, replace the RUNPATH value with an RPATH value of $ORIGIN so that, once deployed, OpenCOR can find our C++
+# version of libOpenCOR.
 
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-                           ${NODE_ADDON_API_DIR})
+if(NOT WIN32 AND NOT APPLE)
+    find_program(PATCHELF patchelf REQUIRED)
 
-add_definitions(-DNAPI_VERSION=3)
+    add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+                       COMMAND ${PATCHELF} --set-rpath "\\$$ORIGIN" --force-rpath ${LIBOPENCOR_NODE_FILENAME})
+endif()
 
 # Configure our splash screen.
 
 string(TIMESTAMP CURRENT_YEAR "%Y")
 
-if(CURRENT_YEAR EQUAL 2024)
-    set(COPYRIGHT "2024")
+if(CURRENT_YEAR EQUAL 2025)
+    set(COPYRIGHT "2025")
 else()
-    set(COPYRIGHT "2024-${CURRENT_YEAR}")
+    set(COPYRIGHT "2025-${CURRENT_YEAR}")
 endif()
 
 set(VERSION ${PROJECT_VERSION})
 
 configure_file(src/main/assets/splashscreen.html.in
-               ${CMAKE_BINARY_DIR}/splashscreen.html)
+               ${CMAKE_BINARY_DIR}/../splashscreen.html)
