@@ -20,10 +20,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return osInfo.distro.replace('Microsoft ', '') + ' (' + architecture + ')'
     }
 
-    if (osInfo.platform === 'linux') {
-      return osInfo.distro + ' ' + osInfo.release + ' (' + architecture + ')'
-    }
-
     return osInfo.distro + ' ' + osInfo.release + ' (' + architecture + ')'
   },
 
