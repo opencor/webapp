@@ -5,8 +5,6 @@ win:
   extraFiles:
     - from: 'out/libOpenCOR.dll'
       to: 'libOpenCOR.dll'
-    - from: 'out/libOpenCOR/libOpenCOR-0.0.0-Windows-ARM-Shared/bin/libOpenCOR.dll'
-      to: 'libOpenCOR.dll'
   target:
     - nsis
     - zip
@@ -18,8 +16,6 @@ linux:
   executableName: OpenCOR
   extraFiles:
     - from: 'out/libOpenCOR.so.0.0.0'
-      to: 'libOpenCOR.so.0.0.0'
-    - from: 'out/libOpenCOR/libOpenCOR-0.0.0-Linux-ARM-Shared/lib/libOpenCOR.so.0.0.0'
       to: 'libOpenCOR.so.0.0.0'
   target:
     - AppImage
