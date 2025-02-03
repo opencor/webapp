@@ -56,7 +56,7 @@ app.on('second-instance', (_event, commandLine) => {
   }
 })
 
-// Some methods to handle the OpenCOR URI scheme.
+// Handle the OpenCOR URI scheme.
 
 const URI_SCHEME = 'opencor'
 
