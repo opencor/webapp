@@ -42,6 +42,14 @@ app.removeAllListeners('second-instance')
 app.on('second-instance', (_event, commandLine) => {
   log('- second-instance\n')
 
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+
+    mainWindow.focus()
+  }
+
   const url = opencorUrl(commandLine)
 
   if (url) {
