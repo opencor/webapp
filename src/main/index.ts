@@ -2,13 +2,14 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { app, ipcMain } from 'electron'
 import * as settings from 'electron-settings'
 import * as fs from 'fs'
+import * as os from 'os'
 import * as path from 'path'
 import { isDevMode, isWindows } from '../electron'
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
 function log(message: string) {
-  fs.writeFileSync('/Users/Alan/Desktop/WebApp.txt', message, { flag: 'a' })
+  fs.writeFileSync(path.join(os.homedir() + '/Desktop/WebApp.txt'), message, { flag: 'a' })
 }
 
 // Prettify our settings.
