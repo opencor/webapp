@@ -1,9 +1,10 @@
 import { platform } from '@electron-toolkit/utils'
 import { app, Menu, screen, shell, type MenuItemConstructorOptions } from 'electron'
 import * as settings from 'electron-settings'
-import { join } from 'path'
+import * as path from 'path'
 import { isDevMode } from '../electron'
 import icon from './assets/icon.png?asset'
+import { URI_SCHEME, log } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
@@ -218,7 +219,55 @@ export class MainWindow extends ApplicationWindow {
     this.setMenuBarVisibility(true)
   }
 
-  constructor(splashScreenWindow: SplashScreenWindow | null) {
+  handleArguments(commandLine: string[]): void {
+    if (commandLine.length === 0) {
+      log(`- No command line arguments\n`)
+
+      return
+    }
+
+    log(`- Command line:\n   - ${commandLine.join('\n   - ')}\n`)
+
+    // Handle every command line argument.
+
+    commandLine.forEach((argument) => {
+      if (argument.startsWith(`${URI_SCHEME}://`)) {
+        function isAction(action: string, expectedAction: string): boolean {
+          return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
+        }
+
+        // We have been launched with a URL, so we need to parse it and act accordingly.
+        log(`   - argument: ${argument}\n`)
+
+        const parsedUrl = new URL(argument)
+
+        if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
+          // Open our about dialog.
+          log(`   - openAboutDialog\n`)
+
+          this.webContents.send('about')
+        } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
+          // Open our preferences dialog.
+          //---OPENCOR--- To be disabled once we have a preferences dialog.
+          // this.webContents.send('preferences')
+        } else {
+          // Check whether we have files to open.
+
+          const paths = parsedUrl.pathname.substring(1).split('%7C')
+
+          if (
+            (isAction(parsedUrl.hostname, 'openFile') && paths.length === 1) ||
+            (isAction(parsedUrl.hostname, 'openFiles') && paths.length > 1)
+          ) {
+            // Open the given file(s).
+            //---OPENCOR--- To be done.
+          }
+        }
+      }
+    })
+  }
+
+  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow | null) {
     // Initialise ourselves.
 
     const mainWindowState = retrieveMainWindowState()
@@ -247,16 +296,27 @@ export class MainWindow extends ApplicationWindow {
       this.setFullScreen(true)
     }
 
-    // Ask for the splash screen window to be closed with a short delay once we are visible.
+    // Ask for the splash screen window to be closed with a short delay once we are visible and handle our command line
+    // (also with a short delay if needed).
 
     this.once('show', () => {
+      let handleCommandLineDelay = 0
+
       if (!this.splashScreenWindowClosed && !!splashScreenWindow) {
+        const SHORT_DELAY = 369
+
         this.splashScreenWindowClosed = true
+
+        handleCommandLineDelay = SHORT_DELAY
 
         setTimeout(() => {
           splashScreenWindow.close()
-        }, 369)
+        }, SHORT_DELAY)
       }
+
+      setTimeout(() => {
+        this.handleArguments(commandLine)
+      }, handleCommandLineDelay)
     })
 
     // Keep track of our new state upon closing.
@@ -299,7 +359,7 @@ export class MainWindow extends ApplicationWindow {
         console.error('Failed to load URL:', err)
       })
     } else {
-      this.loadFile(join(import.meta.dirname, '../renderer/index.html')).catch((err: unknown) => {
+      this.loadFile(path.join(import.meta.dirname, '../renderer/index.html')).catch((err: unknown) => {
         console.error('Failed to load file:', err)
       })
     }

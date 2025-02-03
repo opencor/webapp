@@ -8,7 +8,7 @@ import { isDevMode, isWindows } from '../electron'
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
-function log(message: string) {
+export function log(message: string) {
   fs.writeFileSync(path.join(os.homedir() + '/Desktop/WebApp.txt'), message, { flag: 'a' })
 }
 
@@ -27,10 +27,6 @@ if (settings.getSync('resetAll')) {
 
 // Allow only one instance of OpenCOR.
 
-function opencorUrl(url: string[]): string | undefined {
-  return url.find((url) => isOpencorUrl(url))
-}
-
 const singleInstanceLock = app.requestSingleInstanceLock()
 
 if (!singleInstanceLock) {
@@ -39,86 +35,33 @@ if (!singleInstanceLock) {
 
 let mainWindow: MainWindow | null = null
 
-app.on('second-instance', (_event, commandLine) => {
+app.on('second-instance', (_event, argv) => {
   log('- second-instance\n')
 
-  if (mainWindow) {
+  if (argv.length === 0) {
+    log(`   - No command line arguments\n`)
+  } else {
+    log(`   - Command line:\n      - ${argv.join('\n      - ')}\n`)
+  }
+
+  if (mainWindow !== null) {
     if (mainWindow.isMinimized()) {
       mainWindow.restore()
     }
 
     mainWindow.focus()
-  }
 
-  const url = opencorUrl(commandLine)
-
-  if (url) {
-    handleOpencorUrl(url)
+    mainWindow.handleArguments(argv)
   }
 })
 
-// Handle the OpenCOR URI scheme.
-
-const URI_SCHEME = 'opencor'
-
-function isOpencorUrl(url: string): boolean {
-  return url.startsWith(`${URI_SCHEME}://`)
-}
-
-function handleOpencorUrl(url: string) {
-  if (!app.isReady()) {
-    app.once('ready', () => {
-      handleOpencorUrl(url)
-    })
-
-    return
-  }
-
-  function isAction(action: string, expectedAction: string): boolean {
-    return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
-  }
-
-  // We have been launched with a URL, so we need to parse it and act accordingly.
-  log('------------------\n')
-  log(`- url: ${url}\n`)
-
-  const parsedUrl = new URL(url)
-
-  if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
-    // Open our about dialog.
-
-    mainWindow?.webContents.send('about')
-  } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
-    // Open our preferences dialog.
-    //---OPENCOR--- To be disabled once we have a preferences dialog.
-    // mainWindow?.webContents.send('preferences')
-  } else {
-    // Check whether we have files to open.
-
-    const paths = parsedUrl.pathname.substring(1).split('%7C')
-
-    if (
-      (isAction(parsedUrl.hostname, 'openFile') && paths.length === 1) ||
-      (isAction(parsedUrl.hostname, 'openFiles') && paths.length > 1)
-    ) {
-      // Open the given file(s).
-      //---OPENCOR--- To be done.
-    }
-  }
-}
-
 // The app is ready, so finalise its initialisation.
 
-let mainIsReadyResolver: () => void
-const mainIsReadyPromise = new Promise<void>((resolve) => (mainIsReadyResolver = resolve))
-
-function mainIsReady() {
-  mainIsReadyResolver()
-}
+export const URI_SCHEME = 'opencor'
 
 app
   .whenReady()
-  .then(async () => {
+  .then(() => {
     // Set process.env.NODE_ENV to 'production' if we are not the default app.
     // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they
     //       should run in development mode (default) or production mode.
@@ -132,18 +75,11 @@ app
     app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
 
     app.on('open-url', (_, url) => {
-      if (isOpencorUrl(url)) {
-        handleOpencorUrl(url)
-      }
+      log('- open-url\n')
+      log(`  - url: ${url}\n`)
+
+      mainWindow?.handleArguments([url])
     })
-
-    if (isWindows()) {
-      const url = opencorUrl(process.argv)
-
-      if (url) {
-        handleOpencorUrl(url)
-      }
-    }
 
     // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
 
@@ -169,11 +105,7 @@ app
 
     // Create our main window.
 
-    mainIsReady()
-
-    await mainIsReadyPromise
-
-    mainWindow = new MainWindow(splashScreenWindow)
+    mainWindow = new MainWindow(process.argv, splashScreenWindow)
   })
   .catch((err: unknown) => {
     console.error('Failed to create the main window:', err)
