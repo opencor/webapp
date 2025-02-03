@@ -26,7 +26,7 @@ if (settings.getSync('resetAll')) {
 
 // Allow only one instance of OpenCOR.
 
-function findOpencorUrl(url: string[]): string | undefined {
+function opencorUrl(url: string[]): string | undefined {
   return url.find((url) => isOpencorUrl(url))
 }
 
@@ -42,7 +42,7 @@ app.removeAllListeners('second-instance')
 app.on('second-instance', (_event, commandLine) => {
   log('- second-instance\n')
 
-  const url = findOpencorUrl(commandLine)
+  const url = opencorUrl(commandLine)
 
   if (url) {
     handleOpencorUrl(url)
@@ -131,7 +131,7 @@ app
     })
 
     if (isWindows()) {
-      const url = findOpencorUrl(process.argv)
+      const url = opencorUrl(process.argv)
 
       if (url) {
         handleOpencorUrl(url)
