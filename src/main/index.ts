@@ -38,7 +38,6 @@ if (!singleInstanceLock) {
 
 let mainWindow: MainWindow | null = null
 
-app.removeAllListeners('second-instance')
 app.on('second-instance', (_event, commandLine) => {
   log('- second-instance\n')
 
@@ -131,7 +130,6 @@ app
 
     app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
 
-    app.removeAllListeners('open-url')
     app.on('open-url', (_, url) => {
       if (isOpencorUrl(url)) {
         handleOpencorUrl(url)
