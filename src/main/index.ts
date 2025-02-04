@@ -25,13 +25,26 @@ if (settings.getSync('resetAll')) {
   fs.rmSync(path.join(app.getPath('userData'), 'settings.json'))
 }
 
+// Register our URI scheme.
+
+export const URI_SCHEME = 'opencor'
+
+let mainWindow: MainWindow | null = null
+
+app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
+
+app.on('open-url', (_, url) => {
+  log('- open-url\n')
+  log(`  - url: ${url}\n`)
+
+  mainWindow?.handleArguments([url])
+})
+
 // Allow only one instance of OpenCOR.
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 }
-
-let mainWindow: MainWindow | null = null
 
 app.on('second-instance', (_event, argv) => {
   log('- second-instance\n')
@@ -55,8 +68,6 @@ app.on('second-instance', (_event, argv) => {
 
 // The app is ready, so finalise its initialisation.
 
-export const URI_SCHEME = 'opencor'
-
 app
   .whenReady()
   .then(() => {
@@ -67,17 +78,6 @@ app
     if (!process.defaultApp) {
       process.env.NODE_ENV = 'production'
     }
-
-    // Register our URI scheme.
-
-    app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
-
-    app.on('open-url', (_, url) => {
-      log('- open-url\n')
-      log(`  - url: ${url}\n`)
-
-      mainWindow?.handleArguments([url])
-    })
 
     // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
 

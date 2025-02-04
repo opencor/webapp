@@ -230,6 +230,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Handle every command line argument.
 
+    log(`- Handling command line arguments:\n`)
+
     commandLine.forEach((argument) => {
       if (argument.startsWith(`${URI_SCHEME}://`)) {
         function isAction(action: string, expectedAction: string): boolean {
@@ -237,19 +239,20 @@ export class MainWindow extends ApplicationWindow {
         }
 
         // We have been launched with a URL, so we need to parse it and act accordingly.
-        log(`   - argument: ${argument}\n`)
+        log(`   - Argument: ${argument}\n`)
 
         const parsedUrl = new URL(argument)
 
         if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
           // Open our about dialog.
-          log(`   - openAboutDialog\n`)
+          log(`      ---> openAboutDialog\n`)
 
           this.webContents.send('about')
         } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
           // Open our preferences dialog.
           //---OPENCOR--- To be disabled once we have a preferences dialog.
           // this.webContents.send('preferences')
+          log(`      ---> openPreferencesDialog\n`)
         } else {
           // Check whether we have files to open.
 
@@ -261,6 +264,11 @@ export class MainWindow extends ApplicationWindow {
           ) {
             // Open the given file(s).
             //---OPENCOR--- To be done.
+            if (isAction(parsedUrl.hostname, 'openFile')) {
+              log(`      ---> openFile:\n            - ${paths[0]}\n`)
+            } else {
+              log(`      ---> openFiles:\n            - ${paths.join('\n            - ')}\n`)
+            }
           }
         }
       }
