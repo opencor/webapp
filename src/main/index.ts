@@ -27,9 +27,7 @@ if (settings.getSync('resetAll')) {
 
 // Allow only one instance of OpenCOR.
 
-const singleInstanceLock = app.requestSingleInstanceLock()
-
-if (!singleInstanceLock) {
+if (!app.requestSingleInstanceLock()) {
   app.quit()
 }
 
