@@ -30,12 +30,15 @@ if (settings.getSync('resetAll')) {
 export const URI_SCHEME = 'opencor'
 
 let mainWindow: MainWindow | null = null
+let triggeringUrl: string | null = null
 
 app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
 
 app.on('open-url', (_, url) => {
   log('- open-url\n')
   log(`  - url: ${url}\n`)
+
+  triggeringUrl = url
 
   mainWindow?.handleArguments([url])
 })
@@ -101,9 +104,10 @@ app
     ipcMain.handle('enable-menu', enableMenu)
     ipcMain.handle('disable-menu', disableMenu)
 
-    // Create our main window.
+    // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
+    // triggering URL.
 
-    mainWindow = new MainWindow(process.argv, splashScreenWindow)
+    mainWindow = new MainWindow(triggeringUrl !== null ? [triggeringUrl] : process.argv, splashScreenWindow)
   })
   .catch((err: unknown) => {
     console.error('Failed to create the main window:', err)
