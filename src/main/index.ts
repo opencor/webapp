@@ -30,19 +30,7 @@ if (settings.getSync('resetAll')) {
 
 export const URI_SCHEME = 'opencor'
 
-let mainWindow: MainWindow | null = null
-let triggeringUrl: string | null = null
-
 app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
-
-app.on('open-url', (_, url) => {
-  log('- open-url\n')
-  log(`  - url: ${url}\n`)
-
-  triggeringUrl = url
-
-  mainWindow?.handleArguments([url])
-})
 
 if (isLinux()) {
   // Make our application icon available so that it can be referenced by our desktop file.
@@ -106,6 +94,20 @@ app.on('second-instance', (_event, argv) => {
 
     mainWindow.handleArguments(argv)
   }
+})
+
+// Handle the clicking of an opencor:// link.
+
+let mainWindow: MainWindow | null = null
+let triggeringUrl: string | null = null
+
+app.on('open-url', (_, url) => {
+  log('- open-url\n')
+  log(`  - url: ${url}\n`)
+
+  triggeringUrl = url
+
+  mainWindow?.handleArguments([url])
 })
 
 // The app is ready, so finalise its initialisation.
