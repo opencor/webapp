@@ -130,33 +130,16 @@ endif()
 # Link cmake-js and libOpenCOR to our Node.js add-on.
 
 if(WIN32)
-    set(LIBOPENCOR_DIR bin)
-    set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
-else()
-    set(LIBOPENCOR_DIR lib)
-
-    if(APPLE)
-        set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}.${CMAKE_PROJECT_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX})
-    else()
-        set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}.${CMAKE_PROJECT_VERSION})
-    endif()
-endif()
-
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/${LIBOPENCOR_DIR}/${FULL_LIBOPENCOR_FILENAME}
-                                                 ${CMAKE_BINARY_DIR}/../${FULL_LIBOPENCOR_FILENAME})
-
-if(WIN32)
     set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
-
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_FILENAME}
-                                                     ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_FILENAME})
+elseif(APPLE)
+    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}.${CMAKE_PROJECT_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX})
 else()
-    set(LIBOPENCOR_FILENAME ${FULL_LIBOPENCOR_FILENAME})
+    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}.${CMAKE_PROJECT_VERSION})
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
-                      ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_FILENAME})
+                      ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_FILENAME})
 
 set(LIBOPENCOR_NODE_FILENAME ${CMAKE_BINARY_DIR}/../${CMAKE_PROJECT_NAME}.node)
 
@@ -187,4 +170,4 @@ endif()
 set(VERSION ${PROJECT_VERSION})
 
 configure_file(src/main/assets/splashscreen.html.in
-               ${CMAKE_BINARY_DIR}/../splashscreen.html)
+               ${CMAKE_BINARY_DIR}/../../out/splashscreen.html)

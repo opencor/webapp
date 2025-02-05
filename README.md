@@ -11,7 +11,7 @@ The main difference between the two versions is that models in OpenCOR are, by d
 
 ## Prerequisites
 
-To build OpenCOR and OpenCOR's Web app, you need to install [node.js](https://nodejs.org/) and [npm](https://npmjs.com/), which you can do from [here](https://nodejs.org/en/download/package-manager). Then, you need to install [pnpm](https://pnpm.io/):
+To build OpenCOR and OpenCOR's Web app, you need to install [Node.js](https://nodejs.org/) and [npm](https://npmjs.com/), which you can do from [here](https://nodejs.org/en/download/package-manager). Then, you need to install [pnpm](https://pnpm.io/):
 
 ```bash
 npm -g install pnpm
@@ -31,8 +31,9 @@ To build OpenCOR, you also need a C/C++ toolchain:
 **Notes:**
 
 - Yes, OpenCOR for [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) can only be built using [Visual Studio Community 2019](https://apps.microsoft.com/detail/xp8cdjnzkfm06w) (this is because we must use `MSVC v142`; see [here](https://www.electronjs.org/docs/latest/tutorial/windows-arm#native-modules) for more information).
-- On Ubuntu, you need to install the `patchelf` package so that OpenCOR can be properly packaged.
-- On Ubuntu on ARM, you need to install the `libopenjp2-tools` package so that [`electron-builder`](https://www.electron.build/) can get access to [`opj_decompress`](https://manpages.ubuntu.com/manpages/man1/opj_decompress.1.html).
+- On [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you can install [Node.js](https://nodejs.org/) using [fnm](https://github.com/Schniz/fnm). However, if you use `fnm install --lts`, it will install the [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors) version of [Node.js](https://nodejs.org/), which may or may not be what you want. If you want to install the [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) version of [Node.js](https://nodejs.org/), you should use `fnm install --lts --arch arm64`.
+- On [Ubuntu](https://en.wikipedia.org/wiki/Ubuntu), you need to install the `patchelf` package so that OpenCOR can be properly packaged.
+- On [Ubuntu](https://en.wikipedia.org/wiki/Ubuntu) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you need to install the `libopenjp2-tools` package so that [`electron-builder`](https://www.electron.build/) can get access to [`opj_decompress`](https://manpages.ubuntu.com/manpages/man1/opj_decompress.1.html).
 - On [Ubuntu 24.04 LTS](https://en.wikipedia.org/wiki/Ubuntu_version_history#2404), you need to deactivate restrictions using `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (see [here](https://github.com/electron/electron/issues/42510) for more information).
 
 ## Scripts
