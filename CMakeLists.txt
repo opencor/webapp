@@ -143,7 +143,7 @@ else()
 endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/${LIBOPENCOR_DIR}/${LIBOPENCOR_SHARED_LIBRARY_FILENAME}
-                                                 ${CMAKE_BINARY_DIR}/../../dist/${LIBOPENCOR_SHARED_LIBRARY_FILENAME})
+                                                 ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_SHARED_LIBRARY_FILENAME})
 
 if(WIN32)
     set(LIBOPENCOR_IMPORT_LIBRARY_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
@@ -184,4 +184,4 @@ endif()
 set(VERSION ${PROJECT_VERSION})
 
 configure_file(src/main/assets/splashscreen.html.in
-               ${CMAKE_BINARY_DIR}/../splashscreen.html)
+               ${CMAKE_BINARY_DIR}/../../out/splashscreen.html)

@@ -32,7 +32,7 @@
   },
   "scripts": {
     "build": "pnpm build:libopencor && electron-vite build",
-    "build:libopencor": "cmake-js build -B Release -O out/libOpenCOR",
+    "build:libopencor": "cmake-js build -B Release -O dist/libOpenCOR",
     "build:web": "cd ./src/renderer && vite build",
     "clean": "node res/clean.js",
     "dev": "pnpm build:libopencor && electron-vite dev --watch",
@@ -40,7 +40,7 @@
     "format": "prettier --log-level silent --write . && clang-format -i src/libopencor/src/*",
     "format:check": "prettier --log-level silent --check . && clang-format --dry-run -Werror src/libopencor/src/*",
     "lint": "eslint --fix .",
-    "package": "pnpm build && node res/prepare-for-packaging.js && electron-builder",
+    "package": "pnpm build && electron-builder",
     "publish:web": "pnpm publish ./src/renderer",
     "start": "pnpm build:libopencor && electron-vite preview",
     "start:web": "pnpm build:web && cd ./src/renderer && vite preview"
