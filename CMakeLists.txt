@@ -143,20 +143,17 @@ else()
 endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/${LIBOPENCOR_DIR}/${LIBOPENCOR_SHARED_LIBRARY_FILENAME}
-                                                 ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_SHARED_LIBRARY_FILENAME})
+                                                 ${CMAKE_BINARY_DIR}/../../dist/${LIBOPENCOR_SHARED_LIBRARY_FILENAME})
 
 if(WIN32)
     set(LIBOPENCOR_IMPORT_LIBRARY_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
-
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_IMPORT_LIBRARY_FILENAME}
-                                                     ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_IMPORT_LIBRARY_FILENAME})
 else()
     set(LIBOPENCOR_IMPORT_LIBRARY_FILENAME ${LIBOPENCOR_SHARED_LIBRARY_FILENAME})
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
-                      ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_IMPORT_LIBRARY_FILENAME})
+                      ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_IMPORT_LIBRARY_FILENAME})
 
 set(LIBOPENCOR_NODE_FILENAME ${CMAKE_BINARY_DIR}/../${CMAKE_PROJECT_NAME}.node)
 
