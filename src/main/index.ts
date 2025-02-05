@@ -2,9 +2,10 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { app, ipcMain } from 'electron'
 import * as settings from 'electron-settings'
 import * as fs from 'fs'
+import { exec } from 'node:child_process'
 import * as os from 'os'
 import * as path from 'path'
-import { isDevMode, isWindows } from '../electron'
+import { isDevMode, isWindows, isLinux } from '../electron'
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
@@ -42,6 +43,44 @@ app.on('open-url', (_, url) => {
 
   mainWindow?.handleArguments([url])
 })
+
+if (isLinux()) {
+  // Make our application icon available so that it can be referenced by our desktop file.
+
+  const localShareFolder = path.join(app.getPath('home'), '.local/share')
+
+  exec(`mkdir ${localShareFolder}/${URI_SCHEME}`, (error) => {
+    if (error !== null) {
+      console.error('Failed to create the directory for the URI scheme icon.')
+    }
+  })
+
+  fs.copyFileSync(
+    path.join(import.meta.dirname, '../../src/main/assets/icon.png'),
+    path.join(`${localShareFolder}/${URI_SCHEME}/icon.png`)
+  )
+
+  // Create a desktop file for OpenCOR and its URI scheme.
+
+  fs.writeFileSync(
+    path.join(`${localShareFolder}/applications/${URI_SCHEME}.desktop`),
+    `[Desktop Entry]
+Type=Application
+Name=OpenCOR
+Exec=${process.execPath} %u
+Icon=${localShareFolder}/${URI_SCHEME}/icon.png
+Terminal=false
+MimeType=x-scheme-handler/${URI_SCHEME}`
+  )
+
+  // Update the desktop database.
+
+  exec('update-desktop-database ~/.local/share/applications', (error) => {
+    if (error !== null) {
+      console.error('Failed to update the desktop database.')
+    }
+  })
+}
 
 // Allow only one instance of OpenCOR.
 
