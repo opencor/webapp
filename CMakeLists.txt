@@ -55,14 +55,14 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_BINARY_DIR}/${LIBOPE
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 OUTPUT_QUIET)
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${LIBOPENCOR_FILE_NAME_WE} Shared
+execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${LIBOPENCOR_FILE_NAME_WE} Static
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 OUTPUT_QUIET)
 
 file(REMOVE ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
 
-include_directories(${CMAKE_BINARY_DIR}/Shared/include
-                    ${CMAKE_BINARY_DIR}/Shared/include/libopencor/module)
+include_directories(${CMAKE_BINARY_DIR}/Static/include
+                    ${CMAKE_BINARY_DIR}/Static/include/libopencor/module)
 
 # Use the appropriate C runtime library.
 
@@ -129,17 +129,9 @@ endif()
 
 # Link cmake-js and libOpenCOR to our Node.js add-on.
 
-if(WIN32)
-    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
-elseif(APPLE)
-    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}.${CMAKE_PROJECT_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX})
-else()
-    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}.${CMAKE_PROJECT_VERSION})
-endif()
-
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
-                      ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_FILENAME})
+                      ${CMAKE_BINARY_DIR}/Static/lib/${CMAKE_PROJECT_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX})
 
 set(LIBOPENCOR_NODE_FILENAME ${CMAKE_BINARY_DIR}/../${CMAKE_PROJECT_NAME}.node)
 
