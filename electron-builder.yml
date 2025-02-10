@@ -1,14 +1,14 @@
 appId: ws.opencor.app
 productName: OpenCOR
 win:
-  artifactName: ${productName}-${version}-Windows.${ext}
+  artifactName: ${productName}-${version}-Windows-${arch}.${ext}
   target:
     - nsis
     - zip
 nsis:
   uninstallDisplayName: ${productName}
 linux:
-  artifactName: ${productName}-${version}-Linux.${ext}
+  artifactName: ${productName}-${version}-Linux-${arch}.${ext}
   category: Utility
   executableName: OpenCOR
   target:
