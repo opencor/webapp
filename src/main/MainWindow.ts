@@ -1,7 +1,6 @@
 import { platform } from '@electron-toolkit/utils'
 import { app, Menu, screen, shell, type MenuItemConstructorOptions } from 'electron'
 import * as settings from 'electron-settings'
-import * as path from 'path'
 import { isDevMode } from '../electron'
 import icon from './assets/icon.png?asset'
 import { URI_SCHEME } from './index'
@@ -353,7 +352,7 @@ export class MainWindow extends ApplicationWindow {
         console.error('Failed to load URL:', error)
       })
     } else {
-      this.loadFile(path.join(import.meta.dirname, '../renderer/index.html')).catch((error: unknown) => {
+      this.loadFile('./out/renderer/index.html').catch((error: unknown) => {
         console.error('Failed to load file:', error)
       })
     }

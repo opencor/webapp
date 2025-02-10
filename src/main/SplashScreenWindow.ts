@@ -1,4 +1,3 @@
-import * as path from 'path'
 import { ApplicationWindow } from './ApplicationWindow'
 import { retrieveMainWindowState } from './MainWindow'
 
@@ -23,7 +22,7 @@ export class SplashScreenWindow extends ApplicationWindow {
       alwaysOnTop: true
     })
 
-    this.loadFile(path.join(import.meta.dirname, '../../out/splashscreen.html')).catch((error: unknown) => {
+    this.loadFile('./out/splashscreen.html').catch((error: unknown) => {
       console.error('Failed to load splash screen:', error)
     })
   }
