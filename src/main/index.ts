@@ -60,7 +60,7 @@ MimeType=x-scheme-handler/${URI_SCHEME}`
 
   exec('update-desktop-database ~/.local/share/applications', (error) => {
     if (error !== null) {
-      console.error('Failed to update the desktop database.')
+      console.error('Failed to update the desktop database:', error)
     }
   })
 }
@@ -134,6 +134,6 @@ app
 
     mainWindow = new MainWindow(triggeringUrl !== null ? [triggeringUrl] : process.argv, splashScreenWindow)
   })
-  .catch((err: unknown) => {
-    console.error('Failed to create the main window:', err)
+  .catch((error: unknown) => {
+    console.error('Failed to create the main window:', error)
   })

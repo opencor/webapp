@@ -23,8 +23,8 @@ export class SplashScreenWindow extends ApplicationWindow {
       alwaysOnTop: true
     })
 
-    this.loadFile(path.join(import.meta.dirname, '../../out/splashscreen.html')).catch((err: unknown) => {
-      console.error('Failed to load splash screen:', err)
+    this.loadFile(path.join(import.meta.dirname, '../../out/splashscreen.html')).catch((error: unknown) => {
+      console.error('Failed to load splash screen:', error)
     })
   }
 }

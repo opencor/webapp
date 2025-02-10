@@ -173,8 +173,8 @@ export class MainWindow extends ApplicationWindow {
     helpSubMenu.push({
       label: 'Home Page',
       click: () => {
-        shell.openExternal('https://opencor.ws/').catch((err: unknown) => {
-          console.error('Failed to open the home page:', err)
+        shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
+          console.error('Failed to open the home page:', error)
         })
       }
     })
@@ -182,8 +182,8 @@ export class MainWindow extends ApplicationWindow {
     helpSubMenu.push({
       label: 'Report Issue',
       click: () => {
-        shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((err: unknown) => {
-          console.error('Failed to report an issue:', err)
+        shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
+          console.error('Failed to report an issue:', error)
         })
       }
     })
@@ -336,8 +336,8 @@ export class MainWindow extends ApplicationWindow {
     // Open external links in the default browser.
 
     this.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url).catch((err: unknown) => {
-        console.error('Failed to open external URL:', err)
+      shell.openExternal(details.url).catch((error: unknown) => {
+        console.error('Failed to open external URL:', error)
       })
 
       return {
@@ -349,12 +349,12 @@ export class MainWindow extends ApplicationWindow {
 
     if (isDevMode()) {
       // @ts-expect-error (isDevMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
-      this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((err: unknown) => {
-        console.error('Failed to load URL:', err)
+      this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((error: unknown) => {
+        console.error('Failed to load URL:', error)
       })
     } else {
-      this.loadFile(path.join(import.meta.dirname, '../renderer/index.html')).catch((err: unknown) => {
-        console.error('Failed to load file:', err)
+      this.loadFile(path.join(import.meta.dirname, '../renderer/index.html')).catch((error: unknown) => {
+        console.error('Failed to load file:', error)
       })
     }
   }
