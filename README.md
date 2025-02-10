@@ -65,3 +65,9 @@ where `<script>` is one of the following:
 - `publish:web`: publish OpenCOR's Web app on [npm](https://npmjs.com/);
 - `start`: start OpenCOR in production mode; and
 - `start:web`: start OpenCOR's Web app in production mode.
+
+**Notes:**
+
+- The URI scheme works fine when using the `package`-based version of OpenCOR. When it comes to the `start`-based and `dev`-based versions of OpenCOR, the URI scheme "works" as follows:
+  - On [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) and [Linux](https://en.wikipedia.org/wiki/Linux), it just does not work; and
+  - On [macOS](https://en.wikipedia.org/wiki/MacOS), it only works when OpenCOR is already running.
