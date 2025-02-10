@@ -53,21 +53,22 @@ pnpm <script>
 where `<script>` is one of the following:
 
 - `build`: build OpenCOR;
-- `build:libopencor`: build OpenCOR's JavaScript interface to the C++ bindings of libOpenCOR;
 - `build:web`: build OpenCOR's Web app;
 - `clean`: clean OpenCOR's environment;
-- `dev`: start OpenCOR and OpenCOR's Web app in development mode;
-- `dev:web`: start OpenCOR's Web app in development mode;
+- `dev`: (build and) start OpenCOR and OpenCOR's Web app in development mode;
+- `dev:web`: (build and) start OpenCOR's Web app in development mode;
 - `format`: format OpenCOR's code and OpenCOR's Web app's code;
 - `format:check`: check that OpenCOR's code and OpenCOR's Web app's code are properly formatted;
+- `libopencor`: build OpenCOR's JavaScript interface to libOpenCOR's C++ bindings;
 - `lint`: lint OpenCOR's code and OpenCOR's Web app's code;
 - `package`: (build and) package OpenCOR for the current platform;
 - `publish:web`: publish OpenCOR's Web app on [npm](https://npmjs.com/);
-- `start`: start OpenCOR in production mode; and
-- `start:web`: start OpenCOR's Web app in production mode.
+- `start`: (build and) start OpenCOR in production mode; and
+- `start:web`: (build and) start OpenCOR's Web app in production mode.
 
 **Notes:**
 
+- To run or package OpenCOR, you first need to build OpenCOR's JavaScript interface to libOpenCOR's C++ bindings (using `pnpm libopencor`). From there, you can run (using either `pnpm start` or `pnpm dev`) or package (using `pnpm package`) OpenCOR.
 - The URI scheme works fine when using the `package`-based version of OpenCOR. When it comes to the `start`-based and `dev`-based versions of OpenCOR, the URI scheme "works" as follows:
   - On [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) and [Linux](https://en.wikipedia.org/wiki/Linux), it just does not work; and
   - On [macOS](https://en.wikipedia.org/wiki/MacOS), it only works when OpenCOR is already running.

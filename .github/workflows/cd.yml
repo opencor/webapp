@@ -71,6 +71,8 @@ jobs:
           sudo apt install libopenjp2-tools
       - name: OpenCOR dependencies
         run: pnpm install
+      - name: Build libOpenCOR
+        run: pnpm libopencor
       - name: Package OpenCOR
         run: pnpm package
       - name: Remove blockmap files
