@@ -4,7 +4,7 @@ import * as settings from 'electron-settings'
 import * as path from 'path'
 import { isDevMode } from '../electron'
 import icon from './assets/icon.png?asset'
-import { URI_SCHEME, log } from './index'
+import { URI_SCHEME } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
