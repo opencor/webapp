@@ -31,16 +31,17 @@ if (isLinux()) {
   // Make our application icon available so that it can be referenced by our desktop file.
 
   const localShareFolder = path.join(app.getPath('home'), '.local/share')
+  const localShareOpencorFolder = path.join(localShareFolder, URI_SCHEME)
 
-  exec(`mkdir ${localShareFolder}/${URI_SCHEME}`, (error) => {
-    if (error !== null) {
-      console.error('Failed to create the directory for the URI scheme icon.')
-    }
-  })
+  // Check whether localShareOpencorFolder exists and, if not, create it.
+
+  if (!fs.existsSync(localShareOpencorFolder)) {
+    fs.mkdirSync(localShareOpencorFolder)
+  }
 
   fs.copyFileSync(
     path.join(import.meta.dirname, '../../src/main/assets/icon.png'),
-    path.join(`${localShareFolder}/${URI_SCHEME}/icon.png`)
+    path.join(`${localShareOpencorFolder}/icon.png`)
   )
 
   // Create a desktop file for OpenCOR and its URI scheme.
@@ -51,7 +52,7 @@ if (isLinux()) {
 Type=Application
 Name=OpenCOR
 Exec=${process.execPath} %u
-Icon=${localShareFolder}/${URI_SCHEME}/icon.png
+Icon=${localShareOpencorFolder}/icon.png
 Terminal=false
 MimeType=x-scheme-handler/${URI_SCHEME}`
   )
