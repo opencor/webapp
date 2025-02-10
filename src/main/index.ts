@@ -9,10 +9,6 @@ import { isDevMode, isWindows, isLinux } from '../electron'
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
-export function log(message: string) {
-  fs.writeFileSync(path.join(os.homedir() + '/Desktop/WebApp.txt'), message, { flag: 'a' })
-}
-
 // Prettify our settings.
 
 settings.configure({
@@ -77,14 +73,6 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 app.on('second-instance', (_event, argv) => {
-  log('- second-instance\n')
-
-  if (argv.length === 0) {
-    log(`   - No command line arguments\n`)
-  } else {
-    log(`   - Command line:\n      - ${argv.join('\n      - ')}\n`)
-  }
-
   if (mainWindow !== null) {
     if (mainWindow.isMinimized()) {
       mainWindow.restore()
@@ -102,9 +90,6 @@ let mainWindow: MainWindow | null = null
 let triggeringUrl: string | null = null
 
 app.on('open-url', (_, url) => {
-  log('- open-url\n')
-  log(`  - url: ${url}\n`)
-
   triggeringUrl = url
 
   mainWindow?.handleArguments([url])
