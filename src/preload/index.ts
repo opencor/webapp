@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import loc from '../../dist/libOpenCOR.node'
+import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
 import * as si from 'systeminformation'
 
 // Some bridging between our main process and renderer process.
