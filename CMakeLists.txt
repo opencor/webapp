@@ -141,16 +141,6 @@ add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
                                                     ${LIBOPENCOR_NODE_FILENAME})
 
-# On Linux, replace the RUNPATH value with an RPATH value of $ORIGIN so that, once deployed, OpenCOR can find our C++
-# version of libOpenCOR.
-
-if(NOT WIN32 AND NOT APPLE)
-    find_program(PATCHELF patchelf REQUIRED)
-
-    add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
-                       COMMAND ${PATCHELF} --set-rpath "\\$$ORIGIN" --force-rpath ${LIBOPENCOR_NODE_FILENAME})
-endif()
-
 # Configure our splash screen.
 
 string(TIMESTAMP CURRENT_YEAR "%Y")

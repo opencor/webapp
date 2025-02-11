@@ -32,7 +32,6 @@ To build OpenCOR, you also need a C/C++ toolchain:
 
 - Yes, OpenCOR for [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) can only be built using [Visual Studio Community 2019](https://apps.microsoft.com/detail/xp8cdjnzkfm06w) (this is because we must use `MSVC v142`; see [here](https://www.electronjs.org/docs/latest/tutorial/windows-arm#native-modules) for more information).
 - On [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you can install [Node.js](https://nodejs.org/) using [fnm](https://github.com/Schniz/fnm). However, if you use `fnm install --lts`, it will install the [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors) version of [Node.js](https://nodejs.org/), which may or may not be what you want. If you want to install the [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) version of [Node.js](https://nodejs.org/), you should use `fnm install --lts --arch arm64`.
-- On [Ubuntu](https://en.wikipedia.org/wiki/Ubuntu), you need to install the `patchelf` package so that OpenCOR can be properly packaged.
 - On [Ubuntu](https://en.wikipedia.org/wiki/Ubuntu) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you need to install the `libopenjp2-tools` package so that [`electron-builder`](https://www.electron.build/) can get access to [`opj_decompress`](https://manpages.ubuntu.com/manpages/man1/opj_decompress.1.html).
 
 ## Scripts
