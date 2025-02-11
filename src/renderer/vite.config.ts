@@ -1,6 +1,6 @@
 import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 import vue from '@vitejs/plugin-vue'
-import { join } from 'path'
+import * as path from 'path'
 import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
 
@@ -25,7 +25,7 @@ export default defineConfig({
   ],
   server: {
     fs: {
-      allow: [join(import.meta.dirname, '../..')]
+      allow: [path.join(import.meta.dirname, '../..')]
     }
   }
 })

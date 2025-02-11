@@ -1,5 +1,5 @@
 import { BrowserWindow, nativeTheme, type BrowserWindowConstructorOptions } from 'electron'
-import { join } from 'path'
+import * as path from 'path'
 
 export class ApplicationWindow extends BrowserWindow {
   alreadyShowedWindow = false
@@ -14,7 +14,7 @@ export class ApplicationWindow extends BrowserWindow {
     options.show = false
     options.useContentSize = true
     options.webPreferences = {
-      preload: join(import.meta.dirname, '../preload/index.mjs'),
+      preload: path.join(import.meta.dirname, '../preload/index.mjs'),
       sandbox: false
     }
 
