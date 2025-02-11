@@ -43,6 +43,9 @@ jobs:
         run: npm install -g pnpm
       - name: OpenCOR dependencies
         run: pnpm install
+      - name: Build libOpenCOR
+        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
+        run: pnpm libopencor
       - name: Build OpenCOR
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: pnpm build

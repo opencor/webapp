@@ -2,8 +2,9 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { app, ipcMain } from 'electron'
 import * as settings from 'electron-settings'
 import * as fs from 'fs'
+import { exec } from 'node:child_process'
 import * as path from 'path'
-import { isDevMode } from '../electron'
+import { isDevMode, isWindows, isLinux } from '../electron'
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
@@ -20,32 +21,93 @@ if (settings.getSync('resetAll')) {
   fs.rmSync(path.join(app.getPath('userData'), 'settings.json'))
 }
 
+// Register our URI scheme.
+
+export const URI_SCHEME = 'opencor'
+
+app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
+
+if (isLinux()) {
+  // Make our application icon available so that it can be referenced by our desktop file.
+
+  const localShareFolder = path.join(app.getPath('home'), '.local/share')
+  const localShareOpencorFolder = path.join(localShareFolder, URI_SCHEME)
+
+  // Check whether localShareOpencorFolder exists and, if not, create it.
+
+  if (!fs.existsSync(localShareOpencorFolder)) {
+    fs.mkdirSync(localShareOpencorFolder)
+  }
+
+  fs.copyFileSync(
+    path.join(import.meta.dirname, '../../src/main/assets/icon.png'),
+    path.join(`${localShareOpencorFolder}/icon.png`)
+  )
+
+  // Create a desktop file for OpenCOR and its URI scheme.
+
+  fs.writeFileSync(
+    path.join(`${localShareFolder}/applications/${URI_SCHEME}.desktop`),
+    `[Desktop Entry]
+Type=Application
+Name=OpenCOR
+Exec=${process.execPath} %u
+Icon=${localShareOpencorFolder}/icon.png
+Terminal=false
+MimeType=x-scheme-handler/${URI_SCHEME}`
+  )
+
+  // Update the desktop database.
+
+  exec('update-desktop-database ~/.local/share/applications', (error) => {
+    if (error !== null) {
+      console.error('Failed to update the desktop database:', error)
+    }
+  })
+}
+
 // Allow only one instance of OpenCOR.
 
-const singleInstanceLock = app.requestSingleInstanceLock()
-
-if (!singleInstanceLock) {
+if (!app.requestSingleInstanceLock()) {
   app.quit()
 }
 
-let mainWindow: MainWindow | null = null
-
-app.on('second-instance', () => {
-  if (mainWindow) {
+app.on('second-instance', (_event, argv) => {
+  if (mainWindow !== null) {
     if (mainWindow.isMinimized()) {
       mainWindow.restore()
     }
 
     mainWindow.focus()
+
+    mainWindow.handleArguments(argv)
   }
 })
 
-// This method is called when Electron has finished its initialisation and is ready to create browser windows. Some APIs
-// can only be used after this event occurs.
+// Handle the clicking of an opencor:// link.
+
+let mainWindow: MainWindow | null = null
+let triggeringUrl: string | null = null
+
+app.on('open-url', (_, url) => {
+  triggeringUrl = url
+
+  mainWindow?.handleArguments([url])
+})
+
+// The app is ready, so finalise its initialisation.
 
 app
   .whenReady()
   .then(() => {
+    // Set process.env.NODE_ENV to 'production' if we are not the default app.
+    // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they
+    //       should run in development mode (default) or production mode.
+
+    if (!process.defaultApp) {
+      process.env.NODE_ENV = 'production'
+    }
+
     // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
 
     const splashScreenWindow: SplashScreenWindow | null = isDevMode() ? null : new SplashScreenWindow()
@@ -68,10 +130,11 @@ app
     ipcMain.handle('enable-menu', enableMenu)
     ipcMain.handle('disable-menu', disableMenu)
 
-    // Create our main window.
+    // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
+    // triggering URL.
 
-    mainWindow = new MainWindow(splashScreenWindow)
+    mainWindow = new MainWindow(triggeringUrl !== null ? [triggeringUrl] : process.argv, splashScreenWindow)
   })
-  .catch((err: unknown) => {
-    console.error('Failed to create the main window:', err)
+  .catch((error: unknown) => {
+    console.error('Failed to create the main window:', error)
   })

@@ -21,31 +21,33 @@ include_directories(${CMAKE_JS_INC})
 # Get access to libOpenCOR.
 
 if(WIN32)
-    set(PLATFORM Windows)
-    set(EXTENSION .zip)
-elseif(APPLE)
-    set(PLATFORM macOS)
-    set(EXTENSION .zip)
-else()
-    set(PLATFORM Linux)
-    set(EXTENSION .tar.gz)
-endif()
+    set(PLATFORM "-Windows")
+    set(EXTENSION ".zip")
 
-if(WIN32)
     if("${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}" STREQUAL "x64")
-        set(ARCHITECTURE Intel)
+        set(ARCHITECTURE "-Intel")
     else()
-        set(ARCHITECTURE ARM)
+        set(ARCHITECTURE "-ARM")
     endif()
+
+    set(MODE "-Release")
 else()
-    if("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-        set(ARCHITECTURE Intel)
+    if(APPLE)
+        set(PLATFORM "-macOS")
+        set(EXTENSION ".zip")
     else()
-        set(ARCHITECTURE ARM)
+        set(PLATFORM "-Linux")
+        set(EXTENSION ".tar.gz")
+    endif()
+
+    if("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+        set(ARCHITECTURE "-Intel")
+    else()
+        set(ARCHITECTURE "-ARM")
     endif()
 endif()
 
-set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${PLATFORM}-${ARCHITECTURE}-Shared)
+set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${PLATFORM}${ARCHITECTURE}-Static${MODE})
 set(LIBOPENCOR_FILE_NAME ${LIBOPENCOR_FILE_NAME_WE}${EXTENSION})
 
 file(DOWNLOAD https://opencor.ws/libopencor/downloads/${LIBOPENCOR_FILE_NAME}
@@ -55,14 +57,14 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_BINARY_DIR}/${LIBOPE
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 OUTPUT_QUIET)
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${LIBOPENCOR_FILE_NAME_WE} Shared
+execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${LIBOPENCOR_FILE_NAME_WE} Static
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 OUTPUT_QUIET)
 
 file(REMOVE ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
 
-include_directories(${CMAKE_BINARY_DIR}/Shared/include
-                    ${CMAKE_BINARY_DIR}/Shared/include/libopencor/module)
+include_directories(${CMAKE_BINARY_DIR}/Static/include
+                    ${CMAKE_BINARY_DIR}/Static/include/libopencor/module)
 
 # Use the appropriate C runtime library.
 
@@ -129,50 +131,15 @@ endif()
 
 # Link cmake-js and libOpenCOR to our Node.js add-on.
 
-if(WIN32)
-    set(LIBOPENCOR_DIR bin)
-    set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
-else()
-    set(LIBOPENCOR_DIR lib)
-
-    if(APPLE)
-        set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}.${CMAKE_PROJECT_VERSION}${CMAKE_SHARED_LIBRARY_SUFFIX})
-    else()
-        set(FULL_LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}.${CMAKE_PROJECT_VERSION})
-    endif()
-endif()
-
-execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/${LIBOPENCOR_DIR}/${FULL_LIBOPENCOR_FILENAME}
-                                                 ${CMAKE_BINARY_DIR}/../${FULL_LIBOPENCOR_FILENAME})
-
-if(WIN32)
-    set(LIBOPENCOR_FILENAME ${CMAKE_PROJECT_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
-
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/Shared/lib/${LIBOPENCOR_FILENAME}
-                                                     ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_FILENAME})
-else()
-    set(LIBOPENCOR_FILENAME ${FULL_LIBOPENCOR_FILENAME})
-endif()
-
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
-                      ${CMAKE_BINARY_DIR}/../${LIBOPENCOR_FILENAME})
+                      ${CMAKE_BINARY_DIR}/Static/lib/${CMAKE_PROJECT_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX})
 
 set(LIBOPENCOR_NODE_FILENAME ${CMAKE_BINARY_DIR}/../${CMAKE_PROJECT_NAME}.node)
 
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
                                                     ${LIBOPENCOR_NODE_FILENAME})
-
-# On Linux, replace the RUNPATH value with an RPATH value of $ORIGIN so that, once deployed, OpenCOR can find our C++
-# version of libOpenCOR.
-
-if(NOT WIN32 AND NOT APPLE)
-    find_program(PATCHELF patchelf REQUIRED)
-
-    add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
-                       COMMAND ${PATCHELF} --set-rpath "\\$$ORIGIN" --force-rpath ${LIBOPENCOR_NODE_FILENAME})
-endif()
 
 # Configure our splash screen.
 
@@ -187,4 +154,4 @@ endif()
 set(VERSION ${PROJECT_VERSION})
 
 configure_file(src/main/assets/splashscreen.html.in
-               ${CMAKE_BINARY_DIR}/../splashscreen.html)
+               ${CMAKE_BINARY_DIR}/../../out/splashscreen.html)

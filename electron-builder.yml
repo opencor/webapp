@@ -1,22 +1,16 @@
 appId: ws.opencor.app
 productName: OpenCOR
 win:
-  artifactName: ${productName}-${version}-Windows.${ext}
-  extraFiles:
-    - from: 'out/libOpenCOR.dll'
-      to: 'libOpenCOR.dll'
+  artifactName: ${productName}-${version}-Windows-${arch}.${ext}
   target:
     - nsis
     - zip
 nsis:
   uninstallDisplayName: ${productName}
 linux:
-  artifactName: ${productName}-${version}-Linux.${ext}
+  artifactName: ${productName}-${version}-Linux-${arch}.${ext}
   category: Utility
   executableName: OpenCOR
-  extraFiles:
-    - from: 'out/libOpenCOR.so.0.0.0'
-      to: 'libOpenCOR.so.0.0.0'
   target:
     - AppImage
     - tar.gz
@@ -31,13 +25,14 @@ mac:
   #    - APPLE_APP_SPECIFIC_PASSWORD: a password the team member generated using the App-Specific Passwords tool at https://account.apple.com/account/manage.
   #    - APPLE_TEAM_ID: an id that can be found in the top right corner of https://developer.apple.com/account/resources/certificates/list.
   artifactName: ${productName}-${version}-macOS-${arch}.${ext}
-  extraFiles:
-    - from: 'out/libOpenCOR.0.0.0.dylib'
-      to: 'Frameworks/libOpenCOR.0.0.0.dylib'
   target:
     - dmg
     - pkg
     - zip
+protocols:
+  name: OpenCOR
+  schemes:
+    - opencor
 publish:
   provider: generic
   url: https://opencor.ws/auto-updates
