@@ -135,12 +135,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                       ${CMAKE_JS_LIB}
                       ${CMAKE_BINARY_DIR}/Static/lib/${CMAKE_PROJECT_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-set(LIBOPENCOR_NODE_FILENAME ${CMAKE_BINARY_DIR}/../${CMAKE_PROJECT_NAME}.node)
-
-add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
-                                                    ${LIBOPENCOR_NODE_FILENAME})
-
 # Configure our splash screen.
 
 string(TIMESTAMP CURRENT_YEAR "%Y")
