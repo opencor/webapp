@@ -34,7 +34,6 @@ To build OpenCOR, you also need a C/C++ toolchain:
 - On [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you can install [Node.js](https://nodejs.org/) using [fnm](https://github.com/Schniz/fnm). However, if you use `fnm install --lts`, it will install the [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors) version of [Node.js](https://nodejs.org/), which may or may not be what you want. If you want to install the [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) version of [Node.js](https://nodejs.org/), you should use `fnm install --lts --arch arm64`.
 - On [Ubuntu](https://en.wikipedia.org/wiki/Ubuntu), you need to install the `patchelf` package so that OpenCOR can be properly packaged.
 - On [Ubuntu](https://en.wikipedia.org/wiki/Ubuntu) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you need to install the `libopenjp2-tools` package so that [`electron-builder`](https://www.electron.build/) can get access to [`opj_decompress`](https://manpages.ubuntu.com/manpages/man1/opj_decompress.1.html).
-- On [Ubuntu 24.04 LTS](https://en.wikipedia.org/wiki/Ubuntu_version_history#2404), you need to deactivate restrictions using `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (see [here](https://github.com/electron/electron/issues/42510) for more information).
 
 ## Scripts
 
@@ -69,6 +68,10 @@ where `<script>` is one of the following:
 **Notes:**
 
 - To run or package OpenCOR, you first need to build OpenCOR's JavaScript interface to libOpenCOR's C++ bindings (using `pnpm libopencor`). From there, you can run (using either `pnpm start` or `pnpm dev`) or package (using `pnpm package`) OpenCOR.
+- OpenCOR does not, by default, work on [Ubuntu 24.04 LTS](https://en.wikipedia.org/wiki/Ubuntu_version_history#2404) and later (see [here](https://github.com/opencor/webapp/issues/68) for more information), although it can be made to work by running the following command:
+  ```bash
+  sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+  ```
 - The URI scheme works fine when using the `package`-based version of OpenCOR. When it comes to the `start`-based and `dev`-based versions of OpenCOR, the URI scheme "works" as follows:
   - On [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) and [Linux](https://en.wikipedia.org/wiki/Linux), it just does not work; and
   - On [macOS](https://en.wikipedia.org/wiki/MacOS), it only works when OpenCOR is already running.
