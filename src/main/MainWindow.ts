@@ -100,7 +100,7 @@ export class MainWindow extends ApplicationWindow {
             console.log(`---[ ${fileName} ]---[BEGIN]`)
 
             if (error) {
-              console.error(`Error: ${error}`)
+              console.error('Error:', error)
             } else {
               console.log(data)
             }
@@ -108,6 +108,9 @@ export class MainWindow extends ApplicationWindow {
             console.log(`---[ ${fileName} ]---[END]`)
           })
         }
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to open file(s):', error)
       })
   }
 
