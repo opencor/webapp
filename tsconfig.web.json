@@ -1,11 +1,11 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": ["src/renderer/src/**/*", "src/renderer/src/**/*.vue", "src/renderer/vite.config.d.ts"],
   "compilerOptions": {
-    "composite": true,
     "baseUrl": ".",
+    "composite": true,
     "paths": {
       "@renderer/*": ["src/renderer/src/*"]
     }
-  }
+  },
+  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "include": ["src/*.ts", "src/libopencor/*.ts", "src/renderer/src/**/*", "src/renderer/vite.config.d.ts"]
 }

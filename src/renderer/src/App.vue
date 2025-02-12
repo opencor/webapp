@@ -1,23 +1,35 @@
 <template>
-  <Background />
+  <div class="h-screen">
+    <div class="flex flex-col h-full">
+      <div v-if="!electronAPI" class="main-menu">
+        <MainMenu @about="aboutVisible = true" />
+      </div>
+      <div class="flex grow justify-center items-center">
+        <BackgroundComponent />
+      </div>
+    </div>
+  </div>
   <ResetAllDialog />
-  <AboutDialog :version="version" :copyright="copyright" />
+  <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
 </template>
 
 <script setup lang="ts">
-// @ts-ignore (window.electronAPI may or not be defined and that is why we test it)
-const electronAPI = window.electronAPI
+import * as vue from 'vue'
 
-// Some global constants.
+import { electronAPI } from '../../electronAPI'
 
-const version = __APP_VERSION__
-const currentYear = new Date().getFullYear()
-const copyright = currentYear === 2024 ? '2024' : `2024-${currentYear}`
+// About dialog.
+
+const aboutVisible = vue.ref(false)
+
+electronAPI?.onAbout(() => {
+  aboutVisible.value = true
+})
 
 // Handle drag and drop events.
 
 const dropArea = document.getElementById('app')
-let draggingCounter: number = 0
+let draggingCounter = 0
 
 if (dropArea !== null) {
   dropArea.addEventListener('dragenter', (event: Event) => {

@@ -3,30 +3,27 @@
 </template>
 
 <script setup lang="ts">
-import { useConfirm } from 'primevue/useconfirm'
+import * as primeVueUseConfirm from 'primevue/useconfirm'
 
-// @ts-ignore (window.electronAPI may or not be defined and that is why we test it)
-const electronAPI = window.electronAPI
+import { electronAPI } from '../../../electronAPI'
 
-if (electronAPI !== undefined) {
-  const confirm = useConfirm()
+const confirm = primeVueUseConfirm.useConfirm()
 
-  electronAPI.onResetAll(() => {
-    confirm.require({
-      header: 'OpenCOR',
-      icon: 'pi pi-question-circle',
-      message: 'You are about to reset all of your settings. Do you want to proceed?',
-      acceptProps: {
-        severity: 'danger'
-      },
-      rejectProps: {
-        severity: 'secondary',
-        outlined: true
-      },
-      accept: () => {
-        electronAPI.resetAll()
-      }
-    })
+electronAPI?.onResetAll(() => {
+  confirm.require({
+    header: 'OpenCOR',
+    icon: 'pi pi-question-circle',
+    message: 'You are about to reset all of your settings. Do you want to proceed?',
+    acceptProps: {
+      severity: 'danger'
+    },
+    rejectProps: {
+      severity: 'secondary',
+      outlined: true
+    },
+    accept: () => {
+      electronAPI?.resetAll()
+    }
   })
-}
+})
 </script>

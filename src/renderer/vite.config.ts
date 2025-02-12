@@ -1,23 +1,32 @@
-import { join } from 'path'
-import { PrimeVueResolver } from '@primevue/auto-import-resolver'
-import Components from 'unplugin-vue-components/vite'
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
+import vuePlugin from '@vitejs/plugin-vue'
 
-export default defineConfig({
+import * as path from 'path'
+import vitePlugin from 'unplugin-vue-components/vite'
+import * as vite from 'vite'
+
+export default vite.defineConfig({
   base: './',
+  build: {
+    target: 'esnext'
+  },
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version)
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  },
   plugins: [
-    vue(),
-    Components({
-      resolvers: [PrimeVueResolver()]
+    vuePlugin(),
+    vitePlugin({
+      resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     })
   ],
   server: {
     fs: {
-      allow: [join(__dirname, '../..')]
+      allow: [path.join(import.meta.dirname, '../..')]
     }
   }
 })

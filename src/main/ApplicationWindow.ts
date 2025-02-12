@@ -1,9 +1,8 @@
 import * as electron from 'electron'
-import { BrowserWindow, nativeTheme } from 'electron'
-import { join } from 'path'
+import * as path from 'path'
 
-export class ApplicationWindow extends BrowserWindow {
-  alreadyShowedWindow: boolean = false
+export class ApplicationWindow extends electron.BrowserWindow {
+  alreadyShowedWindow = false
 
   constructor(options: electron.BrowserWindowConstructorOptions) {
     // Add some common options and call our parent constructor.
@@ -11,11 +10,11 @@ export class ApplicationWindow extends BrowserWindow {
     //       that the colours used here should be the same as the ones used by --p-content-background in PrimeVue, i.e.
     //       what we are using as a background for our app (see src/renderer/src/assets/app.css).
 
-    options.backgroundColor = nativeTheme.shouldUseDarkColors ? '#18181b' : '#ffffff'
+    options.backgroundColor = electron.nativeTheme.shouldUseDarkColors ? '#18181b' : '#ffffff'
     options.show = false
     options.useContentSize = true
     options.webPreferences = {
-      preload: join(__dirname, '../preload/index.mjs'),
+      preload: path.join(import.meta.dirname, '../preload/index.mjs'),
       sandbox: false
     }
 

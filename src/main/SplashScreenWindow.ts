@@ -2,7 +2,7 @@ import { ApplicationWindow } from './ApplicationWindow'
 import { retrieveMainWindowState } from './MainWindow'
 
 export class SplashScreenWindow extends ApplicationWindow {
-  constructor(copyright: string, version: string) {
+  constructor() {
     // Initialise ourselves.
 
     const width = 413 + 24
@@ -22,15 +22,8 @@ export class SplashScreenWindow extends ApplicationWindow {
       alwaysOnTop: true
     })
 
-    this.loadFile('./src/main/assets/splashscreen.html')
-
-    // Initialise our Web contents.
-
-    this.on('ready-to-show', () => {
-      this.webContents.send('init-splash-screen-window', {
-        copyright: copyright,
-        version: version
-      })
+    this.loadFile('./out/splashscreen.html').catch((error: unknown) => {
+      console.error('Failed to load splash screen:', error)
     })
   }
 }

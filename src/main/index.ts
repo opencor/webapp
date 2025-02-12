@@ -1,60 +1,143 @@
-import { app, ipcMain } from 'electron'
-import * as settings from 'electron-settings'
-import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import * as electronToolkitUtils from '@electron-toolkit/utils'
+
+import * as electron from 'electron'
+import * as electronSettings from 'electron-settings'
 import * as fs from 'fs'
+import * as nodeChildProcess from 'node:child_process'
+import * as path from 'path'
+
+import { isDevMode, isWindows, isLinux } from '../electron'
 
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
-export function developmentMode(): boolean {
-  return is.dev && process.env['ELECTRON_RENDERER_URL'] !== undefined
-}
-
 // Prettify our settings.
 
-settings.configure({
+electronSettings.configure({
   prettify: true
 })
 
 // Resetting all of our settings, if needed.
 
-if (settings.getSync('resetAll')) {
-  fs.rmSync(app.getPath('userData'), { recursive: true })
+if (electronSettings.getSync('resetAll')) {
+  fs.rmSync(path.join(electron.app.getPath('userData'), 'Preferences'))
+  fs.rmSync(path.join(electron.app.getPath('userData'), 'settings.json'))
 }
 
-// This method is called when Electron has finished its initialisation and is ready to create browser windows. Some APIs
-// can only be used after this event occurs.
+// Register our URI scheme.
 
-app.whenReady().then(() => {
-  // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
+export const URI_SCHEME = 'opencor'
 
-  let splashScreenWindow: SplashScreenWindow = null as unknown as SplashScreenWindow
+electron.app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
 
-  if (!developmentMode()) {
-    const currentYear = new Date().getFullYear()
+if (isLinux()) {
+  // Make our application icon available so that it can be referenced by our desktop file.
 
-    splashScreenWindow = new SplashScreenWindow(currentYear === 2024 ? '2024' : `2024-${currentYear}`, app.getVersion())
+  const localShareFolder = path.join(electron.app.getPath('home'), '.local/share')
+  const localShareOpencorFolder = path.join(localShareFolder, URI_SCHEME)
+
+  // Check whether localShareOpencorFolder exists and, if not, create it.
+
+  if (!fs.existsSync(localShareOpencorFolder)) {
+    fs.mkdirSync(localShareOpencorFolder)
   }
 
-  // Set our app user model id for Windows.
+  fs.copyFileSync(
+    path.join(import.meta.dirname, '../../src/main/assets/icon.png'),
+    path.join(`${localShareOpencorFolder}/icon.png`)
+  )
 
-  electronApp.setAppUserModelId('ws.opencor.app')
+  // Create a desktop file for OpenCOR and its URI scheme.
 
-  // Enable the F12 shortcut (to show/hide the developer tools), if we are in development.
+  fs.writeFileSync(
+    path.join(`${localShareFolder}/applications/${URI_SCHEME}.desktop`),
+    `[Desktop Entry]
+Type=Application
+Name=OpenCOR
+Exec=${process.execPath} %u
+Icon=${localShareOpencorFolder}/icon.png
+Terminal=false
+MimeType=x-scheme-handler/${URI_SCHEME}`
+  )
 
-  if (developmentMode()) {
-    app.on('browser-window-created', (_, window) => {
-      optimizer.watchWindowShortcuts(window)
-    })
+  // Update the desktop database.
+
+  nodeChildProcess.exec('update-desktop-database ~/.local/share/applications', (error) => {
+    if (error !== null) {
+      console.error('Failed to update the desktop database:', error)
+    }
+  })
+}
+
+// Allow only one instance of OpenCOR.
+
+if (!electron.app.requestSingleInstanceLock()) {
+  electron.app.quit()
+}
+
+electron.app.on('second-instance', (_event, argv) => {
+  if (mainWindow !== null) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+
+    mainWindow.focus()
+
+    mainWindow.handleArguments(argv)
   }
-
-  // Handle some requests from our renderer process.
-
-  ipcMain.handle('reset-all', resetAll)
-  ipcMain.handle('enable-menu', enableMenu)
-  ipcMain.handle('disable-menu', disableMenu)
-
-  // Create our main window.
-
-  new MainWindow(splashScreenWindow)
 })
+
+// Handle the clicking of an opencor:// link.
+
+let mainWindow: MainWindow | null = null
+let triggeringUrl: string | null = null
+
+electron.app.on('open-url', (_, url) => {
+  triggeringUrl = url
+
+  mainWindow?.handleArguments([url])
+})
+
+// The app is ready, so finalise its initialisation.
+
+electron.app
+  .whenReady()
+  .then(() => {
+    // Set process.env.NODE_ENV to 'production' if we are not the default app.
+    // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they
+    //       should run in development mode (default) or production mode.
+
+    if (!process.defaultApp) {
+      process.env.NODE_ENV = 'production'
+    }
+
+    // Create our splash window, if we are not in development mode, and pass it our copyright and version values.
+
+    const splashScreenWindow: SplashScreenWindow | null = isDevMode() ? null : new SplashScreenWindow()
+
+    // Set our app user model id for Windows.
+
+    electronToolkitUtils.electronApp.setAppUserModelId('ws.opencor.app')
+
+    // Enable the F12 shortcut (to show/hide the developer tools), if we are in development.
+
+    if (isDevMode()) {
+      electron.app.on('browser-window-created', (_, window) => {
+        electronToolkitUtils.optimizer.watchWindowShortcuts(window)
+      })
+    }
+
+    // Handle some requests from our renderer process.
+
+    electron.ipcMain.handle('reset-all', resetAll)
+    electron.ipcMain.handle('enable-menu', enableMenu)
+    electron.ipcMain.handle('disable-menu', disableMenu)
+
+    // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
+    // triggering URL.
+
+    mainWindow = new MainWindow(triggeringUrl !== null ? [triggeringUrl] : process.argv, splashScreenWindow)
+  })
+  .catch((error: unknown) => {
+    console.error('Failed to create the main window:', error)
+  })

@@ -1,8 +1,10 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["src/**/*", "src/**/*.vue", "electron.vite.config.d.ts"],
   "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "baseUrl": ".",
     "composite": true,
-    "baseUrl": "."
-  }
+    "noEmit": false
+  },
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "include": ["src/**/*", "electron.vite.config.d.ts"]
 }

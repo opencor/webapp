@@ -1,14 +1,15 @@
+import Aura from '@primevue/themes/aura'
+
 import PrimeVue from 'primevue/config'
 import ConfirmationService from 'primevue/confirmationservice'
-import Aura from '@primevue/themes/aura'
-import { createApp } from 'vue'
+import * as vue from 'vue'
 
 import App from './App.vue'
 import './assets/app.css'
 
 import 'primeicons/primeicons.css'
 
-const app = createApp(App)
+const app = vue.createApp(App)
 
 app.use(PrimeVue, {
   theme: {
