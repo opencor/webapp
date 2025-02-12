@@ -94,19 +94,11 @@ export class MainWindow extends ApplicationWindow {
         // Read the contents of the files.
 
         for (const filePath of filePaths) {
-          fs.readFile(filePath, 'base64', (error, data) => {
-            const fileName = path.basename(filePath)
+          const fileName = path.basename(filePath)
 
-            console.log(`---[ ${fileName} ]---[BEGIN]`)
-
-            if (error) {
-              console.error('Error:', error)
-            } else {
-              console.log(data)
-            }
-
-            console.log(`---[ ${fileName} ]---[END]`)
-          })
+          console.log(`---[ ${fileName} ]---[BEGIN]`)
+          console.log(fs.readFileSync(filePath, 'base64'))
+          console.log(`---[ ${fileName} ]---[END]`)
         }
       })
       .catch((error: unknown) => {
