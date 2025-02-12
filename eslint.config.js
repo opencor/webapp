@@ -1,19 +1,20 @@
 // @ts-check
 
-import eslint from '@eslint/js'
+import eslintJs from '@eslint/js'
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
-import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
+import * as vueEslintConfigTypescript from '@vue/eslint-config-typescript'
+
 import pluginVue from 'eslint-plugin-vue'
 import tseslint from 'typescript-eslint'
 import vueParser from 'vue-eslint-parser'
 
-export default defineConfigWithVueTs(
+export default vueEslintConfigTypescript.defineConfigWithVueTs(
   ...pluginVue.configs['flat/essential'],
-  eslint.configs.recommended,
+  eslintJs.configs.recommended,
   skipFormatting,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
-  vueTsConfigs.recommended,
+  vueEslintConfigTypescript.vueTsConfigs.recommended,
   {
     languageOptions: {
       parser: vueParser,

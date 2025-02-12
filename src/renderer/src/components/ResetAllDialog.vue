@@ -3,10 +3,11 @@
 </template>
 
 <script setup lang="ts">
-import { useConfirm } from 'primevue/useconfirm'
+import * as primeVueUseConfirm from 'primevue/useconfirm'
+
 import { electronAPI } from '../../../electronAPI'
 
-const confirm = useConfirm()
+const confirm = primeVueUseConfirm.useConfirm()
 
 electronAPI?.onResetAll(() => {
   confirm.require({

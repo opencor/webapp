@@ -1,10 +1,11 @@
-import { PrimeVueResolver } from '@primevue/auto-import-resolver'
-import vue from '@vitejs/plugin-vue'
-import { bytecodePlugin, defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import * as path from 'path'
-import Components from 'unplugin-vue-components/vite'
+import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
+import vuePlugin from '@vitejs/plugin-vue'
 
-export default defineConfig({
+import * as electronVite from 'electron-vite'
+import * as path from 'path'
+import vitePlugin from 'unplugin-vue-components/vite'
+
+export default electronVite.defineConfig({
   main: {
     build: {
       rollupOptions: {
@@ -13,10 +14,10 @@ export default defineConfig({
         }
       }
     },
-    plugins: [bytecodePlugin(), externalizeDepsPlugin()]
+    plugins: [electronVite.bytecodePlugin(), electronVite.externalizeDepsPlugin()]
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [electronVite.externalizeDepsPlugin()]
   },
   renderer: {
     build: {
@@ -31,9 +32,9 @@ export default defineConfig({
       }
     },
     plugins: [
-      vue(),
-      Components({
-        resolvers: [PrimeVueResolver()]
+      vuePlugin(),
+      vitePlugin({
+        resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
       })
     ],
     server: {

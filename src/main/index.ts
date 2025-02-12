@@ -1,36 +1,39 @@
-import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { app, ipcMain } from 'electron'
-import * as settings from 'electron-settings'
+import * as electronToolkitUtils from '@electron-toolkit/utils'
+
+import * as electron from 'electron'
+import * as electronSettings from 'electron-settings'
 import * as fs from 'fs'
-import { exec } from 'node:child_process'
+import * as nodeChildProcess from 'node:child_process'
 import * as path from 'path'
+
 import { isDevMode, isWindows, isLinux } from '../electron'
+
 import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
 // Prettify our settings.
 
-settings.configure({
+electronSettings.configure({
   prettify: true
 })
 
 // Resetting all of our settings, if needed.
 
-if (settings.getSync('resetAll')) {
-  fs.rmSync(path.join(app.getPath('userData'), 'Preferences'))
-  fs.rmSync(path.join(app.getPath('userData'), 'settings.json'))
+if (electronSettings.getSync('resetAll')) {
+  fs.rmSync(path.join(electron.app.getPath('userData'), 'Preferences'))
+  fs.rmSync(path.join(electron.app.getPath('userData'), 'settings.json'))
 }
 
 // Register our URI scheme.
 
 export const URI_SCHEME = 'opencor'
 
-app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
+electron.app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
 
 if (isLinux()) {
   // Make our application icon available so that it can be referenced by our desktop file.
 
-  const localShareFolder = path.join(app.getPath('home'), '.local/share')
+  const localShareFolder = path.join(electron.app.getPath('home'), '.local/share')
   const localShareOpencorFolder = path.join(localShareFolder, URI_SCHEME)
 
   // Check whether localShareOpencorFolder exists and, if not, create it.
@@ -59,7 +62,7 @@ MimeType=x-scheme-handler/${URI_SCHEME}`
 
   // Update the desktop database.
 
-  exec('update-desktop-database ~/.local/share/applications', (error) => {
+  nodeChildProcess.exec('update-desktop-database ~/.local/share/applications', (error) => {
     if (error !== null) {
       console.error('Failed to update the desktop database:', error)
     }
@@ -68,11 +71,11 @@ MimeType=x-scheme-handler/${URI_SCHEME}`
 
 // Allow only one instance of OpenCOR.
 
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
+if (!electron.app.requestSingleInstanceLock()) {
+  electron.app.quit()
 }
 
-app.on('second-instance', (_event, argv) => {
+electron.app.on('second-instance', (_event, argv) => {
   if (mainWindow !== null) {
     if (mainWindow.isMinimized()) {
       mainWindow.restore()
@@ -89,7 +92,7 @@ app.on('second-instance', (_event, argv) => {
 let mainWindow: MainWindow | null = null
 let triggeringUrl: string | null = null
 
-app.on('open-url', (_, url) => {
+electron.app.on('open-url', (_, url) => {
   triggeringUrl = url
 
   mainWindow?.handleArguments([url])
@@ -97,7 +100,7 @@ app.on('open-url', (_, url) => {
 
 // The app is ready, so finalise its initialisation.
 
-app
+electron.app
   .whenReady()
   .then(() => {
     // Set process.env.NODE_ENV to 'production' if we are not the default app.
@@ -114,21 +117,21 @@ app
 
     // Set our app user model id for Windows.
 
-    electronApp.setAppUserModelId('ws.opencor.app')
+    electronToolkitUtils.electronApp.setAppUserModelId('ws.opencor.app')
 
     // Enable the F12 shortcut (to show/hide the developer tools), if we are in development.
 
     if (isDevMode()) {
-      app.on('browser-window-created', (_, window) => {
-        optimizer.watchWindowShortcuts(window)
+      electron.app.on('browser-window-created', (_, window) => {
+        electronToolkitUtils.optimizer.watchWindowShortcuts(window)
       })
     }
 
     // Handle some requests from our renderer process.
 
-    ipcMain.handle('reset-all', resetAll)
-    ipcMain.handle('enable-menu', enableMenu)
-    ipcMain.handle('disable-menu', disableMenu)
+    electron.ipcMain.handle('reset-all', resetAll)
+    electron.ipcMain.handle('enable-menu', enableMenu)
+    electron.ipcMain.handle('disable-menu', disableMenu)
 
     // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
     // triggering URL.

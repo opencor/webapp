@@ -7,9 +7,9 @@ interface ElectronAPI {
 
   // Renderer process asking the main process to do something for it.
 
-  resetAll: () => void
   enableMenu: () => void
   disableMenu: () => void
+  resetAll: () => void
 
   // Renderer process listening to the main process.
 

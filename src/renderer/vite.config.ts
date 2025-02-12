@@ -1,10 +1,11 @@
-import { PrimeVueResolver } from '@primevue/auto-import-resolver'
-import vue from '@vitejs/plugin-vue'
-import * as path from 'path'
-import Components from 'unplugin-vue-components/vite'
-import { defineConfig } from 'vite'
+import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
+import vuePlugin from '@vitejs/plugin-vue'
 
-export default defineConfig({
+import * as path from 'path'
+import vitePlugin from 'unplugin-vue-components/vite'
+import * as vite from 'vite'
+
+export default vite.defineConfig({
   base: './',
   build: {
     target: 'esnext'
@@ -18,9 +19,9 @@ export default defineConfig({
     }
   },
   plugins: [
-    vue(),
-    Components({
-      resolvers: [PrimeVueResolver()]
+    vuePlugin(),
+    vitePlugin({
+      resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     })
   ],
   server: {

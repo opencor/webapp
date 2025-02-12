@@ -1,7 +1,7 @@
-import { platform } from '@electron-toolkit/utils'
-import { app, Menu, screen, shell, type MenuItemConstructorOptions } from 'electron'
-import * as settings from 'electron-settings'
-import { isDevMode } from '../electron'
+import * as electron from 'electron'
+import * as electronSettings from 'electron-settings'
+
+import { isDevMode, isMacOs } from '../electron'
 import icon from './assets/icon.png?asset'
 import { URI_SCHEME } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
@@ -15,15 +15,15 @@ export function retrieveMainWindowState(): {
   isMaximized: boolean
   isFullScreen: boolean
 } {
-  const workAreaSize = screen.getPrimaryDisplay().workAreaSize
+  const workAreaSize = electron.screen.getPrimaryDisplay().workAreaSize
   const horizontalSpace = Math.round(workAreaSize.width / 13)
   const verticalSpace = Math.round(workAreaSize.height / 13)
-  const x = settings.getSync('mainWindowState.x')
-  const y = settings.getSync('mainWindowState.y')
-  const width = settings.getSync('mainWindowState.width')
-  const height = settings.getSync('mainWindowState.height')
-  const isMaximized = settings.getSync('mainWindowState.isMaximized')
-  const isFullScreen = settings.getSync('mainWindowState.isFullScreen')
+  const x = electronSettings.getSync('mainWindowState.x')
+  const y = electronSettings.getSync('mainWindowState.y')
+  const width = electronSettings.getSync('mainWindowState.width')
+  const height = electronSettings.getSync('mainWindowState.height')
+  const isMaximized = electronSettings.getSync('mainWindowState.isMaximized')
+  const isFullScreen = electronSettings.getSync('mainWindowState.isFullScreen')
 
   return {
     x: (x ?? horizontalSpace) as number,
@@ -36,21 +36,21 @@ export function retrieveMainWindowState(): {
 }
 
 export function resetAll(): void {
-  settings.setSync('resetAll', true)
+  electronSettings.setSync('resetAll', true)
 
-  app.relaunch()
-  app.quit()
+  electron.app.relaunch()
+  electron.app.quit()
 }
 
 function doEnableDisableMenu(enabled: boolean): void {
-  const menu = Menu.getApplicationMenu()
+  const menu = electron.Menu.getApplicationMenu()
 
   if (menu) {
     menu.items.forEach((menuItem) => {
       menuItem.enabled = enabled
     })
 
-    Menu.setApplicationMenu(menu)
+    electron.Menu.setApplicationMenu(menu)
   }
 }
 
@@ -93,11 +93,11 @@ export class MainWindow extends ApplicationWindow {
 
     // App menu.
 
-    let appMenu: MenuItemConstructorOptions = {}
+    let appMenu: electron.MenuItemConstructorOptions = {}
 
-    if (platform.isMacOS) {
+    if (isMacOs()) {
       appMenu = {
-        label: app.name,
+        label: electron.app.name,
         submenu: [
           aboutOpencorMenuItem,
           /*---OPENCOR---
@@ -121,14 +121,14 @@ export class MainWindow extends ApplicationWindow {
 
     // File menu.
 
-    const fileMenu: MenuItemConstructorOptions = {
+    const fileMenu: electron.MenuItemConstructorOptions = {
       label: 'File',
       submenu: [{ role: 'quit' }]
     }
 
     // View menu.
 
-    const viewMenu: MenuItemConstructorOptions = {
+    const viewMenu: electron.MenuItemConstructorOptions = {
       label: 'View',
       submenu: [
         { role: 'resetZoom' },
@@ -141,14 +141,14 @@ export class MainWindow extends ApplicationWindow {
 
     // Tools menu.
 
-    const toolsSubMenu: MenuItemConstructorOptions[] = []
-    const toolsMenu: MenuItemConstructorOptions = {
+    const toolsSubMenu: electron.MenuItemConstructorOptions[] = []
+    const toolsMenu: electron.MenuItemConstructorOptions = {
       label: 'Tools',
       submenu: toolsSubMenu
     }
 
     /*---OPENCOR---
-    if (!platform.isMacOS) {
+    if (!isMacOs()) {
       toolsSubMenu.push(settingsMenuItem)
       toolsSubMenu.push({ type: 'separator' })
     }
@@ -163,8 +163,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Help menu.
 
-    const helpSubMenu: MenuItemConstructorOptions[] = []
-    const helpMenu: MenuItemConstructorOptions = {
+    const helpSubMenu: electron.MenuItemConstructorOptions[] = []
+    const helpMenu: electron.MenuItemConstructorOptions = {
       label: 'Help',
       submenu: helpSubMenu
     }
@@ -172,7 +172,7 @@ export class MainWindow extends ApplicationWindow {
     helpSubMenu.push({
       label: 'Home Page',
       click: () => {
-        shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
+        electron.shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
           console.error('Failed to open the home page:', error)
         })
       }
@@ -181,13 +181,13 @@ export class MainWindow extends ApplicationWindow {
     helpSubMenu.push({
       label: 'Report Issue',
       click: () => {
-        shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
+        electron.shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
           console.error('Failed to report an issue:', error)
         })
       }
     })
 
-    if (!platform.isMacOS) {
+    if (!isMacOs()) {
       /*---OPENCOR---
       helpSubMenu.push({ type: 'separator' })
       helpSubMenu.push(checkForUpdatesMenuItem)
@@ -198,9 +198,9 @@ export class MainWindow extends ApplicationWindow {
 
     // Set our menu.
 
-    const menu: MenuItemConstructorOptions[] = []
+    const menu: electron.MenuItemConstructorOptions[] = []
 
-    if (platform.isMacOS) {
+    if (isMacOs()) {
       menu.push(appMenu)
     } else {
       menu.push(fileMenu)
@@ -210,7 +210,7 @@ export class MainWindow extends ApplicationWindow {
     menu.push(toolsMenu)
     menu.push(helpMenu)
 
-    Menu.setApplicationMenu(Menu.buildFromTemplate(menu))
+    electron.Menu.setApplicationMenu(electron.Menu.buildFromTemplate(menu))
 
     // Make sure that our menu bar is always visible.
 
@@ -272,13 +272,13 @@ export class MainWindow extends ApplicationWindow {
       height: mainWindowState.height,
       minWidth: 640,
       minHeight: 480,
-      ...(platform.isMacOS ? {} : { icon: icon })
+      ...(isMacOs() ? {} : { icon: icon })
     })
 
     // Set our dock icon (macOS only).
 
-    if (platform.isMacOS) {
-      app.dock.setIcon(icon)
+    if (isMacOs()) {
+      electron.app.dock.setIcon(icon)
     }
 
     // Restore our state, if needed.
@@ -325,7 +325,7 @@ export class MainWindow extends ApplicationWindow {
       mainWindowState.isMaximized = this.isMaximized()
       mainWindowState.isFullScreen = this.isFullScreen()
 
-      settings.setSync('mainWindowState', mainWindowState)
+      electronSettings.setSync('mainWindowState', mainWindowState)
     })
 
     // Configure our menu.
@@ -335,7 +335,7 @@ export class MainWindow extends ApplicationWindow {
     // Open external links in the default browser.
 
     this.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url).catch((error: unknown) => {
+      electron.shell.openExternal(details.url).catch((error: unknown) => {
         console.error('Failed to open external URL:', error)
       })
 
