@@ -14,10 +14,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import * as vue from 'vue'
+
 import { electronAPI } from '../../electronAPI'
 
-const aboutVisible = ref(false)
+const aboutVisible = vue.ref(false)
 
 electronAPI?.onAbout(() => {
   aboutVisible.value = true

@@ -1,18 +1,21 @@
-import 'primeicons/primeicons.css'
-import Aura from '@primevue/themes/aura'
-import PrimeVue from 'primevue/config'
-import ConfirmationService from 'primevue/confirmationservice'
-import { createApp } from 'vue'
+import primeVueAuraTheme from '@primevue/themes/aura'
+
+import primeVueConfig from 'primevue/config'
+import primeVueConfirmationService from 'primevue/confirmationservice'
+import * as vue from 'vue'
+
 import App from './App.vue'
 import './assets/app.css'
 
-const app = createApp(App)
+import 'primeicons/primeicons.css'
 
-app.use(PrimeVue, {
+const app = vue.createApp(App)
+
+app.use(primeVueConfig, {
   theme: {
-    preset: Aura
+    preset: primeVueAuraTheme
   }
 })
-app.use(ConfirmationService)
+app.use(primeVueConfirmationService)
 
 app.mount('#app')

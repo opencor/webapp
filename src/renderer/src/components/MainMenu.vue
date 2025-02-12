@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import * as vue from 'vue'
 
 const emit = defineEmits(['about'])
 
@@ -37,7 +37,7 @@ const items = [
 
 // Never display our menu as a hamburger menu.
 
-onMounted(() => {
+vue.onMounted(() => {
   const mainMenu = document.getElementById('mainMenu')
 
   if (mainMenu) {

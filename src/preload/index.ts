@@ -1,13 +1,14 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import * as electron from 'electron'
+import * as systemInformation from 'systeminformation'
+
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
-import * as si from 'systeminformation'
 
 // Some bridging between our main process and renderer process.
 // Note: src/electronAPI.ts needs to be in sync with this file.
 
-const osInfo = await si.osInfo()
+const osInfo = await systemInformation.osInfo()
 
-contextBridge.exposeInMainWorld('electronAPI', {
+electron.contextBridge.exposeInMainWorld('electronAPI', {
   // Some general methods.
 
   operatingSystem: () => {
@@ -25,18 +26,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Renderer process asking the main process to do something for it.
 
-  resetAll: () => ipcRenderer.invoke('reset-all'),
-  enableMenu: () => ipcRenderer.invoke('enable-menu'),
-  disableMenu: () => ipcRenderer.invoke('disable-menu'),
+  enableMenu: () => electron.ipcRenderer.invoke('enable-menu'),
+  disableMenu: () => electron.ipcRenderer.invoke('disable-menu'),
+  resetAll: () => electron.ipcRenderer.invoke('reset-all'),
 
   // Renderer process listening to the main process.
 
   onResetAll: (callback: () => void) =>
-    ipcRenderer.on('reset-all', () => {
+    electron.ipcRenderer.on('reset-all', () => {
       callback()
     }),
   onAbout: (callback: () => void) =>
-    ipcRenderer.on('about', () => {
+    electron.ipcRenderer.on('about', () => {
       callback()
     })
 })
@@ -44,6 +45,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 // Give our renderer process access to the C++ version of libOpenCOR.
 // Note: src/libopencor/locAPI.ts needs to be in sync with this file.
 
-contextBridge.exposeInMainWorld('locAPI', {
+electron.contextBridge.exposeInMainWorld('locAPI', {
   versionString: () => loc.version()
 })
