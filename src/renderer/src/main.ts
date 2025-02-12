@@ -1,7 +1,7 @@
-import Aura from '@primevue/themes/aura'
+import primeVueAuraTheme from '@primevue/themes/aura'
 
-import PrimeVue from 'primevue/config'
-import ConfirmationService from 'primevue/confirmationservice'
+import primeVueConfig from 'primevue/config'
+import primeVueConfirmationService from 'primevue/confirmationservice'
 import * as vue from 'vue'
 
 import App from './App.vue'
@@ -11,11 +11,11 @@ import 'primeicons/primeicons.css'
 
 const app = vue.createApp(App)
 
-app.use(PrimeVue, {
+app.use(primeVueConfig, {
   theme: {
-    preset: Aura
+    preset: primeVueAuraTheme
   }
 })
-app.use(ConfirmationService)
+app.use(primeVueConfirmationService)
 
 app.mount('#app')

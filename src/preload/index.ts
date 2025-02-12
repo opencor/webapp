@@ -1,12 +1,12 @@
 import * as electron from 'electron'
-import * as systeminformation from 'systeminformation'
+import * as systemInformation from 'systeminformation'
 
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
 
 // Some bridging between our main process and renderer process.
 // Note: src/electronAPI.ts needs to be in sync with this file.
 
-const osInfo = await systeminformation.osInfo()
+const osInfo = await systemInformation.osInfo()
 
 electron.contextBridge.exposeInMainWorld('electronAPI', {
   // Some general methods.

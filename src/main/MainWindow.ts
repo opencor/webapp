@@ -1,5 +1,5 @@
 import * as electron from 'electron'
-import * as settings from 'electron-settings'
+import * as electronSettings from 'electron-settings'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -20,12 +20,12 @@ export function retrieveMainWindowState(): {
   const workAreaSize = electron.screen.getPrimaryDisplay().workAreaSize
   const horizontalSpace = Math.round(workAreaSize.width / 13)
   const verticalSpace = Math.round(workAreaSize.height / 13)
-  const x = settings.getSync('mainWindowState.x')
-  const y = settings.getSync('mainWindowState.y')
-  const width = settings.getSync('mainWindowState.width')
-  const height = settings.getSync('mainWindowState.height')
-  const isMaximized = settings.getSync('mainWindowState.isMaximized')
-  const isFullScreen = settings.getSync('mainWindowState.isFullScreen')
+  const x = electronSettings.getSync('mainWindowState.x')
+  const y = electronSettings.getSync('mainWindowState.y')
+  const width = electronSettings.getSync('mainWindowState.width')
+  const height = electronSettings.getSync('mainWindowState.height')
+  const isMaximized = electronSettings.getSync('mainWindowState.isMaximized')
+  const isFullScreen = electronSettings.getSync('mainWindowState.isFullScreen')
 
   return {
     x: (x ?? horizontalSpace) as number,
@@ -38,7 +38,7 @@ export function retrieveMainWindowState(): {
 }
 
 export function resetAll(): void {
-  settings.setSync('resetAll', true)
+  electronSettings.setSync('resetAll', true)
 
   electron.app.relaunch()
   electron.app.quit()
@@ -387,7 +387,7 @@ export class MainWindow extends ApplicationWindow {
       mainWindowState.isMaximized = this.isMaximized()
       mainWindowState.isFullScreen = this.isFullScreen()
 
-      settings.setSync('mainWindowState', mainWindowState)
+      electronSettings.setSync('mainWindowState', mainWindowState)
     })
 
     // Configure our menu.
