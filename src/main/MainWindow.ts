@@ -4,6 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 import { isDevMode, isMacOs } from '../electron'
+
 import icon from './assets/icon.png?asset'
 import { URI_SCHEME } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
