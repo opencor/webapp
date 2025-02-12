@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.0.0",
+  "version": "2025.02.12",
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
@@ -38,6 +38,7 @@
     "dev:web": "cd ./src/renderer && vite dev",
     "format": "prettier --log-level silent --write . && clang-format -i src/libopencor/src/*",
     "format:check": "prettier --log-level silent --check . && clang-format --dry-run -Werror src/libopencor/src/*",
+    "install": "node res/version.js",
     "libopencor": "cmake-js build -B Release -O dist/libOpenCOR",
     "lint": "eslint --fix .",
     "package": "pnpm build && electron-builder",
@@ -64,7 +65,7 @@
     "electron-settings": "^4.0.4",
     "electron-vite": "^2.3.0",
     "eslint": "^9.20.0",
-    "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.0.0.tgz",
+    "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-2025.02.12.tgz",
     "node-addon-api": "^8.3.0",
     "prettier": "^3.5.0",
     "primeicons": "^7.0.0",

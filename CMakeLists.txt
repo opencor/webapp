@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(libOpenCOR VERSION 0.0.0)
+# Some CMake policies.
+
+foreach(POLICY CMP0096)
+    if(POLICY ${POLICY})
+        cmake_policy(SET ${POLICY} NEW)
+    endif()
+endforeach()
+
+# Project details.
+
+project(libOpenCOR VERSION 2025.02.12)
 
 # Enable C++20.
 
