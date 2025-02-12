@@ -65,7 +65,7 @@ if (dropArea !== null) {
 
     if (files !== undefined) {
       for (const file of Array.from(files)) {
-        console.log("---------")
+        console.log('---------')
         console.log(file.name)
 
         if (electronAPI !== undefined) {
