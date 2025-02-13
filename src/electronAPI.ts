@@ -16,6 +16,7 @@ interface ElectronAPI {
 
   onResetAll: (callback: () => void) => void
   onAbout: (callback: () => void) => void
+  onOpen: (callback: () => void) => void
 }
 
 interface Window {

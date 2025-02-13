@@ -1,19 +1,21 @@
 <template>
-  <div class="h-screen">
+  <div id="app" class="h-screen">
     <div class="flex flex-col h-full">
       <div v-if="!electronAPI" class="main-menu">
-        <MainMenu @about="aboutVisible = true" />
+        <MainMenu @about="aboutVisible = true" @open="open()" />
       </div>
       <div class="flex grow justify-center items-center">
         <BackgroundComponent />
       </div>
     </div>
   </div>
+  <input id="file" type="file" style="display: none" />
   <ResetAllDialog />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
 </template>
 
 <script setup lang="ts">
+import { fileOpen } from 'browser-fs-access'
 import * as vue from 'vue'
 
 import { electronAPI } from '../../electronAPI'
@@ -26,6 +28,59 @@ electronAPI?.onAbout(() => {
   aboutVisible.value = true
 })
 
+// Open file(s) dialog.
+
+function open() {
+  fileOpen([
+    {
+      multiple: true
+    }
+  ])
+    .then((files) => {
+      for (const file of files) {
+        console.log(file)
+        file
+          .arrayBuffer()
+          .then((arrayBuffer) => {
+            const uint8Array = new Uint8Array(arrayBuffer)
+            const base64 = btoa(uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), ''))
+
+            console.log(`---[ ${file.name} ]---[BEGIN]`)
+            console.log(base64)
+            console.log(`---[ ${file.name} ]---[END]`)
+          })
+          .catch((error: unknown) => {
+            console.log('Failed to read file:', error)
+          })
+      }
+    })
+    .catch((error: unknown) => {
+      console.log('Failed to open file(s):', error)
+    })
+}
+
+const fileInput = document.getElementById('file') as HTMLInputElement | null
+
+if (fileInput !== null) {
+  fileInput.addEventListener('click', (event: Event) => {
+    event.stopPropagation()
+    event.preventDefault()
+
+    const files = fileInput.files
+
+    if (files !== null) {
+      for (const file of Array.from(files)) {
+        console.log('---------')
+        console.log(file.name)
+
+        if (electronAPI !== undefined) {
+          console.log(electronAPI.filePath(file))
+        }
+      }
+    }
+  })
+}
+
 // Handle drag and drop events.
 
 const dropArea = document.getElementById('app')
@@ -33,24 +88,23 @@ let draggingCounter = 0
 
 if (dropArea !== null) {
   dropArea.addEventListener('dragenter', (event: Event) => {
+    event.stopPropagation()
+    event.preventDefault()
+
     // Show the drop area, but only when entering it for the first time.
 
-    if (event.target === dropArea && draggingCounter === 0) {
+    if (draggingCounter++ === 0) {
       dropArea.classList.add('dragging')
     }
-
-    ++draggingCounter
   })
 
   dropArea.addEventListener('dragover', (event: Event) => {
-    // Prevent the default behavior to enable dropping.
-
+    event.stopPropagation()
     event.preventDefault()
   })
 
   dropArea.addEventListener('drop', (event: Event) => {
-    // Prevent the default behavior to enable dropping.
-
+    event.stopPropagation()
     event.preventDefault()
 
     // Hide the drop area.
@@ -76,11 +130,12 @@ if (dropArea !== null) {
   })
 
   dropArea.addEventListener('dragleave', (event: Event) => {
+    event.stopPropagation()
+    event.preventDefault()
+
     // Hide the drop area, but only when leaving it for the last time.
 
-    --draggingCounter
-
-    if (event.target === dropArea && draggingCounter === 0) {
+    if (--draggingCounter === 0) {
       dropArea.classList.remove('dragging')
     }
   })

@@ -70,30 +70,10 @@ export class MainWindow extends ApplicationWindow {
 
   open(): void {
     electron.dialog
-      .showOpenDialog(this, {
-        properties: ['openFile', 'multiSelections'],
-        filters: [
-          {
-            name: 'All Files',
-            extensions: ['*']
-          },
-          {
-            name: 'CellML Files',
-            extensions: ['cellml']
-          },
-          {
-            name: 'SED-ML Files',
-            extensions: ['sedml']
-          },
-          {
-            name: 'COMBINE Archives',
-            extensions: ['omex']
-          }
-        ]
+      .showOpenDialog({
+        properties: ['openFile', 'multiSelections']
       })
       .then(({ filePaths }) => {
-        // Read the contents of the files.
-
         for (const filePath of filePaths) {
           const fileName = path.basename(filePath)
 
