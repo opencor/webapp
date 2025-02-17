@@ -33,6 +33,25 @@ electronAPI?.onAbout(() => {
   aboutVisible.value = true
 })
 
+// Show the contents of a file.
+
+function showFileContents(file: File) {
+  file
+    .arrayBuffer()
+    .then((arrayBuffer) => {
+      const uint8Array = new Uint8Array(arrayBuffer)
+      const base64 = btoa(uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), ''))
+      const filePathOrName = electronAPI !== undefined ? electronAPI.filePath(file) : file.name
+
+      console.log(`---[ ${filePathOrName} ]---[BEGIN]`)
+      console.log(base64)
+      console.log(`---[ ${filePathOrName} ]---[END]`)
+    })
+    .catch((error: unknown) => {
+      console.log('Failed to read file:', error)
+    })
+}
+
 // Open file(s) dialog.
 
 function onChange(event: Event) {
@@ -40,19 +59,7 @@ function onChange(event: Event) {
 
   if (files !== null) {
     for (const file of files) {
-      file
-        .arrayBuffer()
-        .then((arrayBuffer) => {
-          const uint8Array = new Uint8Array(arrayBuffer)
-          const base64 = btoa(uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), ''))
-
-          console.log(`---[ ${file.name} ]---[BEGIN]`)
-          console.log(base64)
-          console.log(`---[ ${file.name} ]---[END]`)
-        })
-        .catch((error: unknown) => {
-          console.log('Failed to read file:', error)
-        })
+      showFileContents(file)
     }
   }
 }
@@ -86,12 +93,7 @@ function onDrop(event: DragEvent) {
 
   if (files !== undefined) {
     for (const file of Array.from(files)) {
-      console.log('---------')
-      console.log(file.name)
-
-      if (electronAPI !== undefined) {
-        console.log(electronAPI.filePath(file))
-      }
+      showFileContents(file)
     }
   }
 }
