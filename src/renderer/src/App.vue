@@ -72,7 +72,7 @@ const dropArea = vue.useTemplateRef('dropArea')
 
 vue.onMounted(() => {
   const dropAreaElement = dropArea.value as HTMLInputElement
-  let draggingCounter = 0
+  let dropAreaCounter = 0
 
   dropAreaElement.ondragenter = (event: DragEvent) => {
     event.stopPropagation()
@@ -80,8 +80,8 @@ vue.onMounted(() => {
 
     // Show the drop area, but only when entering it for the first time.
 
-    if (draggingCounter++ === 0) {
-      dropAreaElement.classList.add('dragging')
+    if (dropAreaCounter++ === 0) {
+      dropAreaElement.classList.add('drop-area')
     }
   }
 
@@ -96,9 +96,9 @@ vue.onMounted(() => {
 
     // Hide the drop area.
 
-    draggingCounter = 0
+    dropAreaCounter = 0
 
-    dropAreaElement.classList.remove('dragging')
+    dropAreaElement.classList.remove('drop-area')
 
     // Handle the dropped files.
 
@@ -122,8 +122,8 @@ vue.onMounted(() => {
 
     // Hide the drop area, but only when leaving it for the last time.
 
-    if (--draggingCounter === 0) {
-      dropAreaElement.classList.remove('dragging')
+    if (--dropAreaCounter === 0) {
+      dropAreaElement.classList.remove('drop-area')
     }
   }
 })

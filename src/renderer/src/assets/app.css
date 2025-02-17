@@ -9,13 +9,13 @@ a {
   color: var(--p-button-link-color);
 }
 
-.dragging {
+.drop-area {
   border: 6px dashed;
   border-color: var(--p-gray-300);
 }
 
 @media (prefers-color-scheme: dark) {
-  .dragging {
+  .drop-area {
     border-color: var(--p-gray-700);
   }
 }
