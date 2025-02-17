@@ -2,7 +2,7 @@ import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
 import vuePlugin from '@vitejs/plugin-vue'
 
 import * as electronVite from 'electron-vite'
-import * as path from 'path'
+import path from 'path'
 import vitePlugin from 'unplugin-vue-components/vite'
 
 export default electronVite.defineConfig({

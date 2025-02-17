@@ -1,7 +1,7 @@
 import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
 import vuePlugin from '@vitejs/plugin-vue'
 
-import * as path from 'path'
+import path from 'path'
 import vitePlugin from 'unplugin-vue-components/vite'
 import * as vite from 'vite'
 

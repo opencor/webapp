@@ -1,10 +1,10 @@
 import * as electronToolkitUtils from '@electron-toolkit/utils'
 
-import * as electron from 'electron'
+import electron from 'electron'
 import * as electronSettings from 'electron-settings'
-import * as fs from 'fs'
+import fs from 'fs'
 import * as nodeChildProcess from 'node:child_process'
-import * as path from 'path'
+import path from 'path'
 
 import { isDevMode, isWindows, isLinux } from '../electron'
 

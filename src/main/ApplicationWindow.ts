@@ -1,5 +1,5 @@
-import * as electron from 'electron'
-import * as path from 'path'
+import electron from 'electron'
+import path from 'path'
 
 export class ApplicationWindow extends electron.BrowserWindow {
   alreadyShowedWindow = false

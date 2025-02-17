@@ -1,7 +1,7 @@
-import * as electron from 'electron'
+import electron from 'electron'
 import * as electronSettings from 'electron-settings'
-import * as fs from 'fs'
-import * as path from 'path'
+import fs from 'fs'
+import path from 'path'
 
 import { isDevMode, isMacOs } from '../electron'
 

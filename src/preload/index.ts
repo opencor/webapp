@@ -1,4 +1,4 @@
-import * as electron from 'electron'
+import electron from 'electron'
 import * as systemInformation from 'systeminformation'
 
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
