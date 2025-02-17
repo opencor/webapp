@@ -26,19 +26,19 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
 
   // Renderer process asking the main process to do something for it.
 
-  enableMenu: () => electron.ipcRenderer.invoke('enable-menu'),
   disableMenu: () => electron.ipcRenderer.invoke('disable-menu'),
+  enableMenu: () => electron.ipcRenderer.invoke('enable-menu'),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
 
   // Renderer process listening to the main process.
 
-  onResetAll: (callback: () => void) =>
-    electron.ipcRenderer.on('reset-all', () => {
-      callback()
-    }),
   onAbout: (callback: () => void) =>
     electron.ipcRenderer.on('about', () => {
+      callback()
+    }),
+  onResetAll: (callback: () => void) =>
+    electron.ipcRenderer.on('reset-all', () => {
       callback()
     })
 })

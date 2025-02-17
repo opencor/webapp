@@ -129,9 +129,9 @@ electron.app
 
     // Handle some requests from our renderer process.
 
-    electron.ipcMain.handle('reset-all', resetAll)
     electron.ipcMain.handle('enable-menu', enableMenu)
     electron.ipcMain.handle('disable-menu', disableMenu)
+    electron.ipcMain.handle('reset-all', resetAll)
 
     // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
     // triggering URL.

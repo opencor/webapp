@@ -7,16 +7,16 @@ interface ElectronAPI {
 
   // Renderer process asking the main process to do something for it.
 
-  enableMenu: () => void
   disableMenu: () => void
+  enableMenu: () => void
   filePath: (file: File) => string
   resetAll: () => void
 
   // Renderer process listening to the main process.
 
-  onResetAll: (callback: () => void) => void
   onAbout: (callback: () => void) => void
   onOpen: (callback: () => void) => void
+  onResetAll: (callback: () => void) => void
 }
 
 interface Window {
