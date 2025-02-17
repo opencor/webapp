@@ -1,10 +1,10 @@
 <template>
-  <div ref="app" class="h-screen">
+  <div class="h-screen">
     <div class="flex flex-col h-full">
       <div v-if="!electronAPI" class="main-menu">
         <MainMenu @about="aboutVisible = true" @open="open()" />
       </div>
-      <div class="flex grow justify-center items-center">
+      <div ref="dropArea" class="flex grow justify-center items-center">
         <BackgroundComponent />
       </div>
     </div>
@@ -68,7 +68,7 @@ vue.onMounted(() => {
 
 // Handle drag and drop events.
 
-const dropArea = vue.useTemplateRef('app')
+const dropArea = vue.useTemplateRef('dropArea')
 
 vue.onMounted(() => {
   const dropAreaElement = dropArea.value as HTMLInputElement
