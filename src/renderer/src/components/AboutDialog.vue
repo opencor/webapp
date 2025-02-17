@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import { electronAPI } from '../../../electronAPI'
-import * as locAPI from '../../../libopencor/locAPI'
+import { locAPI } from '../../../libopencor/locAPI'
 
 defineEmits(['close'])
 
@@ -52,5 +52,6 @@ const version = __APP_VERSION__
 const currentYear = new Date().getFullYear()
 const copyright = currentYear === 2025 ? '2025' : `2025-${currentYear.toString()}`
 
-const locVersion = locAPI.version()
+const locVersion =
+  locAPI.versionString() + (electronAPI !== undefined ? ' (compiled or interpreted)' : ' (interpreted)')
 </script>

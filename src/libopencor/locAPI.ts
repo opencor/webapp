@@ -6,11 +6,5 @@ interface LOCAPI {
   versionString: () => string
 }
 
-// @ts-expect-error (window.locAPI may or not be defined and that is why we test it)
-const winLocAPI = window.locAPI ?? undefined
-const locAPI: LOCAPI = winLocAPI ?? (await libOpenCOR())
-const cppLocAPI = !!winLocAPI
-
-export function version() {
-  return locAPI.versionString() + (cppLocAPI ? ' (compiled or interpreted)' : ' (interpreted)')
-}
+// @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
+export const locAPI: LOCAPI = window.locAPI ?? (await libOpenCOR())
