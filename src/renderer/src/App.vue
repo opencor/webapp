@@ -2,14 +2,14 @@
   <div class="h-screen">
     <div class="flex flex-col h-full">
       <div v-if="!electronAPI" class="main-menu">
-        <MainMenu @about="aboutVisible = true" @open="open()" />
+        <MainMenu @about="aboutVisible = true" @open="$refs.files.click()" />
       </div>
       <div ref="dropArea" class="flex grow justify-center items-center">
         <BackgroundComponent />
       </div>
     </div>
   </div>
-  <input ref="files" type="file" multiple style="display: none" />
+  <input ref="files" type="file" multiple style="display: none" @change.prevent="onChange" />
   <ResetAllDialog />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
 </template>
@@ -29,42 +29,27 @@ electronAPI?.onAbout(() => {
 
 // Open file(s) dialog.
 
-const filesInput = vue.useTemplateRef('files')
+function onChange(event: Event) {
+  const files = (event.target as HTMLInputElement).files
 
-function open() {
-  const filesInputElement = filesInput.value as HTMLInputElement
+  if (files !== null) {
+    for (const file of files) {
+      file
+        .arrayBuffer()
+        .then((arrayBuffer) => {
+          const uint8Array = new Uint8Array(arrayBuffer)
+          const base64 = btoa(uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), ''))
 
-  filesInputElement.click()
-}
-
-vue.onMounted(() => {
-  const filesInputElement = filesInput.value as HTMLInputElement
-
-  filesInputElement.onchange = (event: Event) => {
-    event.stopPropagation()
-    event.preventDefault()
-
-    const files = filesInputElement.files
-
-    if (files !== null) {
-      for (const file of files) {
-        file
-          .arrayBuffer()
-          .then((arrayBuffer) => {
-            const uint8Array = new Uint8Array(arrayBuffer)
-            const base64 = btoa(uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), ''))
-
-            console.log(`---[ ${file.name} ]---[BEGIN]`)
-            console.log(base64)
-            console.log(`---[ ${file.name} ]---[END]`)
-          })
-          .catch((error: unknown) => {
-            console.log('Failed to read file:', error)
-          })
-      }
+          console.log(`---[ ${file.name} ]---[BEGIN]`)
+          console.log(base64)
+          console.log(`---[ ${file.name} ]---[END]`)
+        })
+        .catch((error: unknown) => {
+          console.log('Failed to read file:', error)
+        })
     }
   }
-})
+}
 
 // Handle drag and drop events.
 
