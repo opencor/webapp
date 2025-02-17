@@ -202,7 +202,7 @@ export class MainWindow extends ApplicationWindow {
     */
 
     toolsSubMenu.push({
-      label: 'Reset All',
+      label: 'Reset All...',
       click: () => {
         this.webContents.send('reset-all')
       }
