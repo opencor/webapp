@@ -4,7 +4,13 @@
       <div v-if="!electronAPI" class="main-menu">
         <MainMenu @about="aboutVisible = true" @open="$refs.files.click()" />
       </div>
-      <div ref="dropArea" class="flex grow justify-center items-center">
+      <div
+        class="flex grow justify-center items-center"
+        @dragenter.prevent="onDragEnter"
+        @dragover.prevent
+        @drop.prevent="onDrop"
+        @dragleave.prevent="onDragLeave"
+      >
         <BackgroundComponent />
       </div>
     </div>
@@ -51,65 +57,50 @@ function onChange(event: Event) {
   }
 }
 
-// Handle drag and drop events.
+// Drag and drop.
 
-const dropArea = vue.useTemplateRef('dropArea')
+let dropAreaCounter = 0
 
-vue.onMounted(() => {
-  const dropAreaElement = dropArea.value as HTMLInputElement
-  let dropAreaCounter = 0
+function onDragEnter(event: DragEvent) {
+  const dropAreaElement = event.target as HTMLElement
 
-  dropAreaElement.ondragenter = (event: DragEvent) => {
-    event.stopPropagation()
-    event.preventDefault()
+  // Show the drop area, but only when entering it for the first time.
 
-    // Show the drop area, but only when entering it for the first time.
-
-    if (dropAreaCounter++ === 0) {
-      dropAreaElement.classList.add('drop-area')
-    }
+  if (dropAreaCounter++ === 0) {
+    dropAreaElement.classList.add('drop-area')
   }
+}
 
-  dropAreaElement.ondragover = (event: DragEvent) => {
-    event.stopPropagation()
-    event.preventDefault()
-  }
+function onDrop(event: DragEvent) {
+  // Hide the drop area.
 
-  dropAreaElement.ondrop = (event: DragEvent) => {
-    event.stopPropagation()
-    event.preventDefault()
+  const dropAreaElement = event.target as HTMLElement
 
-    // Hide the drop area.
+  dropAreaCounter = 0
 
-    dropAreaCounter = 0
+  dropAreaElement.classList.remove('drop-area')
 
-    dropAreaElement.classList.remove('drop-area')
+  // Handle the dropped files.
 
-    // Handle the dropped files.
+  const files = event.dataTransfer?.files
 
-    const files = event.dataTransfer?.files
+  if (files !== undefined) {
+    for (const file of Array.from(files)) {
+      console.log('---------')
+      console.log(file.name)
 
-    if (files !== undefined) {
-      for (const file of Array.from(files)) {
-        console.log('---------')
-        console.log(file.name)
-
-        if (electronAPI !== undefined) {
-          console.log(electronAPI.filePath(file))
-        }
+      if (electronAPI !== undefined) {
+        console.log(electronAPI.filePath(file))
       }
     }
   }
+}
 
-  dropAreaElement.ondragleave = (event: DragEvent) => {
-    event.stopPropagation()
-    event.preventDefault()
+function onDragLeave(event: DragEvent) {
+  const dropAreaElement = event.target as HTMLElement
 
-    // Hide the drop area, but only when leaving it for the last time.
-
-    if (--dropAreaCounter === 0) {
-      dropAreaElement.classList.remove('drop-area')
-    }
+  if (--dropAreaCounter === 0) {
+    dropAreaElement.classList.remove('drop-area')
   }
-})
+}
 </script>
