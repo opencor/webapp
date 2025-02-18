@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "2025.02.17",
+  "version": "2025.02.18",
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",

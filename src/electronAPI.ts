@@ -15,7 +15,7 @@ interface ElectronAPI {
   // Renderer process listening to the main process.
 
   onAbout: (callback: () => void) => void
-  onOpen: (callback: () => void) => void
+  onOpenRemote: (callback: () => void) => void
   onResetAll: (callback: () => void) => void
 }
 

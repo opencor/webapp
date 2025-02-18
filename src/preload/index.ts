@@ -37,6 +37,10 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.on('about', () => {
       callback()
     }),
+  onOpenRemote: (callback: () => void) =>
+    electron.ipcRenderer.on('open-remote', () => {
+      callback()
+    }),
   onResetAll: (callback: () => void) =>
     electron.ipcRenderer.on('reset-all', () => {
       callback()

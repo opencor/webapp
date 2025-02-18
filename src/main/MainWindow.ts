@@ -87,10 +87,6 @@ export class MainWindow extends ApplicationWindow {
       })
   }
 
-  openRemote(): void {
-    console.log('Open Remote...')
-  }
-
   configureMenu(): void {
     // Some common menu items.
 
@@ -164,7 +160,7 @@ export class MainWindow extends ApplicationWindow {
       label: 'Open Remote...',
       accelerator: 'CmdOrCtrl+Shift+O',
       click: () => {
-        this.openRemote()
+        this.webContents.send('open-remote')
       }
     })
 

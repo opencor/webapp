@@ -2,7 +2,7 @@
   <div class="h-screen">
     <div class="flex flex-col h-full">
       <div v-if="!electronAPI" class="main-menu">
-        <MainMenu @about="aboutVisible = true" @open="$refs.files.click()" @openRemote="openRemote()" />
+        <MainMenu @about="aboutVisible = true" @open="$refs.files.click()" @openRemote="openRemoteVisible = true" />
       </div>
       <div
         class="flex grow justify-center items-center"
@@ -16,6 +16,7 @@
     </div>
   </div>
   <input ref="files" type="file" multiple style="display: none" @change.prevent="onChange" />
+  <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="onClose" />
   <ResetAllDialog />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
 </template>
@@ -108,7 +109,17 @@ function onDragLeave(event: DragEvent) {
 
 // Open remote.
 
-function openRemote() {
-  console.log('Open remote...')
+const openRemoteVisible = vue.ref(false)
+
+electronAPI?.onOpenRemote(() => {
+  openRemoteVisible.value = true
+})
+
+function onOpenRemote(url: string) {
+  console.log('Open remote:', url)
+}
+
+function onClose() {
+  openRemoteVisible.value = false
 }
 </script>
