@@ -288,11 +288,11 @@ export class MainWindow extends ApplicationWindow {
         } else {
           // Check whether we have files to open.
 
-          const paths = parsedUrl.pathname.substring(1).split('%7C')
+          const filePaths = parsedUrl.pathname.substring(1).split('%7C')
 
           if (
-            (isAction(parsedUrl.hostname, 'openFile') && paths.length === 1) ||
-            (isAction(parsedUrl.hostname, 'openFiles') && paths.length > 1)
+            (isAction(parsedUrl.hostname, 'openFile') && filePaths.length === 1) ||
+            (isAction(parsedUrl.hostname, 'openFiles') && filePaths.length > 1)
           ) {
             // Open the given file(s).
             //---OPENCOR--- To be done.
