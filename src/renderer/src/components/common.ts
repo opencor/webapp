@@ -1,9 +1,9 @@
 import { electronAPI } from '../../../electronAPI'
 
-export function onShow() {
+export function onShow(): void {
   electronAPI?.disableMenu()
 }
 
-export function onHide() {
+export function onHide(): void {
   electronAPI?.enableMenu()
 }
