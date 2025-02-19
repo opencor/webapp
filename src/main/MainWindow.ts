@@ -272,11 +272,11 @@ export class MainWindow extends ApplicationWindow {
         const parsedUrl = new URL(argument)
 
         if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
-          // Open our about dialog.
+          // Ask our renderer to open our about dialog.
 
           this.webContents.send('about')
         } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
-          // Open our preferences dialog.
+          // Ask our renderer to open our preferences dialog.
           //---OPENCOR--- To be disabled once we have a preferences dialog.
           // this.webContents.send('preferences')
         } else {
@@ -288,7 +288,7 @@ export class MainWindow extends ApplicationWindow {
             (isAction(parsedUrl.hostname, 'openFile') && filePaths.length === 1) ||
             (isAction(parsedUrl.hostname, 'openFiles') && filePaths.length > 1)
           ) {
-            // Open the given file(s).
+            // Ask our renderer to open the given file(s).
 
             for (const filePath of filePaths) {
               this.webContents.send('open', filePath)
