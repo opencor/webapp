@@ -75,11 +75,7 @@ export class MainWindow extends ApplicationWindow {
       })
       .then(({ filePaths }) => {
         for (const filePath of filePaths) {
-          const fileName = path.basename(filePath)
-
-          console.log(`---[ ${fileName} ]---[BEGIN]`)
-          console.log(fs.readFileSync(filePath, 'base64'))
-          console.log(`---[ ${fileName} ]---[END]`)
+          this.webContents.send('open', filePath)
         }
       })
       .catch((error: unknown) => {
@@ -295,7 +291,10 @@ export class MainWindow extends ApplicationWindow {
             (isAction(parsedUrl.hostname, 'openFiles') && filePaths.length > 1)
           ) {
             // Open the given file(s).
-            //---OPENCOR--- To be done.
+
+            for (const filePath of filePaths) {
+              this.webContents.send('open', filePath)
+            }
           }
         }
       }

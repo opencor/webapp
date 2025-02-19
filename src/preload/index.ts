@@ -37,6 +37,12 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.on('about', () => {
       callback()
     }),
+  onOpen: (callback: (filePath: string) => void) =>
+    electron.ipcRenderer.on('open', (_event, ...filePaths) => {
+      for (const filePath of filePaths) {
+        callback(filePath)
+      }
+    }),
   onOpenRemote: (callback: () => void) =>
     electron.ipcRenderer.on('open-remote', () => {
       callback()

@@ -26,6 +26,8 @@
 import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 
+import { fileContents, filePath, toastLife } from './components/common'
+
 import { electronAPI } from '../../electronAPI'
 
 const toast = useToast()
@@ -38,23 +40,41 @@ electronAPI?.onAbout(() => {
   aboutVisible.value = true
 })
 
-// Show the contents of a file.
+// Open a file.
 
-function showFileContents(file: File) {
-  file
-    .arrayBuffer()
-    .then((arrayBuffer) => {
-      const uint8Array = new Uint8Array(arrayBuffer)
-      const base64 = btoa(uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), ''))
-      const filePathOrName = electronAPI !== undefined ? electronAPI.filePath(file) : file.name
+function openFile(filePath: string, fileContentsPromise?: Promise<string>): void {
+  if (fileContentsPromise !== undefined) {
+    fileContentsPromise
+      .then((fileContents) => {
+        const fileContentsShown = Math.min(100, fileContents.length)
 
-      console.log(`---[ ${filePathOrName} ]---[BEGIN]`)
-      console.log(base64)
-      console.log(`---[ ${filePathOrName} ]---[END]`)
+        toast.add({
+          severity: 'info',
+          summary: 'Opening a file',
+          detail:
+            filePath +
+            '\n\n' +
+            fileContents.slice(0, fileContentsShown) +
+            (fileContents.length > fileContentsShown ? '...' : ''),
+          life: toastLife
+        })
+      })
+      .catch((error: unknown) => {
+        toast.add({
+          severity: 'error',
+          summary: 'Opening a file',
+          detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
+          life: toastLife
+        })
+      })
+  } else {
+    toast.add({
+      severity: 'info',
+      summary: 'Opening a file',
+      detail: filePath,
+      life: toastLife
     })
-    .catch((error: unknown) => {
-      console.log('Failed to read file:', error)
-    })
+  }
 }
 
 // Open file(s) dialog.
@@ -64,7 +84,7 @@ function onChange(event: Event) {
 
   if (files !== null) {
     for (const file of files) {
-      showFileContents(file)
+      openFile(filePath(file), fileContents(file))
     }
   }
 }
@@ -98,7 +118,7 @@ function onDrop(event: DragEvent) {
 
   if (files !== undefined) {
     for (const file of Array.from(files)) {
-      showFileContents(file)
+      openFile(filePath(file), electronAPI !== undefined ? undefined : fileContents(file))
     }
   }
 }
@@ -111,6 +131,12 @@ function onDragLeave(event: DragEvent) {
   }
 }
 
+// Open.
+
+electronAPI?.onOpen((filePath: string) => {
+  openFile(filePath)
+})
+
 // Open remote.
 
 const openRemoteVisible = vue.ref(false)
@@ -120,7 +146,7 @@ electronAPI?.onOpenRemote(() => {
 })
 
 function onOpenRemote(url: string) {
-  console.log('Open remote:', url)
+  openFile(url, electronAPI !== undefined ? undefined : fileContents(url))
 }
 
 // Reset all.
