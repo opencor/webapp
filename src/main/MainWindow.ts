@@ -277,8 +277,8 @@ export class MainWindow extends ApplicationWindow {
           this.webContents.send('about')
         } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
           // Ask our renderer to open our preferences dialog.
-          //---OPENCOR--- To be disabled once we have a preferences dialog.
-          // this.webContents.send('preferences')
+
+          this.webContents.send('preferences')
         } else {
           // Check whether we have files to open.
 

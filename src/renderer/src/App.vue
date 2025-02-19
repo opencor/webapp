@@ -40,6 +40,17 @@ electronAPI?.onAbout(() => {
   aboutVisible.value = true
 })
 
+// Preferences dialog.
+
+electronAPI?.onPreferences(() => {
+  toast.add({
+    severity: 'info',
+    summary: 'Preferences',
+    detail: 'Preferences dialog not implemented yet.',
+    life: toastLife
+  })
+})
+
 // Open a file.
 
 function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): void {
