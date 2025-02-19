@@ -2,6 +2,7 @@ import primeVueAuraTheme from '@primevue/themes/aura'
 
 import primeVueConfig from 'primevue/config'
 import primeVueConfirmationService from 'primevue/confirmationservice'
+import primeVueToastService from 'primevue/toastservice'
 import * as vue from 'vue'
 
 import App from './App.vue'
@@ -17,5 +18,6 @@ app.use(primeVueConfig, {
   }
 })
 app.use(primeVueConfirmationService)
+app.use(primeVueToastService)
 
 app.mount('#app')

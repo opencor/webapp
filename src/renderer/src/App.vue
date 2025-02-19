@@ -19,12 +19,16 @@
   <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
   <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
+  <Toast />
 </template>
 
 <script setup lang="ts">
+import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 
 import { electronAPI } from '../../electronAPI'
+
+const toast = useToast()
 
 // About dialog.
 
