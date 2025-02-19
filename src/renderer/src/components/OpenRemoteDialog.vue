@@ -3,11 +3,11 @@
     <div class="flex items-center mt-2 mb-4">
       <FloatLabel class="w-full" variant="on">
         <label>URL</label>
-        <InputText autofocus fluid v-model="url" @update:modelValue="onUpdate()" @keyup.enter="emitOpenRemote()" />
+        <InputText autofocus fluid v-model="url" @keyup.enter="emitOpenRemote()" />
       </FloatLabel>
     </div>
     <template #footer>
-      <Button type="button" label="Open" :disabled="!validUrl" @click="emitOpenRemote()" />
+      <Button type="button" label="Open" :disabled="url === ''" @click="emitOpenRemote()" />
       <Button type="button" label="Cancel" severity="secondary" @click="$emit('close')" />
     </template>
   </BaseDialog>
@@ -17,18 +17,7 @@
 import * as vue from 'vue'
 
 const emit = defineEmits(['close', 'openRemote'])
-const url = vue.ref()
-const validUrl = vue.ref(false)
-
-function onUpdate() {
-  try {
-    const userUrl = new URL(url.value)
-
-    validUrl.value = userUrl.protocol === 'http:' || userUrl.protocol === 'https:'
-  } catch {
-    validUrl.value = false
-  }
-}
+const url = vue.ref('')
 
 function emitClose() {
   url.value = ''
@@ -37,7 +26,7 @@ function emitClose() {
 }
 
 function emitOpenRemote() {
-  if (!validUrl.value) {
+  if (url.value === '') {
     return
   }
 
