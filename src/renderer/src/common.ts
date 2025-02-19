@@ -1,4 +1,4 @@
-import { electronAPI } from '../../../electronAPI'
+import { electronAPI } from '../../electronAPI'
 
 export const toastLife = 3000
 

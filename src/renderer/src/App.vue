@@ -26,7 +26,7 @@
 import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 
-import { fileContents, filePath, toastLife } from './components/common'
+import { fileContents, filePath, toastLife } from './common'
 
 import { electronAPI } from '../../electronAPI'
 

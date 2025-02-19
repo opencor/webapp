@@ -7,5 +7,5 @@
 </template>
 
 <script setup lang="ts">
-import { onShow, onHide } from './common'
+import { onShow, onHide } from '../common'
 </script>
