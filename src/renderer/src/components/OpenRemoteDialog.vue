@@ -16,14 +16,8 @@
 <script setup lang="ts">
 import * as vue from 'vue'
 
-const emit = defineEmits(['close', 'openRemote'])
+const emit = defineEmits(['openRemote', 'close'])
 const url = vue.ref('')
-
-function emitClose() {
-  url.value = ''
-
-  emit('close')
-}
 
 function emitOpenRemote() {
   if (url.value === '') {
@@ -33,5 +27,11 @@ function emitOpenRemote() {
   emit('openRemote', url.value)
 
   emitClose()
+}
+
+function emitClose() {
+  url.value = ''
+
+  emit('close')
 }
 </script>
