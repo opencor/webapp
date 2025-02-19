@@ -42,20 +42,30 @@ electronAPI?.onAbout(() => {
 
 // Open a file.
 
-function openFile(filePath: string, fileContentsPromise?: Promise<string>): void {
+function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): void {
+  const numberOfBytesShown = 100
+
+  function topContents(contents: string): string {
+    return (
+      contents.slice(0, Math.min(numberOfBytesShown, contents.length)) +
+      (contents.length > numberOfBytesShown ? '...' : '')
+    )
+  }
+
   if (fileContentsPromise !== undefined) {
     fileContentsPromise
       .then((fileContents) => {
-        const fileContentsShown = Math.min(100, fileContents.length)
-
         toast.add({
           severity: 'info',
           summary: 'Opening a file',
           detail:
             filePath +
-            '\n\n' +
-            fileContents.slice(0, fileContentsShown) +
-            (fileContents.length > fileContentsShown ? '...' : ''),
+            '\n\nRaw contents:\n' +
+            topContents(new TextDecoder().decode(fileContents)) +
+            '\n\nUint8Array:\n' +
+            topContents(String(fileContents)) +
+            '\n\nBase64:\n' +
+            topContents(btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), ''))),
           life: toastLife
         })
       })

@@ -14,7 +14,7 @@ export function filePath(file: File): string {
   return electronAPI !== undefined ? electronAPI.filePath(file) : file.name
 }
 
-export function fileContents(fileOrUrl: File | string): Promise<string> {
+export function fileContents(fileOrUrl: File | string): Promise<Uint8Array> {
   if (typeof fileOrUrl === 'string') {
     return new Promise((resolve, reject) => {
       fetch(fileOrUrl)
@@ -26,9 +26,7 @@ export function fileContents(fileOrUrl: File | string): Promise<string> {
           }
         })
         .then((arrayBuffer) => {
-          const uint8Array = new Uint8Array(arrayBuffer)
-
-          resolve(btoa(uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')))
+          resolve(new Uint8Array(arrayBuffer))
         })
         .catch((error: unknown) => {
           reject(error instanceof Error ? error : new Error(String(error)))
@@ -39,9 +37,7 @@ export function fileContents(fileOrUrl: File | string): Promise<string> {
       fileOrUrl
         .arrayBuffer()
         .then((arrayBuffer) => {
-          const uint8Array = new Uint8Array(arrayBuffer)
-
-          resolve(btoa(uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')))
+          resolve(new Uint8Array(arrayBuffer))
         })
         .catch((error: unknown) => {
           reject(error instanceof Error ? error : new Error(String(error)))
