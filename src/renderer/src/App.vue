@@ -16,8 +16,8 @@
     </div>
   </div>
   <input ref="files" type="file" multiple style="display: none" @change.prevent="onChange" />
-  <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="onClose" />
-  <ResetAllDialog />
+  <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
+  <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
 </template>
 
@@ -119,7 +119,15 @@ function onOpenRemote(url: string) {
   console.log('Open remote:', url)
 }
 
-function onClose() {
-  openRemoteVisible.value = false
+// Reset all.
+
+const resetAllVisible = vue.ref(false)
+
+electronAPI?.onResetAll(() => {
+  resetAllVisible.value = true
+})
+
+function onResetAll() {
+  electronAPI?.resetAll()
 }
 </script>
