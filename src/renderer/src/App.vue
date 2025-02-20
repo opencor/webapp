@@ -31,7 +31,7 @@
 import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 
-import { fileContents, filePath, toastLife } from './common'
+import { fileContents, filePath, isRemoteFilePath, toastLife } from './common'
 
 import { electronAPI } from '../../electronAPI'
 
@@ -127,6 +127,14 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
         })
       })
   } else {
+    if (isRemoteFilePath(filePath)) {
+      showSpinningWheel()
+    }
+
+    if (isRemoteFilePath(filePath)) {
+      hideSpinningWheel()
+    }
+
     toast.add({
       severity: 'info',
       summary: 'Opening a file',

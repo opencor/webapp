@@ -10,6 +10,10 @@ export function onHide(): void {
   electronAPI?.showEnabledMenu()
 }
 
+export function isRemoteFilePath(filePath: string): boolean {
+  return filePath.startsWith('http://') || filePath.startsWith('https://')
+}
+
 export function filePath(file: File): string {
   return electronAPI !== undefined ? electronAPI.filePath(file) : file.name
 }
