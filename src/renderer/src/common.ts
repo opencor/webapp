@@ -17,7 +17,7 @@ export function filePath(file: File): string {
 export function fileContents(fileOrUrl: File | string): Promise<Uint8Array> {
   if (typeof fileOrUrl === 'string') {
     return new Promise((resolve, reject) => {
-      fetch(fileOrUrl)
+      fetch(`https://corsproxy.io/${encodeURIComponent(fileOrUrl)}`)
         .then((response) => {
           if (response.ok) {
             return response.arrayBuffer()
