@@ -48,7 +48,11 @@ function doEnableDisableMenu(enabled: boolean): void {
 
   if (menu) {
     menu.items.forEach((menuItem) => {
-      menuItem.enabled = enabled
+      // Only enable/disable menu items that are not related to editing (otherwise we won't be able to use the clipboard).
+
+      if (menuItem.label !== 'Edit') {
+        menuItem.enabled = enabled
+      }
     })
 
     electron.Menu.setApplicationMenu(menu)
@@ -163,6 +167,23 @@ export class MainWindow extends ApplicationWindow {
       fileSubMenu.push({ role: 'quit' })
     }
 
+    // Edit menu.
+
+    const editMenu: electron.MenuItemConstructorOptions = {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'delete', accelerator: 'Delete' },
+        { type: 'separator' },
+        { role: 'selectAll' }
+      ]
+    }
+
     // View menu.
 
     const viewMenu: electron.MenuItemConstructorOptions = {
@@ -242,6 +263,7 @@ export class MainWindow extends ApplicationWindow {
     }
 
     menu.push(fileMenu)
+    menu.push(editMenu)
     menu.push(viewMenu)
     menu.push(toolsMenu)
     menu.push(helpMenu)
