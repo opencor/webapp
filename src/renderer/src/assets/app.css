@@ -40,3 +40,12 @@ a {
 .p-menubar-root-list > .p-menubar-item > .p-menubar-item-content > .p-menubar-item-link > .p-menubar-submenu-icon {
   display: none !important;
 }
+
+.spinning-wheel {
+  position: fixed !important;
+  top: center;
+  left: center;
+  width: 50% !important;
+  height: 50% !important;
+  z-index: 999;
+}

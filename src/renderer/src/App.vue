@@ -12,6 +12,8 @@
         @dragleave.prevent="onDragLeave"
       >
         <BackgroundComponent />
+        <BlockUI :blocked="spinningWheelVisible" :fullScreen="true"></BlockUI>
+        <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
       </div>
     </div>
   </div>
@@ -31,6 +33,18 @@ import { fileContents, filePath, toastLife } from './common'
 import { electronAPI } from '../../electronAPI'
 
 const toast = useToast()
+
+// Spinning wheel.
+
+const spinningWheelVisible = vue.ref(false)
+
+function showSpinningWheel() {
+  spinningWheelVisible.value = true
+}
+
+function hideSpinningWheel() {
+  spinningWheelVisible.value = false
+}
 
 // About dialog.
 
@@ -64,8 +78,12 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
   }
 
   if (fileContentsPromise !== undefined) {
+    showSpinningWheel()
+
     fileContentsPromise
       .then((fileContents) => {
+        hideSpinningWheel()
+
         toast.add({
           severity: 'info',
           summary: 'Opening a file',
@@ -81,6 +99,8 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
         })
       })
       .catch((error: unknown) => {
+        hideSpinningWheel()
+
         toast.add({
           severity: 'error',
           summary: 'Opening a file',
