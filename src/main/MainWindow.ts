@@ -43,20 +43,194 @@ export function resetAll(): void {
   electron.app.quit()
 }
 
+let mainWindowInstance: MainWindow | null = null
+
 function doEnableDisableMenu(enabled: boolean): void {
-  const menu = electron.Menu.getApplicationMenu()
+  // Some common menu items.
 
-  if (menu) {
-    menu.items.forEach((menuItem) => {
-      // Only enable/disable menu items that are not related to editing (otherwise we won't be able to use the clipboard).
-
-      if (menuItem.label !== 'Edit') {
-        menuItem.enabled = enabled
-      }
-    })
-
-    electron.Menu.setApplicationMenu(menu)
+  const settingsMenuItem: electron.MenuItemConstructorOptions = {
+    label: 'Settings...',
+    click: () => {
+      mainWindowInstance?.webContents.send('settings')
+    }
   }
+
+  const checkForUpdatesMenuItem: electron.MenuItemConstructorOptions = {
+    label: 'Check For Updates...',
+    click: () => {
+      mainWindowInstance?.webContents.send('check-for-updates')
+    }
+  }
+
+  const aboutOpencorMenuItem: electron.MenuItemConstructorOptions = {
+    label: 'About OpenCOR',
+    click: () => {
+      mainWindowInstance?.webContents.send('about')
+    }
+  }
+
+  // App menu.
+
+  const appSubMenu: electron.MenuItemConstructorOptions[] = []
+  const appMenu: electron.MenuItemConstructorOptions = {
+    label: electron.app.name,
+    submenu: appSubMenu
+  }
+
+  if (isMacOs()) {
+    if (enabled) {
+      appSubMenu.push(aboutOpencorMenuItem)
+      appSubMenu.push({ type: 'separator' })
+      appSubMenu.push(checkForUpdatesMenuItem)
+      appSubMenu.push({ type: 'separator' })
+      appSubMenu.push(settingsMenuItem)
+      appSubMenu.push({ type: 'separator' })
+    }
+
+    appSubMenu.push({ role: 'hide' })
+    appSubMenu.push({ role: 'hideOthers' })
+    appSubMenu.push({ role: 'unhide' })
+
+    if (enabled) {
+      appSubMenu.push({ type: 'separator' })
+      appSubMenu.push({ role: 'quit' })
+    }
+  }
+
+  // File menu.
+
+  const fileSubMenu: electron.MenuItemConstructorOptions[] = []
+  const fileMenu: electron.MenuItemConstructorOptions = {
+    label: 'File',
+    submenu: fileSubMenu
+  }
+
+  fileSubMenu.push({
+    label: 'Open...',
+    accelerator: 'CmdOrCtrl+O',
+    click: () => {
+      mainWindowInstance?.open()
+    }
+  })
+  fileSubMenu.push({
+    label: 'Open Remote...',
+    accelerator: 'CmdOrCtrl+Shift+O',
+    click: () => {
+      mainWindowInstance?.webContents.send('open-remote')
+    }
+  })
+
+  if (!isMacOs()) {
+    fileSubMenu.push({ type: 'separator' })
+    fileSubMenu.push({ role: 'quit' })
+  }
+
+  // Edit menu.
+
+  const editMenu: electron.MenuItemConstructorOptions = {
+    label: 'Edit',
+    submenu: [
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      { role: 'delete', accelerator: 'Delete' },
+      { type: 'separator' },
+      { role: 'selectAll' }
+    ]
+  }
+
+  // View menu.
+
+  const viewMenu: electron.MenuItemConstructorOptions = {
+    label: 'View',
+    submenu: [
+      { role: 'resetZoom' },
+      { role: 'zoomIn' },
+      { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' }
+    ]
+  }
+
+  // Tools menu.
+
+  const toolsSubMenu: electron.MenuItemConstructorOptions[] = []
+  const toolsMenu: electron.MenuItemConstructorOptions = {
+    label: 'Tools',
+    submenu: toolsSubMenu
+  }
+
+  if (!isMacOs()) {
+    toolsSubMenu.push(settingsMenuItem)
+    toolsSubMenu.push({ type: 'separator' })
+  }
+
+  toolsSubMenu.push({
+    label: 'Reset All...',
+    click: () => {
+      mainWindowInstance?.webContents.send('reset-all')
+    }
+  })
+
+  // Help menu.
+
+  const helpSubMenu: electron.MenuItemConstructorOptions[] = []
+  const helpMenu: electron.MenuItemConstructorOptions = {
+    label: 'Help',
+    submenu: helpSubMenu
+  }
+
+  helpSubMenu.push({
+    label: 'Home Page',
+    click: () => {
+      electron.shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
+        console.error('Failed to open the home page:', error)
+      })
+    }
+  })
+  helpSubMenu.push({ type: 'separator' })
+  helpSubMenu.push({
+    label: 'Report Issue',
+    click: () => {
+      electron.shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
+        console.error('Failed to report an issue:', error)
+      })
+    }
+  })
+
+  if (!isMacOs()) {
+    helpSubMenu.push({ type: 'separator' })
+    helpSubMenu.push(checkForUpdatesMenuItem)
+    helpSubMenu.push({ type: 'separator' })
+    helpSubMenu.push(aboutOpencorMenuItem)
+  }
+
+  // Set our menu.
+
+  const menu: electron.MenuItemConstructorOptions[] = []
+
+  if (enabled) {
+    if (isMacOs()) {
+      menu.push(appMenu)
+    }
+
+    menu.push(fileMenu)
+    menu.push(editMenu)
+    menu.push(viewMenu)
+    menu.push(toolsMenu)
+    menu.push(helpMenu)
+  } else {
+    if (isMacOs()) {
+      menu.push(appMenu)
+    }
+
+    menu.push(editMenu)
+  }
+
+  electron.Menu.setApplicationMenu(electron.Menu.buildFromTemplate(menu))
 }
 
 export function enableMenu(): void {
@@ -69,6 +243,10 @@ export function disableMenu(): void {
 
 export class MainWindow extends ApplicationWindow {
   splashScreenWindowClosed = false
+
+  static setInstance(window: MainWindow): void {
+    mainWindowInstance = window
+  }
 
   open(): void {
     electron.dialog
@@ -83,186 +261,6 @@ export class MainWindow extends ApplicationWindow {
       .catch((error: unknown) => {
         console.error('Failed to open file(s):', error)
       })
-  }
-
-  configureMenu(): void {
-    // Some common menu items.
-
-    const settingsMenuItem: electron.MenuItemConstructorOptions = {
-      label: 'Settings...',
-      click: () => {
-        this.webContents.send('settings')
-      }
-    }
-
-    const checkForUpdatesMenuItem: electron.MenuItemConstructorOptions = {
-      label: 'Check For Updates...',
-      click: () => {
-        this.webContents.send('check-for-updates')
-      }
-    }
-
-    const aboutOpencorMenuItem: electron.MenuItemConstructorOptions = {
-      label: 'About OpenCOR',
-      click: () => {
-        this.webContents.send('about')
-      }
-    }
-
-    // App menu.
-
-    let appMenu: electron.MenuItemConstructorOptions = {}
-
-    if (isMacOs()) {
-      appMenu = {
-        label: electron.app.name,
-        submenu: [
-          aboutOpencorMenuItem,
-          { type: 'separator' },
-          checkForUpdatesMenuItem,
-          { type: 'separator' },
-          settingsMenuItem,
-          { type: 'separator' },
-          { role: 'hide' },
-          { role: 'hideOthers' },
-          { role: 'unhide' },
-          { type: 'separator' },
-          { role: 'quit' }
-        ]
-      }
-    }
-
-    // File menu.
-
-    const fileSubMenu: electron.MenuItemConstructorOptions[] = []
-    const fileMenu: electron.MenuItemConstructorOptions = {
-      label: 'File',
-      submenu: fileSubMenu
-    }
-
-    fileSubMenu.push({
-      label: 'Open...',
-      accelerator: 'CmdOrCtrl+O',
-      click: () => {
-        this.open()
-      }
-    })
-    fileSubMenu.push({
-      label: 'Open Remote...',
-      accelerator: 'CmdOrCtrl+Shift+O',
-      click: () => {
-        this.webContents.send('open-remote')
-      }
-    })
-
-    if (!isMacOs()) {
-      fileSubMenu.push({ type: 'separator' })
-      fileSubMenu.push({ role: 'quit' })
-    }
-
-    // Edit menu.
-
-    const editMenu: electron.MenuItemConstructorOptions = {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'delete', accelerator: 'Delete' },
-        { type: 'separator' },
-        { role: 'selectAll' }
-      ]
-    }
-
-    // View menu.
-
-    const viewMenu: electron.MenuItemConstructorOptions = {
-      label: 'View',
-      submenu: [
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' }
-      ]
-    }
-
-    // Tools menu.
-
-    const toolsSubMenu: electron.MenuItemConstructorOptions[] = []
-    const toolsMenu: electron.MenuItemConstructorOptions = {
-      label: 'Tools',
-      submenu: toolsSubMenu
-    }
-
-    if (!isMacOs()) {
-      toolsSubMenu.push(settingsMenuItem)
-      toolsSubMenu.push({ type: 'separator' })
-    }
-
-    toolsSubMenu.push({
-      label: 'Reset All...',
-      click: () => {
-        this.webContents.send('reset-all')
-      }
-    })
-
-    // Help menu.
-
-    const helpSubMenu: electron.MenuItemConstructorOptions[] = []
-    const helpMenu: electron.MenuItemConstructorOptions = {
-      label: 'Help',
-      submenu: helpSubMenu
-    }
-
-    helpSubMenu.push({
-      label: 'Home Page',
-      click: () => {
-        electron.shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
-          console.error('Failed to open the home page:', error)
-        })
-      }
-    })
-    helpSubMenu.push({ type: 'separator' })
-    helpSubMenu.push({
-      label: 'Report Issue',
-      click: () => {
-        electron.shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
-          console.error('Failed to report an issue:', error)
-        })
-      }
-    })
-
-    if (!isMacOs()) {
-      helpSubMenu.push({ type: 'separator' })
-      helpSubMenu.push(checkForUpdatesMenuItem)
-      helpSubMenu.push({ type: 'separator' })
-      helpSubMenu.push(aboutOpencorMenuItem)
-    }
-
-    // Set our menu.
-
-    const menu: electron.MenuItemConstructorOptions[] = []
-
-    if (isMacOs()) {
-      menu.push(appMenu)
-    }
-
-    menu.push(fileMenu)
-    menu.push(editMenu)
-    menu.push(viewMenu)
-    menu.push(toolsMenu)
-    menu.push(helpMenu)
-
-    electron.Menu.setApplicationMenu(electron.Menu.buildFromTemplate(menu))
-
-    // Make sure that our menu bar is always visible.
-
-    this.setAutoHideMenuBar(false)
-    this.setMenuBarVisibility(true)
   }
 
   handleArguments(commandLine: string[]): void {
@@ -325,6 +323,10 @@ export class MainWindow extends ApplicationWindow {
       ...(isMacOs() ? {} : { icon: icon })
     })
 
+    // Keep track of ourselves (needed for our menu).
+
+    MainWindow.setInstance(this)
+
     // Set our dock icon (macOS only).
 
     if (isMacOs()) {
@@ -378,9 +380,14 @@ export class MainWindow extends ApplicationWindow {
       electronSettings.setSync('mainWindowState', mainWindowState)
     })
 
-    // Configure our menu.
+    // Enable our menu.
 
-    this.configureMenu()
+    enableMenu()
+
+    // Make sure that our menu bar is always visible.
+
+    this.setAutoHideMenuBar(false)
+    this.setMenuBarVisibility(true)
 
     // Open external links in the default browser.
 
