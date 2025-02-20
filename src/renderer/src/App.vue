@@ -1,20 +1,18 @@
 <template>
-  <div class="h-screen">
-    <div class="flex flex-col h-full">
-      <div v-if="!electronAPI" class="main-menu">
-        <MainMenu @about="aboutVisible = true" @open="$refs.files.click()" @openRemote="openRemoteVisible = true" />
-      </div>
-      <div
-        class="flex grow justify-center items-center"
-        @dragenter.prevent="onDragEnter"
-        @dragover.prevent
-        @drop.prevent="onDrop"
-        @dragleave.prevent="onDragLeave"
-      >
-        <BackgroundComponent />
-        <BlockUI :blocked="spinningWheelVisible" :fullScreen="true"></BlockUI>
-        <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
-      </div>
+  <div class="flex flex-col h-screen">
+    <div v-if="!electronAPI" class="main-menu">
+      <MainMenu @about="aboutVisible = true" @open="$refs.files.click()" @openRemote="openRemoteVisible = true" />
+    </div>
+    <div
+      class="flex grow justify-center items-center"
+      @dragenter.prevent="onDragEnter"
+      @dragover.prevent
+      @drop.prevent="onDrop"
+      @dragleave.prevent="onDragLeave"
+    >
+      <BackgroundComponent />
+      <BlockUI :blocked="spinningWheelVisible" :fullScreen="true"></BlockUI>
+      <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
   </div>
   <input ref="files" type="file" multiple style="display: none" @change.prevent="onChange" />
