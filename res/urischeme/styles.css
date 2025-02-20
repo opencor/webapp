@@ -36,3 +36,7 @@ a {
     color: #34d399;
   }
 }
+
+td:last-child {
+  padding-left: 1rem;
+}
