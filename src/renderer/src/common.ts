@@ -3,11 +3,11 @@ import { electronAPI } from '../../electronAPI'
 export const toastLife = 3000
 
 export function onShow(): void {
-  electronAPI?.disableMenu()
+  electronAPI?.showDisabledMenu()
 }
 
 export function onHide(): void {
-  electronAPI?.enableMenu()
+  electronAPI?.showEnabledMenu()
 }
 
 export function filePath(file: File): string {

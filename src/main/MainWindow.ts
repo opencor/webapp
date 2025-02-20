@@ -6,6 +6,7 @@ import { isDevMode, isMacOs } from '../electron'
 import icon from './assets/icon.png?asset'
 import { URI_SCHEME } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
+import { showEnabledMenu } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {
@@ -43,232 +44,122 @@ export function resetAll(): void {
   electron.app.quit()
 }
 
-let mainWindowInstance: MainWindow | null = null
-
-function doEnableDisableMenu(enabled: boolean): void {
-  // Some common menu items.
-
-  const settingsMenuItem: electron.MenuItemConstructorOptions = {
-    label: 'Settings...',
-    click: () => {
-      mainWindowInstance?.webContents.send('settings')
-    }
-  }
-
-  const checkForUpdatesMenuItem: electron.MenuItemConstructorOptions = {
-    label: 'Check For Updates...',
-    click: () => {
-      mainWindowInstance?.webContents.send('check-for-updates')
-    }
-  }
-
-  const aboutOpencorMenuItem: electron.MenuItemConstructorOptions = {
-    label: 'About OpenCOR',
-    click: () => {
-      mainWindowInstance?.webContents.send('about')
-    }
-  }
-
-  // App menu.
-
-  const appSubMenu: electron.MenuItemConstructorOptions[] = []
-  const appMenu: electron.MenuItemConstructorOptions = {
-    label: electron.app.name,
-    submenu: appSubMenu
-  }
-
-  if (isMacOs()) {
-    if (enabled) {
-      appSubMenu.push(aboutOpencorMenuItem)
-      appSubMenu.push({ type: 'separator' })
-      appSubMenu.push(checkForUpdatesMenuItem)
-      appSubMenu.push({ type: 'separator' })
-      appSubMenu.push(settingsMenuItem)
-      appSubMenu.push({ type: 'separator' })
-    }
-
-    appSubMenu.push({ role: 'hide' })
-    appSubMenu.push({ role: 'hideOthers' })
-    appSubMenu.push({ role: 'unhide' })
-
-    if (enabled) {
-      appSubMenu.push({ type: 'separator' })
-      appSubMenu.push({ role: 'quit' })
-    }
-  }
-
-  // File menu.
-
-  const fileSubMenu: electron.MenuItemConstructorOptions[] = []
-  const fileMenu: electron.MenuItemConstructorOptions = {
-    label: 'File',
-    submenu: fileSubMenu
-  }
-
-  fileSubMenu.push({
-    label: 'Open...',
-    accelerator: 'CmdOrCtrl+O',
-    click: () => {
-      mainWindowInstance?.open()
-    }
-  })
-  fileSubMenu.push({
-    label: 'Open Remote...',
-    accelerator: 'CmdOrCtrl+Shift+O',
-    click: () => {
-      mainWindowInstance?.webContents.send('open-remote')
-    }
-  })
-
-  if (!isMacOs()) {
-    fileSubMenu.push({ type: 'separator' })
-    fileSubMenu.push({ role: 'quit' })
-  }
-
-  // Edit menu.
-
-  const editMenu: electron.MenuItemConstructorOptions = {
-    label: 'Edit',
-    submenu: [
-      { role: 'undo' },
-      { role: 'redo' },
-      { type: 'separator' },
-      { role: 'cut' },
-      { role: 'copy' },
-      { role: 'paste' },
-      { role: 'delete', accelerator: 'Delete' },
-      { type: 'separator' },
-      { role: 'selectAll' }
-    ]
-  }
-
-  // View menu.
-
-  const viewMenu: electron.MenuItemConstructorOptions = {
-    label: 'View',
-    submenu: [
-      { role: 'resetZoom' },
-      { role: 'zoomIn' },
-      { role: 'zoomOut' },
-      { type: 'separator' },
-      { role: 'togglefullscreen' }
-    ]
-  }
-
-  // Tools menu.
-
-  const toolsSubMenu: electron.MenuItemConstructorOptions[] = []
-  const toolsMenu: electron.MenuItemConstructorOptions = {
-    label: 'Tools',
-    submenu: toolsSubMenu
-  }
-
-  if (!isMacOs()) {
-    toolsSubMenu.push(settingsMenuItem)
-    toolsSubMenu.push({ type: 'separator' })
-  }
-
-  toolsSubMenu.push({
-    label: 'Reset All...',
-    click: () => {
-      mainWindowInstance?.webContents.send('reset-all')
-    }
-  })
-
-  // Help menu.
-
-  const helpSubMenu: electron.MenuItemConstructorOptions[] = []
-  const helpMenu: electron.MenuItemConstructorOptions = {
-    label: 'Help',
-    submenu: helpSubMenu
-  }
-
-  helpSubMenu.push({
-    label: 'Home Page',
-    click: () => {
-      electron.shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
-        console.error('Failed to open the home page:', error)
-      })
-    }
-  })
-  helpSubMenu.push({ type: 'separator' })
-  helpSubMenu.push({
-    label: 'Report Issue',
-    click: () => {
-      electron.shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
-        console.error('Failed to report an issue:', error)
-      })
-    }
-  })
-
-  if (!isMacOs()) {
-    helpSubMenu.push({ type: 'separator' })
-    helpSubMenu.push(checkForUpdatesMenuItem)
-    helpSubMenu.push({ type: 'separator' })
-    helpSubMenu.push(aboutOpencorMenuItem)
-  }
-
-  // Set our menu.
-
-  const menu: electron.MenuItemConstructorOptions[] = []
-
-  if (enabled) {
-    if (isMacOs()) {
-      menu.push(appMenu)
-    }
-
-    menu.push(fileMenu)
-    menu.push(editMenu)
-    menu.push(viewMenu)
-    menu.push(toolsMenu)
-    menu.push(helpMenu)
-  } else {
-    if (isMacOs()) {
-      menu.push(appMenu)
-    }
-
-    menu.push(editMenu)
-  }
-
-  electron.Menu.setApplicationMenu(electron.Menu.buildFromTemplate(menu))
-}
-
-export function enableMenu(): void {
-  doEnableDisableMenu(true)
-}
-
-export function disableMenu(): void {
-  doEnableDisableMenu(false)
-}
-
 export class MainWindow extends ApplicationWindow {
-  splashScreenWindowClosed = false
+  // Properties.
 
-  static setInstance(window: MainWindow): void {
-    mainWindowInstance = window
+  #splashScreenWindowClosed = false
+
+  // Constructor.
+
+  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow | null) {
+    // Initialise ourselves.
+
+    const mainWindowState = retrieveMainWindowState()
+
+    super({
+      x: mainWindowState.x,
+      y: mainWindowState.y,
+      width: mainWindowState.width,
+      height: mainWindowState.height,
+      minWidth: 640,
+      minHeight: 480,
+      ...(isMacOs() ? {} : { icon: icon })
+    })
+
+    // Set our dock icon (macOS only).
+
+    if (isMacOs()) {
+      electron.app.dock.setIcon(icon)
+    }
+
+    // Restore our state, if needed.
+
+    if (mainWindowState.isMaximized) {
+      this.maximize()
+    } else if (mainWindowState.isFullScreen) {
+      this.setFullScreen(true)
+    }
+
+    // Ask for the splash screen window to be closed with a short delay once we are visible and handle our command line
+    // (also with a short delay if needed).
+
+    this.once('show', () => {
+      let handleCommandLineDelay = 0
+
+      if (!this.#splashScreenWindowClosed && !!splashScreenWindow) {
+        const SHORT_DELAY = 369
+
+        this.#splashScreenWindowClosed = true
+
+        handleCommandLineDelay = SHORT_DELAY
+
+        setTimeout(() => {
+          splashScreenWindow.close()
+        }, SHORT_DELAY)
+      }
+
+      setTimeout(() => {
+        this.handleArguments(commandLine)
+      }, handleCommandLineDelay)
+    })
+
+    // Keep track of our new state upon closing.
+
+    this.on('close', () => {
+      if (!this.isMaximized() && !this.isMinimized() && !this.isFullScreen()) {
+        mainWindowState.x = this.getPosition()[0]
+        mainWindowState.y = this.getPosition()[1]
+        mainWindowState.width = this.getContentSize()[0]
+        mainWindowState.height = this.getContentSize()[1]
+      }
+
+      mainWindowState.isMaximized = this.isMaximized()
+      mainWindowState.isFullScreen = this.isFullScreen()
+
+      electronSettings.setSync('mainWindowState', mainWindowState)
+    })
+
+    // Show our enabled menu.
+
+    showEnabledMenu()
+
+    // Make sure that our menu bar is always visible.
+
+    this.setAutoHideMenuBar(false)
+    this.setMenuBarVisibility(true)
+
+    // Open external links in the default browser.
+
+    this.webContents.setWindowOpenHandler((details) => {
+      electron.shell.openExternal(details.url).catch((error: unknown) => {
+        console.error('Failed to open external URL:', error)
+      })
+
+      return {
+        action: 'deny'
+      }
+    })
+
+    // Load the remote URL for development or the local HTML file for production.
+
+    if (isDevMode()) {
+      // @ts-expect-error (isDevMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
+      this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((error: unknown) => {
+        console.error('Failed to load URL:', error)
+      })
+    } else {
+      this.loadFile('./out/renderer/index.html').catch((error: unknown) => {
+        console.error('Failed to load file:', error)
+      })
+    }
   }
 
-  open(): void {
-    electron.dialog
-      .showOpenDialog({
-        properties: ['openFile', 'multiSelections']
-      })
-      .then(({ filePaths }) => {
-        for (const filePath of filePaths) {
-          this.webContents.send('open', filePath)
-        }
-      })
-      .catch((error: unknown) => {
-        console.error('Failed to open file(s):', error)
-      })
-  }
+  // Handle our command line arguments.
 
   handleArguments(commandLine: string[]): void {
     if (commandLine.length === 0) {
       return
     }
-
-    // Handle every command line argument.
 
     commandLine.forEach((argument) => {
       if (argument.startsWith(`${URI_SCHEME}://`)) {
@@ -308,110 +199,20 @@ export class MainWindow extends ApplicationWindow {
     })
   }
 
-  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow | null) {
-    // Initialise ourselves.
+  // Handle our File|Open menu.
 
-    const mainWindowState = retrieveMainWindowState()
-
-    super({
-      x: mainWindowState.x,
-      y: mainWindowState.y,
-      width: mainWindowState.width,
-      height: mainWindowState.height,
-      minWidth: 640,
-      minHeight: 480,
-      ...(isMacOs() ? {} : { icon: icon })
-    })
-
-    // Keep track of ourselves (needed for our menu).
-
-    MainWindow.setInstance(this)
-
-    // Set our dock icon (macOS only).
-
-    if (isMacOs()) {
-      electron.app.dock.setIcon(icon)
-    }
-
-    // Restore our state, if needed.
-
-    if (mainWindowState.isMaximized) {
-      this.maximize()
-    } else if (mainWindowState.isFullScreen) {
-      this.setFullScreen(true)
-    }
-
-    // Ask for the splash screen window to be closed with a short delay once we are visible and handle our command line
-    // (also with a short delay if needed).
-
-    this.once('show', () => {
-      let handleCommandLineDelay = 0
-
-      if (!this.splashScreenWindowClosed && !!splashScreenWindow) {
-        const SHORT_DELAY = 369
-
-        this.splashScreenWindowClosed = true
-
-        handleCommandLineDelay = SHORT_DELAY
-
-        setTimeout(() => {
-          splashScreenWindow.close()
-        }, SHORT_DELAY)
-      }
-
-      setTimeout(() => {
-        this.handleArguments(commandLine)
-      }, handleCommandLineDelay)
-    })
-
-    // Keep track of our new state upon closing.
-
-    this.on('close', () => {
-      if (!this.isMaximized() && !this.isMinimized() && !this.isFullScreen()) {
-        mainWindowState.x = this.getPosition()[0]
-        mainWindowState.y = this.getPosition()[1]
-        mainWindowState.width = this.getContentSize()[0]
-        mainWindowState.height = this.getContentSize()[1]
-      }
-
-      mainWindowState.isMaximized = this.isMaximized()
-      mainWindowState.isFullScreen = this.isFullScreen()
-
-      electronSettings.setSync('mainWindowState', mainWindowState)
-    })
-
-    // Enable our menu.
-
-    enableMenu()
-
-    // Make sure that our menu bar is always visible.
-
-    this.setAutoHideMenuBar(false)
-    this.setMenuBarVisibility(true)
-
-    // Open external links in the default browser.
-
-    this.webContents.setWindowOpenHandler((details) => {
-      electron.shell.openExternal(details.url).catch((error: unknown) => {
-        console.error('Failed to open external URL:', error)
+  open(): void {
+    electron.dialog
+      .showOpenDialog({
+        properties: ['openFile', 'multiSelections']
       })
-
-      return {
-        action: 'deny'
-      }
-    })
-
-    // Load the remote URL for development or the local HTML file for production.
-
-    if (isDevMode()) {
-      // @ts-expect-error (isDevMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
-      this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((error: unknown) => {
-        console.error('Failed to load URL:', error)
+      .then(({ filePaths }) => {
+        for (const filePath of filePaths) {
+          this.webContents.send('open', filePath)
+        }
       })
-    } else {
-      this.loadFile('./out/renderer/index.html').catch((error: unknown) => {
-        console.error('Failed to load file:', error)
+      .catch((error: unknown) => {
+        console.error('Failed to open file(s):', error)
       })
-    }
   }
 }

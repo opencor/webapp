@@ -41,11 +41,11 @@ const toast = useToast()
 
 const spinningWheelVisible = vue.ref(false)
 
-function showSpinningWheel() {
+function showSpinningWheel(): void {
   spinningWheelVisible.value = true
 }
 
-function hideSpinningWheel() {
+function hideSpinningWheel(): void {
   spinningWheelVisible.value = false
 }
 
@@ -74,7 +74,7 @@ electronAPI?.onSettings(() => {
   onSettings()
 })
 
-function onSettings() {
+function onSettings(): void {
   toast.add({
     severity: 'info',
     summary: 'Settings',
@@ -86,16 +86,16 @@ function onSettings() {
 // Open a file.
 
 function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): void {
-  const numberOfBytesShown = 100
-
-  function topContents(contents: string): string {
-    return (
-      contents.slice(0, Math.min(numberOfBytesShown, contents.length)) +
-      (contents.length > numberOfBytesShown ? '...' : '')
-    )
-  }
-
   if (fileContentsPromise !== undefined) {
+    function topContents(contents: string): string {
+      const numberOfBytesShown = 100
+
+      return (
+        contents.slice(0, Math.min(numberOfBytesShown, contents.length)) +
+        (contents.length > numberOfBytesShown ? '...' : '')
+      )
+    }
+
     showSpinningWheel()
 
     fileContentsPromise
@@ -138,7 +138,7 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
 
 // Open file(s) dialog.
 
-function onChange(event: Event) {
+function onChange(event: Event): void {
   const files = (event.target as HTMLInputElement).files
 
   if (files !== null) {
@@ -152,7 +152,7 @@ function onChange(event: Event) {
 
 let dropAreaCounter = 0
 
-function onDragEnter(event: DragEvent) {
+function onDragEnter(event: DragEvent): void {
   const dropAreaElement = event.target as HTMLElement
 
   // Show the drop area, but only when entering it for the first time.
@@ -162,7 +162,7 @@ function onDragEnter(event: DragEvent) {
   }
 }
 
-function onDrop(event: DragEvent) {
+function onDrop(event: DragEvent): void {
   // Hide the drop area.
 
   const dropAreaElement = event.target as HTMLElement
@@ -182,7 +182,7 @@ function onDrop(event: DragEvent) {
   }
 }
 
-function onDragLeave(event: DragEvent) {
+function onDragLeave(event: DragEvent): void {
   const dropAreaElement = event.target as HTMLElement
 
   if (--dropAreaCounter === 0) {
@@ -204,7 +204,7 @@ electronAPI?.onOpenRemote(() => {
   openRemoteVisible.value = true
 })
 
-function onOpenRemote(url: string) {
+function onOpenRemote(url: string): void {
   openFile(url, electronAPI !== undefined ? undefined : fileContents(url))
 }
 
@@ -216,7 +216,7 @@ electronAPI?.onResetAll(() => {
   resetAllVisible.value = true
 })
 
-function onResetAll() {
+function onResetAll(): void {
   electronAPI?.resetAll()
 }
 </script>

@@ -19,7 +19,7 @@ import * as vue from 'vue'
 const emit = defineEmits(['openRemote', 'close'])
 const url = vue.ref('')
 
-function emitOpenRemote() {
+function emitOpenRemote(): void {
   if (url.value === '') {
     return
   }
@@ -29,7 +29,7 @@ function emitOpenRemote() {
   emitClose()
 }
 
-function emitClose() {
+function emitClose(): void {
   url.value = ''
 
   emit('close')

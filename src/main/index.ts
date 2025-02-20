@@ -8,7 +8,8 @@ import path from 'path'
 
 import { isDevMode, isWindows, isLinux } from '../electron'
 
-import { disableMenu, enableMenu, MainWindow, resetAll } from './MainWindow'
+import { showDisabledMenu, showEnabledMenu } from './MainMenu'
+import { MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
 // Prettify our settings.
@@ -71,6 +72,8 @@ MimeType=x-scheme-handler/${URI_SCHEME}`
 
 // Allow only one instance of OpenCOR.
 
+export let mainWindow: MainWindow | null = null
+
 if (!electron.app.requestSingleInstanceLock()) {
   electron.app.quit()
 }
@@ -89,7 +92,6 @@ electron.app.on('second-instance', (_event, argv) => {
 
 // Handle the clicking of an opencor:// link.
 
-let mainWindow: MainWindow | null = null
 let triggeringUrl: string | null = null
 
 electron.app.on('open-url', (_, url) => {
@@ -129,9 +131,9 @@ electron.app
 
     // Handle some requests from our renderer process.
 
-    electron.ipcMain.handle('enable-menu', enableMenu)
-    electron.ipcMain.handle('disable-menu', disableMenu)
     electron.ipcMain.handle('reset-all', resetAll)
+    electron.ipcMain.handle('show-disabled-menu', showDisabledMenu)
+    electron.ipcMain.handle('show-enabled-menu', showEnabledMenu)
 
     // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
     // triggering URL.
