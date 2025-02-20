@@ -37,6 +37,10 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.on('about', () => {
       callback()
     }),
+  onCheckForUpdates: (callback: () => void) =>
+    electron.ipcRenderer.on('check-for-updates', () => {
+      callback()
+    }),
   onOpen: (callback: (filePath: string) => void) =>
     electron.ipcRenderer.on('open', (_event, ...filePaths) => {
       for (const filePath of filePaths) {
@@ -47,12 +51,12 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.on('open-remote', () => {
       callback()
     }),
-  onPreferences: (callback: () => void) =>
-    electron.ipcRenderer.on('preferences', () => {
-      callback()
-    }),
   onResetAll: (callback: () => void) =>
     electron.ipcRenderer.on('reset-all', () => {
+      callback()
+    }),
+  onSettings: (callback: () => void) =>
+    electron.ipcRenderer.on('settings', () => {
       callback()
     })
 })

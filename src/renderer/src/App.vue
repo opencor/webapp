@@ -1,7 +1,12 @@
 <template>
   <div class="flex flex-col h-screen">
     <div v-if="!electronAPI" class="main-menu">
-      <MainMenu @about="aboutVisible = true" @open="$refs.files.click()" @openRemote="openRemoteVisible = true" />
+      <MainMenu
+        @about="aboutVisible = true"
+        @open="$refs.files.click()"
+        @openRemote="openRemoteVisible = true"
+        @settings="onSettings"
+      />
     </div>
     <div
       class="flex grow justify-center items-center"
@@ -44,6 +49,17 @@ function hideSpinningWheel() {
   spinningWheelVisible.value = false
 }
 
+// Check for updates dialog.
+
+electronAPI?.onCheckForUpdates(() => {
+  toast.add({
+    severity: 'info',
+    summary: 'Check for updates',
+    detail: 'The Check for updates dialog has yet to be implemented.',
+    life: toastLife
+  })
+})
+
 // About dialog.
 
 const aboutVisible = vue.ref(false)
@@ -52,16 +68,20 @@ electronAPI?.onAbout(() => {
   aboutVisible.value = true
 })
 
-// Preferences dialog.
+// Settings dialog.
 
-electronAPI?.onPreferences(() => {
+electronAPI?.onSettings(() => {
+  onSettings()
+})
+
+function onSettings() {
   toast.add({
     severity: 'info',
-    summary: 'Preferences',
-    detail: 'Preferences dialog not implemented yet.',
+    summary: 'Settings',
+    detail: 'The Settings dialog has yet to be implemented.',
     life: toastLife
   })
-})
+}
 
 // Open a file.
 

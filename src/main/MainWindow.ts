@@ -88,23 +88,21 @@ export class MainWindow extends ApplicationWindow {
   configureMenu(): void {
     // Some common menu items.
 
-    /*---OPENCOR---
-    const settingsMenuItem = {
+    const settingsMenuItem: electron.MenuItemConstructorOptions = {
       label: 'Settings...',
       click: () => {
-        console.log('Settings...')
+        this.webContents.send('settings')
       }
     }
-    */
-    /*---OPENCOR---
-    const checkForUpdatesMenuItem = {
+
+    const checkForUpdatesMenuItem: electron.MenuItemConstructorOptions = {
       label: 'Check For Updates...',
       click: () => {
-        console.log('Check For Updates...')
+        this.webContents.send('check-for-updates')
       }
     }
-    */
-    const aboutOpencorMenuItem = {
+
+    const aboutOpencorMenuItem: electron.MenuItemConstructorOptions = {
       label: 'About OpenCOR',
       click: () => {
         this.webContents.send('about')
@@ -120,15 +118,10 @@ export class MainWindow extends ApplicationWindow {
         label: electron.app.name,
         submenu: [
           aboutOpencorMenuItem,
-          /*---OPENCOR---
+          { type: 'separator' },
           checkForUpdatesMenuItem,
-          */
           { type: 'separator' },
-          /*---OPENCOR---
           settingsMenuItem,
-          */
-          { type: 'separator' },
-          { role: 'services' },
           { type: 'separator' },
           { role: 'hide' },
           { role: 'hideOthers' },
@@ -205,12 +198,10 @@ export class MainWindow extends ApplicationWindow {
       submenu: toolsSubMenu
     }
 
-    /*---OPENCOR---
     if (!isMacOs()) {
       toolsSubMenu.push(settingsMenuItem)
       toolsSubMenu.push({ type: 'separator' })
     }
-    */
 
     toolsSubMenu.push({
       label: 'Reset All...',
@@ -246,10 +237,8 @@ export class MainWindow extends ApplicationWindow {
     })
 
     if (!isMacOs()) {
-      /*---OPENCOR---
       helpSubMenu.push({ type: 'separator' })
       helpSubMenu.push(checkForUpdatesMenuItem)
-      */
       helpSubMenu.push({ type: 'separator' })
       helpSubMenu.push(aboutOpencorMenuItem)
     }
@@ -297,10 +286,10 @@ export class MainWindow extends ApplicationWindow {
           // Ask our renderer to open our about dialog.
 
           this.webContents.send('about')
-        } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
-          // Ask our renderer to open our preferences dialog.
+        } else if (isAction(parsedUrl.hostname, 'openSettingsDialog')) {
+          // Ask our renderer to open our settings dialog.
 
-          this.webContents.send('preferences')
+          this.webContents.send('settings')
         } else {
           // Check whether we have files to open.
 

@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import * as vue from 'vue'
 
-const emit = defineEmits(['about', 'open', 'openRemote'])
+const emit = defineEmits(['about', 'open', 'openRemote', 'settings'])
 
 const items = [
   {
@@ -21,6 +21,17 @@ const items = [
         label: 'Open Remote...',
         command: () => {
           emit('openRemote')
+        }
+      }
+    ]
+  },
+  {
+    label: 'Tools',
+    items: [
+      {
+        label: 'Settings...',
+        command: () => {
+          emit('settings')
         }
       }
     ]
