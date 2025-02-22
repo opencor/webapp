@@ -122,10 +122,11 @@ endif()
 
 # Create our Node.js add-on as a shared library.
 
+file(GLOB CPP_FILES "src/libopencor/src/*.cpp")
+
 add_library(${CMAKE_PROJECT_NAME} SHARED
             ${CMAKE_JS_SRC}
-            src/libopencor/src/main.cpp
-            src/libopencor/src/version.cpp)
+            ${CPP_FILES})
 
 # Don't have a "lib" prefix and use a ".node" suffix.
 
