@@ -17,6 +17,10 @@
   border-radius: 16px;
   padding: 8px;
   box-shadow: 0 0 12px 6px var(--p-content-border-color);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: -1;
 }
 </style>
