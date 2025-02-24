@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import { electronAPI } from '../../../electronAPI'
-import { locAPI } from '../../../libopencor/locAPI'
+import * as locAPI from '../../../libopencor/locAPI'
 
 defineEmits(['close'])
 

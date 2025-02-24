@@ -61,8 +61,10 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     })
 })
 
-// Give our renderer process access to the C++ version of libOpenCOR.
+// Give our renderer process access to the native node module for libOpenCOR.
+// Note: this must be in sync with src/libopencor/src/main.cpp.
 
 electron.contextBridge.exposeInMainWorld('locAPI', {
+  fileCreate: () => loc.fileCreate(),
   version: () => loc.version()
 })

@@ -35,6 +35,7 @@ import * as vue from 'vue'
 import { fileContents, filePath, isRemoteFilePath, toastLife } from './common'
 
 import { electronAPI } from '../../electronAPI'
+import * as locAPI from '../../libopencor/locAPI'
 
 const toast = useToast()
 
@@ -87,7 +88,7 @@ function onSettings(): void {
 // Open a file.
 
 function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): void {
-  if (fileContentsPromise !== undefined) {
+  function addToast(file: locAPI.File) {
     function topContents(contents: string): string {
       const numberOfBytesShown = 100
 
@@ -97,25 +98,31 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
       )
     }
 
+    toast.add({
+      severity: 'info',
+      summary: 'Opening a file',
+      detail:
+        filePath +
+        '\n\nRaw contents:\n' +
+        topContents(new TextDecoder().decode(file.contents())) +
+        '\n\nUint8Array:\n' +
+        topContents(String(file.contents())) +
+        '\n\nBase64:\n' +
+        topContents(btoa(file.contents().reduce((data, byte) => data + String.fromCharCode(byte), ''))),
+      life: toastLife
+    })
+  }
+
+  if (fileContentsPromise !== undefined) {
     showSpinningWheel()
 
     fileContentsPromise
       .then((fileContents) => {
+        const file = new locAPI.File(filePath, fileContents)
+
         hideSpinningWheel()
 
-        toast.add({
-          severity: 'info',
-          summary: 'Opening a file',
-          detail:
-            filePath +
-            '\n\nRaw contents:\n' +
-            topContents(new TextDecoder().decode(fileContents)) +
-            '\n\nUint8Array:\n' +
-            topContents(String(fileContents)) +
-            '\n\nBase64:\n' +
-            topContents(btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), ''))),
-          life: toastLife
-        })
+        addToast(file)
       })
       .catch((error: unknown) => {
         hideSpinningWheel()
@@ -132,16 +139,13 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
       showSpinningWheel()
     }
 
+    const file = new locAPI.File(filePath)
+
     if (isRemoteFilePath(filePath)) {
       hideSpinningWheel()
     }
 
-    toast.add({
-      severity: 'info',
-      summary: 'Opening a file',
-      detail: filePath,
-      life: toastLife
-    })
+    addToast(file)
   }
 }
 
