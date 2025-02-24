@@ -3,7 +3,7 @@
     <div v-if="!electronAPI" class="main-menu">
       <MainMenu
         @about="aboutVisible = true"
-        @open="$refs.files.click()"
+        @open="($refs.files as HTMLInputElement).click()"
         @openRemote="openRemoteVisible = true"
         @settings="onSettings"
       />
@@ -161,23 +161,18 @@ function onChange(event: Event): void {
 let dropAreaCounter = 0
 
 function onDragEnter(event: DragEvent): void {
-  const dropAreaElement = event.target as HTMLElement
-
   // Show the drop area, but only when entering it for the first time.
 
   if (dropAreaCounter++ === 0) {
-    dropAreaElement.classList.add('drop-area')
+    ;(event.target as HTMLElement).classList.add('drop-area')
   }
 }
 
 function onDrop(event: DragEvent): void {
   // Hide the drop area.
 
-  const dropAreaElement = event.target as HTMLElement
-
   dropAreaCounter = 0
-
-  dropAreaElement.classList.remove('drop-area')
+  ;(event.target as HTMLElement).classList.remove('drop-area')
 
   // Handle the dropped files.
 
@@ -191,10 +186,8 @@ function onDrop(event: DragEvent): void {
 }
 
 function onDragLeave(event: DragEvent): void {
-  const dropAreaElement = event.target as HTMLElement
-
   if (--dropAreaCounter === 0) {
-    dropAreaElement.classList.remove('drop-area')
+    ;(event.target as HTMLElement).classList.remove('drop-area')
   }
 }
 
