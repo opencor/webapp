@@ -47,7 +47,7 @@ export function resetAll(): void {
 export class MainWindow extends ApplicationWindow {
   // Properties.
 
-  #splashScreenWindowClosed = false
+  private _splashScreenWindowClosed = false
 
   // Constructor.
 
@@ -86,10 +86,10 @@ export class MainWindow extends ApplicationWindow {
     this.once('show', () => {
       let handleCommandLineDelay = 0
 
-      if (!this.#splashScreenWindowClosed && !!splashScreenWindow) {
+      if (!this._splashScreenWindowClosed && !!splashScreenWindow) {
         const SHORT_DELAY = 369
 
-        this.#splashScreenWindowClosed = true
+        this._splashScreenWindowClosed = true
 
         handleCommandLineDelay = SHORT_DELAY
 
