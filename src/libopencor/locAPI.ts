@@ -1,10 +1,24 @@
+import { electronAPI } from '../electronAPI'
+
 import libOpenCOR from 'libopencor'
 
-interface LOCAPI {
-  // Note: src/preload/index.ts needs to be in sync with this file.
+// @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
+const _locAPI = window.locAPI ?? (await libOpenCOR())
 
-  versionString: () => string
+class LOCAPI {
+  // Some general methods.
+
+  cppVersion(): boolean {
+    return electronAPI !== undefined
+  }
+
+  wasmVersion(): boolean {
+    return !this.cppVersion()
+  }
+
+  version(): string {
+    return this.cppVersion() ? _locAPI.version() : _locAPI.versionString()
+  }
 }
 
-// @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
-export const locAPI: LOCAPI = window.locAPI ?? (await libOpenCOR())
+export const locAPI: LOCAPI = new LOCAPI()

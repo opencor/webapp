@@ -62,8 +62,7 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
 })
 
 // Give our renderer process access to the C++ version of libOpenCOR.
-// Note: src/libopencor/locAPI.ts needs to be in sync with this file.
 
 electron.contextBridge.exposeInMainWorld('locAPI', {
-  versionString: () => loc.version()
+  version: () => loc.version()
 })

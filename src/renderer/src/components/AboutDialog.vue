@@ -52,6 +52,5 @@ const version = __APP_VERSION__
 const currentYear = new Date().getFullYear()
 const copyright = currentYear === 2025 ? '2025' : `2025-${currentYear.toString()}`
 
-const locVersion =
-  locAPI.versionString() + (electronAPI !== undefined ? ' (compiled or interpreted)' : ' (interpreted)')
+const locVersion = locAPI.version() + (locAPI.cppVersion() ? ' (compiled or interpreted)' : ' (interpreted)')
 </script>
