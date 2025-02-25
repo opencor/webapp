@@ -28,7 +28,7 @@ body {
 .copyright,
 .version {
   border-top: 1px solid #33415522; /* Light variant version of --p-content-color. */
-  padding: 0px 8px;
+  padding: 0 0.5rem;
   background-color: #33415511; /* Light variant version of --p-content-color. */
   color: #334155; /* Light version of --p-content-color. */
 }
@@ -45,7 +45,7 @@ body {
 img.logo {
   width: 413px;
   height: 351px;
-  margin: 8px;
+  margin: 0.5rem;
 }
 
 td.logo {

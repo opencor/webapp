@@ -10,7 +10,7 @@ a {
 }
 
 .drop-area {
-  border: 6px dashed;
+  border: 0.375rem dashed;
   border-color: var(--p-gray-300);
 }
 
@@ -30,7 +30,7 @@ a {
 }
 
 .p-menubar-item-link {
-  padding: 4px 8px !important;
+  padding: 0.25rem 0.5rem !important;
 }
 
 .p-menubar-root-list {

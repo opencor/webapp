@@ -14,9 +14,9 @@
 
   max-width: 311px;
   max-height: 266px;
-  border-radius: 16px;
-  padding: 8px;
-  box-shadow: 0 0 12px 6px var(--p-content-border-color);
+  border-radius: 1rem;
+  padding: 0.5rem;
+  box-shadow: 0 0 0.75rem 0.375rem var(--p-content-border-color);
   position: absolute;
   top: 50%;
   left: 50%;
