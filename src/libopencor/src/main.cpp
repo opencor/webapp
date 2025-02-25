@@ -3,7 +3,7 @@
 
 Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
 {
-    // Note: src/preload/index.ts must be in sync with this file.
+    // Note: this must be in sync with src/preload/index.ts.
 
     // File API.
 

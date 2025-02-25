@@ -4,7 +4,7 @@ import * as systemInformation from 'systeminformation'
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
 
 // Some bridging between our main process and renderer process.
-// Note: src/electronAPI.ts must be in sync with this file.
+// Note: this must be in sync with src/electronAPI.ts.
 
 const osInfo = await systemInformation.osInfo()
 
