@@ -67,8 +67,11 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_BINARY_DIR}/${LIBOPE
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 OUTPUT_QUIET)
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${LIBOPENCOR_FILE_NAME_WE} Static
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/Static
+                OUTPUT_QUIET)
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}
+                                                   ${CMAKE_BINARY_DIR}/Static
                 OUTPUT_QUIET)
 
 file(REMOVE ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
