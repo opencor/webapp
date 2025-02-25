@@ -16,6 +16,7 @@
       @dragleave.prevent="onDragLeave"
     >
       <BackgroundComponent />
+      <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="spinningWheelVisible" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
@@ -158,23 +159,14 @@ function onChange(event: Event): void {
 
 // Drag and drop.
 
-let dropAreaCounter = 0
+const dropAreaCounter = vue.ref(0)
 
-function onDragEnter(event: DragEvent): void {
-  // Show the drop area, but only when entering it for the first time.
-
-  if (dropAreaCounter++ === 0) {
-    ;(event.target as HTMLElement).classList.add('drop-area')
-  }
+function onDragEnter(): void {
+  dropAreaCounter.value += 1
 }
 
 function onDrop(event: DragEvent): void {
-  // Hide the drop area.
-
-  dropAreaCounter = 0
-  ;(event.target as HTMLElement).classList.remove('drop-area')
-
-  // Handle the dropped files.
+  dropAreaCounter.value = 0
 
   const files = event.dataTransfer?.files
 
@@ -185,10 +177,8 @@ function onDrop(event: DragEvent): void {
   }
 }
 
-function onDragLeave(event: DragEvent): void {
-  if (--dropAreaCounter === 0) {
-    ;(event.target as HTMLElement).classList.remove('drop-area')
-  }
+function onDragLeave(): void {
+  dropAreaCounter.value -= 1
 }
 
 // Open.
