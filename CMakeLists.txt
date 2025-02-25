@@ -123,7 +123,7 @@ elseif(BUILDING_USING_CLANG)
     endif()
 endif()
 
-# Create our Node.js add-on as a shared library.
+# Create our native node module as a shared library.
 
 file(GLOB CPP_FILES "src/libopencor/src/*.cpp")
 
@@ -143,10 +143,14 @@ if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
     execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
 endif()
 
-# Link cmake-js and libOpenCOR to our Node.js add-on.
+# Link our native node module against cmake-js, a few Windows-specific libraries, and libOpenCOR.
+
+if(WIN32)
+    set(WINDOWS_LIBS crypt32 version wldap32 ws2_32)
+endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
-                      ${CMAKE_JS_LIB}
+                      ${CMAKE_JS_LIB} ${WINDOWS_LIBS}
                       ${CMAKE_BINARY_DIR}/Static/lib/${CMAKE_PROJECT_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX})
 
 # Configure our splash screen.
