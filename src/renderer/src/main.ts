@@ -1,4 +1,4 @@
-import primeVueAuraTheme from '@primevue/themes/aura'
+import primeVueAuraTheme from '@primeuix/themes/aura'
 
 import primeVueConfig from 'primevue/config'
 import primeVueConfirmationService from 'primevue/confirmationservice'
