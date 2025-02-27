@@ -1,5 +1,5 @@
 <template>
-  <div class="drop-area">
+  <div class="drop-area p-overlay-mask">
     <div class="message">CellML files, SED-ML files, and COMBINE archives can be dropped here.</div>
   </div>
 </template>
@@ -9,7 +9,6 @@
   width: 100%;
   height: 100%;
   border: 0.375rem dashed;
-  background-color: var(--p-content-background);
   border-color: var(--p-emerald-500);
   z-index: 99999;
 }
