@@ -1,8 +1,8 @@
-import * as electron from 'electron'
-import * as path from 'path'
+import electron from 'electron'
+import path from 'path'
 
 export class ApplicationWindow extends electron.BrowserWindow {
-  alreadyShowedWindow = false
+  private _alreadyShowedWindow = false
 
   constructor(options: electron.BrowserWindowConstructorOptions) {
     // Add some common options and call our parent constructor.
@@ -25,8 +25,8 @@ export class ApplicationWindow extends electron.BrowserWindow {
     //       multiple times (e.g., when returning from sleep mode on macOS).
 
     this.on('ready-to-show', () => {
-      if (!this.alreadyShowedWindow) {
-        this.alreadyShowedWindow = true
+      if (!this._alreadyShowedWindow) {
+        this._alreadyShowedWindow = true
 
         this.show()
       }

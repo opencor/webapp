@@ -1,4 +1,4 @@
-import * as fs from 'fs'
+import fs from 'fs'
 
 function clean(paths) {
   for (const path of paths) {

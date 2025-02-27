@@ -1,17 +1,17 @@
 import { is } from '@electron-toolkit/utils'
 
-export function isDevMode() {
+export function isDevMode(): boolean {
   return is.dev && !!process.env.ELECTRON_RENDERER_URL
 }
 
-export function isWindows() {
+export function isWindows(): boolean {
   return process.platform === 'win32'
 }
 
-export function isLinux() {
+export function isLinux(): boolean {
   return process.platform === 'linux'
 }
 
-export function isMacOs() {
+export function isMacOs(): boolean {
   return process.platform === 'darwin'
 }
