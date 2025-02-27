@@ -1,21 +1,23 @@
 #include "file.h"
 
-void File::init(Napi::Env pEnv, Napi::Object pExports)
-{
-    auto func = DefineClass(pEnv, "File", {InstanceMethod("contents", &File::contents)});
+#include <libopencor>
 
-    pExports.Set("File", func);
-}
+static std::vector<libOpenCOR::FilePtr> files;
 
-File::File(const Napi::CallbackInfo &pInfo)
-    : Napi::ObjectWrap<File>(pInfo)
+napi_value fileContents(const Napi::CallbackInfo &pInfo)
 {
-    mFile = libOpenCOR::File::create(pInfo[0].ToString().Utf8Value());
-}
-
-Napi::Value File::contents(const Napi::CallbackInfo &pInfo)
-{
-    auto res = mFile->contents();
+    auto fileManager = libOpenCOR::FileManager::instance();
+    auto file = fileManager.file(pInfo[0].ToString().Utf8Value());
+    auto res = file->contents();
 
     return Napi::Buffer<unsigned char>::Copy(pInfo.Env(), res.data(), res.size());
+}
+
+void fileCreate(const Napi::CallbackInfo &pInfo)
+{
+    auto file = libOpenCOR::File::create(pInfo[0].ToString().Utf8Value());
+
+    // Keep track of the file so that it doesn't get garbage collected.
+
+    files.push_back(file);
 }

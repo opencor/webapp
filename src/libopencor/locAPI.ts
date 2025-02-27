@@ -21,15 +21,20 @@ export function version(): string {
 
 // File API.
 
+interface IFile {
+  contents(): Uint8Array
+  setContents(ptr: number, length: number): void
+}
+
 export class File {
-  private _file: {
-    contents(): Uint8Array
-    setContents(ptr: number, length: number): void
-  }
+  private _path?: string
+  private _file: IFile = {} as IFile
 
   constructor(path: string, contents?: Uint8Array) {
     if (cppVersion()) {
-      this._file = new _locAPI.File(path)
+      this._path = path
+
+      _locAPI.fileCreate(path)
     } else {
       if (contents === undefined) {
         throw new Error('The contents of the file must be provided.')
@@ -47,6 +52,6 @@ export class File {
   }
 
   contents(): Uint8Array {
-    return this._file.contents()
+    return cppVersion() ? _locAPI.fileContents(this._path) : this._file.contents()
   }
 }

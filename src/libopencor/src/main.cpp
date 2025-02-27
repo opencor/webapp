@@ -9,9 +9,10 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
 
     pExports.Set(Napi::String::New(pEnv, "version"), Napi::Function::New(pEnv, version));
 
-    // File class.
+    // File API.
 
-    File::init(pEnv, pExports);
+    pExports.Set(Napi::String::New(pEnv, "fileContents"), Napi::Function::New(pEnv, fileContents));
+    pExports.Set(Napi::String::New(pEnv, "fileCreate"), Napi::Function::New(pEnv, fileCreate));
 
     return pExports;
 }
