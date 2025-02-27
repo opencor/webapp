@@ -65,6 +65,11 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
 // Note: this must be in sync with src/libopencor/src/main.cpp.
 
 electron.contextBridge.exposeInMainWorld('locAPI', {
-  fileCreate: () => loc.fileCreate(),
-  version: () => loc.version()
+  // Some general methods.
+
+  version: () => loc.version(),
+
+  // File class.
+
+  File: loc.File
 })
