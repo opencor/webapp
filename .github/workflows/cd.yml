@@ -83,7 +83,7 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: ./dist/OpenCOR-*.*
-  webApp:
+  web_app:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
     runs-on: ubuntu-22.04
@@ -91,9 +91,7 @@ jobs:
       - name: Set the timezone to New Zealand
         uses: szenius/set-timezone@v2.0
         with:
-          timezoneWindows: 'New Zealand Standard Time'
           timezoneLinux: 'Pacific/Auckland'
-          timezoneMacos: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
       - name: Install Node.js
@@ -113,6 +111,6 @@ jobs:
           remote-host: ${{ secrets.REMOTE_HOST }}
           remote-user: ${{ secrets.REMOTE_USER }}
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          local-path: ./src/renderer/dist/
-          remote-path: /home/www/opencor.ws/app/
+          local-path: ./src/renderer/dist
+          remote-path: /home/www/opencor.ws/app
           sync: full
