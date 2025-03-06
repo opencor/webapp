@@ -30,16 +30,12 @@ export class File {
   private _path?: string
   private _file: IFile = {} as IFile
 
-  constructor(path: string, contents?: Uint8Array) {
+  constructor(path: string, contents: Uint8Array) {
     if (cppVersion()) {
       this._path = path
 
-      _locAPI.fileCreate(path)
+      _locAPI.fileCreate(path, contents)
     } else {
-      if (contents === undefined) {
-        throw new Error('The contents of the file must be provided.')
-      }
-
       this._file = new _locAPI.File(path)
 
       const heapContentsPtr = _locAPI._malloc(contents.length)

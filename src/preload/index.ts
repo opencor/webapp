@@ -72,5 +72,5 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
   // File API.
 
   fileContents: (path: string) => loc.fileContents(path),
-  fileCreate: (path: string) => loc.fileCreate(path)
+  fileCreate: (path: string, contents: object) => loc.fileCreate(path, contents)
 })

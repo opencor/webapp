@@ -200,7 +200,12 @@ electronAPI?.onOpenRemote(() => {
 })
 
 function onOpenRemote(url: string): void {
-  openFile(url, electronAPI !== undefined ? undefined : fileContents(url))
+  // Note: no matter whether this is OpenCOR or OpenCOR's Web app, we always retrieve the file contents of a remote
+  //       file. We could, in OpenCOR, rely on libOpenCOR to retrieve it for us, but this would block the UI. To
+  //       retrieve the file here means that it is done asynchronously, which in turn means that the UI is not blocked
+  //       and that we can show a spinning wheel to indicate that something is happening.
+
+  openFile(url, fileContents(url))
 }
 
 // Reset all.
