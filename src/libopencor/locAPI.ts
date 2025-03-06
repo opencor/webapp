@@ -30,12 +30,12 @@ export class File {
   private _path?: string
   private _file: IFile = {} as IFile
 
-  constructor(path: string, contents: Uint8Array) {
+  constructor(path: string, contents: Uint8Array | undefined = undefined) {
     if (cppVersion()) {
       this._path = path
 
       _locAPI.fileCreate(path, contents)
-    } else {
+    } else if (contents !== undefined) {
       this._file = new _locAPI.File(path)
 
       const heapContentsPtr = _locAPI._malloc(contents.length)
@@ -44,6 +44,11 @@ export class File {
       heapContents.set(contents)
 
       this._file.setContents(heapContentsPtr, contents.length)
+    } else {
+      // Note: we should never reach this point since we should always provide some file contents when using the WASM
+      //       version of libOpenCOR.
+
+      console.error(`No contents provided for file '${path}'.`)
     }
   }
 
