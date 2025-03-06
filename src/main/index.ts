@@ -8,7 +8,7 @@ import path from 'path'
 
 import { isDevMode, isWindows, isLinux } from '../electron'
 
-import { showDisabledMenu, showEnabledMenu } from './MainMenu'
+import { disableMainMenu, enableMainMenu } from './MainMenu'
 import { MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
@@ -131,9 +131,9 @@ electron.app
 
     // Handle some requests from our renderer process.
 
+    electron.ipcMain.handle('disable-main-menu', disableMainMenu)
+    electron.ipcMain.handle('enable-main-menu', enableMainMenu)
     electron.ipcMain.handle('reset-all', resetAll)
-    electron.ipcMain.handle('show-disabled-menu', showDisabledMenu)
-    electron.ipcMain.handle('show-enabled-menu', showEnabledMenu)
 
     // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
     // triggering URL.

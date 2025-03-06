@@ -6,7 +6,7 @@ import { isDevMode, isMacOs } from '../electron'
 import icon from './assets/icon.png?asset'
 import { URI_SCHEME } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
-import { showEnabledMenu } from './MainMenu'
+import { enableMainMenu } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {
@@ -119,9 +119,9 @@ export class MainWindow extends ApplicationWindow {
       electronSettings.setSync('mainWindowState', mainWindowState)
     })
 
-    // Show our enabled menu.
+    // Enable our main menu.
 
-    showEnabledMenu()
+    enableMainMenu()
 
     // Make sure that our menu bar is always visible.
 

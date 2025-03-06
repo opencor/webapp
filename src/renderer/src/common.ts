@@ -3,11 +3,11 @@ import { electronAPI } from '../../electronAPI'
 export const toastLife = 3000
 
 export function onShow(): void {
-  electronAPI?.showDisabledMenu()
+  electronAPI?.disableMainMenu()
 }
 
 export function onHide(): void {
-  electronAPI?.showEnabledMenu()
+  electronAPI?.enableMainMenu()
 }
 
 export function isRemoteFilePath(filePath: string): boolean {

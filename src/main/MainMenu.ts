@@ -4,16 +4,16 @@ import { isMacOs } from '../electron'
 
 import { mainWindow } from './index'
 
-let enabledMenu: electron.Menu | null = null
-let disabledMenu: electron.Menu | null = null
+let _enabledMenu: electron.Menu | null = null
+let _disabledMenu: electron.Menu | null = null
 
-function showMenu(enabled: boolean): void {
+function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
 
-  if (enabled && enabledMenu !== null) {
-    electron.Menu.setApplicationMenu(enabledMenu)
-  } else if (!enabled && disabledMenu !== null) {
-    electron.Menu.setApplicationMenu(disabledMenu)
+  if (enable && _enabledMenu !== null) {
+    electron.Menu.setApplicationMenu(_enabledMenu)
+  } else if (!enable && _disabledMenu !== null) {
+    electron.Menu.setApplicationMenu(_disabledMenu)
   } else {
     // Some common menu items.
 
@@ -47,7 +47,7 @@ function showMenu(enabled: boolean): void {
     }
 
     if (isMacOs()) {
-      if (enabled) {
+      if (enable) {
         appSubMenu.push(aboutOpencorMenuItem)
         appSubMenu.push({ type: 'separator' })
         appSubMenu.push(checkForUpdatesMenuItem)
@@ -60,7 +60,7 @@ function showMenu(enabled: boolean): void {
       appSubMenu.push({ role: 'hideOthers' })
       appSubMenu.push({ role: 'unhide' })
 
-      if (enabled) {
+      if (enable) {
         appSubMenu.push({ type: 'separator' })
         appSubMenu.push({ role: 'quit' })
       }
@@ -181,7 +181,7 @@ function showMenu(enabled: boolean): void {
 
     const menu: electron.MenuItemConstructorOptions[] = []
 
-    if (enabled) {
+    if (enable) {
       if (isMacOs()) {
         menu.push(appMenu)
       }
@@ -192,7 +192,7 @@ function showMenu(enabled: boolean): void {
       menu.push(toolsMenu)
       menu.push(helpMenu)
 
-      enabledMenu = electron.Menu.buildFromTemplate(menu)
+      _enabledMenu = electron.Menu.buildFromTemplate(menu)
     } else {
       if (isMacOs()) {
         menu.push(appMenu)
@@ -200,17 +200,17 @@ function showMenu(enabled: boolean): void {
 
       menu.push(editMenu)
 
-      disabledMenu = electron.Menu.buildFromTemplate(menu)
+      _disabledMenu = electron.Menu.buildFromTemplate(menu)
     }
 
-    electron.Menu.setApplicationMenu(enabled ? enabledMenu : disabledMenu)
+    electron.Menu.setApplicationMenu(enable ? _enabledMenu : _disabledMenu)
   }
 }
 
-export function showEnabledMenu(): void {
-  showMenu(true)
+export function enableMainMenu(): void {
+  enableDisableMainMenu(true)
 }
 
-export function showDisabledMenu(): void {
-  showMenu(false)
+export function disableMainMenu(): void {
+  enableDisableMainMenu(false)
 }

@@ -7,10 +7,10 @@ interface ElectronAPI {
 
   // Renderer process asking the main process to do something for it.
 
+  disableMainMenu: () => void
+  enableMainMenu: () => void
   filePath: (file: File) => string
   resetAll: () => void
-  showDisabledMenu: () => void
-  showEnabledMenu: () => void
 
   // Renderer process listening to the main process.
 

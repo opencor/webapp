@@ -26,10 +26,10 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
 
   // Renderer process asking the main process to do something for it.
 
+  disableMainMenu: () => electron.ipcRenderer.invoke('disable-main-menu'),
+  enableMainMenu: () => electron.ipcRenderer.invoke('enable-main-menu'),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
-  showDisabledMenu: () => electron.ipcRenderer.invoke('show-disabled-menu'),
-  showEnabledMenu: () => electron.ipcRenderer.invoke('show-enabled-menu'),
 
   // Renderer process listening to the main process.
 
