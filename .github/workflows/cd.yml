@@ -84,6 +84,7 @@ jobs:
           name: ${{ matrix.name }}
           path: ./dist/OpenCOR-*.*
   webApp:
+    if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
     runs-on: ubuntu-22.04
     steps:
