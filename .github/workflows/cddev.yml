@@ -1,0 +1,13 @@
+name: CD (Development)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  web_app:
+    name: Web app
+    uses: ./.github/workflows/webApp.yml
+    with:
+      output_dir: app-dev
