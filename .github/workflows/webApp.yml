@@ -1,0 +1,42 @@
+name: Web app
+
+on:
+  workflow_call:
+    inputs:
+      output_dir:
+        required: true
+        type: string
+
+jobs:
+  web_app:
+    name: Web app
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set the timezone to New Zealand
+        uses: szenius/set-timezone@v2.0
+        with:
+          timezoneWindows: 'New Zealand Standard Time'
+          timezoneLinux: 'Pacific/Auckland'
+          timezoneMacos: 'Pacific/Auckland'
+      - name: Check out OpenCOR
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: OpenCOR dependencies
+        run: pnpm install
+      - name: Build OpenCOR's Web app
+        run: pnpm build:web
+      - name: Deploy to https://opencor.ws/app/
+        uses: milanmk/actions-file-deployer@master
+        with:
+          remote-protocol: sftp
+          remote-host: ${{ secrets.REMOTE_HOST }}
+          remote-user: ${{ secrets.REMOTE_USER }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          local-path: ./src/renderer/dist/
+          remote-path: /home/www/opencor.ws/${{ inputs.output_dir }}/
+          sync: full
