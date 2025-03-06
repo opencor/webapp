@@ -1,5 +1,5 @@
 interface ElectronAPI {
-  // Note: src/preload/index.ts needs to be in sync with this file.
+  // Note: this must be in sync with src/preload/index.ts.
 
   // Some general methods.
 
@@ -7,14 +7,19 @@ interface ElectronAPI {
 
   // Renderer process asking the main process to do something for it.
 
-  enableMenu: () => void
-  disableMenu: () => void
+  disableMainMenu: () => void
+  enableMainMenu: () => void
+  filePath: (file: File) => string
   resetAll: () => void
 
   // Renderer process listening to the main process.
 
-  onResetAll: (callback: () => void) => void
   onAbout: (callback: () => void) => void
+  onCheckForUpdates: (callback: () => void) => void
+  onOpen: (callback: (filePath: string) => void) => void
+  onOpenRemote: (callback: () => void) => void
+  onResetAll: (callback: () => void) => void
+  onSettings: (callback: () => void) => void
 }
 
 interface Window {

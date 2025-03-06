@@ -1,10 +1,10 @@
-import * as electron from 'electron'
+import electron from 'electron'
 import * as systemInformation from 'systeminformation'
 
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
 
 // Some bridging between our main process and renderer process.
-// Note: src/electronAPI.ts needs to be in sync with this file.
+// Note: this must be in sync with src/electronAPI.ts.
 
 const osInfo = await systemInformation.osInfo()
 
@@ -26,25 +26,51 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
 
   // Renderer process asking the main process to do something for it.
 
-  enableMenu: () => electron.ipcRenderer.invoke('enable-menu'),
-  disableMenu: () => electron.ipcRenderer.invoke('disable-menu'),
+  disableMainMenu: () => electron.ipcRenderer.invoke('disable-main-menu'),
+  enableMainMenu: () => electron.ipcRenderer.invoke('enable-main-menu'),
+  filePath: (file: File) => electron.webUtils.getPathForFile(file),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
 
   // Renderer process listening to the main process.
 
+  onAbout: (callback: () => void) =>
+    electron.ipcRenderer.on('about', () => {
+      callback()
+    }),
+  onCheckForUpdates: (callback: () => void) =>
+    electron.ipcRenderer.on('check-for-updates', () => {
+      callback()
+    }),
+  onOpen: (callback: (filePath: string) => void) =>
+    electron.ipcRenderer.on('open', (_event, ...filePaths) => {
+      for (const filePath of filePaths) {
+        callback(filePath)
+      }
+    }),
+  onOpenRemote: (callback: () => void) =>
+    electron.ipcRenderer.on('open-remote', () => {
+      callback()
+    }),
   onResetAll: (callback: () => void) =>
     electron.ipcRenderer.on('reset-all', () => {
       callback()
     }),
-  onAbout: (callback: () => void) =>
-    electron.ipcRenderer.on('about', () => {
+  onSettings: (callback: () => void) =>
+    electron.ipcRenderer.on('settings', () => {
       callback()
     })
 })
 
-// Give our renderer process access to the C++ version of libOpenCOR.
-// Note: src/libopencor/locAPI.ts needs to be in sync with this file.
+// Give our renderer process access to the native node module for libOpenCOR.
+// Note: this must be in sync with src/libopencor/src/main.cpp.
 
 electron.contextBridge.exposeInMainWorld('locAPI', {
-  versionString: () => loc.version()
+  // Some general methods.
+
+  version: () => loc.version(),
+
+  // File API.
+
+  fileContents: (path: string) => loc.fileContents(path),
+  fileCreate: (path: string, contents: object) => loc.fileCreate(path, contents)
 })

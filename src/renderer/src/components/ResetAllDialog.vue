@@ -1,29 +1,15 @@
 <template>
-  <BaseConfirmDialog style="width: 37rem" />
+  <BaseDialog header="Reset All..." style="width: 37rem">
+    <div class="mt-2 mb-4">
+      <label>You are about to reset all of your settings. Do you want to proceed?</label>
+    </div>
+    <template #footer>
+      <Button type="button" autofocus label="Yes" severity="danger" @click="$emit('resetAll')" />
+      <Button type="button" label="No" severity="secondary" @click="$emit('close')" />
+    </template>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
-import * as primeVueUseConfirm from 'primevue/useconfirm'
-
-import { electronAPI } from '../../../electronAPI'
-
-const confirm = primeVueUseConfirm.useConfirm()
-
-electronAPI?.onResetAll(() => {
-  confirm.require({
-    header: 'OpenCOR',
-    icon: 'pi pi-question-circle',
-    message: 'You are about to reset all of your settings. Do you want to proceed?',
-    acceptProps: {
-      severity: 'danger'
-    },
-    rejectProps: {
-      severity: 'secondary',
-      outlined: true
-    },
-    accept: () => {
-      electronAPI?.resetAll()
-    }
-  })
-})
+defineEmits(['resetAll', 'close'])
 </script>

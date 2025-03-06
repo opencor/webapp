@@ -1,7 +1,8 @@
 import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
+import tailwindcssPlugin from '@tailwindcss/vite'
 import vuePlugin from '@vitejs/plugin-vue'
 
-import * as path from 'path'
+import path from 'path'
 import vitePlugin from 'unplugin-vue-components/vite'
 import * as vite from 'vite'
 
@@ -19,6 +20,9 @@ export default vite.defineConfig({
     }
   },
   plugins: [
+    // Note: this must be in sync with electron.vite.config.ts.
+
+    tailwindcssPlugin(),
     vuePlugin(),
     vitePlugin({
       resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]

@@ -10,7 +10,7 @@ endforeach()
 
 # Project details.
 
-project(libOpenCOR VERSION 2025.02.12)
+project(libOpenCOR VERSION 2025.03.03)
 
 # Enable C++20.
 
@@ -67,8 +67,11 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_BINARY_DIR}/${LIBOPE
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 OUTPUT_QUIET)
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${LIBOPENCOR_FILE_NAME_WE} Static
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/Static
+                OUTPUT_QUIET)
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E rename ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME_WE}
+                                                   ${CMAKE_BINARY_DIR}/Static
                 OUTPUT_QUIET)
 
 file(REMOVE ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
@@ -120,12 +123,13 @@ elseif(BUILDING_USING_CLANG)
     endif()
 endif()
 
-# Create our Node.js add-on as a shared library.
+# Create our native node module as a shared library.
+
+file(GLOB CPP_FILES "src/libopencor/src/*.cpp")
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
             ${CMAKE_JS_SRC}
-            src/libopencor/src/main.cpp
-            src/libopencor/src/version.cpp)
+            ${CPP_FILES})
 
 # Don't have a "lib" prefix and use a ".node" suffix.
 
@@ -139,10 +143,14 @@ if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
     execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
 endif()
 
-# Link cmake-js and libOpenCOR to our Node.js add-on.
+# Link our native node module against cmake-js, a few Windows-specific libraries, and libOpenCOR.
+
+if(WIN32)
+    set(WINDOWS_LIBS crypt32 version wldap32 ws2_32)
+endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
-                      ${CMAKE_JS_LIB}
+                      ${CMAKE_JS_LIB} ${WINDOWS_LIBS}
                       ${CMAKE_BINARY_DIR}/Static/lib/${CMAKE_PROJECT_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX})
 
 # Configure our splash screen.
@@ -155,7 +163,11 @@ else()
     set(COPYRIGHT "2025-${CURRENT_YEAR}")
 endif()
 
-set(VERSION ${PROJECT_VERSION})
+string(TIMESTAMP CURRENT_YEAR "%Y")
+string(TIMESTAMP CURRENT_MONTH "%m")
+string(TIMESTAMP CURRENT_DAY "%d")
+
+set(VERSION "${CURRENT_YEAR}.${CURRENT_MONTH}.${CURRENT_DAY}")
 
 configure_file(src/main/assets/splashscreen.html.in
                ${CMAKE_BINARY_DIR}/../../out/splashscreen.html)

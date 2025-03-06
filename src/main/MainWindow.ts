@@ -1,4 +1,4 @@
-import * as electron from 'electron'
+import electron from 'electron'
 import * as electronSettings from 'electron-settings'
 
 import { isDevMode, isMacOs } from '../electron'
@@ -6,6 +6,7 @@ import { isDevMode, isMacOs } from '../electron'
 import icon from './assets/icon.png?asset'
 import { URI_SCHEME } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
+import { disableMainMenu, enableMainMenu } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {
@@ -43,223 +44,12 @@ export function resetAll(): void {
   electron.app.quit()
 }
 
-function doEnableDisableMenu(enabled: boolean): void {
-  const menu = electron.Menu.getApplicationMenu()
-
-  if (menu) {
-    menu.items.forEach((menuItem) => {
-      menuItem.enabled = enabled
-    })
-
-    electron.Menu.setApplicationMenu(menu)
-  }
-}
-
-export function enableMenu(): void {
-  doEnableDisableMenu(true)
-}
-
-export function disableMenu(): void {
-  doEnableDisableMenu(false)
-}
-
 export class MainWindow extends ApplicationWindow {
-  splashScreenWindowClosed = false
+  // Properties.
 
-  configureMenu(): void {
-    // Some common menu items.
+  private _splashScreenWindowClosed = false
 
-    /*---OPENCOR---
-    const settingsMenuItem = {
-      label: 'Settings...',
-      click: () => {
-        console.log('Settings...')
-      }
-    }
-    */
-    /*---OPENCOR---
-    const checkForUpdatesMenuItem = {
-      label: 'Check For Updates...',
-      click: () => {
-        console.log('Check For Updates...')
-      }
-    }
-    */
-    const aboutOpencorMenuItem = {
-      label: 'About OpenCOR',
-      click: () => {
-        this.webContents.send('about')
-      }
-    }
-
-    // App menu.
-
-    let appMenu: electron.MenuItemConstructorOptions = {}
-
-    if (isMacOs()) {
-      appMenu = {
-        label: electron.app.name,
-        submenu: [
-          aboutOpencorMenuItem,
-          /*---OPENCOR---
-          checkForUpdatesMenuItem,
-          */
-          { type: 'separator' },
-          /*---OPENCOR---
-          settingsMenuItem,
-          */
-          { type: 'separator' },
-          { role: 'services' },
-          { type: 'separator' },
-          { role: 'hide' },
-          { role: 'hideOthers' },
-          { role: 'unhide' },
-          { type: 'separator' },
-          { role: 'quit' }
-        ]
-      }
-    }
-
-    // File menu.
-
-    const fileMenu: electron.MenuItemConstructorOptions = {
-      label: 'File',
-      submenu: [{ role: 'quit' }]
-    }
-
-    // View menu.
-
-    const viewMenu: electron.MenuItemConstructorOptions = {
-      label: 'View',
-      submenu: [
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' }
-      ]
-    }
-
-    // Tools menu.
-
-    const toolsSubMenu: electron.MenuItemConstructorOptions[] = []
-    const toolsMenu: electron.MenuItemConstructorOptions = {
-      label: 'Tools',
-      submenu: toolsSubMenu
-    }
-
-    /*---OPENCOR---
-    if (!isMacOs()) {
-      toolsSubMenu.push(settingsMenuItem)
-      toolsSubMenu.push({ type: 'separator' })
-    }
-    */
-
-    toolsSubMenu.push({
-      label: 'Reset All',
-      click: () => {
-        this.webContents.send('reset-all')
-      }
-    })
-
-    // Help menu.
-
-    const helpSubMenu: electron.MenuItemConstructorOptions[] = []
-    const helpMenu: electron.MenuItemConstructorOptions = {
-      label: 'Help',
-      submenu: helpSubMenu
-    }
-
-    helpSubMenu.push({
-      label: 'Home Page',
-      click: () => {
-        electron.shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
-          console.error('Failed to open the home page:', error)
-        })
-      }
-    })
-    helpSubMenu.push({ type: 'separator' })
-    helpSubMenu.push({
-      label: 'Report Issue',
-      click: () => {
-        electron.shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
-          console.error('Failed to report an issue:', error)
-        })
-      }
-    })
-
-    if (!isMacOs()) {
-      /*---OPENCOR---
-      helpSubMenu.push({ type: 'separator' })
-      helpSubMenu.push(checkForUpdatesMenuItem)
-      */
-      helpSubMenu.push({ type: 'separator' })
-      helpSubMenu.push(aboutOpencorMenuItem)
-    }
-
-    // Set our menu.
-
-    const menu: electron.MenuItemConstructorOptions[] = []
-
-    if (isMacOs()) {
-      menu.push(appMenu)
-    } else {
-      menu.push(fileMenu)
-    }
-
-    menu.push(viewMenu)
-    menu.push(toolsMenu)
-    menu.push(helpMenu)
-
-    electron.Menu.setApplicationMenu(electron.Menu.buildFromTemplate(menu))
-
-    // Make sure that our menu bar is always visible.
-
-    this.setAutoHideMenuBar(false)
-    this.setMenuBarVisibility(true)
-  }
-
-  handleArguments(commandLine: string[]): void {
-    if (commandLine.length === 0) {
-      return
-    }
-
-    // Handle every command line argument.
-
-    commandLine.forEach((argument) => {
-      if (argument.startsWith(`${URI_SCHEME}://`)) {
-        function isAction(action: string, expectedAction: string): boolean {
-          return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
-        }
-
-        // We have been launched with a URL, so we need to parse it and act accordingly.
-
-        const parsedUrl = new URL(argument)
-
-        if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
-          // Open our about dialog.
-
-          this.webContents.send('about')
-        } else if (isAction(parsedUrl.hostname, 'openPreferencesDialog')) {
-          // Open our preferences dialog.
-          //---OPENCOR--- To be disabled once we have a preferences dialog.
-          // this.webContents.send('preferences')
-        } else {
-          // Check whether we have files to open.
-
-          const paths = parsedUrl.pathname.substring(1).split('%7C')
-
-          if (
-            (isAction(parsedUrl.hostname, 'openFile') && paths.length === 1) ||
-            (isAction(parsedUrl.hostname, 'openFiles') && paths.length > 1)
-          ) {
-            // Open the given file(s).
-            //---OPENCOR--- To be done.
-          }
-        }
-      }
-    })
-  }
+  // Constructor.
 
   constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow | null) {
     // Initialise ourselves.
@@ -296,10 +86,10 @@ export class MainWindow extends ApplicationWindow {
     this.once('show', () => {
       let handleCommandLineDelay = 0
 
-      if (!this.splashScreenWindowClosed && !!splashScreenWindow) {
+      if (!this._splashScreenWindowClosed && !!splashScreenWindow) {
         const SHORT_DELAY = 369
 
-        this.splashScreenWindowClosed = true
+        this._splashScreenWindowClosed = true
 
         handleCommandLineDelay = SHORT_DELAY
 
@@ -329,9 +119,14 @@ export class MainWindow extends ApplicationWindow {
       electronSettings.setSync('mainWindowState', mainWindowState)
     })
 
-    // Configure our menu.
+    // Enable our main menu.
 
-    this.configureMenu()
+    enableMainMenu()
+
+    // Make sure that our menu bar is always visible.
+
+    this.setAutoHideMenuBar(false)
+    this.setMenuBarVisibility(true)
 
     // Open external links in the default browser.
 
@@ -357,5 +152,73 @@ export class MainWindow extends ApplicationWindow {
         console.error('Failed to load file:', error)
       })
     }
+  }
+
+  // Handle our command line arguments.
+
+  handleArguments(commandLine: string[]): void {
+    if (commandLine.length === 0) {
+      return
+    }
+
+    commandLine.forEach((argument) => {
+      if (argument.startsWith(`${URI_SCHEME}://`)) {
+        function isAction(action: string, expectedAction: string): boolean {
+          return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
+        }
+
+        // We have been launched with a URL, so we need to parse it and act accordingly.
+
+        const parsedUrl = new URL(argument)
+
+        if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
+          // Ask our renderer to open our about dialog.
+
+          this.webContents.send('about')
+        } else if (isAction(parsedUrl.hostname, 'openSettingsDialog')) {
+          // Ask our renderer to open our settings dialog.
+
+          this.webContents.send('settings')
+        } else {
+          // Check whether we have files to open.
+
+          const filePaths = parsedUrl.pathname.substring(1).split('%7C')
+
+          if (
+            (isAction(parsedUrl.hostname, 'openFile') && filePaths.length === 1) ||
+            (isAction(parsedUrl.hostname, 'openFiles') && filePaths.length > 1)
+          ) {
+            // Ask our renderer to open the given file(s).
+
+            for (const filePath of filePaths) {
+              this.webContents.send('open', filePath)
+            }
+          }
+        }
+      }
+    })
+  }
+
+  // Handle our File|Open menu.
+
+  open(): void {
+    disableMainMenu()
+
+    electron.dialog
+      .showOpenDialog({
+        properties: ['openFile', 'multiSelections']
+      })
+      .then(({ filePaths }) => {
+        for (const filePath of filePaths) {
+          this.webContents.send('open', filePath)
+        }
+
+        enableMainMenu()
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to open file(s):', error)
+
+        enableMainMenu()
+      })
   }
 }

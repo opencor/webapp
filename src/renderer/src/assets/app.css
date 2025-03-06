@@ -19,7 +19,7 @@ a {
 }
 
 .p-menubar-item-link {
-  padding: 4px 8px !important;
+  padding: 0.25rem 0.5rem !important;
 }
 
 .p-menubar-root-list {
@@ -28,4 +28,14 @@ a {
 
 .p-menubar-root-list > .p-menubar-item > .p-menubar-item-content > .p-menubar-item-link > .p-menubar-submenu-icon {
   display: none !important;
+}
+
+.spinning-wheel {
+  width: 50% !important;
+  height: 50% !important;
+  position: fixed !important;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 99999;
 }

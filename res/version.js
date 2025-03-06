@@ -1,4 +1,4 @@
-import * as fs from 'fs'
+import fs from 'fs'
 
 const now = new Date()
 const year = now.getFullYear()
