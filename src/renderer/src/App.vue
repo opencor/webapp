@@ -114,13 +114,17 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
   }
 
   if (fileContentsPromise !== undefined) {
-    showSpinningWheel()
+    if (isRemoteFilePath(filePath)) {
+      showSpinningWheel()
+    }
 
     fileContentsPromise
       .then((fileContents) => {
         const file = new locAPI.File(filePath, fileContents)
 
-        hideSpinningWheel()
+        if (isRemoteFilePath(filePath)) {
+          hideSpinningWheel()
+        }
 
         addToast(file)
       })
