@@ -7,6 +7,7 @@ on:
 
 jobs:
   web_app:
+    if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
     runs-on: ubuntu-22.04
     steps:
@@ -34,5 +35,5 @@ jobs:
           remote-user: ${{ secrets.REMOTE_USER }}
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
           local-path: ./src/renderer/dist
-          remote-path: /home/www/opencor.ws/app-dev
+          remote-path: /home/www/opencor.ws/appdev
           sync: full
