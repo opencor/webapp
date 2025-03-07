@@ -15,7 +15,7 @@
       @drop.prevent="onDrop"
       @dragleave.prevent="onDragLeave"
     >
-      <BackgroundComponent />
+      <ContentsComponent ref="contents" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="spinningWheelVisible" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
@@ -37,7 +37,12 @@ import { fileContents, filePath, isRemoteFilePath, toastLife } from './common'
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
 
+interface ContentsComponent {
+  addFile(file: locAPI.File): void;
+}
+
 const toast = useToast()
+const contents = vue.ref(null)
 
 // Spinning wheel.
 
@@ -97,6 +102,8 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
         (contents.length > numberOfBytesShown ? '...' : '')
       )
     }
+
+    (contents.value as unknown as ContentsComponent).addFile(file)
 
     toast.add({
       severity: 'info',
