@@ -27,13 +27,13 @@ interface IFile {
 }
 
 export class File {
-  private _path?: string
+  private _path: string
   private _file: IFile = {} as IFile
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
-    if (cppVersion()) {
-      this._path = path
+    this._path = path
 
+    if (cppVersion()) {
       _locAPI.fileCreate(path, contents)
     } else if (contents !== undefined) {
       this._file = new _locAPI.File(path)
@@ -50,6 +50,10 @@ export class File {
 
       console.error(`No contents provided for file '${path}'.`)
     }
+  }
+
+  path(): string {
+    return this._path
   }
 
   contents(): Uint8Array {
