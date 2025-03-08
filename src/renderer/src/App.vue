@@ -3,7 +3,7 @@
     <div v-if="!electronAPI" class="main-menu">
       <MainMenu
         @about="aboutVisible = true"
-        @open="($refs.files as HTMLInputElement).click()"
+        @open="($refs.filesRef as HTMLInputElement).click()"
         @openRemote="openRemoteVisible = true"
         @settings="onSettings"
       />
@@ -15,13 +15,13 @@
       @drop.prevent="onDrop"
       @dragleave.prevent="onDragLeave"
     >
-      <ContentsComponent ref="contents" />
+      <ContentsComponent ref="contentsRef" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="spinningWheelVisible" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
   </div>
-  <input ref="files" type="file" multiple style="display: none" @change.prevent="onChange" />
+  <input ref="filesRef" type="file" multiple style="display: none" @change.prevent="onChange" />
   <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
   <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
@@ -42,7 +42,7 @@ interface ContentsComponent {
 }
 
 const toast = useToast()
-const contents = vue.ref(null)
+const contentsRef = vue.ref()
 
 // Spinning wheel.
 
@@ -103,7 +103,7 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
       )
     }
 
-    (contents.value as unknown as ContentsComponent).addFile(file)
+    (contentsRef.value as unknown as ContentsComponent).addFile(file)
 
     toast.add({
       severity: 'info',
