@@ -68,7 +68,7 @@ const items = [
 vue.onMounted(() => {
   const mainMenu = document.getElementById('mainMenu')
 
-  if (mainMenu) {
+  if (mainMenu !== null) {
     const observer = new MutationObserver(() => {
       if (mainMenu.className.includes('p-menubar-mobile')) {
         mainMenu.classList.remove('p-menubar-mobile')
