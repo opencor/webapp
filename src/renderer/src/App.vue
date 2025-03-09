@@ -37,12 +37,10 @@ import { fileContents, filePath, isRemoteFilePath, toastLife } from './common'
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
 
-interface ContentsComponent {
-  addFile(file: locAPI.File): void;
-}
+import ContentsComponent from './components/ContentsComponent.vue'
 
 const toast = useToast()
-const contentsRef = vue.ref()
+const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null)
 
 // Spinning wheel.
 
@@ -103,7 +101,7 @@ function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): 
       )
     }
 
-    (contentsRef.value as unknown as ContentsComponent).addFile(file)
+    contentsRef.value?.addFile(file)
 
     toast.add({
       severity: 'info',

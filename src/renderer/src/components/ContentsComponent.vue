@@ -1,12 +1,12 @@
 <template>
   <BackgroundComponent v-show="fileTabs.length === 0" />
-  <Tabs value="0">
+  <Tabs v-model:value="activeFileValue">
     <TabList>
-      <Tab v-for="fileTab in fileTabs" :key="fileTab.title" :value="fileTab.value">{{ fileTab.title }}</Tab>
+      <Tab v-for="fileTab in fileTabs" :key="'Tab_' + fileTab.value" :value="fileTab.value">{{ fileTab.title }}</Tab>
     </TabList>
     <TabPanels>
-      <TabPanel v-for="fileTab in fileTabs" :key="fileTab.content" :value="fileTab.value">
-        <p class="m-0">{{ fileTab.content }}</p>
+      <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
+        <p class="m-0">{{ fileTab.contents }}</p>
       </TabPanel>
     </TabPanels>
   </Tabs>
@@ -15,24 +15,36 @@
 <script setup lang="ts">
 import * as vue from 'vue'
 
+import * as locAPI from '../../../libopencor/locAPI'
+
 interface FileTab {
-  title: string;
-  content: string;
-  value: string;
+  title: string
+  contents: string
+  value: string
 }
 
 const fileTabs = vue.ref<FileTab[]>([])
-
-vue.onMounted(() => {
-  fileTabs.value = [
-    { title: 'File 1', content: 'Content 1', value: '0' },
-    { title: 'File 2', content: 'Content 2', value: '1' }
-  ]
-})
+const activeFileValue = vue.ref()
 
 defineExpose({ addFile })
 
-function addFile(): void {
-  fileTabs.value.push({ title: 'File 3', content: 'Content 3', value: '2' })
+export interface ContentsComponent {
+  addFile(file: locAPI.File): void
+}
+
+function addFile(file: locAPI.File): void {
+  const fileTab = fileTabs.value.find(fileTab => fileTab.value === file.path())
+
+  if (fileTab !== undefined) {
+    activeFileValue.value = fileTab.value
+
+    return
+  }
+
+  const fileName = file.path().split('/').pop() ?? ''
+
+  fileTabs.value.push({ title: fileName, contents: new TextDecoder().decode(file.contents()), value: file.path() })
+
+  activeFileValue.value = file.path()
 }
 </script>
