@@ -6,21 +6,33 @@
     </TabList>
     <TabPanels>
       <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
-        <div>
-          <strong>File path:</strong>
-          <pre style="margin-top: 0.1rem">{{ fileTab.value }}</pre>
+        <div class="font-bold">
+          <Panel header="File path">
+            <p class="font-mono break-all">
+              {{ fileTab.value }}
+            </p>
+          </Panel>
         </div>
         <div style="margin-top: 1rem">
-          <strong>Uint8Array:</strong>
-          <pre style="margin-top: 0.1rem">{{ fileTab.uint8Array }}</pre>
+          <Panel header="Uint8Array">
+            <p class="font-mono break-all">
+              {{ fileTab.uint8Array }}
+            </p>
+          </Panel>
         </div>
         <div style="margin-top: 1rem">
-          <strong>Base64:</strong>
-          <pre style="margin-top: 0.1rem">{{ fileTab.base64 }}</pre>
+          <Panel header="Base64">
+            <p class="font-mono break-all">
+              {{ fileTab.base64 }}
+            </p>
+          </Panel>
         </div>
         <div style="margin-top: 1rem">
-          <strong>Raw contents:</strong>
-          <pre style="margin-top: 0.1rem">{{ fileTab.rawContents }}</pre>
+          <Panel header="Raw contents">
+            <p class="font-mono break-all">
+              {{ fileTab.rawContents }}
+            </p>
+          </Panel>
         </div>
       </TabPanel>
     </TabPanels>
@@ -52,15 +64,24 @@ export interface IContentsComponent {
 }
 
 function addFile(file: locAPI.File): void {
+  function topContents(contents: string): string {
+    const numberOfBytesShown = 1024
+
+    return (
+      contents.slice(0, Math.min(numberOfBytesShown, contents.length)) +
+      (contents.length > numberOfBytesShown ? '...' : '')
+    )
+  }
+
   const filePath = file.path()
   const fileContents = file.contents()
 
   fileTabs.value.push({
     value: filePath,
     title: filePath.split('/').pop() ?? '',
-    uint8Array: String(fileContents),
-    base64: btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), '')),
-    rawContents: new TextDecoder().decode(fileContents)
+    uint8Array: topContents(String(fileContents)),
+    base64: topContents(btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), ''))),
+    rawContents: topContents(new TextDecoder().decode(fileContents))
   })
 
   activeFileValue.value = filePath
