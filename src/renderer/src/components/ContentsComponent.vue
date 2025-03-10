@@ -41,7 +41,7 @@ interface IFileTab {
 }
 
 const fileTabs = vue.ref<IFileTab[]>([])
-const activeFileValue = vue.ref()
+const activeFileValue = vue.ref<string>('')
 
 defineExpose({ addFile, hasFile, selectFile })
 

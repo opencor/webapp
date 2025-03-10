@@ -42,7 +42,7 @@ const contentsRef = vue.ref<InstanceType<typeof IContentsComponent> | null>(null
 
 // Spinning wheel.
 
-const spinningWheelVisible = vue.ref(false)
+const spinningWheelVisible = vue.ref<boolean>(false)
 
 function showSpinningWheel(): void {
   spinningWheelVisible.value = true
@@ -65,7 +65,7 @@ electronAPI?.onCheckForUpdates(() => {
 
 // About dialog.
 
-const aboutVisible = vue.ref(false)
+const aboutVisible = vue.ref<boolean>(false)
 
 electronAPI?.onAbout(() => {
   aboutVisible.value = true
@@ -142,7 +142,7 @@ function onChange(event: Event): void {
 
 // Drag and drop.
 
-const dropAreaCounter = vue.ref(0)
+const dropAreaCounter = vue.ref<number>(0)
 
 function onDragEnter(): void {
   dropAreaCounter.value += 1
@@ -172,7 +172,7 @@ electronAPI?.onOpen((filePath: string) => {
 
 // Open remote.
 
-const openRemoteVisible = vue.ref(false)
+const openRemoteVisible = vue.ref<boolean>(false)
 
 electronAPI?.onOpenRemote(() => {
   openRemoteVisible.value = true
@@ -189,7 +189,7 @@ function onOpenRemote(url: string): void {
 
 // Reset all.
 
-const resetAllVisible = vue.ref(false)
+const resetAllVisible = vue.ref<boolean>(false)
 
 electronAPI?.onResetAll(() => {
   resetAllVisible.value = true
