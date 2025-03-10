@@ -88,7 +88,7 @@ function addFile(file: locAPI.File): void {
 }
 
 function hasFile(filePath: string): boolean {
-  return fileTabs.value.some((fileTab) => fileTab.value === filePath)
+  return fileTabs.value.find((fileTab) => fileTab.value === filePath) !== undefined
 }
 
 function selectFile(filePath: string): void {
