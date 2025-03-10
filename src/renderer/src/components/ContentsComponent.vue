@@ -6,7 +6,22 @@
     </TabList>
     <TabPanels>
       <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
-        <p class="m-0">{{ fileTab.contents }}</p>
+        <div>
+          <strong>File path:</strong>
+          <pre style="margin-top: 0.1rem">{{ fileTab.value }}</pre>
+        </div>
+        <div style="margin-top: 1rem">
+          <strong>Uint8Array:</strong>
+          <pre style="margin-top: 0.1rem">{{ fileTab.uint8Array }}</pre>
+        </div>
+        <div style="margin-top: 1rem">
+          <strong>Base64:</strong>
+          <pre style="margin-top: 0.1rem">{{ fileTab.base64 }}</pre>
+        </div>
+        <div style="margin-top: 1rem">
+          <strong>Raw contents:</strong>
+          <pre style="margin-top: 0.1rem">{{ fileTab.rawContents }}</pre>
+        </div>
       </TabPanel>
     </TabPanels>
   </Tabs>
@@ -17,34 +32,45 @@ import * as vue from 'vue'
 
 import * as locAPI from '../../../libopencor/locAPI'
 
-interface FileTab {
-  title: string
-  contents: string
+interface IFileTab {
   value: string
+  title: string
+  uint8Array: string
+  base64: string
+  rawContents: string
 }
 
-const fileTabs = vue.ref<FileTab[]>([])
+const fileTabs = vue.ref<IFileTab[]>([])
 const activeFileValue = vue.ref()
 
-defineExpose({ addFile })
+defineExpose({ addFile, hasFile, selectFile })
 
-export interface ContentsComponent {
+export interface IContentsComponent {
   addFile(file: locAPI.File): void
+  hasFile(filePath: string): boolean
+  selectFile(filePath: string): void
 }
 
 function addFile(file: locAPI.File): void {
-  const fileTab = fileTabs.value.find(fileTab => fileTab.value === file.path())
+  const filePath = file.path()
+  const fileContents = file.contents()
 
-  if (fileTab !== undefined) {
-    activeFileValue.value = fileTab.value
+  fileTabs.value.push({
+    value: filePath,
+    title: filePath.split('/').pop() ?? '',
+    uint8Array: String(fileContents),
+    base64: btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), '')),
+    rawContents: new TextDecoder().decode(fileContents)
+  })
 
-    return
-  }
+  activeFileValue.value = filePath
+}
 
-  const fileName = file.path().split('/').pop() ?? ''
+function hasFile(filePath: string): boolean {
+  return fileTabs.value.some((fileTab) => fileTab.value === filePath)
+}
 
-  fileTabs.value.push({ title: fileName, contents: new TextDecoder().decode(file.contents()), value: file.path() })
-
-  activeFileValue.value = file.path()
+function selectFile(filePath: string): void {
+  activeFileValue.value = filePath
 }
 </script>

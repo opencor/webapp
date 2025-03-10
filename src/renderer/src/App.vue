@@ -32,15 +32,13 @@
 import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 
-import { fileContents, filePath, isRemoteFilePath, toastLife } from './common'
-
 import { electronAPI } from '../../electronAPI'
-import * as locAPI from '../../libopencor/locAPI'
 
-import ContentsComponent from './components/ContentsComponent.vue'
+import * as common from './common'
+import IContentsComponent from './components/ContentsComponent.vue'
 
 const toast = useToast()
-const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null)
+const contentsRef = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 
 // Spinning wheel.
 
@@ -61,7 +59,7 @@ electronAPI?.onCheckForUpdates(() => {
     severity: 'info',
     summary: 'Check for updates',
     detail: 'The Check for updates dialog has yet to be implemented.',
-    life: toastLife
+    life: common.toastLife
   })
 })
 
@@ -84,78 +82,50 @@ function onSettings(): void {
     severity: 'info',
     summary: 'Settings',
     detail: 'The Settings dialog has yet to be implemented.',
-    life: toastLife
+    life: common.toastLife
   })
 }
 
 // Open a file.
 
-function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): void {
-  function addToast(file: locAPI.File) {
-    function topContents(contents: string): string {
-      const numberOfBytesShown = 100
+function openFile(fileOrFilePath: string | File): void {
+  // Check whether the file is already open and if so then select it.
 
-      return (
-        contents.slice(0, Math.min(numberOfBytesShown, contents.length)) +
-        (contents.length > numberOfBytesShown ? '...' : '')
-      )
-    }
+  const filePath = common.filePath(fileOrFilePath)
 
-    contentsRef.value?.addFile(file)
+  if (contentsRef.value?.hasFile(filePath) ?? false) {
+    contentsRef.value?.selectFile(filePath)
 
-    toast.add({
-      severity: 'info',
-      summary: 'Opening a file',
-      detail:
-        filePath +
-        '\n\nRaw contents:\n' +
-        topContents(new TextDecoder().decode(file.contents())) +
-        '\n\nUint8Array:\n' +
-        topContents(String(file.contents())) +
-        '\n\nBase64:\n' +
-        topContents(btoa(file.contents().reduce((data, byte) => data + String.fromCharCode(byte), ''))),
-      life: toastLife
-    })
+    return
   }
 
-  if (fileContentsPromise !== undefined) {
-    if (isRemoteFilePath(filePath)) {
-      showSpinningWheel()
-    }
+  // Retrieve a locAPI.File object for the given file or file path and add it to the contents.
 
-    fileContentsPromise
-      .then((fileContents) => {
-        const file = new locAPI.File(filePath, fileContents)
+  if (common.isRemoteFilePath(filePath)) {
+    showSpinningWheel()
+  }
 
-        if (isRemoteFilePath(filePath)) {
-          hideSpinningWheel()
-        }
+  common
+    .file(fileOrFilePath)
+    .then((file) => {
+      contentsRef.value?.addFile(file)
 
-        addToast(file)
-      })
-      .catch((error: unknown) => {
+      if (common.isRemoteFilePath(filePath)) {
         hideSpinningWheel()
+      }
+    })
+    .catch((error: unknown) => {
+      if (common.isRemoteFilePath(filePath)) {
+        hideSpinningWheel()
+      }
 
-        toast.add({
-          severity: 'error',
-          summary: 'Opening a file',
-          detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
-          life: toastLife
-        })
+      toast.add({
+        severity: 'error',
+        summary: 'Opening a file',
+        detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
+        life: common.toastLife
       })
-  } else {
-    if (isRemoteFilePath(filePath)) {
-      showSpinningWheel()
-    }
-
-    const file = new locAPI.File(filePath)
-
-    if (isRemoteFilePath(filePath)) {
-      hideSpinningWheel()
-    }
-
-    addToast(file)
-  }
+    })
 }
 
 // Open file(s) dialog.
@@ -165,7 +135,7 @@ function onChange(event: Event): void {
 
   if (files !== null) {
     for (const file of files) {
-      openFile(filePath(file), fileContents(file))
+      openFile(file)
     }
   }
 }
@@ -185,7 +155,7 @@ function onDrop(event: DragEvent): void {
 
   if (files !== undefined) {
     for (const file of Array.from(files)) {
-      openFile(filePath(file), electronAPI !== undefined ? undefined : fileContents(file))
+      openFile(file)
     }
   }
 }
@@ -214,7 +184,7 @@ function onOpenRemote(url: string): void {
   //       retrieve the file here means that it is done asynchronously, which in turn means that the UI is not blocked
   //       and that we can show a spinning wheel to indicate that something is happening.
 
-  openFile(url, fileContents(url))
+  openFile(url)
 }
 
 // Reset all.
