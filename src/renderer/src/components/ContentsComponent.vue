@@ -40,6 +40,8 @@
 </template>
 
 <script setup lang="ts">
+import * as vueusecore from '@vueuse/core'
+
 import * as vue from 'vue'
 
 import * as locAPI from '../../../libopencor/locAPI'
@@ -94,4 +96,43 @@ function hasFile(filePath: string): boolean {
 function selectFile(filePath: string): void {
   activeFileValue.value = filePath
 }
+
+function selectNextFile(): void {
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
+  const nextFileIndex = (activeFileIndex + 1) % fileTabs.value.length
+
+  activeFileValue.value = fileTabs.value[nextFileIndex].value
+}
+
+function selectPreviousFile(): void {
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
+  const nextFileIndex = (activeFileIndex - 1 + fileTabs.value.length) % fileTabs.value.length
+
+  activeFileValue.value = fileTabs.value[nextFileIndex].value
+}
+
+function closeCurrentFile(): void {
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
+
+  fileTabs.value.splice(activeFileIndex, 1)
+
+  if (fileTabs.value.length > 0) {
+    activeFileValue.value = fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].value
+  } else {
+    activeFileValue.value = ''
+  }
+}
+
+// Keyboard shortcuts.
+
+vueusecore.onKeyStroke((event) => {
+  console.log(event)
+  if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
+    selectNextFile()
+  } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
+    selectPreviousFile()
+  } else if (event.ctrlKey && !event.shiftKey && event.code === 'KeyW') {
+    closeCurrentFile()
+  }
+})
 </script>
