@@ -76,7 +76,7 @@ function addFile(file: locAPI.File): void {
   const filePath = file.path()
   const fileContents = file.contents()
 
-  fileTabs.value.push({
+  fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value) + 1, 0, {
     value: filePath,
     title: filePath.split('/').pop() ?? '',
     uint8Array: topContents(String(fileContents)),
