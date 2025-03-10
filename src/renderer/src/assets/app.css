@@ -30,6 +30,10 @@ a {
   display: none !important;
 }
 
+.p-menubar-submenu {
+  z-index: 10 !important;
+}
+
 .spinning-wheel {
   width: 50% !important;
   height: 50% !important;
