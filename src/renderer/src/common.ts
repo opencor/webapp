@@ -1,7 +1,27 @@
+import { UAParser } from 'ua-parser-js'
+
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
 
 export const toastLife = 3000
+
+const uaParser = new UAParser()
+
+export function isWindows(): boolean {
+  return uaParser.getOS().name === 'Windows'
+}
+
+export function isLinux(): boolean {
+  return uaParser.getOS().name === 'Linux'
+}
+
+export function isMacOS(): boolean {
+  return uaParser.getOS().name === 'macOS'
+}
+
+export function isCtrlOrCmd(event: KeyboardEvent): boolean {
+  return isMacOS() ? event.metaKey : event.ctrlKey
+}
 
 export function disableMainMenu(): void {
   electronAPI?.disableMainMenu()

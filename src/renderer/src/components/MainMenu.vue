@@ -1,9 +1,24 @@
 <template>
-  <Menubar id="mainMenu" :model="items" />
+  <Menubar id="mainMenu" :model="items">
+    <template #item="{ item, props }">
+      <a v-bind="props.action">
+        <span>{{ item.label }}</span>
+        <span
+          v-if="item.shortcut"
+          class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1"
+          >{{ item.shortcut }}</span
+        >
+      </a>
+    </template>
+  </Menubar>
 </template>
 
 <script setup lang="ts">
+import * as vueusecore from '@vueuse/core'
+
 import * as vue from 'vue'
+
+import * as common from '../common'
 
 const emit = defineEmits(['about', 'open', 'openRemote', 'settings'])
 
@@ -13,12 +28,14 @@ const items = [
     items: [
       {
         label: 'Open...',
+        shortcut: common.isMacOS() ? '⌘⌥O' : 'Ctrl+Alt+O',
         command: () => {
           emit('open')
         }
       },
       {
         label: 'Open Remote...',
+        shortcut: common.isMacOS() ? '⇧⌘⌥O' : 'Ctrl+Shift+Alt+O',
         command: () => {
           emit('openRemote')
         }
@@ -76,6 +93,16 @@ vue.onMounted(() => {
     })
 
     observer.observe(mainMenu, { attributes: true })
+  }
+})
+
+// Keyboard shortcuts.
+
+vueusecore.onKeyStroke((event) => {
+  if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyO') {
+    emit('open')
+  } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.code === 'KeyO') {
+    emit('openRemote')
   }
 })
 </script>
