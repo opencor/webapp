@@ -6,7 +6,7 @@ import { isDevMode, isMacOs } from '../electron'
 import icon from './assets/icon.png?asset'
 import { URI_SCHEME } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
-import { disableMainMenu, enableMainMenu } from './MainMenu'
+import { disableUi, enableMainMenu, enableUi } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {
@@ -202,7 +202,7 @@ export class MainWindow extends ApplicationWindow {
   // Handle our File|Open menu.
 
   open(): void {
-    disableMainMenu()
+    disableUi()
 
     electron.dialog
       .showOpenDialog({
@@ -213,12 +213,12 @@ export class MainWindow extends ApplicationWindow {
           this.webContents.send('open', filePath)
         }
 
-        enableMainMenu()
+        enableUi()
       })
       .catch((error: unknown) => {
         console.error('Failed to open file(s):', error)
 
-        enableMainMenu()
+        enableUi()
       })
   }
 }

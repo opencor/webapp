@@ -16,6 +16,8 @@ interface ElectronAPI {
 
   onAbout: (callback: () => void) => void
   onCheckForUpdates: (callback: () => void) => void
+  onDisableUi: (callback: () => void) => void
+  onEnableUi: (callback: () => void) => void
   onOpen: (callback: (filePath: string) => void) => void
   onOpenRemote: (callback: () => void) => void
   onResetAll: (callback: () => void) => void

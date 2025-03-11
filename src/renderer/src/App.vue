@@ -17,7 +17,7 @@
     >
       <ContentsComponent ref="contentsRef" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
-      <BlockUI :blocked="spinningWheelVisible" :fullScreen="true"></BlockUI>
+      <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
   </div>
@@ -40,15 +40,39 @@ import IContentsComponent from './components/ContentsComponent.vue'
 const toast = useToast()
 const contentsRef = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 
+// Enable/disable the UI.
+
+const uiEnabled = vue.ref<boolean>(true)
+
+electronAPI?.onEnableUi(() => {
+  enableUi()
+})
+
+function enableUi(): void {
+  uiEnabled.value = true
+}
+
+electronAPI?.onDisableUi(() => {
+  disableUi()
+})
+
+function disableUi(): void {
+  uiEnabled.value = false
+}
+
 // Spinning wheel.
 
 const spinningWheelVisible = vue.ref<boolean>(false)
 
 function showSpinningWheel(): void {
+  disableUi()
+
   spinningWheelVisible.value = true
 }
 
 function hideSpinningWheel(): void {
+  enableUi()
+
   spinningWheelVisible.value = false
 }
 

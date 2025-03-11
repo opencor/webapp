@@ -214,3 +214,15 @@ export function enableMainMenu(): void {
 export function disableMainMenu(): void {
   enableDisableMainMenu(false)
 }
+
+export function enableUi(): void {
+  enableMainMenu()
+
+  mainWindow?.webContents.send('enable-ui')
+}
+
+export function disableUi(): void {
+  disableMainMenu()
+
+  mainWindow?.webContents.send('disable-ui')
+}
