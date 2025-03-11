@@ -46,6 +46,8 @@ import * as vue from 'vue'
 
 import * as locAPI from '../../../libopencor/locAPI'
 
+import * as common from '../common'
+
 interface IFileTab {
   value: string
   title: string
@@ -127,12 +129,12 @@ function closeCurrentFile(): void {
 
 // Keyboard shortcuts.
 
-vueusecore.onKeyStroke((event) => {
+vueusecore.onKeyStroke((event: KeyboardEvent) => {
   if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
     selectNextFile()
   } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
     selectPreviousFile()
-  } else if (event.ctrlKey && !event.shiftKey && event.code === 'KeyW') {
+  } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
     closeCurrentFile()
   }
 })
