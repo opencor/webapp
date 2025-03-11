@@ -19,6 +19,47 @@ export function version(): string {
   return cppVersion() ? _locAPI.version() : _locAPI.versionString()
 }
 
+// FileManager API.
+
+class FileManager {
+  private _fileManager = cppVersion() ? undefined : _locAPI.FileManager.instance()
+
+  files(): string[] {
+    if (cppVersion()) {
+      return _locAPI.fileManagerFiles()
+    }
+
+    const res: string[] = []
+    const files = this._fileManager.files()
+
+    for (let i = 0; i < files.size(); ++i) {
+      res.push(files.get(i).fileName())
+    }
+
+    return res
+  }
+
+  unmanage(path: string): void {
+    if (cppVersion()) {
+      _locAPI.fileManagerUnmanage(path)
+    } else {
+      const files = this._fileManager.files()
+
+      for (let i = 0; i < files.size(); ++i) {
+        const file = files.get(i)
+
+        if (file.fileName() === path) {
+          this._fileManager.unmanage(file)
+
+          break
+        }
+      }
+    }
+  }
+}
+
+export const fileManager = new FileManager()
+
 // File API.
 
 interface IFile {

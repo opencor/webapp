@@ -112,6 +112,8 @@ function selectPreviousFile(): void {
 }
 
 function closeCurrentFile(): void {
+  locAPI.fileManager.unmanage(activeFileValue.value)
+
   const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
 
   fileTabs.value.splice(activeFileIndex, 1)
@@ -126,7 +128,6 @@ function closeCurrentFile(): void {
 // Keyboard shortcuts.
 
 vueusecore.onKeyStroke((event) => {
-  console.log(event)
   if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
     selectNextFile()
   } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
