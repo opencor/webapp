@@ -1,5 +1,5 @@
 <template>
-  <Dialog :modal="true" @show="onShow()" @hide="onHide()">
+  <Dialog :modal="true" @show="disableMainMenu()" @hide="enableMainMenu()">
     <template v-for="(_, slot) of $slots" #[slot]="scope">
       <slot :name="slot" v-bind="scope" />
     </template>
@@ -7,5 +7,5 @@
 </template>
 
 <script setup lang="ts">
-import { onShow, onHide } from '../common'
+import { disableMainMenu, enableMainMenu } from '../common'
 </script>

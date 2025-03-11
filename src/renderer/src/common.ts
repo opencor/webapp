@@ -3,11 +3,11 @@ import * as locAPI from '../../libopencor/locAPI'
 
 export const toastLife = 3000
 
-export function onShow(): void {
+export function disableMainMenu(): void {
   electronAPI?.disableMainMenu()
 }
 
-export function onHide(): void {
+export function enableMainMenu(): void {
   electronAPI?.enableMainMenu()
 }
 
