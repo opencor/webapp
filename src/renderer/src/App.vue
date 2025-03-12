@@ -8,20 +8,14 @@
         @settings="onSettings"
       />
     </div>
-    <div
-      class="grow"
-      @dragenter.prevent="onDragEnter"
-      @dragover.prevent
-      @drop.prevent="onDrop"
-      @dragleave.prevent="onDragLeave"
-    >
+    <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
       <ContentsComponent ref="contentsRef" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
   </div>
-  <input ref="filesRef" type="file" multiple style="display: none" @change.prevent="onChange" />
+  <input ref="filesRef" type="file" multiple style="display: none" @change="onChange" />
   <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
   <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
