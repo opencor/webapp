@@ -1,8 +1,14 @@
 <template>
   <BackgroundComponent v-show="fileTabs.length === 0" />
-  <Tabs v-model:value="activeFileValue">
+  <Tabs v-model:value="activeFileValue" :scrollable="true" :selectOnFocus="true">
     <TabList>
-      <Tab v-for="fileTab in fileTabs" :key="'Tab_' + fileTab.value" :value="fileTab.value">{{ fileTab.title }}</Tab>
+      <Tab
+        v-for="fileTab in fileTabs"
+        :id="'Tab_' + fileTab.value"
+        :key="'Tab_' + fileTab.value"
+        :value="fileTab.value"
+        >{{ fileTab.title }}</Tab
+      >
     </TabList>
     <TabPanels>
       <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
@@ -88,7 +94,7 @@ function addFile(file: locAPI.File): void {
     rawContents: topContents(new TextDecoder().decode(fileContents))
   })
 
-  activeFileValue.value = filePath
+  selectFile(filePath)
 }
 
 function hasFile(filePath: string): boolean {
@@ -97,20 +103,33 @@ function hasFile(filePath: string): boolean {
 
 function selectFile(filePath: string): void {
   activeFileValue.value = filePath
+
+  vue
+    .nextTick()
+    .then(() => {
+      const tabElement = document.getElementById('Tab_' + filePath)
+
+      if (tabElement !== null) {
+        tabElement.scrollIntoView({ block: 'nearest' })
+      }
+    })
+    .catch((error: unknown) => {
+      console.error('Error scrolling to tab:', error)
+    })
 }
 
 function selectNextFile(): void {
   const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
   const nextFileIndex = (activeFileIndex + 1) % fileTabs.value.length
 
-  activeFileValue.value = fileTabs.value[nextFileIndex].value
+  selectFile(fileTabs.value[nextFileIndex].value)
 }
 
 function selectPreviousFile(): void {
   const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
   const nextFileIndex = (activeFileIndex - 1 + fileTabs.value.length) % fileTabs.value.length
 
-  activeFileValue.value = fileTabs.value[nextFileIndex].value
+  selectFile(fileTabs.value[nextFileIndex].value)
 }
 
 function closeCurrentFile(): void {
@@ -121,9 +140,9 @@ function closeCurrentFile(): void {
   fileTabs.value.splice(activeFileIndex, 1)
 
   if (fileTabs.value.length > 0) {
-    activeFileValue.value = fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].value
+    selectFile(fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].value)
   } else {
-    activeFileValue.value = ''
+    selectFile('')
   }
 }
 
