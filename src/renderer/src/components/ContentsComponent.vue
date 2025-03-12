@@ -155,6 +155,10 @@ function closeCurrentFile(): void {
 // Keyboard shortcuts.
 
 vueusecore.onKeyStroke((event: KeyboardEvent) => {
+  if (fileTabs.value.length === 0) {
+    return
+  }
+
   if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
     selectNextFile()
   } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
