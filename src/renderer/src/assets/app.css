@@ -35,3 +35,33 @@ a {
   padding: 0.1rem !important;
   z-index: 10 !important;
 }
+
+.p-tab {
+  padding: 0.25rem 0.5rem !important;
+  border-right: 1px solid var(--p-content-border-color) !important;
+  border-bottom: 1px solid var(--p-content-border-color) !important;
+  outline: none !important;
+}
+
+.p-tab:first-of-type {
+  border-left: 1px solid var(--p-content-border-color) !important;
+}
+
+.p-tab:hover {
+  background-color: var(--p-content-hover-background) !important;
+}
+
+.p-tab-active,
+.p-tab-active:hover {
+  background-color: var(--p-primary-color) !important;
+  color: var(--p-primary-contrast-color) !important;
+  border-bottom: 1px solid var(--p-primary-color) !important;
+}
+
+.p-tablist-active-bar {
+  display: none !important;
+}
+
+.p-tabpanel {
+  outline: none !important;
+}

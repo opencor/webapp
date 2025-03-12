@@ -1,14 +1,20 @@
 <template>
-  <BackgroundComponent v-show="fileTabs.length === 0" />
-  <Tabs v-model:value="activeFileValue" :scrollable="true" :selectOnFocus="true">
-    <TabList>
+  <BackgroundComponent v-if="fileTabs.length === 0" />
+  <Tabs v-else v-model:value="activeFileValue" :scrollable="true" :selectOnFocus="true">
+    <TabList class="tablist">
       <Tab
         v-for="fileTab in fileTabs"
         :id="'Tab_' + fileTab.value"
         :key="'Tab_' + fileTab.value"
         :value="fileTab.value"
-        >{{ fileTab.title }}</Tab
       >
+        <div class="flex gap-2 items-center">
+          <div>
+            {{ fileTab.title }}
+          </div>
+          <div class="pi pi-times remove-button" />
+        </div>
+      </Tab>
     </TabList>
     <TabPanels>
       <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
@@ -158,3 +164,26 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
   }
 })
 </script>
+
+<style scoped>
+.remove-button {
+  padding: 0.15rem;
+  font-size: 0.75rem;
+}
+
+.remove-button:hover {
+  border-radius: var(--p-border-radius-sm);
+  background-color: var(--p-red-500);
+  color: var(--p-red-50);
+}
+
+@media (prefers-color-scheme: dark) {
+  .remove-button:hover {
+    background-color: var(--p-red-400);
+  }
+}
+
+.tablist {
+  border-bottom: 1px solid var(--p-primary-color);
+}
+</style>
