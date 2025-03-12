@@ -9,14 +9,8 @@
   width: 100%;
   height: 100%;
   border: 0.375rem dashed;
-  border-color: var(--p-emerald-500);
+  border-color: var(--p-primary-color);
   z-index: 99999;
-}
-
-@media (prefers-color-scheme: dark) {
-  .drop-area {
-    border-color: var(--p-emerald-400);
-  }
 }
 
 .message {
@@ -24,18 +18,12 @@
   text-align: center;
   border-radius: 1rem;
   padding: 0.5rem 1rem;
-  background-color: var(--p-emerald-500);
-  color: var(--p-content-background);
+  background-color: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
   box-shadow: 0 0 0.75rem 0.375rem var(--p-content-border-color);
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-}
-
-@media (prefers-color-scheme: dark) {
-  .message {
-    background-color: var(--p-emerald-400);
-  }
 }
 </style>
