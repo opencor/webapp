@@ -1,6 +1,6 @@
 <template>
   <BackgroundComponent v-if="fileTabs.length === 0" />
-  <Tabs v-else v-model:value="activeFileValue" :scrollable="true" :selectOnFocus="true">
+  <Tabs v-else v-model:value="activeFile" :scrollable="true" :selectOnFocus="true">
     <TabList class="tablist">
       <Tab
         v-for="fileTab in fileTabs"
@@ -69,7 +69,7 @@ interface IFileTab {
 }
 
 const fileTabs = vue.ref<IFileTab[]>([])
-const activeFileValue = vue.ref<string>('')
+const activeFile = vue.ref<string>('')
 
 defineExpose({ addFile, hasFile, selectFile })
 
@@ -92,7 +92,7 @@ function addFile(file: locAPI.File): void {
   const filePath = file.path()
   const fileContents = file.contents()
 
-  fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value) + 1, 0, {
+  fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.value === activeFile.value) + 1, 0, {
     value: filePath,
     title: filePath.split('/').pop() ?? '',
     uint8Array: topContents(String(fileContents)),
@@ -108,7 +108,7 @@ function hasFile(filePath: string): boolean {
 }
 
 function selectFile(filePath: string): void {
-  activeFileValue.value = filePath
+  activeFile.value = filePath
 
   vue
     .nextTick()
@@ -130,23 +130,23 @@ function selectFile(filePath: string): void {
 }
 
 function selectNextFile(): void {
-  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFile.value)
   const nextFileIndex = (activeFileIndex + 1) % fileTabs.value.length
 
   selectFile(fileTabs.value[nextFileIndex].value)
 }
 
 function selectPreviousFile(): void {
-  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFile.value)
   const nextFileIndex = (activeFileIndex - 1 + fileTabs.value.length) % fileTabs.value.length
 
   selectFile(fileTabs.value[nextFileIndex].value)
 }
 
 function closeCurrentFile(): void {
-  locAPI.fileManager.unmanage(activeFileValue.value)
+  locAPI.fileManager.unmanage(activeFile.value)
 
-  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFileValue.value)
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFile.value)
 
   fileTabs.value.splice(activeFileIndex, 1)
 
