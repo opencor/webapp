@@ -12,7 +12,7 @@
           <div>
             {{ fileTab.title }}
           </div>
-          <div class="pi pi-times remove-button" />
+          <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.value)" />
         </div>
       </Tab>
     </TabList>
@@ -143,16 +143,20 @@ function selectPreviousFile(): void {
   selectFile(fileTabs.value[nextFileIndex].value)
 }
 
-function closeCurrentFile(): void {
-  locAPI.fileManager.unmanage(activeFile.value)
+function closeFile(filePath: string): void {
+  locAPI.fileManager.unmanage(filePath)
 
-  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === activeFile.value)
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === filePath)
 
   fileTabs.value.splice(activeFileIndex, 1)
 
-  if (fileTabs.value.length > 0) {
+  if (activeFile.value === filePath && fileTabs.value.length > 0) {
     selectFile(fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].value)
   }
+}
+
+function closeCurrentFile(): void {
+  closeFile(activeFile.value)
 }
 
 // Keyboard shortcuts.
