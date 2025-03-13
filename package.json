@@ -37,7 +37,7 @@
     "dev": "electron-vite dev --watch",
     "dev:web": "cd ./src/renderer && vite dev",
     "format": "prettier --log-level silent --write . && clang-format -i src/libopencor/src/*",
-    "format:check": "prettier --log-level silent --check . && clang-format --dry-run -Werror src/libopencor/src/*",
+    "format:check": "prettier --check . && clang-format --dry-run -Werror src/libopencor/src/*",
     "install": "node res/version.js",
     "libopencor": "cmake-js build -B Release -O dist/libOpenCOR",
     "lint": "eslint --fix .",
