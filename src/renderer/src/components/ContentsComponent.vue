@@ -152,8 +152,6 @@ function closeCurrentFile(): void {
 
   if (fileTabs.value.length > 0) {
     selectFile(fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].value)
-  } else {
-    selectFile('')
   }
 }
 
