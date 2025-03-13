@@ -116,7 +116,12 @@ function selectFile(filePath: string): void {
       const tabElement = document.getElementById('Tab_' + filePath)
 
       if (tabElement !== null) {
+        // Note: when removing a tab, unless it is the last one, it will flash (whether we scroll it into view or not).
+        //       To prevent this, we temporarily remove the 'p-tab' class (!?).
+
+        tabElement.classList.remove('p-tab')
         tabElement.scrollIntoView({ block: 'nearest' })
+        tabElement.classList.add('p-tab')
       }
     })
     .catch((error: unknown) => {
