@@ -62,6 +62,8 @@ a {
   display: none !important;
 }
 
+.p-tablist-prev-button,
+.p-tablist-next-button,
 .p-tabpanel {
   outline: none !important;
 }
