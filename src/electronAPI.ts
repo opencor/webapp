@@ -1,4 +1,4 @@
-interface ElectronAPI {
+interface IElectronAPI {
   // Note: this must be in sync with src/preload/index.ts.
 
   // Some general methods.
@@ -24,8 +24,8 @@ interface ElectronAPI {
   onSettings: (callback: () => void) => void
 }
 
-interface Window {
-  electronAPI: ElectronAPI
+interface IWindow {
+  electronAPI: IElectronAPI
 }
 
-export const electronAPI: ElectronAPI | undefined = (window as unknown as Window).electronAPI
+export const electronAPI: IElectronAPI | undefined = (window as unknown as IWindow).electronAPI
