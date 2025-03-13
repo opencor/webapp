@@ -7,18 +7,6 @@ static std::vector<libOpenCOR::FilePtr> files;
 
 // FileManager API.
 
-napi_value fileManagerFiles(const Napi::CallbackInfo &pInfo)
-{
-    auto files = fileManager.files();
-    auto res = Napi::Array::New(pInfo.Env(), files.size());
-
-    for (std::size_t i = 0; i < files.size(); ++i) {
-        res.Set(i, Napi::String::New(pInfo.Env(), files[i]->path()));
-    }
-
-    return res;
-}
-
 void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
 {
     auto files = fileManager.files();
