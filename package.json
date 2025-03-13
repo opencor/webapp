@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "2025.03.13",
+  "version": "2025.03.14",
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
@@ -37,7 +37,7 @@
     "dev": "electron-vite dev --watch",
     "dev:web": "cd ./src/renderer && vite dev",
     "format": "prettier --log-level silent --write . && clang-format -i src/libopencor/src/*",
-    "format:check": "prettier --log-level silent --check . && clang-format --dry-run -Werror src/libopencor/src/*",
+    "format:check": "prettier --check . && clang-format --dry-run -Werror src/libopencor/src/*",
     "install": "node res/version.js",
     "libopencor": "cmake-js build -B Release -O dist/libOpenCOR",
     "lint": "eslint --fix .",
@@ -51,8 +51,8 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@primeuix/themes": "^1.0.0",
     "@primevue/auto-import-resolver": "^4.3.2",
-    "@tailwindcss/postcss": "^4.0.13",
-    "@tailwindcss/vite": "^4.0.13",
+    "@tailwindcss/postcss": "^4.0.14",
+    "@tailwindcss/vite": "^4.0.14",
     "@types/node": "^22.13.10",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/eslint-config-prettier": "^10.2.0",
@@ -73,7 +73,7 @@
     "primeicons": "^7.0.0",
     "primevue": "^4.3.2",
     "systeminformation": "^5.25.11",
-    "tailwindcss": "^4.0.13",
+    "tailwindcss": "^4.0.14",
     "ua-parser-js": "^2.0.2",
     "unplugin-vue-components": "^28.4.1",
     "vite": "^6.2.1",
