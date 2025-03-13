@@ -3,25 +3,19 @@
     <div v-if="!electronAPI" class="main-menu">
       <MainMenu
         @about="aboutVisible = true"
-        @open="($refs.files as HTMLInputElement).click()"
+        @open="($refs.filesRef as HTMLInputElement).click()"
         @openRemote="openRemoteVisible = true"
         @settings="onSettings"
       />
     </div>
-    <div
-      class="grow"
-      @dragenter.prevent="onDragEnter"
-      @dragover.prevent
-      @drop.prevent="onDrop"
-      @dragleave.prevent="onDragLeave"
-    >
-      <BackgroundComponent />
+    <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
+      <ContentsComponent ref="contentsRef" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
-      <BlockUI :blocked="spinningWheelVisible" :fullScreen="true"></BlockUI>
+      <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
   </div>
-  <input ref="files" type="file" multiple style="display: none" @change.prevent="onChange" />
+  <input ref="filesRef" type="file" multiple style="display: none" @change="onChange" />
   <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
   <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
@@ -32,22 +26,47 @@
 import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 
-import { fileContents, filePath, isRemoteFilePath, toastLife } from './common'
-
 import { electronAPI } from '../../electronAPI'
-import * as locAPI from '../../libopencor/locAPI'
+
+import * as common from './common'
+import IContentsComponent from './components/ContentsComponent.vue'
 
 const toast = useToast()
+const contentsRef = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
+
+// Enable/disable the UI.
+
+const uiEnabled = vue.ref<boolean>(true)
+
+electronAPI?.onEnableUi(() => {
+  enableUi()
+})
+
+function enableUi(): void {
+  uiEnabled.value = true
+}
+
+electronAPI?.onDisableUi(() => {
+  disableUi()
+})
+
+function disableUi(): void {
+  uiEnabled.value = false
+}
 
 // Spinning wheel.
 
-const spinningWheelVisible = vue.ref(false)
+const spinningWheelVisible = vue.ref<boolean>(false)
 
 function showSpinningWheel(): void {
+  disableUi()
+
   spinningWheelVisible.value = true
 }
 
 function hideSpinningWheel(): void {
+  enableUi()
+
   spinningWheelVisible.value = false
 }
 
@@ -58,13 +77,13 @@ electronAPI?.onCheckForUpdates(() => {
     severity: 'info',
     summary: 'Check for updates',
     detail: 'The Check for updates dialog has yet to be implemented.',
-    life: toastLife
+    life: common.toastLife
   })
 })
 
 // About dialog.
 
-const aboutVisible = vue.ref(false)
+const aboutVisible = vue.ref<boolean>(false)
 
 electronAPI?.onAbout(() => {
   aboutVisible.value = true
@@ -81,76 +100,50 @@ function onSettings(): void {
     severity: 'info',
     summary: 'Settings',
     detail: 'The Settings dialog has yet to be implemented.',
-    life: toastLife
+    life: common.toastLife
   })
 }
 
 // Open a file.
 
-function openFile(filePath: string, fileContentsPromise?: Promise<Uint8Array>): void {
-  function addToast(file: locAPI.File) {
-    function topContents(contents: string): string {
-      const numberOfBytesShown = 100
+function openFile(fileOrFilePath: string | File): void {
+  // Check whether the file is already open and if so then select it.
 
-      return (
-        contents.slice(0, Math.min(numberOfBytesShown, contents.length)) +
-        (contents.length > numberOfBytesShown ? '...' : '')
-      )
-    }
+  const filePath = common.filePath(fileOrFilePath)
 
-    toast.add({
-      severity: 'info',
-      summary: 'Opening a file',
-      detail:
-        filePath +
-        '\n\nRaw contents:\n' +
-        topContents(new TextDecoder().decode(file.contents())) +
-        '\n\nUint8Array:\n' +
-        topContents(String(file.contents())) +
-        '\n\nBase64:\n' +
-        topContents(btoa(file.contents().reduce((data, byte) => data + String.fromCharCode(byte), ''))),
-      life: toastLife
-    })
+  if (contentsRef.value?.hasFile(filePath) ?? false) {
+    contentsRef.value?.selectFile(filePath)
+
+    return
   }
 
-  if (fileContentsPromise !== undefined) {
-    if (isRemoteFilePath(filePath)) {
-      showSpinningWheel()
-    }
+  // Retrieve a locAPI.File object for the given file or file path and add it to the contents.
 
-    fileContentsPromise
-      .then((fileContents) => {
-        const file = new locAPI.File(filePath, fileContents)
+  if (common.isRemoteFilePath(filePath)) {
+    showSpinningWheel()
+  }
 
-        if (isRemoteFilePath(filePath)) {
-          hideSpinningWheel()
-        }
+  common
+    .file(fileOrFilePath)
+    .then((file) => {
+      contentsRef.value?.addFile(file)
 
-        addToast(file)
-      })
-      .catch((error: unknown) => {
+      if (common.isRemoteFilePath(filePath)) {
         hideSpinningWheel()
+      }
+    })
+    .catch((error: unknown) => {
+      if (common.isRemoteFilePath(filePath)) {
+        hideSpinningWheel()
+      }
 
-        toast.add({
-          severity: 'error',
-          summary: 'Opening a file',
-          detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
-          life: toastLife
-        })
+      toast.add({
+        severity: 'error',
+        summary: 'Opening a file',
+        detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
+        life: common.toastLife
       })
-  } else {
-    if (isRemoteFilePath(filePath)) {
-      showSpinningWheel()
-    }
-
-    const file = new locAPI.File(filePath)
-
-    if (isRemoteFilePath(filePath)) {
-      hideSpinningWheel()
-    }
-
-    addToast(file)
-  }
+    })
 }
 
 // Open file(s) dialog.
@@ -160,14 +153,14 @@ function onChange(event: Event): void {
 
   if (files !== null) {
     for (const file of files) {
-      openFile(filePath(file), fileContents(file))
+      openFile(file)
     }
   }
 }
 
 // Drag and drop.
 
-const dropAreaCounter = vue.ref(0)
+const dropAreaCounter = vue.ref<number>(0)
 
 function onDragEnter(): void {
   dropAreaCounter.value += 1
@@ -180,7 +173,7 @@ function onDrop(event: DragEvent): void {
 
   if (files !== undefined) {
     for (const file of Array.from(files)) {
-      openFile(filePath(file), electronAPI !== undefined ? undefined : fileContents(file))
+      openFile(file)
     }
   }
 }
@@ -197,7 +190,7 @@ electronAPI?.onOpen((filePath: string) => {
 
 // Open remote.
 
-const openRemoteVisible = vue.ref(false)
+const openRemoteVisible = vue.ref<boolean>(false)
 
 electronAPI?.onOpenRemote(() => {
   openRemoteVisible.value = true
@@ -209,12 +202,12 @@ function onOpenRemote(url: string): void {
   //       retrieve the file here means that it is done asynchronously, which in turn means that the UI is not blocked
   //       and that we can show a spinning wheel to indicate that something is happening.
 
-  openFile(url, fileContents(url))
+  openFile(url)
 }
 
 // Reset all.
 
-const resetAllVisible = vue.ref(false)
+const resetAllVisible = vue.ref<boolean>(false)
 
 electronAPI?.onResetAll(() => {
   resetAllVisible.value = true
@@ -224,3 +217,19 @@ function onResetAll(): void {
   electronAPI?.resetAll()
 }
 </script>
+
+<style scoped>
+.main-menu {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.spinning-wheel {
+  width: 50% !important;
+  height: 50% !important;
+  position: fixed !important;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 99999;
+}
+</style>

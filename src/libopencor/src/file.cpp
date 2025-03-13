@@ -2,11 +2,29 @@
 
 #include <libopencor>
 
+static libOpenCOR::FileManager fileManager = libOpenCOR::FileManager::instance();
 static std::vector<libOpenCOR::FilePtr> files;
+
+// FileManager API.
+
+void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
+{
+    auto files = fileManager.files();
+    auto path = pInfo[0].ToString().Utf8Value();
+
+    for (auto file : files) {
+        if (file->path() == path) {
+            fileManager.unmanage(file);
+
+            break;
+        }
+    }
+}
+
+// File API.
 
 napi_value fileContents(const Napi::CallbackInfo &pInfo)
 {
-    auto fileManager = libOpenCOR::FileManager::instance();
     auto file = fileManager.file(pInfo[0].ToString().Utf8Value());
     auto res = file->contents();
 

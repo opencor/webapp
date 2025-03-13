@@ -19,6 +19,32 @@ export function version(): string {
   return cppVersion() ? _locAPI.version() : _locAPI.versionString()
 }
 
+// FileManager API.
+
+class FileManager {
+  private _fileManager = cppVersion() ? undefined : _locAPI.FileManager.instance()
+
+  unmanage(path: string): void {
+    if (cppVersion()) {
+      _locAPI.fileManagerUnmanage(path)
+    } else {
+      const files = this._fileManager.files()
+
+      for (let i = 0; i < files.size(); ++i) {
+        const file = files.get(i)
+
+        if (file.fileName() === path) {
+          this._fileManager.unmanage(file)
+
+          break
+        }
+      }
+    }
+  }
+}
+
+export const fileManager = new FileManager()
+
 // File API.
 
 interface IFile {
@@ -27,13 +53,13 @@ interface IFile {
 }
 
 export class File {
-  private _path?: string
+  private _path: string
   private _file: IFile = {} as IFile
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
-    if (cppVersion()) {
-      this._path = path
+    this._path = path
 
+    if (cppVersion()) {
       _locAPI.fileCreate(path, contents)
     } else if (contents !== undefined) {
       this._file = new _locAPI.File(path)
@@ -50,6 +76,10 @@ export class File {
 
       console.error(`No contents provided for file '${path}'.`)
     }
+  }
+
+  path(): string {
+    return this._path
   }
 
   contents(): Uint8Array {

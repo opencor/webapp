@@ -9,6 +9,10 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
 
     pExports.Set(Napi::String::New(pEnv, "version"), Napi::Function::New(pEnv, version));
 
+    // FileManager API.
+
+    pExports.Set(Napi::String::New(pEnv, "fileManagerUnmanage"), Napi::Function::New(pEnv, fileManagerUnmanage));
+
     // File API.
 
     pExports.Set(Napi::String::New(pEnv, "fileContents"), Napi::Function::New(pEnv, fileContents));

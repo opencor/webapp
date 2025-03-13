@@ -41,6 +41,14 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.on('check-for-updates', () => {
       callback()
     }),
+  onDisableUi: (callback: () => void) =>
+    electron.ipcRenderer.on('disable-ui', () => {
+      callback()
+    }),
+  onEnableUi: (callback: () => void) =>
+    electron.ipcRenderer.on('enable-ui', () => {
+      callback()
+    }),
   onOpen: (callback: (filePath: string) => void) =>
     electron.ipcRenderer.on('open', (_event, ...filePaths) => {
       for (const filePath of filePaths) {
@@ -68,6 +76,10 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
   // Some general methods.
 
   version: () => loc.version(),
+
+  // FileManager API.
+
+  fileManagerUnmanage: (path: string) => loc.fileManagerUnmanage(path),
 
   // File API.
 
