@@ -170,6 +170,15 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
 </script>
 
 <style scoped>
+.p-tab .remove-button {
+  visibility: hidden;
+}
+
+.p-tab:hover .remove-button,
+.p-tab-active .remove-button {
+  visibility: visible;
+}
+
 .remove-button {
   padding: 0.15rem;
   font-size: 0.75rem;
