@@ -8,7 +8,7 @@
     </div>
     <template #footer>
       <Button type="button" label="Open" :disabled="url === ''" @click="emitOpenRemote()" />
-      <Button type="button" label="Cancel" severity="secondary" @click="$emit('close')" />
+      <Button type="button" label="Cancel" severity="secondary" @click="emitClose()" />
     </template>
   </BaseDialog>
 </template>
