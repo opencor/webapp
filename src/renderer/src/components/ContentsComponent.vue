@@ -12,7 +12,7 @@
           <div>
             {{ fileTab.title }}
           </div>
-          <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.value)" />
+          <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="removeFile(fileTab.value)" />
         </div>
       </Tab>
     </TabList>
@@ -143,7 +143,7 @@ function selectPreviousFile(): void {
   selectFile(fileTabs.value[nextFileIndex].value)
 }
 
-function closeFile(filePath: string): void {
+function removeFile(filePath: string): void {
   locAPI.fileManager.unmanage(filePath)
 
   const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === filePath)
@@ -155,8 +155,8 @@ function closeFile(filePath: string): void {
   }
 }
 
-function closeCurrentFile(): void {
-  closeFile(activeFile.value)
+function removeCurrentFile(): void {
+  removeFile(activeFile.value)
 }
 
 // Keyboard shortcuts.
@@ -171,7 +171,7 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
   } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
     selectPreviousFile()
   } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
-    closeCurrentFile()
+    removeCurrentFile()
   }
 })
 </script>
