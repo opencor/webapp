@@ -31,6 +31,12 @@ jobs:
           - name: Linting
             os: ubuntu-22.04
     steps:
+      - name: Set the timezone to New Zealand
+        uses: szenius/set-timezone@v2.0
+        with:
+          timezoneWindows: 'New Zealand Standard Time'
+          timezoneLinux: 'Pacific/Auckland'
+          timezoneMacos: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
       - name: Install CMake and Ninja
