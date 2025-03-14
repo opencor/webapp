@@ -104,7 +104,7 @@ function addFile(file: locAPI.File): void {
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.value === activeFile.value) + 1, 0, {
     value: filePath,
-    title: filePath.split('/').pop() ?? '',
+    title: filePath.split(/(\\|\/)/g).pop() ?? '',
     type: file.type(),
     uint8Array: topContents(String(fileContents)),
     base64: topContents(btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), ''))),
