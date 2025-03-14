@@ -44,3 +44,10 @@ void fileCreate(const Napi::CallbackInfo &pInfo)
 
     files.push_back(file);
 }
+
+napi_value fileType(const Napi::CallbackInfo &pInfo)
+{
+    auto file = fileManager.file(pInfo[0].ToString().Utf8Value());
+
+    return Napi::Number::New(pInfo.Env(), static_cast<int>(file->type()));
+}

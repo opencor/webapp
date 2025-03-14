@@ -47,7 +47,15 @@ export const fileManager = new FileManager()
 
 // File API.
 
+export enum FileType {
+  UnknownFile,
+  CellMLFile,
+  SEDMLFile,
+  COMBINEArchive
+}
+
 interface IFile {
+  type(): { value: FileType }
   contents(): Uint8Array
   setContents(ptr: number, length: number): void
 }
@@ -76,6 +84,10 @@ export class File {
 
       console.error(`No contents provided for file '${path}'.`)
     }
+  }
+
+  type(): FileType {
+    return cppVersion() ? _locAPI.fileType(this._path) : this._file.type().value
   }
 
   path(): string {
