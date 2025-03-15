@@ -22,6 +22,6 @@
     "@primevue/auto-import-resolver": "^4.3.2",
     "primevue": "^4.3.2",
     "unplugin-vue-components": "^28.4.1",
-    "vite": "^6.2.1"
+    "vite": "^6.2.2"
   }
 }
