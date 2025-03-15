@@ -19,6 +19,10 @@ export function isMacOS(): boolean {
   return uaParser.getOS().name === 'macOS'
 }
 
+export function isMobile(): boolean {
+  return uaParser.getDevice().type === 'mobile'
+}
+
 export function isCtrlOrCmd(event: KeyboardEvent): boolean {
   return isMacOS() ? event.metaKey : event.ctrlKey
 }
