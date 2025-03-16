@@ -94,7 +94,7 @@ electron.app.on('second-instance', (_event, argv) => {
 
 let triggeringUrl: string | null = null
 
-electron.app.on('open-url', (_, url) => {
+electron.app.on('open-url', (_event, url) => {
   triggeringUrl = url
 
   mainWindow?.handleArguments([url])
@@ -124,7 +124,7 @@ electron.app
     // Enable the F12 shortcut (to show/hide the developer tools), if we are in development.
 
     if (isDevMode()) {
-      electron.app.on('browser-window-created', (_, window) => {
+      electron.app.on('browser-window-created', (_event, window) => {
         electronToolkitUtils.optimizer.watchWindowShortcuts(window)
       })
     }
