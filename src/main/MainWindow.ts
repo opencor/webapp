@@ -99,6 +99,8 @@ export class MainWindow extends ApplicationWindow {
       }
 
       setTimeout(() => {
+        commandLine.shift() // Remove the first argument, which is the path to OpenCOR.
+
         this.handleArguments(commandLine)
       }, handleCommandLineDelay)
     })
@@ -195,6 +197,10 @@ export class MainWindow extends ApplicationWindow {
             }
           }
         }
+      } else if (argument !== '--allow-file-access-from-files') {
+        // The argument is not an action (and not --allow-file-access-from-files either), so it must be a file to open.
+
+        this.webContents.send('open', argument)
       }
     })
   }

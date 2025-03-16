@@ -86,6 +86,8 @@ electron.app.on('second-instance', (_event, argv) => {
 
     mainWindow.focus()
 
+    argv.shift() // Remove the first argument, which is the path to OpenCOR.
+
     mainWindow.handleArguments(argv)
   }
 })
