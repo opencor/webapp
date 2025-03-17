@@ -101,6 +101,10 @@ export class MainWindow extends ApplicationWindow {
       setTimeout(() => {
         commandLine.shift() // Remove the first argument, which is the path to OpenCOR.
 
+        if (isDevMode()) {
+          commandLine.shift() // Remove the second argument, which is the path to the renderer.
+        }
+
         this.handleArguments(commandLine)
       }, handleCommandLineDelay)
     })
