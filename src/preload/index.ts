@@ -37,6 +37,10 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.on('about', () => {
       callback()
     }),
+  onAction: (callback: (action: string) => void) =>
+    electron.ipcRenderer.on('action', (_event, action) => {
+      callback(action)
+    }),
   onCheckForUpdates: (callback: () => void) =>
     electron.ipcRenderer.on('check-for-updates', () => {
       callback()

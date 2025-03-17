@@ -70,8 +70,12 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
       })
     }
 
-    return new Promise((resolve) => {
-      resolve(new locAPI.File(filePath(fileOrFilePath)))
+    return new Promise((resolve, reject) => {
+      if (electronAPI !== undefined) {
+        resolve(new locAPI.File(filePath(fileOrFilePath)))
+      } else {
+        reject(new Error('Local files cannot be opened.'))
+      }
     })
   }
 

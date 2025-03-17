@@ -15,6 +15,7 @@ interface IElectronAPI {
   // Renderer process listening to the main process.
 
   onAbout: (callback: () => void) => void
+  onAction: (callback: (action: string) => void) => void
   onCheckForUpdates: (callback: () => void) => void
   onDisableUi: (callback: () => void) => void
   onEnableUi: (callback: () => void) => void
