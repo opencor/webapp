@@ -27,7 +27,7 @@ jobs:
         run: pnpm install
       - name: Build OpenCOR's Web app
         run: pnpm build:web
-      - name: Deploy to https://opencor.ws/app/
+      - name: Deploy to https://opencor.ws/appdev/
         uses: milanmk/actions-file-deployer@master
         with:
           remote-protocol: sftp
