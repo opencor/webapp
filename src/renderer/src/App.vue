@@ -27,6 +27,7 @@ import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 import * as vueusecore from '@vueuse/core'
 
+import { TOAST_LIFE } from '../../constants'
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
 
@@ -112,7 +113,7 @@ electronAPI?.onCheckForUpdates(() => {
     severity: 'info',
     summary: 'Check for updates',
     detail: 'The Check for updates dialog has yet to be implemented.',
-    life: common.toastLife
+    life: TOAST_LIFE
   })
 })
 
@@ -139,7 +140,7 @@ function onSettings(): void {
     severity: 'info',
     summary: 'Settings',
     detail: 'The Settings dialog has yet to be implemented.',
-    life: common.toastLife
+    life: TOAST_LIFE
   })
 }
 
@@ -177,7 +178,7 @@ function openFile(fileOrFilePath: string | File): void {
             (fileType === locAPI.FileType.UnknownFile
               ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
               : 'The file could not be retrieved.'),
-          life: common.toastLife
+          life: TOAST_LIFE
         })
       } else {
         contentsRef.value?.addFile(file)
@@ -196,7 +197,7 @@ function openFile(fileOrFilePath: string | File): void {
         severity: 'error',
         summary: 'Opening a file',
         detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
-        life: common.toastLife
+        life: TOAST_LIFE
       })
     })
 }

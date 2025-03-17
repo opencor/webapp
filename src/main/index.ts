@@ -6,6 +6,7 @@ import fs from 'fs'
 import * as nodeChildProcess from 'node:child_process'
 import path from 'path'
 
+import { URI_SCHEME } from '../constants'
 import { isDevMode, isWindows, isLinux } from '../electron'
 
 import { disableMainMenu, enableMainMenu } from './MainMenu'
@@ -26,8 +27,6 @@ if (electronSettings.getSync('resetAll')) {
 }
 
 // Register our URI scheme.
-
-export const URI_SCHEME = 'opencor'
 
 electron.app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined)
 
