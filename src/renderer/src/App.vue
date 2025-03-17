@@ -275,7 +275,7 @@ function onResetAll(): void {
 
 // Things that need to be done when the component is mounted.
 
-const url = vueusecore.useStorage('url', '')
+const action = vueusecore.useStorage('action', '')
 
 vue.onMounted(() => {
   // Check whether the URL contains an OpenCOR action, but with a bit of a delay to ensure that our background (with the
@@ -287,13 +287,13 @@ vue.onMounted(() => {
       const index = window.location.search.indexOf(FULL_URI_SCHEME)
 
       if (index !== -1) {
-        url.value = window.location.search.substring(index + FULL_URI_SCHEME.length)
+        action.value = window.location.search.substring(index + FULL_URI_SCHEME.length)
 
         window.location.search = ''
-      } else if (url.value !== '') {
-        handleAction(url.value)
+      } else if (action.value !== '') {
+        handleAction(action.value)
 
-        url.value = ''
+        action.value = ''
       }
     }
   }, 0)
