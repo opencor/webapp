@@ -51,9 +51,6 @@ function handleAction(action: string): void {
   const actionName = index !== -1 ? action.substring(0, index) : action
   const actionArguments = index !== -1 ? action.substring(index + 1) : ''
 
-  console.log(`actionName: >${actionName}<`)
-  console.log(`actionArguments: >${actionArguments}<`)
-
   if (isAction(actionName, 'openAboutDialog')) {
     onAbout()
   } else if (isAction(actionName, 'openSettingsDialog')) {
@@ -285,23 +282,12 @@ vue.onMounted(() => {
   // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
   setTimeout(() => {
-    console.log(`window.location.pathname: >${window.location.pathname}<`)
-
     if (electronAPI === undefined) {
-      console.log(`window.location.pathname: >${window.location.pathname}<`)
-
-      console.log('window.location.pathname starts with https://')
       if (window.location.pathname !== '/') {
-        console.log(`window.location.pathname: >${window.location.pathname}<`)
-        console.log('OLD url:', url.value)
         url.value = window.location.pathname
-        console.log('NEW url:', url.value)
 
         window.location.pathname = '/'
       } else {
-        console.log(`window.location.pathname: >${window.location.pathname}<`)
-        console.log('CRT url:', url.value.substring(1))
-
         handleAction(url.value.substring(1))
 
         url.value = ''
