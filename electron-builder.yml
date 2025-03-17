@@ -33,6 +33,3 @@ protocols:
   name: OpenCOR
   schemes:
     - opencor
-publish:
-  provider: generic
-  url: https://opencor.ws/auto-updates
