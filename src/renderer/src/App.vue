@@ -66,6 +66,13 @@ function handleAction(action: string): void {
       for (const filePath of filePaths) {
         openFile(filePath)
       }
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Handling an action',
+        detail: action + '\n\nThe action could not be handled.',
+        life: TOAST_LIFE
+      })
     }
   }
 }
@@ -278,8 +285,8 @@ function onResetAll(): void {
 const action = vueusecore.useStorage('action', '')
 
 vue.onMounted(() => {
-  // Check whether the URL contains an OpenCOR action, but with a bit of a delay to ensure that our background (with the
-  // OpenCOR logo) is properly rendered.
+  // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
+  // logo) time to be renderered.
   // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
   setTimeout(() => {
@@ -289,12 +296,14 @@ vue.onMounted(() => {
 
         window.location.search = ''
       } else if (action.value !== '') {
-        handleAction(action.value)
+        setTimeout(() => {
+          handleAction(action.value)
 
-        action.value = ''
+          action.value = ''
+        }, 69)
       }
     }
-  }, 0)
+  }, 69)
 })
 </script>
 
