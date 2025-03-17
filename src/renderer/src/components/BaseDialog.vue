@@ -1,6 +1,6 @@
 <template>
   <Dialog :modal="true" @show="disableMainMenu()" @hide="enableMainMenu()">
-    <template v-for="(_, slot) of $slots" #[slot]="scope">
+    <template v-for="(_event, slot) of $slots" #[slot]="scope">
       <slot :name="slot" v-bind="scope" />
     </template>
   </Dialog>

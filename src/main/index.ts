@@ -72,11 +72,14 @@ MimeType=x-scheme-handler/${URI_SCHEME}`
 
 // Allow only one instance of OpenCOR.
 
-export let mainWindow: MainWindow | null = null
+let mainInstance = true
 
 if (!electron.app.requestSingleInstanceLock()) {
+  mainInstance = false
   electron.app.quit()
 }
+
+export let mainWindow: MainWindow | null = null
 
 electron.app.on('second-instance', (_event, argv) => {
   if (mainWindow !== null) {
@@ -86,6 +89,8 @@ electron.app.on('second-instance', (_event, argv) => {
 
     mainWindow.focus()
 
+    argv.shift() // Remove the first argument, which is the path to OpenCOR.
+
     mainWindow.handleArguments(argv)
   }
 })
@@ -94,7 +99,7 @@ electron.app.on('second-instance', (_event, argv) => {
 
 let triggeringUrl: string | null = null
 
-electron.app.on('open-url', (_, url) => {
+electron.app.on('open-url', (_event, url) => {
   triggeringUrl = url
 
   mainWindow?.handleArguments([url])
@@ -105,6 +110,12 @@ electron.app.on('open-url', (_, url) => {
 electron.app
   .whenReady()
   .then(() => {
+    // Leave if we are not the main instance.
+
+    if (!mainInstance) {
+      return
+    }
+
     // Set process.env.NODE_ENV to 'production' if we are not the default app.
     // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they
     //       should run in development mode (default) or production mode.
@@ -124,7 +135,7 @@ electron.app
     // Enable the F12 shortcut (to show/hide the developer tools), if we are in development.
 
     if (isDevMode()) {
-      electron.app.on('browser-window-created', (_, window) => {
+      electron.app.on('browser-window-created', (_event, window) => {
         electronToolkitUtils.optimizer.watchWindowShortcuts(window)
       })
     }

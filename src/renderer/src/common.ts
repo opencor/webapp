@@ -69,21 +69,22 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
           })
       })
     }
+
     return new Promise((resolve) => {
       resolve(new locAPI.File(filePath(fileOrFilePath)))
     })
-  } else {
-    return new Promise((resolve, reject) => {
-      fileOrFilePath
-        .arrayBuffer()
-        .then((arrayBuffer) => {
-          const fileContents = new Uint8Array(arrayBuffer)
-
-          resolve(new locAPI.File(filePath(fileOrFilePath), fileContents))
-        })
-        .catch((error: unknown) => {
-          reject(error instanceof Error ? error : new Error(String(error)))
-        })
-    })
   }
+
+  return new Promise((resolve, reject) => {
+    fileOrFilePath
+      .arrayBuffer()
+      .then((arrayBuffer) => {
+        const fileContents = new Uint8Array(arrayBuffer)
+
+        resolve(new locAPI.File(filePath(fileOrFilePath), fileContents))
+      })
+      .catch((error: unknown) => {
+        reject(error instanceof Error ? error : new Error(String(error)))
+      })
+  })
 }

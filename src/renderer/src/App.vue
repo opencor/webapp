@@ -27,6 +27,7 @@ import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 
 import { electronAPI } from '../../electronAPI'
+import * as locAPI from '../../libopencor/locAPI'
 
 import * as common from './common'
 import IContentsComponent from './components/ContentsComponent.vue'
@@ -126,7 +127,23 @@ function openFile(fileOrFilePath: string | File): void {
   common
     .file(fileOrFilePath)
     .then((file) => {
-      contentsRef.value?.addFile(file)
+      const fileType = file.type()
+
+      if (fileType === locAPI.FileType.UnknownFile || fileType === locAPI.FileType.IrretrievableFile) {
+        toast.add({
+          severity: 'error',
+          summary: 'Opening a file',
+          detail:
+            filePath +
+            '\n\n' +
+            (fileType === locAPI.FileType.UnknownFile
+              ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
+              : 'The file could not be retrieved.'),
+          life: common.toastLife
+        })
+      } else {
+        contentsRef.value?.addFile(file)
+      }
 
       if (common.isRemoteFilePath(filePath)) {
         hideSpinningWheel()

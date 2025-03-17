@@ -1,5 +1,6 @@
 import electron from 'electron'
 import * as electronSettings from 'electron-settings'
+import path from 'path'
 
 import { isDevMode, isMacOs } from '../electron'
 
@@ -99,6 +100,17 @@ export class MainWindow extends ApplicationWindow {
       }
 
       setTimeout(() => {
+        // The command line can either be a classical command line or be an OpenCOR action (i.e. an opencor:// link). In
+        // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
+
+        if (!this.isArgumentAction(commandLine[0])) {
+          commandLine.shift() // Remove the first argument, which is the path to OpenCOR.
+
+          if (isDevMode()) {
+            commandLine.shift() // Remove the second argument, which is the path to the renderer.
+          }
+        }
+
         this.handleArguments(commandLine)
       }, handleCommandLineDelay)
     })
@@ -156,13 +168,17 @@ export class MainWindow extends ApplicationWindow {
 
   // Handle our command line arguments.
 
+  isArgumentAction(argument: string): boolean {
+    return argument.startsWith(`${URI_SCHEME}://`)
+  }
+
   handleArguments(commandLine: string[]): void {
     if (commandLine.length === 0) {
       return
     }
 
     commandLine.forEach((argument) => {
-      if (argument.startsWith(`${URI_SCHEME}://`)) {
+      if (this.isArgumentAction(argument)) {
         function isAction(action: string, expectedAction: string): boolean {
           return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
         }
@@ -195,6 +211,16 @@ export class MainWindow extends ApplicationWindow {
             }
           }
         }
+      } else if (argument !== '--allow-file-access-from-files' && argument !== '--enable-avfoundation') {
+        // The argument is not an action (and not --allow-file-access-from-files or --enable-avfoundation either), so it
+        // must be a file to open. But, first, check whether the argument is a relative path and, if so, convert it to
+        // an absolute path.
+
+        if (!path.isAbsolute(argument)) {
+          argument = path.resolve(argument)
+        }
+
+        this.webContents.send('open', argument)
       }
     })
   }

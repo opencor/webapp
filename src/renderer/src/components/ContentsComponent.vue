@@ -25,35 +25,26 @@
             </p>
           </Panel>
         </div>
-        <div v-if="fileTab.type !== locAPI.FileType.UnknownFile">
-          <div style="margin-top: 1rem">
-            <Panel header="Uint8Array">
-              <p class="font-mono break-all">
-                {{ fileTab.uint8Array }}
-              </p>
-            </Panel>
-          </div>
-          <div style="margin-top: 1rem">
-            <Panel header="Base64">
-              <p class="font-mono break-all">
-                {{ fileTab.base64 }}
-              </p>
-            </Panel>
-          </div>
-          <div style="margin-top: 1rem">
-            <Panel header="Raw contents">
-              <p class="font-mono break-all">
-                {{ fileTab.rawContents }}
-              </p>
-            </Panel>
-          </div>
+        <div style="margin-top: 1rem">
+          <Panel header="Uint8Array">
+            <p class="font-mono break-all">
+              {{ fileTab.uint8Array }}
+            </p>
+          </Panel>
         </div>
-        <div v-else>
-          <div style="margin-top: 1rem">
-            <Panel header="Unknown file">
-              <p>Only CellML files, SED-ML files, and COMBINE archives are supported.</p>
-            </Panel>
-          </div>
+        <div style="margin-top: 1rem">
+          <Panel header="Base64">
+            <p class="font-mono break-all">
+              {{ fileTab.base64 }}
+            </p>
+          </Panel>
+        </div>
+        <div style="margin-top: 1rem">
+          <Panel header="Raw contents">
+            <p class="font-mono break-all">
+              {{ fileTab.rawContents }}
+            </p>
+          </Panel>
         </div>
       </TabPanel>
     </TabPanels>
@@ -72,7 +63,6 @@ import * as common from '../common'
 interface IFileTab {
   value: string
   title: string
-  type: locAPI.FileType
   uint8Array: string
   base64: string
   rawContents: string
@@ -105,7 +95,6 @@ function addFile(file: locAPI.File): void {
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.value === activeFile.value) + 1, 0, {
     value: filePath,
     title: filePath.split(/(\\|\/)/g).pop() ?? '',
-    type: file.type(),
     uint8Array: topContents(String(fileContents)),
     base64: topContents(btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), ''))),
     rawContents: topContents(new TextDecoder().decode(fileContents))

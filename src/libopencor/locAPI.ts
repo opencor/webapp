@@ -51,7 +51,8 @@ export enum FileType {
   UnknownFile,
   CellMLFile,
   SEDMLFile,
-  COMBINEArchive
+  COMBINEArchive,
+  IrretrievableFile
 }
 
 interface IFile {
