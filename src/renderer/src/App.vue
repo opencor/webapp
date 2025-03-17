@@ -38,6 +38,10 @@ const contentsRef = vue.ref<InstanceType<typeof IContentsComponent> | null>(null
 
 // Handle an action.
 
+electronAPI?.onAction((action: string) => {
+  handleAction(action)
+})
+
 function handleAction(action: string): void {
   function isAction(actionName: string, expectedActionName: string): boolean {
     return actionName.localeCompare(expectedActionName, undefined, { sensitivity: 'base' }) === 0

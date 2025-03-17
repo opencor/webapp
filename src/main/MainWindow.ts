@@ -100,10 +100,10 @@ export class MainWindow extends ApplicationWindow {
       }
 
       setTimeout(() => {
-        // The command line can either be a classical command line or be an OpenCOR action (i.e. an opencor:// link). In
+        // The command line can either be a classical command line or an OpenCOR action (i.e. an opencor:// link). In
         // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
 
-        if (!this.isArgumentAction(commandLine[0])) {
+        if (!this.isAction(commandLine[0])) {
           commandLine.shift() // Remove the first argument, which is the path to OpenCOR.
 
           if (isDevMode()) {
@@ -168,8 +168,10 @@ export class MainWindow extends ApplicationWindow {
 
   // Handle our command line arguments.
 
-  isArgumentAction(argument: string): boolean {
-    return argument.startsWith(`${URI_SCHEME}://`)
+  private _FULL_URI_SCHEME = `${URI_SCHEME}://`
+
+  isAction(argument: string): boolean {
+    return argument.startsWith(this._FULL_URI_SCHEME)
   }
 
   handleArguments(commandLine: string[]): void {
@@ -178,39 +180,8 @@ export class MainWindow extends ApplicationWindow {
     }
 
     commandLine.forEach((argument) => {
-      if (this.isArgumentAction(argument)) {
-        function isAction(action: string, expectedAction: string): boolean {
-          return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
-        }
-
-        // We have been launched with a URL, so we need to parse it and act accordingly.
-
-        const parsedUrl = new URL(argument)
-
-        if (isAction(parsedUrl.hostname, 'openAboutDialog')) {
-          // Ask our renderer to open our about dialog.
-
-          this.webContents.send('about')
-        } else if (isAction(parsedUrl.hostname, 'openSettingsDialog')) {
-          // Ask our renderer to open our settings dialog.
-
-          this.webContents.send('settings')
-        } else {
-          // Check whether we have files to open.
-
-          const filePaths = parsedUrl.pathname.substring(1).split('%7C')
-
-          if (
-            (isAction(parsedUrl.hostname, 'openFile') && filePaths.length === 1) ||
-            (isAction(parsedUrl.hostname, 'openFiles') && filePaths.length > 1)
-          ) {
-            // Ask our renderer to open the given file(s).
-
-            for (const filePath of filePaths) {
-              this.webContents.send('open', filePath)
-            }
-          }
-        }
+      if (this.isAction(argument)) {
+        this.webContents.send('action', argument.slice(this._FULL_URI_SCHEME.length))
       } else if (argument !== '--allow-file-access-from-files' && argument !== '--enable-avfoundation') {
         // The argument is not an action (and not --allow-file-access-from-files or --enable-avfoundation either), so it
         // must be a file to open. But, first, check whether the argument is a relative path and, if so, convert it to
