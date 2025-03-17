@@ -27,7 +27,7 @@ import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 import * as vueusecore from '@vueuse/core'
 
-import { FULL_URI_SCHEME, TOAST_LIFE } from '../../constants'
+import { TOAST_LIFE } from '../../constants'
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
 
@@ -284,10 +284,8 @@ vue.onMounted(() => {
 
   setTimeout(() => {
     if (electronAPI === undefined) {
-      const index = window.location.search.indexOf(FULL_URI_SCHEME)
-
-      if (index !== -1) {
-        action.value = window.location.search.substring(index + FULL_URI_SCHEME.length)
+      if (window.location.search !== '') {
+        action.value = window.location.search.substring(1)
 
         window.location.search = ''
       } else if (action.value !== '') {
