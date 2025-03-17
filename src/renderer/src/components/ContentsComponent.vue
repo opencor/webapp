@@ -25,7 +25,13 @@
             </p>
           </Panel>
         </div>
-        <div v-if="fileTab.type !== locAPI.FileType.UnknownFile">
+        <div
+          v-if="
+            fileTab.type === locAPI.FileType.CellMLFile ||
+            fileTab.type === locAPI.FileType.SEDMLFile ||
+            fileTab.type === locAPI.FileType.COMBINEArchive
+          "
+        >
           <div style="margin-top: 1rem">
             <Panel header="Uint8Array">
               <p class="font-mono break-all">
@@ -48,12 +54,18 @@
             </Panel>
           </div>
         </div>
-        <div v-else>
+        <div v-else-if="fileTab.type === locAPI.FileType.UnknownFile">
           <div style="margin-top: 1rem">
             <Panel header="Unknown file">
               <p>Only CellML files, SED-ML files, and COMBINE archives are supported.</p>
             </Panel>
           </div>
+        </div>
+        <div v-else></div>
+        <div style="margin-top: 1rem">
+          <Panel header="Error">
+            <p>An error occurred while reading the file.</p>
+          </Panel>
         </div>
       </TabPanel>
     </TabPanels>
