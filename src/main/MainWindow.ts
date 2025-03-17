@@ -1,5 +1,6 @@
 import electron from 'electron'
 import * as electronSettings from 'electron-settings'
+import path from 'path'
 
 import { isDevMode, isMacOs } from '../electron'
 
@@ -201,8 +202,14 @@ export class MainWindow extends ApplicationWindow {
             }
           }
         }
-      } else if (argument !== '--allow-file-access-from-files') {
-        // The argument is not an action (and not --allow-file-access-from-files either), so it must be a file to open.
+      } else if (argument !== '--allow-file-access-from-files' && argument !== '--enable-avfoundation') {
+        // The argument is not an action (and not --allow-file-access-from-files or --enable-avfoundation either), so it
+        // must be a file to open. But, first, check whether the argument is a relative path and, if so, convert it to
+        // an absolute path.
+
+        if (!path.isAbsolute(argument)) {
+          argument = path.resolve(argument)
+        }
 
         this.webContents.send('open', argument)
       }
