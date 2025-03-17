@@ -100,10 +100,15 @@ export class MainWindow extends ApplicationWindow {
       }
 
       setTimeout(() => {
-        commandLine.shift() // Remove the first argument, which is the path to OpenCOR.
+        // The command line can either be a classical command line or be an OpenCOR action (i.e. an opencor:// link). In
+        // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
 
-        if (isDevMode()) {
-          commandLine.shift() // Remove the second argument, which is the path to the renderer.
+        if (!this.isArgumentAction(commandLine[0])) {
+          commandLine.shift() // Remove the first argument, which is the path to OpenCOR.
+
+          if (isDevMode()) {
+            commandLine.shift() // Remove the second argument, which is the path to the renderer.
+          }
         }
 
         this.handleArguments(commandLine)
@@ -163,13 +168,17 @@ export class MainWindow extends ApplicationWindow {
 
   // Handle our command line arguments.
 
+  isArgumentAction(argument: string): boolean {
+    return argument.startsWith(`${URI_SCHEME}://`)
+  }
+
   handleArguments(commandLine: string[]): void {
     if (commandLine.length === 0) {
       return
     }
 
     commandLine.forEach((argument) => {
-      if (argument.startsWith(`${URI_SCHEME}://`)) {
+      if (this.isArgumentAction(argument)) {
         function isAction(action: string, expectedAction: string): boolean {
           return action.localeCompare(expectedAction, undefined, { sensitivity: 'base' }) === 0
         }
