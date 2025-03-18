@@ -27,7 +27,7 @@ import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 import * as vueusecore from '@vueuse/core'
 
-import { TOAST_LIFE } from '../../constants'
+import { SHORT_DELAY, TOAST_LIFE } from '../../constants'
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
 
@@ -300,10 +300,10 @@ vue.onMounted(() => {
           handleAction(action.value)
 
           action.value = ''
-        }, 69)
+        }, SHORT_DELAY)
       }
     }
-  }, 69)
+  }, SHORT_DELAY)
 })
 </script>
 

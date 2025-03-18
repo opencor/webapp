@@ -2,7 +2,7 @@ import electron from 'electron'
 import * as electronSettings from 'electron-settings'
 import path from 'path'
 
-import { FULL_URI_SCHEME } from '../constants'
+import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../constants'
 import { isDevMode, isMacOs } from '../electron'
 
 import icon from './assets/icon.png?asset'
@@ -85,18 +85,16 @@ export class MainWindow extends ApplicationWindow {
     // (also with a short delay if needed).
 
     this.once('show', () => {
-      let handleCommandLineDelay = 0
+      let handleCommandLineDelay = SHORT_DELAY
 
       if (!this._splashScreenWindowClosed && !!splashScreenWindow) {
-        const SHORT_DELAY = 369
-
         this._splashScreenWindowClosed = true
 
-        handleCommandLineDelay = SHORT_DELAY
+        handleCommandLineDelay = LONG_DELAY
 
         setTimeout(() => {
           splashScreenWindow.close()
-        }, SHORT_DELAY)
+        }, LONG_DELAY)
       }
 
       setTimeout(() => {
