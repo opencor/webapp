@@ -27,6 +27,7 @@ import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 import * as vueusecore from '@vueuse/core'
 
+import { SHORT_DELAY, TOAST_LIFE } from '../../constants'
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
 
@@ -51,9 +52,6 @@ function handleAction(action: string): void {
   const actionName = index !== -1 ? action.substring(0, index) : action
   const actionArguments = index !== -1 ? action.substring(index + 1) : ''
 
-  console.log(`actionName: >${actionName}<`)
-  console.log(`actionArguments: >${actionArguments}<`)
-
   if (isAction(actionName, 'openAboutDialog')) {
     onAbout()
   } else if (isAction(actionName, 'openSettingsDialog')) {
@@ -68,6 +66,13 @@ function handleAction(action: string): void {
       for (const filePath of filePaths) {
         openFile(filePath)
       }
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Handling an action',
+        detail: action + '\n\nThe action could not be handled.',
+        life: TOAST_LIFE
+      })
     }
   }
 }
@@ -115,7 +120,7 @@ electronAPI?.onCheckForUpdates(() => {
     severity: 'info',
     summary: 'Check for updates',
     detail: 'The Check for updates dialog has yet to be implemented.',
-    life: common.toastLife
+    life: TOAST_LIFE
   })
 })
 
@@ -142,7 +147,7 @@ function onSettings(): void {
     severity: 'info',
     summary: 'Settings',
     detail: 'The Settings dialog has yet to be implemented.',
-    life: common.toastLife
+    life: TOAST_LIFE
   })
 }
 
@@ -180,7 +185,7 @@ function openFile(fileOrFilePath: string | File): void {
             (fileType === locAPI.FileType.UnknownFile
               ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
               : 'The file could not be retrieved.'),
-          life: common.toastLife
+          life: TOAST_LIFE
         })
       } else {
         contentsRef.value?.addFile(file)
@@ -199,7 +204,7 @@ function openFile(fileOrFilePath: string | File): void {
         severity: 'error',
         summary: 'Opening a file',
         detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
-        life: common.toastLife
+        life: TOAST_LIFE
       })
     })
 }
@@ -277,37 +282,28 @@ function onResetAll(): void {
 
 // Things that need to be done when the component is mounted.
 
-const url = vueusecore.useStorage('url', '')
+const action = vueusecore.useStorage('action', '')
 
 vue.onMounted(() => {
-  // Check whether the URL contains an OpenCOR action, but with a bit of a delay to ensure that our background (with the
-  // OpenCOR logo) is properly rendered.
+  // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
+  // logo) time to be renderered.
   // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
   setTimeout(() => {
-    console.log(`window.location.pathname: >${window.location.pathname}<`)
-
     if (electronAPI === undefined) {
-      console.log(`window.location.pathname: >${window.location.pathname}<`)
+      if (window.location.search !== '') {
+        action.value = window.location.search.substring(1)
 
-      console.log('window.location.pathname starts with https://')
-      if (window.location.pathname !== '/') {
-        console.log(`window.location.pathname: >${window.location.pathname}<`)
-        console.log('OLD url:', url.value)
-        url.value = window.location.pathname
-        console.log('NEW url:', url.value)
+        window.location.search = ''
+      } else if (action.value !== '') {
+        setTimeout(() => {
+          handleAction(action.value)
 
-        window.location.pathname = '/'
-      } else {
-        console.log(`window.location.pathname: >${window.location.pathname}<`)
-        console.log('CRT url:', url.value.substring(1))
-
-        handleAction(url.value.substring(1))
-
-        url.value = ''
+          action.value = ''
+        }, SHORT_DELAY)
       }
     }
-  }, 0)
+  }, SHORT_DELAY)
 })
 </script>
 

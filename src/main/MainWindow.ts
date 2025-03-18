@@ -2,10 +2,10 @@ import electron from 'electron'
 import * as electronSettings from 'electron-settings'
 import path from 'path'
 
+import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../constants'
 import { isDevMode, isMacOs } from '../electron'
 
 import icon from './assets/icon.png?asset'
-import { URI_SCHEME } from './index'
 import { ApplicationWindow } from './ApplicationWindow'
 import { disableMainMenu, enableMainMenu } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
@@ -85,18 +85,16 @@ export class MainWindow extends ApplicationWindow {
     // (also with a short delay if needed).
 
     this.once('show', () => {
-      let handleCommandLineDelay = 0
+      let handleCommandLineDelay = SHORT_DELAY
 
       if (!this._splashScreenWindowClosed && !!splashScreenWindow) {
-        const SHORT_DELAY = 369
-
         this._splashScreenWindowClosed = true
 
-        handleCommandLineDelay = SHORT_DELAY
+        handleCommandLineDelay = LONG_DELAY
 
         setTimeout(() => {
           splashScreenWindow.close()
-        }, SHORT_DELAY)
+        }, LONG_DELAY)
       }
 
       setTimeout(() => {
@@ -168,10 +166,8 @@ export class MainWindow extends ApplicationWindow {
 
   // Handle our command line arguments.
 
-  private _FULL_URI_SCHEME = `${URI_SCHEME}://`
-
   isAction(argument: string): boolean {
-    return argument.startsWith(this._FULL_URI_SCHEME)
+    return argument.startsWith(FULL_URI_SCHEME)
   }
 
   handleArguments(commandLine: string[]): void {
@@ -181,7 +177,7 @@ export class MainWindow extends ApplicationWindow {
 
     commandLine.forEach((argument) => {
       if (this.isAction(argument)) {
-        this.webContents.send('action', argument.slice(this._FULL_URI_SCHEME.length))
+        this.webContents.send('action', argument.slice(FULL_URI_SCHEME.length))
       } else if (argument !== '--allow-file-access-from-files' && argument !== '--enable-avfoundation') {
         // The argument is not an action (and not --allow-file-access-from-files or --enable-avfoundation either), so it
         // must be a file to open. But, first, check whether the argument is a relative path and, if so, convert it to

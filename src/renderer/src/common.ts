@@ -3,8 +3,6 @@ import { UAParser } from 'ua-parser-js'
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
 
-export const toastLife = 3000
-
 const uaParser = new UAParser()
 
 export function isWindows(): boolean {
