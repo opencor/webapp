@@ -19,32 +19,32 @@
     <TabPanels>
       <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
         <div class="font-bold">
-          <Panel header="File path">
+          <Fieldset legend="File path">
             <p class="font-mono break-all">
               {{ fileTab.value }}
             </p>
-          </Panel>
+          </Fieldset>
         </div>
         <div style="margin-top: 1rem">
-          <Panel header="Uint8Array">
+          <Fieldset legend="Uint8Array">
             <p class="font-mono break-all">
               {{ fileTab.uint8Array }}
             </p>
-          </Panel>
+          </Fieldset>
         </div>
         <div style="margin-top: 1rem">
-          <Panel header="Base64">
+          <Fieldset legend="Base64">
             <p class="font-mono break-all">
               {{ fileTab.base64 }}
             </p>
-          </Panel>
+          </Fieldset>
         </div>
         <div style="margin-top: 1rem">
-          <Panel header="Raw contents">
+          <Fieldset legend="Raw contents">
             <p class="font-mono break-all">
               {{ fileTab.rawContents }}
             </p>
-          </Panel>
+          </Fieldset>
         </div>
       </TabPanel>
     </TabPanels>
