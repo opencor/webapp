@@ -2,12 +2,7 @@
   <BackgroundComponent v-if="fileTabs.length === 0" />
   <Tabs v-else v-model:value="activeFile" :scrollable="true" :selectOnFocus="true">
     <TabList class="tablist">
-      <Tab
-        v-for="fileTab in fileTabs"
-        :id="'Tab_' + fileTab.value"
-        :key="'Tab_' + fileTab.value"
-        :value="fileTab.value"
-      >
+      <Tab v-for="fileTab in fileTabs" :key="'Tab_' + fileTab.value" :value="fileTab.value">
         <div class="flex gap-2 items-center">
           <div>
             {{ fileTab.title }}
