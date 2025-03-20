@@ -79,11 +79,12 @@ interface IFileTab {
 const fileTabs = vue.ref<IFileTab[]>([])
 const activeFile = vue.ref<string>('')
 
-defineExpose({ openFile, closeCurrentFile, hasFile, selectFile })
+defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, selectFile })
 
 export interface IContentsComponent {
   openFile(file: locAPI.File): void
   closeCurrentFile(): void
+  closeAllFiles(): void
   hasFile(filePath: string): boolean
   selectFile(filePath: string): void
 }
@@ -167,6 +168,12 @@ function closeFile(filePath: string): void {
 
 function closeCurrentFile(): void {
   closeFile(activeFile.value)
+}
+
+function closeAllFiles(): void {
+  while (fileTabs.value.length > 0) {
+    closeCurrentFile()
+  }
 }
 
 // Keyboard shortcuts.

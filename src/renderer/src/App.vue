@@ -287,12 +287,7 @@ electronAPI?.onCloseAll(() => {
 })
 
 function onCloseAll(): void {
-  toast.add({
-    severity: 'info',
-    summary: 'Close All',
-    detail: 'All the files are to be closed.',
-    life: TOAST_LIFE
-  })
+  contentsRef.value?.closeAllFiles()
 }
 
 // Reset all.
