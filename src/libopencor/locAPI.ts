@@ -28,12 +28,12 @@ class FileManager {
     if (cppVersion()) {
       _locAPI.fileManagerUnmanage(path)
     } else {
-      const files = this._fileManager.files()
+      const files = this._fileManager.files
 
       for (let i = 0; i < files.size(); ++i) {
         const file = files.get(i)
 
-        if (file.fileName() === path) {
+        if (file.fileName === path) {
           this._fileManager.unmanage(file)
 
           break

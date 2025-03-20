@@ -190,7 +190,7 @@ function openFile(fileOrFilePath: string | File): void {
           life: TOAST_LIFE
         })
       } else {
-        contentsRef.value?.addFile(file)
+        contentsRef.value?.openFile(file)
       }
 
       if (common.isRemoteFilePath(filePath)) {
@@ -277,12 +277,7 @@ electronAPI?.onClose(() => {
 })
 
 function onClose(): void {
-  toast.add({
-    severity: 'info',
-    summary: 'Close',
-    detail: 'The current file is to be closed.',
-    life: TOAST_LIFE
-  })
+  contentsRef.value?.closeCurrentFile()
 }
 
 // Close all.
