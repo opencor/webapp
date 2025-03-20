@@ -21,6 +21,8 @@ interface IElectronAPI {
   onEnableUi: (callback: () => void) => void
   onOpen: (callback: (filePath: string) => void) => void
   onOpenRemote: (callback: () => void) => void
+  onClose: (callback: () => void) => void
+  onCloseAll: (callback: () => void) => void
   onResetAll: (callback: () => void) => void
   onSettings: (callback: () => void) => void
 }

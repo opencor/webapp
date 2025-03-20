@@ -181,8 +181,6 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
     selectNextFile()
   } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
     selectPreviousFile()
-  } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
-    removeCurrentFile()
   }
 })
 </script>

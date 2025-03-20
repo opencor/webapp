@@ -88,6 +88,20 @@ function enableDisableMainMenu(enable: boolean): void {
         mainWindow?.webContents.send('open-remote')
       }
     })
+    fileSubMenu.push({ type: 'separator' })
+    fileSubMenu.push({
+      label: 'Close',
+      accelerator: 'CmdOrCtrl+W',
+      click: () => {
+        mainWindow?.webContents.send('close')
+      }
+    })
+    fileSubMenu.push({
+      label: 'Close All',
+      click: () => {
+        mainWindow?.webContents.send('close-all')
+      }
+    })
 
     if (!isMacOs()) {
       fileSubMenu.push({ type: 'separator' })

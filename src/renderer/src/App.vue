@@ -5,6 +5,8 @@
         @about="onAbout"
         @open="($refs.filesRef as HTMLInputElement).click()"
         @openRemote="openRemoteVisible = true"
+        @close="onClose"
+        @closeAll="onCloseAll"
         @settings="onSettings"
       />
     </div>
@@ -266,6 +268,36 @@ function onOpenRemote(url: string): void {
   //       and that we can show a spinning wheel to indicate that something is happening.
 
   openFile(url)
+}
+
+// Close.
+
+electronAPI?.onClose(() => {
+  onClose()
+})
+
+function onClose(): void {
+  toast.add({
+    severity: 'info',
+    summary: 'Close',
+    detail: 'The current file is to be closed.',
+    life: TOAST_LIFE
+  })
+}
+
+// Close all.
+
+electronAPI?.onCloseAll(() => {
+  onCloseAll()
+})
+
+function onCloseAll(): void {
+  toast.add({
+    severity: 'info',
+    summary: 'Close All',
+    detail: 'All the files are to be closed.',
+    life: TOAST_LIFE
+  })
 }
 
 // Reset all.
