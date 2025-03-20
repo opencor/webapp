@@ -122,7 +122,7 @@ export class File {
 
   issues(): IIssue[] {
     if (cppVersion()) {
-      return []
+      return _locAPI.fileIssues(this._path)
     }
 
     const res = []
