@@ -49,7 +49,7 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
   if (typeof fileOrFilePath === 'string') {
     if (isRemoteFilePath(fileOrFilePath)) {
       return new Promise((resolve, reject) => {
-        fetch(`https://corsproxy.io/${encodeURIComponent(fileOrFilePath)}`)
+        fetch(`https://corsproxy.io/${fileOrFilePath}`)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer()
