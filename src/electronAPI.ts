@@ -7,8 +7,8 @@ interface IElectronAPI {
 
   // Renderer process asking the main process to do something for it.
 
-  disableMainMenu: () => void
-  enableMainMenu: () => void
+  enableDisableMainMenu: (enable: boolean) => void
+  enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) => void
   filePath: (file: File) => string
   resetAll: () => void
 
@@ -17,10 +17,11 @@ interface IElectronAPI {
   onAbout: (callback: () => void) => void
   onAction: (callback: (action: string) => void) => void
   onCheckForUpdates: (callback: () => void) => void
-  onDisableUi: (callback: () => void) => void
-  onEnableUi: (callback: () => void) => void
+  onEnableDisableUi: (callback: (enable: boolean) => void) => void
   onOpen: (callback: (filePath: string) => void) => void
   onOpenRemote: (callback: () => void) => void
+  onClose: (callback: () => void) => void
+  onCloseAll: (callback: () => void) => void
   onResetAll: (callback: () => void) => void
   onSettings: (callback: () => void) => void
 }

@@ -7,7 +7,7 @@ import { mainWindow } from './index'
 let _enabledMenu: electron.Menu | null = null
 let _disabledMenu: electron.Menu | null = null
 
-function enableDisableMainMenu(enable: boolean): void {
+export function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
 
   if (enable && _enabledMenu !== null) {
@@ -87,6 +87,24 @@ function enableDisableMainMenu(enable: boolean): void {
       click: () => {
         mainWindow?.webContents.send('open-remote')
       }
+    })
+    fileSubMenu.push({ type: 'separator' })
+    fileSubMenu.push({
+      id: 'fileClose',
+      label: 'Close',
+      accelerator: 'CmdOrCtrl+W',
+      click: () => {
+        mainWindow?.webContents.send('close')
+      },
+      enabled: false
+    })
+    fileSubMenu.push({
+      id: 'fileCloseAll',
+      label: 'Close All',
+      click: () => {
+        mainWindow?.webContents.send('close-all')
+      },
+      enabled: false
     })
 
     if (!isMacOs()) {
@@ -207,10 +225,14 @@ function enableDisableMainMenu(enable: boolean): void {
   }
 }
 
-export function enableMainMenu(): void {
-  enableDisableMainMenu(true)
-}
+export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
+  if (_enabledMenu !== null) {
+    const fileMenu = _enabledMenu.getMenuItemById('fileClose')
+    const fileCloseAllMenu = _enabledMenu.getMenuItemById('fileCloseAll')
 
-export function disableMainMenu(): void {
-  enableDisableMainMenu(false)
+    if (fileMenu !== null && fileCloseAllMenu !== null) {
+      fileMenu.enabled = enable
+      fileCloseAllMenu.enabled = enable
+    }
+  }
 }

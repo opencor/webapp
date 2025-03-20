@@ -2,9 +2,12 @@
   <div class="flex flex-col h-screen">
     <div v-if="!electronAPI" class="main-menu">
       <MainMenu
+        :hasFiles="hasFilesRef"
         @about="onAbout"
         @open="($refs.filesRef as HTMLInputElement).click()"
         @openRemote="openRemoteVisible = true"
+        @close="onClose"
+        @closeAll="onCloseAll"
         @settings="onSettings"
       />
     </div>
@@ -81,34 +84,36 @@ function handleAction(action: string): void {
 
 const uiEnabled = vue.ref<boolean>(true)
 
-electronAPI?.onEnableUi(() => {
-  enableUi()
+electronAPI?.onEnableDisableUi((enable: boolean) => {
+  enableDisableUi(enable)
 })
 
-function enableUi(): void {
-  uiEnabled.value = true
+function enableDisableUi(enable: boolean): void {
+  uiEnabled.value = enable
 }
 
-electronAPI?.onDisableUi(() => {
-  disableUi()
+// Enable/disable some menu items.
+
+const hasFilesRef = vue.computed(() => {
+  return contentsRef.value?.hasFiles() ?? false
 })
 
-function disableUi(): void {
-  uiEnabled.value = false
-}
+vue.watch(hasFilesRef, (hasFiles) => {
+  electronAPI?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
+})
 
 // Spinning wheel.
 
 const spinningWheelVisible = vue.ref<boolean>(false)
 
 function showSpinningWheel(): void {
-  disableUi()
+  enableDisableUi(false)
 
   spinningWheelVisible.value = true
 }
 
 function hideSpinningWheel(): void {
-  enableUi()
+  enableDisableUi(true)
 
   spinningWheelVisible.value = false
 }
@@ -188,7 +193,7 @@ function openFile(fileOrFilePath: string | File): void {
           life: TOAST_LIFE
         })
       } else {
-        contentsRef.value?.addFile(file)
+        contentsRef.value?.openFile(file)
       }
 
       if (common.isRemoteFilePath(filePath)) {
@@ -266,6 +271,26 @@ function onOpenRemote(url: string): void {
   //       and that we can show a spinning wheel to indicate that something is happening.
 
   openFile(url)
+}
+
+// Close.
+
+electronAPI?.onClose(() => {
+  onClose()
+})
+
+function onClose(): void {
+  contentsRef.value?.closeCurrentFile()
+}
+
+// Close all.
+
+electronAPI?.onCloseAll(() => {
+  onCloseAll()
+})
+
+function onCloseAll(): void {
+  contentsRef.value?.closeAllFiles()
 }
 
 // Reset all.

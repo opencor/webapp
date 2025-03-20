@@ -7,7 +7,7 @@
           <div>
             {{ fileTab.title }}
           </div>
-          <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="removeFile(fileTab.value)" />
+          <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.value)" />
         </div>
       </Tab>
     </TabList>
@@ -67,8 +67,6 @@ import * as vue from 'vue'
 
 import * as locAPI from '../../../libopencor/locAPI'
 
-import * as common from '../common'
-
 interface IFileTab {
   value: string
   title: string
@@ -81,15 +79,18 @@ interface IFileTab {
 const fileTabs = vue.ref<IFileTab[]>([])
 const activeFile = vue.ref<string>('')
 
-defineExpose({ addFile, hasFile, selectFile })
+defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
 
 export interface IContentsComponent {
-  addFile(file: locAPI.File): void
+  openFile(file: locAPI.File): void
+  closeCurrentFile(): void
+  closeAllFiles(): void
   hasFile(filePath: string): boolean
+  hasFiles(): boolean
   selectFile(filePath: string): void
 }
 
-function addFile(file: locAPI.File): void {
+function openFile(file: locAPI.File): void {
   function topContents(contents: string): string {
     const numberOfBytesShown = 1024
 
@@ -116,6 +117,10 @@ function addFile(file: locAPI.File): void {
 
 function hasFile(filePath: string): boolean {
   return fileTabs.value.find((fileTab) => fileTab.value === filePath) !== undefined
+}
+
+function hasFiles(): boolean {
+  return fileTabs.value.length > 0
 }
 
 function selectFile(filePath: string): void {
@@ -154,7 +159,7 @@ function selectPreviousFile(): void {
   selectFile(fileTabs.value[nextFileIndex].value)
 }
 
-function removeFile(filePath: string): void {
+function closeFile(filePath: string): void {
   locAPI.fileManager.unmanage(filePath)
 
   const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.value === filePath)
@@ -166,8 +171,14 @@ function removeFile(filePath: string): void {
   }
 }
 
-function removeCurrentFile(): void {
-  removeFile(activeFile.value)
+function closeCurrentFile(): void {
+  closeFile(activeFile.value)
+}
+
+function closeAllFiles(): void {
+  while (fileTabs.value.length > 0) {
+    closeCurrentFile()
+  }
 }
 
 // Keyboard shortcuts.
@@ -181,8 +192,6 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
     selectNextFile()
   } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
     selectPreviousFile()
-  } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
-    removeCurrentFile()
   }
 })
 </script>

@@ -62,7 +62,7 @@
     "@wasm-fmt/clang-format": "^19.1.7",
     "autoprefixer": "^10.4.21",
     "cmake-js": "^7.3.0",
-    "electron": "^35.0.2",
+    "electron": "^35.0.3",
     "electron-builder": "^25.1.8",
     "electron-settings": "^4.0.4",
     "electron-vite": "^3.0.0",

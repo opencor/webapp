@@ -25,12 +25,12 @@ export function isCtrlOrCmd(event: KeyboardEvent): boolean {
   return isMacOS() ? event.metaKey : event.ctrlKey
 }
 
-export function disableMainMenu(): void {
-  electronAPI?.disableMainMenu()
+export function enableDisableMainMenu(enable: boolean): void {
+  electronAPI?.enableDisableMainMenu(enable)
 }
 
-export function enableMainMenu(): void {
-  electronAPI?.enableMainMenu()
+export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
+  electronAPI?.enableDisableFileCloseAndCloseAllMenuItems(enable)
 }
 
 export function isRemoteFilePath(filePath: string): boolean {
@@ -49,7 +49,7 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
   if (typeof fileOrFilePath === 'string') {
     if (isRemoteFilePath(fileOrFilePath)) {
       return new Promise((resolve, reject) => {
-        fetch(`https://corsproxy.io/${encodeURIComponent(fileOrFilePath)}`)
+        fetch(`https://corsproxy.io/${fileOrFilePath}`)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer()

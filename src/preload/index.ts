@@ -26,8 +26,9 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
 
   // Renderer process asking the main process to do something for it.
 
-  disableMainMenu: () => electron.ipcRenderer.invoke('disable-main-menu'),
-  enableMainMenu: () => electron.ipcRenderer.invoke('enable-main-menu'),
+  enableDisableMainMenu: (enable: boolean) => electron.ipcRenderer.invoke('enable-disable-main-menu', enable),
+  enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
+    electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
 
@@ -45,13 +46,9 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.on('check-for-updates', () => {
       callback()
     }),
-  onDisableUi: (callback: () => void) =>
-    electron.ipcRenderer.on('disable-ui', () => {
-      callback()
-    }),
-  onEnableUi: (callback: () => void) =>
-    electron.ipcRenderer.on('enable-ui', () => {
-      callback()
+  onEnableDisableUi: (callback: (enable: boolean) => void) =>
+    electron.ipcRenderer.on('enable-disable-ui', (_event, enable: boolean) => {
+      callback(enable)
     }),
   onOpen: (callback: (filePath: string) => void) =>
     electron.ipcRenderer.on('open', (_event, ...filePaths) => {
@@ -61,6 +58,14 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     }),
   onOpenRemote: (callback: () => void) =>
     electron.ipcRenderer.on('open-remote', () => {
+      callback()
+    }),
+  onClose: (callback: () => void) =>
+    electron.ipcRenderer.on('close', () => {
+      callback()
+    }),
+  onCloseAll: (callback: () => void) =>
+    electron.ipcRenderer.on('close-all', () => {
       callback()
     }),
   onResetAll: (callback: () => void) =>
