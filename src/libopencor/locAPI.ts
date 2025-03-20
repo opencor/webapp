@@ -45,6 +45,30 @@ class FileManager {
 
 export const fileManager = new FileManager()
 
+// Logger API.
+
+export enum IssueType {
+  Error,
+  Warning
+}
+
+export interface IIssue {
+  type: IssueType
+  typeAsString: string
+  description: string
+}
+
+interface ILocIssue {
+  type: { value: IssueType }
+  typeAsString: string
+  description: string
+}
+
+interface ILocIssues {
+  size(): number
+  get(index: number): ILocIssue
+}
+
 // File API.
 
 export enum FileType {
@@ -55,15 +79,16 @@ export enum FileType {
   IrretrievableFile
 }
 
-interface IFile {
-  type(): { value: FileType }
+interface ILocFile {
+  type: { value: FileType }
+  issues: ILocIssues
   contents(): Uint8Array
   setContents(ptr: number, length: number): void
 }
 
 export class File {
   private _path: string
-  private _file: IFile = {} as IFile
+  private _file: ILocFile = {} as ILocFile
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
     this._path = path
@@ -88,11 +113,32 @@ export class File {
   }
 
   type(): FileType {
-    return cppVersion() ? _locAPI.fileType(this._path) : this._file.type().value
+    return cppVersion() ? _locAPI.fileType(this._path) : this._file.type.value
   }
 
   path(): string {
     return this._path
+  }
+
+  issues(): IIssue[] {
+    if (cppVersion()) {
+      return []
+    }
+
+    const res = []
+    const issues = this._file.issues
+
+    for (let i = 0; i < issues.size(); ++i) {
+      const issue = issues.get(i)
+
+      res.push({
+        type: issue.type.value,
+        typeAsString: issue.typeAsString,
+        description: issue.description
+      })
+    }
+
+    return res
   }
 
   contents(): Uint8Array {

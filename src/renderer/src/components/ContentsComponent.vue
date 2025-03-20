@@ -2,12 +2,7 @@
   <BackgroundComponent v-if="fileTabs.length === 0" />
   <Tabs v-else v-model:value="activeFile" :scrollable="true" :selectOnFocus="true">
     <TabList class="tablist">
-      <Tab
-        v-for="fileTab in fileTabs"
-        :id="'Tab_' + fileTab.value"
-        :key="'Tab_' + fileTab.value"
-        :value="fileTab.value"
-      >
+      <Tab v-for="fileTab in fileTabs" :key="'Tab_' + fileTab.value" :value="fileTab.value">
         <div class="flex gap-2 items-center">
           <div>
             {{ fileTab.title }}
@@ -18,33 +13,47 @@
     </TabList>
     <TabPanels>
       <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
-        <div class="font-bold">
-          <Panel header="File path">
-            <p class="font-mono break-all">
-              {{ fileTab.value }}
-            </p>
-          </Panel>
+        <div v-if="fileTab.issues.length === 0">
+          <div class="font-bold">
+            <Fieldset legend="File path">
+              <p class="font-mono break-all">
+                {{ fileTab.value }}
+              </p>
+            </Fieldset>
+          </div>
+          <div style="margin-top: 1rem">
+            <Fieldset legend="Uint8Array">
+              <p class="font-mono break-all">
+                {{ fileTab.uint8Array }}
+              </p>
+            </Fieldset>
+          </div>
+          <div style="margin-top: 1rem">
+            <Fieldset legend="Base64">
+              <p class="font-mono break-all">
+                {{ fileTab.base64 }}
+              </p>
+            </Fieldset>
+          </div>
+          <div style="margin-top: 1rem">
+            <Fieldset legend="Raw contents">
+              <p class="font-mono break-all">
+                {{ fileTab.rawContents }}
+              </p>
+            </Fieldset>
+          </div>
         </div>
-        <div style="margin-top: 1rem">
-          <Panel header="Uint8Array">
-            <p class="font-mono break-all">
-              {{ fileTab.uint8Array }}
-            </p>
-          </Panel>
-        </div>
-        <div style="margin-top: 1rem">
-          <Panel header="Base64">
-            <p class="font-mono break-all">
-              {{ fileTab.base64 }}
-            </p>
-          </Panel>
-        </div>
-        <div style="margin-top: 1rem">
-          <Panel header="Raw contents">
-            <p class="font-mono break-all">
-              {{ fileTab.rawContents }}
-            </p>
-          </Panel>
+        <div v-else>
+          <Fieldset legend="Issues">
+            <div v-for="issue in fileTab.issues" :key="'Issue_' + issue.type + '_' + issue.description">
+              <Message v-if="issue.type === locAPI.IssueType.Error" severity="error" icon="pi pi-times-circle">
+                {{ issue.description }}
+              </Message>
+              <Message v-else severity="warn" icon="pi pi-exclamation-triangle">
+                {{ issue.description }}
+              </Message>
+            </div>
+          </Fieldset>
         </div>
       </TabPanel>
     </TabPanels>
@@ -63,6 +72,7 @@ import * as common from '../common'
 interface IFileTab {
   value: string
   title: string
+  issues: locAPI.IIssue[]
   uint8Array: string
   base64: string
   rawContents: string
@@ -95,6 +105,7 @@ function addFile(file: locAPI.File): void {
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.value === activeFile.value) + 1, 0, {
     value: filePath,
     title: filePath.split(/(\\|\/)/g).pop() ?? '',
+    issues: file.issues(),
     uint8Array: topContents(String(fileContents)),
     base64: topContents(btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), ''))),
     rawContents: topContents(new TextDecoder().decode(fileContents))
