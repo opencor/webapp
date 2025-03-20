@@ -79,6 +79,7 @@ const items = [
     items: [
       {
         label: 'Settings...',
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+,' : isMacOS ? '⌘⌥,' : undefined,
         command: () => {
           emit('settings')
         }
@@ -138,6 +139,8 @@ if (!common.isMobile()) {
       emit('openRemote')
     } else if (props.hasFiles && common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
       emit('close')
+    } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'Comma') {
+      emit('settings')
     }
   })
 }

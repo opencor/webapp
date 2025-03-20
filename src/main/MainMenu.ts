@@ -19,6 +19,7 @@ export function enableDisableMainMenu(enable: boolean): void {
 
     const settingsMenuItem: electron.MenuItemConstructorOptions = {
       label: 'Settings...',
+      accelerator: 'CmdOrCtrl+,',
       click: () => {
         mainWindow?.webContents.send('settings')
       }
