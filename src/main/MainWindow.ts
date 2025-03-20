@@ -194,22 +194,16 @@ export class MainWindow extends ApplicationWindow {
 
   // Enable/disable our UI.
 
-  enableUi(): void {
-    enableDisableMainMenu(true)
+  enableDisableUi(enable: boolean): void {
+    enableDisableMainMenu(enable)
 
-    this.webContents.send('enable-ui')
-  }
-
-  disableUi(): void {
-    enableDisableMainMenu(false)
-
-    this.webContents.send('disable-ui')
+    this.webContents.send('enable-disable-ui', enable)
   }
 
   // Handle our File|Open menu.
 
   open(): void {
-    this.disableUi()
+    this.enableDisableUi(false)
 
     electron.dialog
       .showOpenDialog({
@@ -220,12 +214,12 @@ export class MainWindow extends ApplicationWindow {
           this.webContents.send('open', filePath)
         }
 
-        this.enableUi()
+        this.enableDisableUi(true)
       })
       .catch((error: unknown) => {
         console.error('Failed to open file(s):', error)
 
-        this.enableUi()
+        this.enableDisableUi(true)
       })
   }
 }

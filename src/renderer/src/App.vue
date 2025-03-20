@@ -84,20 +84,12 @@ function handleAction(action: string): void {
 
 const uiEnabled = vue.ref<boolean>(true)
 
-electronAPI?.onEnableUi(() => {
-  enableUi()
+electronAPI?.onEnableDisableUi((enable: boolean) => {
+  enableDisableUi(enable)
 })
 
-function enableUi(): void {
-  uiEnabled.value = true
-}
-
-electronAPI?.onDisableUi(() => {
-  disableUi()
-})
-
-function disableUi(): void {
-  uiEnabled.value = false
+function enableDisableUi(enable: boolean): void {
+  uiEnabled.value = enable
 }
 
 // Enable/disable some menu items.
@@ -115,13 +107,13 @@ vue.watch(hasFilesRef, (hasFiles) => {
 const spinningWheelVisible = vue.ref<boolean>(false)
 
 function showSpinningWheel(): void {
-  disableUi()
+  enableDisableUi(false)
 
   spinningWheelVisible.value = true
 }
 
 function hideSpinningWheel(): void {
-  enableUi()
+  enableDisableUi(true)
 
   spinningWheelVisible.value = false
 }

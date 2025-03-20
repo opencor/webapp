@@ -46,13 +46,9 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.on('check-for-updates', () => {
       callback()
     }),
-  onDisableUi: (callback: () => void) =>
-    electron.ipcRenderer.on('disable-ui', () => {
-      callback()
-    }),
-  onEnableUi: (callback: () => void) =>
-    electron.ipcRenderer.on('enable-ui', () => {
-      callback()
+  onEnableDisableUi: (callback: (enable: boolean) => void) =>
+    electron.ipcRenderer.on('enable-disable-ui', (_event, enable: boolean) => {
+      callback(enable)
     }),
   onOpen: (callback: (filePath: string) => void) =>
     electron.ipcRenderer.on('open', (_event, ...filePaths) => {
