@@ -7,10 +7,7 @@ import { isDevMode, isMacOs } from '../electron'
 
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'
-import {
-  disableMainMenu,
-  enableMainMenu
-} from './MainMenu'
+import { enableDisableMainMenu } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {
@@ -134,7 +131,7 @@ export class MainWindow extends ApplicationWindow {
 
     // Enable our main menu.
 
-    enableMainMenu()
+    enableDisableMainMenu(true)
 
     // Make sure that our menu bar is always visible.
 
@@ -198,13 +195,13 @@ export class MainWindow extends ApplicationWindow {
   // Enable/disable our UI.
 
   enableUi(): void {
-    enableMainMenu()
+    enableDisableMainMenu(true)
 
     this.webContents.send('enable-ui')
   }
 
   disableUi(): void {
-    disableMainMenu()
+    enableDisableMainMenu(false)
 
     this.webContents.send('disable-ui')
   }

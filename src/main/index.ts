@@ -10,8 +10,7 @@ import { URI_SCHEME } from '../constants'
 import { isDevMode, isWindows, isLinux } from '../electron'
 
 import {
-  disableMainMenu,
-  enableMainMenu,
+  enableDisableMainMenu,
   disableFileCloseAndCloseAllMenuItems,
   enableFileCloseAndCloseAllMenuItems
 } from './MainMenu'
@@ -146,8 +145,9 @@ electron.app
 
     // Handle some requests from our renderer process.
 
-    electron.ipcMain.handle('disable-main-menu', disableMainMenu)
-    electron.ipcMain.handle('enable-main-menu', enableMainMenu)
+    electron.ipcMain.handle('enable-disable-main-menu', (_event, enable: boolean) => {
+      enableDisableMainMenu(enable)
+    })
     electron.ipcMain.handle('disable-file-close-and-close-all-menu-items', disableFileCloseAndCloseAllMenuItems)
     electron.ipcMain.handle('enable-file-close-and-close-all-menu-items', enableFileCloseAndCloseAllMenuItems)
     electron.ipcMain.handle('reset-all', resetAll)

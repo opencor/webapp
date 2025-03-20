@@ -7,8 +7,7 @@ interface IElectronAPI {
 
   // Renderer process asking the main process to do something for it.
 
-  disableMainMenu: () => void
-  enableMainMenu: () => void
+  enableDisableMainMenu: (enable: boolean) => void
   disableFileCloseAndCloseAllMenuItems: () => void
   enableFileCloseAndCloseAllMenuItems: () => void
   filePath: (file: File) => string

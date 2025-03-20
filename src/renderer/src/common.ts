@@ -25,12 +25,8 @@ export function isCtrlOrCmd(event: KeyboardEvent): boolean {
   return isMacOS() ? event.metaKey : event.ctrlKey
 }
 
-export function disableMainMenu(): void {
-  electronAPI?.disableMainMenu()
-}
-
-export function enableMainMenu(): void {
-  electronAPI?.enableMainMenu()
+export function enableDisableMainMenu(enable: boolean): void {
+  electronAPI?.enableDisableMainMenu(enable)
 }
 
 export function disableFileCloseAndCloseAllMenuItems(): void {

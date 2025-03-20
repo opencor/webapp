@@ -7,7 +7,7 @@ import { mainWindow } from './index'
 let _enabledMenu: electron.Menu | null = null
 let _disabledMenu: electron.Menu | null = null
 
-function enableDisableMainMenu(enable: boolean): void {
+export function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
 
   if (enable && _enabledMenu !== null) {
@@ -223,14 +223,6 @@ function enableDisableMainMenu(enable: boolean): void {
 
     electron.Menu.setApplicationMenu(enable ? _enabledMenu : _disabledMenu)
   }
-}
-
-export function enableMainMenu(): void {
-  enableDisableMainMenu(true)
-}
-
-export function disableMainMenu(): void {
-  enableDisableMainMenu(false)
 }
 
 function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
