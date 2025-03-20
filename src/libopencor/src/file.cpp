@@ -45,6 +45,26 @@ void fileCreate(const Napi::CallbackInfo &pInfo)
     files.push_back(file);
 }
 
+napi_value fileIssues(const Napi::CallbackInfo &pInfo)
+{
+    auto env = pInfo.Env();
+    auto res = Napi::Array::New(env);
+    auto file = fileManager.file(pInfo[0].ToString().Utf8Value());
+    auto issues = file->issues();
+
+    for (const auto &issue : issues) {
+        auto object = Napi::Object::New(env);
+
+        object.Set("type", Napi::Number::New(env, static_cast<int>(issue->type())));
+        object.Set("typeAsString", Napi::String::New(env, issue->typeAsString()));
+        object.Set("description", Napi::String::New(env, issue->description()));
+
+        res.Set(res.Length(), object);
+    }
+
+    return res;
+}
+
 napi_value fileType(const Napi::CallbackInfo &pInfo)
 {
     auto file = fileManager.file(pInfo[0].ToString().Utf8Value());

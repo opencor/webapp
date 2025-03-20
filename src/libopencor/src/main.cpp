@@ -17,6 +17,7 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
 
     pExports.Set(Napi::String::New(pEnv, "fileContents"), Napi::Function::New(pEnv, fileContents));
     pExports.Set(Napi::String::New(pEnv, "fileCreate"), Napi::Function::New(pEnv, fileCreate));
+    pExports.Set(Napi::String::New(pEnv, "fileIssues"), Napi::Function::New(pEnv, fileIssues));
     pExports.Set(Napi::String::New(pEnv, "fileType"), Napi::Function::New(pEnv, fileType));
 
     return pExports;
