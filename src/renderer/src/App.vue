@@ -107,11 +107,7 @@ const hasFilesRef = vue.computed(() => {
 })
 
 vue.watch(hasFilesRef, (hasFiles) => {
-  if (hasFiles) {
-    electronAPI?.enableFileCloseAndCloseAllMenuItems()
-  } else {
-    electronAPI?.disableFileCloseAndCloseAllMenuItems()
-  }
+  electronAPI?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
 })
 
 // Spinning wheel.

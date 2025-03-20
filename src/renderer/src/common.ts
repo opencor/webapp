@@ -29,12 +29,8 @@ export function enableDisableMainMenu(enable: boolean): void {
   electronAPI?.enableDisableMainMenu(enable)
 }
 
-export function disableFileCloseAndCloseAllMenuItems(): void {
-  electronAPI?.disableFileCloseAndCloseAllMenuItems()
-}
-
-export function enableFileCloseAndCloseAllMenuItems(): void {
-  electronAPI?.enableFileCloseAndCloseAllMenuItems()
+export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
+  electronAPI?.enableDisableFileCloseAndCloseAllMenuItems(enable)
 }
 
 export function isRemoteFilePath(filePath: string): boolean {

@@ -9,11 +9,7 @@ import path from 'path'
 import { URI_SCHEME } from '../constants'
 import { isDevMode, isWindows, isLinux } from '../electron'
 
-import {
-  enableDisableMainMenu,
-  disableFileCloseAndCloseAllMenuItems,
-  enableFileCloseAndCloseAllMenuItems
-} from './MainMenu'
+import { enableDisableMainMenu, enableDisableFileCloseAndCloseAllMenuItems } from './MainMenu'
 import { MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
@@ -148,8 +144,9 @@ electron.app
     electron.ipcMain.handle('enable-disable-main-menu', (_event, enable: boolean) => {
       enableDisableMainMenu(enable)
     })
-    electron.ipcMain.handle('disable-file-close-and-close-all-menu-items', disableFileCloseAndCloseAllMenuItems)
-    electron.ipcMain.handle('enable-file-close-and-close-all-menu-items', enableFileCloseAndCloseAllMenuItems)
+    electron.ipcMain.handle('enable-disable-file-close-and-close-all-menu-items', (_event, enable: boolean) => {
+      enableDisableFileCloseAndCloseAllMenuItems(enable)
+    })
     electron.ipcMain.handle('reset-all', resetAll)
 
     // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the

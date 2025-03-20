@@ -225,7 +225,7 @@ export function enableDisableMainMenu(enable: boolean): void {
   }
 }
 
-function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
+export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
   if (_enabledMenu !== null) {
     const fileMenu = _enabledMenu.getMenuItemById('fileClose')
     const fileCloseAllMenu = _enabledMenu.getMenuItemById('fileCloseAll')
@@ -235,12 +235,4 @@ function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
       fileCloseAllMenu.enabled = enable
     }
   }
-}
-
-export function enableFileCloseAndCloseAllMenuItems(): void {
-  enableDisableFileCloseAndCloseAllMenuItems(true)
-}
-
-export function disableFileCloseAndCloseAllMenuItems(): void {
-  enableDisableFileCloseAndCloseAllMenuItems(false)
 }

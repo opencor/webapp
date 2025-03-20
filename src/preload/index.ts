@@ -27,9 +27,8 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
   // Renderer process asking the main process to do something for it.
 
   enableDisableMainMenu: (enable: boolean) => electron.ipcRenderer.invoke('enable-disable-main-menu', enable),
-  disableFileCloseAndCloseAllMenuItems: () =>
-    electron.ipcRenderer.invoke('disable-file-close-and-close-all-menu-items'),
-  enableFileCloseAndCloseAllMenuItems: () => electron.ipcRenderer.invoke('enable-file-close-and-close-all-menu-items'),
+  enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
+    electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
 
