@@ -59,7 +59,7 @@ const items = [
       { separator: true },
       {
         label: 'Close',
-        shortcut: isWindowsOrLinux ? 'Ctrl+W' : isMacOS ? '⌘W' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+W' : isMacOS ? '⌘⌥W' : undefined,
         command: () => {
           emit('close')
         },
