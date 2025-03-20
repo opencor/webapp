@@ -7,7 +7,10 @@ import { isDevMode, isMacOs } from '../electron'
 
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'
-import { disableMainMenu, enableMainMenu } from './MainMenu'
+import {
+  disableMainMenu,
+  enableMainMenu
+} from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {

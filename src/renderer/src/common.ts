@@ -33,6 +33,14 @@ export function enableMainMenu(): void {
   electronAPI?.enableMainMenu()
 }
 
+export function disableFileCloseAndCloseAllMenuItems(): void {
+  electronAPI?.disableFileCloseAndCloseAllMenuItems()
+}
+
+export function enableFileCloseAndCloseAllMenuItems(): void {
+  electronAPI?.enableFileCloseAndCloseAllMenuItems()
+}
+
 export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://')
 }

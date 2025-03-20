@@ -9,6 +9,8 @@ interface IElectronAPI {
 
   disableMainMenu: () => void
   enableMainMenu: () => void
+  disableFileCloseAndCloseAllMenuItems: () => void
+  enableFileCloseAndCloseAllMenuItems: () => void
   filePath: (file: File) => string
   resetAll: () => void
 

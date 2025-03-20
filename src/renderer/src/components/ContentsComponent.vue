@@ -79,13 +79,14 @@ interface IFileTab {
 const fileTabs = vue.ref<IFileTab[]>([])
 const activeFile = vue.ref<string>('')
 
-defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, selectFile })
+defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
 
 export interface IContentsComponent {
   openFile(file: locAPI.File): void
   closeCurrentFile(): void
   closeAllFiles(): void
   hasFile(filePath: string): boolean
+  hasFiles(): boolean
   selectFile(filePath: string): void
 }
 
@@ -116,6 +117,10 @@ function openFile(file: locAPI.File): void {
 
 function hasFile(filePath: string): boolean {
   return fileTabs.value.find((fileTab) => fileTab.value === filePath) !== undefined
+}
+
+function hasFiles(): boolean {
+  return fileTabs.value.length > 0
 }
 
 function selectFile(filePath: string): void {

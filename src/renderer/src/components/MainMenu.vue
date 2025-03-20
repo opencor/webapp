@@ -30,6 +30,10 @@ import * as vue from 'vue'
 
 import * as common from '../common'
 
+const props = defineProps<{
+  hasFiles: boolean
+}>()
+
 const emit = defineEmits(['about', 'close', 'closeAll', 'open', 'openRemote', 'settings'])
 const isWindowsOrLinux = common.isWindows() || common.isLinux()
 const isMacOS = common.isMacOS()
@@ -58,13 +62,15 @@ const items = [
         shortcut: isWindowsOrLinux ? 'Ctrl+W' : isMacOS ? '⌘W' : undefined,
         command: () => {
           emit('close')
-        }
+        },
+        disabled: () => !props.hasFiles
       },
       {
         label: 'Close All',
         command: () => {
           emit('closeAll')
-        }
+        },
+        disabled: () => !props.hasFiles
       }
     ]
   },
@@ -130,7 +136,7 @@ if (!common.isMobile()) {
       emit('open')
     } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.code === 'KeyO') {
       emit('openRemote')
-    } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
+    } else if (props.hasFiles && common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
       emit('close')
     }
   })

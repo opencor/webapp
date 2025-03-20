@@ -2,6 +2,7 @@
   <div class="flex flex-col h-screen">
     <div v-if="!electronAPI" class="main-menu">
       <MainMenu
+        :hasFiles="hasFilesRef"
         @about="onAbout"
         @open="($refs.filesRef as HTMLInputElement).click()"
         @openRemote="openRemoteVisible = true"
@@ -98,6 +99,20 @@ electronAPI?.onDisableUi(() => {
 function disableUi(): void {
   uiEnabled.value = false
 }
+
+// Enable/disable some menu items.
+
+const hasFilesRef = vue.computed(() => {
+  return contentsRef.value?.hasFiles() ?? false
+})
+
+vue.watch(hasFilesRef, (hasFiles) => {
+  if (hasFiles) {
+    electronAPI?.enableFileCloseAndCloseAllMenuItems()
+  } else {
+    electronAPI?.disableFileCloseAndCloseAllMenuItems()
+  }
+})
 
 // Spinning wheel.
 

@@ -90,17 +90,21 @@ function enableDisableMainMenu(enable: boolean): void {
     })
     fileSubMenu.push({ type: 'separator' })
     fileSubMenu.push({
+      id: 'fileClose',
       label: 'Close',
       accelerator: 'CmdOrCtrl+W',
       click: () => {
         mainWindow?.webContents.send('close')
-      }
+      },
+      enabled: false
     })
     fileSubMenu.push({
+      id: 'fileCloseAll',
       label: 'Close All',
       click: () => {
         mainWindow?.webContents.send('close-all')
-      }
+      },
+      enabled: false
     })
 
     if (!isMacOs()) {
@@ -227,4 +231,24 @@ export function enableMainMenu(): void {
 
 export function disableMainMenu(): void {
   enableDisableMainMenu(false)
+}
+
+function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
+  if (_enabledMenu !== null) {
+    const fileMenu = _enabledMenu.getMenuItemById('fileClose')
+    const fileCloseAllMenu = _enabledMenu.getMenuItemById('fileCloseAll')
+
+    if (fileMenu !== null && fileCloseAllMenu !== null) {
+      fileMenu.enabled = enable
+      fileCloseAllMenu.enabled = enable
+    }
+  }
+}
+
+export function enableFileCloseAndCloseAllMenuItems(): void {
+  enableDisableFileCloseAndCloseAllMenuItems(true)
+}
+
+export function disableFileCloseAndCloseAllMenuItems(): void {
+  enableDisableFileCloseAndCloseAllMenuItems(false)
 }
