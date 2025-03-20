@@ -14,38 +14,34 @@
     <TabPanels>
       <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
         <div v-if="fileTab.issues.length === 0">
-          <div class="font-bold">
-            <Fieldset legend="File path">
-              <p class="font-mono break-all">
-                {{ fileTab.value }}
-              </p>
-            </Fieldset>
-          </div>
-          <div style="margin-top: 1rem">
-            <Fieldset legend="Uint8Array">
-              <p class="font-mono break-all">
-                {{ fileTab.uint8Array }}
-              </p>
-            </Fieldset>
-          </div>
-          <div style="margin-top: 1rem">
-            <Fieldset legend="Base64">
-              <p class="font-mono break-all">
-                {{ fileTab.base64 }}
-              </p>
-            </Fieldset>
-          </div>
-          <div style="margin-top: 1rem">
-            <Fieldset legend="Raw contents">
-              <p class="font-mono break-all">
-                {{ fileTab.rawContents }}
-              </p>
-            </Fieldset>
-          </div>
+          <Fieldset legend="File path">
+            <p class="font-mono break-all">
+              {{ fileTab.value }}
+            </p>
+          </Fieldset>
+          <Fieldset class="mt-4!" legend="Uint8Array">
+            <p class="font-mono break-all">
+              {{ fileTab.uint8Array }}
+            </p>
+          </Fieldset>
+          <Fieldset class="mt-4!" legend="Base64">
+            <p class="font-mono break-all">
+              {{ fileTab.base64 }}
+            </p>
+          </Fieldset>
+          <Fieldset class="mt-4!" legend="Raw contents">
+            <p class="font-mono break-all">
+              {{ fileTab.rawContents }}
+            </p>
+          </Fieldset>
         </div>
         <div v-else>
           <Fieldset legend="Issues">
-            <div v-for="issue in fileTab.issues" :key="'Issue_' + issue.type + '_' + issue.description">
+            <div
+              v-for="(issue, index) in fileTab.issues"
+              :key="'Issue_' + issue.type + '_' + issue.description"
+              :class="index > 0 ? 'mt-4!' : ''"
+            >
               <Message v-if="issue.type === locAPI.IssueType.Error" severity="error" icon="pi pi-times-circle">
                 {{ issue.description }}
               </Message>
