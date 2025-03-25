@@ -147,6 +147,35 @@ if (!common.isMobile()) {
 </script>
 
 <style scoped>
+.p-menubar {
+  padding: 0.1rem;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.p-menubar
+  > .p-menubar-root-list
+  > .p-menubar-item
+  > .p-menubar-item-content
+  > .p-menubar-item-link
+  .p-menubar-submenu-icon {
+  display: none;
+}
+
+.p-menubar-item-link {
+  padding: 0.25rem 0.5rem !important;
+}
+
+:deep(.p-menubar-root-list) {
+  gap: 0.1rem;
+}
+
+:deep(.p-menubar-submenu) {
+  padding: 0.1rem;
+  z-index: 10;
+}
+
 .shortcut {
   border-color: var(--p-content-border-color);
   background: var(--p-content-hover-background);

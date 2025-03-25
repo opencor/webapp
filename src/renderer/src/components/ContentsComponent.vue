@@ -198,6 +198,20 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
 </script>
 
 <style scoped>
+.p-tab {
+  padding: 0.25rem 0.5rem;
+  border-right: 1px solid var(--p-content-border-color);
+  outline: none;
+}
+
+.p-tab:first-of-type {
+  border-left: 1px solid var(--p-content-border-color);
+}
+
+.p-tab:hover {
+  background-color: var(--p-content-hover-background) !important;
+}
+
 .p-tab .remove-button {
   visibility: hidden;
 }
@@ -205,6 +219,22 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
 .p-tab:hover .remove-button,
 .p-tab-active .remove-button {
   visibility: visible;
+}
+
+.p-tab-active,
+.p-tab-active:hover {
+  background-color: var(--p-primary-color) !important;
+  color: var(--p-primary-contrast-color);
+}
+
+:deep(.p-tablist-active-bar) {
+  display: none;
+}
+
+:deep(.p-tablist-prev-button),
+:deep(.p-tablist-next-button),
+:deep(.p-tabpanel) {
+  outline: none !important;
 }
 
 .remove-button {
