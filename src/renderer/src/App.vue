@@ -1,6 +1,6 @@
 <template>
-  <div class="flex flex-col h-screen">
-    <div v-if="!electronAPI" class="main-menu">
+  <div class="flex flex-col h-screen overflow-hidden">
+    <div v-if="!electronAPI">
       <MainMenu
         :hasFiles="hasFilesRef"
         @about="onAbout"
@@ -333,10 +333,6 @@ vue.onMounted(() => {
 </script>
 
 <style scoped>
-.main-menu {
-  border-bottom: 1px solid var(--border-color);
-}
-
 .spinning-wheel {
   width: 50% !important;
   height: 50% !important;
