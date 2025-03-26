@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-screen">
+  <div class="flex flex-col h-screen overflow-hidden">
     <div v-if="!electronAPI">
       <MainMenu
         :hasFiles="hasFilesRef"
