@@ -24,6 +24,11 @@
               {{ fileTab.value }}
             </p>
           </Fieldset>
+          <Fieldset class="mt-4!" legend="Raw contents">
+            <p class="font-mono break-all">
+              {{ fileTab.rawContents }}
+            </p>
+          </Fieldset>
           <Fieldset class="mt-4!" legend="Uint8Array">
             <p class="font-mono break-all">
               {{ fileTab.uint8Array }}
@@ -32,11 +37,6 @@
           <Fieldset class="mt-4!" legend="Base64">
             <p class="font-mono break-all">
               {{ fileTab.base64 }}
-            </p>
-          </Fieldset>
-          <Fieldset class="mt-4!" legend="Raw contents">
-            <p class="font-mono break-all">
-              {{ fileTab.rawContents }}
             </p>
           </Fieldset>
         </div>
