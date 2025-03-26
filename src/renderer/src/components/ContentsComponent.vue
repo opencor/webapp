@@ -1,7 +1,7 @@
 <template>
   <BackgroundComponent v-if="fileTabs.length === 0" />
   <Tabs v-else v-model:value="activeFile" :scrollable="true" :selectOnFocus="true">
-    <TabList class="tablist">
+    <TabList id="tablist" class="tablist">
       <Tab
         v-for="fileTab in fileTabs"
         :id="'Tab_' + fileTab.value"
@@ -16,46 +16,50 @@
         </div>
       </Tab>
     </TabList>
-    <TabPanels>
+    <TabPanels class="p-0!">
       <TabPanel v-for="fileTab in fileTabs" :key="'TabPanel_' + fileTab.value" :value="fileTab.value">
-        <div v-if="fileTab.issues.length === 0">
-          <Fieldset legend="File path">
-            <p class="font-mono break-all">
-              {{ fileTab.value }}
-            </p>
-          </Fieldset>
-          <Fieldset class="mt-4!" legend="Raw contents">
-            <p class="font-mono break-all">
-              {{ fileTab.rawContents }}
-            </p>
-          </Fieldset>
-          <Fieldset class="mt-4!" legend="Uint8Array">
-            <p class="font-mono break-all">
-              {{ fileTab.uint8Array }}
-            </p>
-          </Fieldset>
-          <Fieldset class="mt-4!" legend="Base64">
-            <p class="font-mono break-all">
-              {{ fileTab.base64 }}
-            </p>
-          </Fieldset>
-        </div>
-        <div v-else>
-          <Fieldset legend="Issues">
-            <div
-              v-for="(issue, index) in fileTab.issues"
-              :key="'Issue_' + issue.type + '_' + issue.description"
-              :class="index > 0 ? 'mt-4!' : ''"
-            >
-              <Message v-if="issue.type === locAPI.IssueType.Error" severity="error" icon="pi pi-times-circle">
-                {{ issue.description }}
-              </Message>
-              <Message v-else severity="warn" icon="pi pi-exclamation-triangle">
-                {{ issue.description }}
-              </Message>
+        <ScrollPanel class="scroll-panel">
+          <div class="panel-container">
+            <div v-if="fileTab.issues.length === 0">
+              <Fieldset legend="File path">
+                <p class="font-mono break-all">
+                  {{ fileTab.value }}
+                </p>
+              </Fieldset>
+              <Fieldset class="mt-4!" legend="Raw contents">
+                <p class="font-mono break-all">
+                  {{ fileTab.rawContents }}
+                </p>
+              </Fieldset>
+              <Fieldset class="mt-4!" legend="Uint8Array">
+                <p class="font-mono break-all">
+                  {{ fileTab.uint8Array }}
+                </p>
+              </Fieldset>
+              <Fieldset class="mt-4!" legend="Base64">
+                <p class="font-mono break-all">
+                  {{ fileTab.base64 }}
+                </p>
+              </Fieldset>
             </div>
-          </Fieldset>
-        </div>
+            <div v-else>
+              <Fieldset legend="Issues">
+                <div
+                  v-for="(issue, index) in fileTab.issues"
+                  :key="'Issue_' + issue.type + '_' + issue.description"
+                  :class="index > 0 ? 'mt-4!' : ''"
+                >
+                  <Message v-if="issue.type === locAPI.IssueType.Error" severity="error" icon="pi pi-times-circle">
+                    {{ issue.description }}
+                  </Message>
+                  <Message v-else severity="warn" icon="pi pi-exclamation-triangle">
+                    {{ issue.description }}
+                  </Message>
+                </div>
+              </Fieldset>
+            </div>
+          </div>
+        </ScrollPanel>
       </TabPanel>
     </TabPanels>
   </Tabs>
@@ -91,6 +95,41 @@ export interface IContentsComponent {
   selectFile(filePath: string): void
 }
 
+let mainMenuHeight = ''
+let tablistHeight = ''
+
+function updateScrollPanelHeight(): void {
+  if (fileTabs.value.length !== 1 || mainMenuHeight !== '' || tablistHeight !== '') {
+    return
+  }
+
+  vue
+    .nextTick()
+    .then(() => {
+      const mainMenu = document.getElementById('mainMenu')
+
+      if (mainMenu !== null) {
+        mainMenuHeight = window.getComputedStyle(mainMenu).height
+      } else {
+        mainMenuHeight = '0px'
+      }
+
+      const tablist = document.querySelector('.tablist')
+
+      if (tablist !== null) {
+        tablistHeight = window.getComputedStyle(tablist).height
+      } else {
+        tablistHeight = '0px'
+      }
+
+      document.documentElement.style.setProperty('--main-menu-height', mainMenuHeight)
+      document.documentElement.style.setProperty('--tablist-height', tablistHeight)
+    })
+    .catch((error: unknown) => {
+      console.error('Error updating the scroll panel height:', error)
+    })
+}
+
 function openFile(file: locAPI.File): void {
   const filePath = file.path()
   const fileContents = file.contents()
@@ -105,6 +144,8 @@ function openFile(file: locAPI.File): void {
   })
 
   selectFile(filePath)
+
+  updateScrollPanelHeight()
 }
 
 function hasFile(filePath: string): boolean {
@@ -228,6 +269,10 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
   outline: none !important;
 }
 
+.panel-container {
+  padding: var(--p-tabs-tabpanel-padding);
+}
+
 .remove-button {
   padding: 0.15rem;
   font-size: 0.75rem;
@@ -243,6 +288,10 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
   .remove-button:hover {
     background-color: var(--p-red-400);
   }
+}
+
+.scroll-panel {
+  height: calc(100vh - var(--main-menu-height) - var(--tablist-height));
 }
 
 .tablist {
