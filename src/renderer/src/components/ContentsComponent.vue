@@ -92,15 +92,6 @@ export interface IContentsComponent {
 }
 
 function openFile(file: locAPI.File): void {
-  function topContents(contents: string): string {
-    const numberOfBytesShown = 1024
-
-    return (
-      contents.slice(0, Math.min(numberOfBytesShown, contents.length)) +
-      (contents.length > numberOfBytesShown ? '...' : '')
-    )
-  }
-
   const filePath = file.path()
   const fileContents = file.contents()
 
@@ -108,9 +99,9 @@ function openFile(file: locAPI.File): void {
     value: filePath,
     title: filePath.split(/(\\|\/)/g).pop() ?? '',
     issues: file.issues(),
-    uint8Array: topContents(String(fileContents)),
-    base64: topContents(btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), ''))),
-    rawContents: topContents(new TextDecoder().decode(fileContents))
+    uint8Array: String(fileContents),
+    base64: btoa(fileContents.reduce((data, byte) => data + String.fromCharCode(byte), '')),
+    rawContents: new TextDecoder().decode(fileContents)
   })
 
   selectFile(filePath)
