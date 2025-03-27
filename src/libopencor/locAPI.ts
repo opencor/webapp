@@ -7,10 +7,10 @@ export const _locAPI = window.locAPI ?? (await libOpenCOR())
 
 export { IssueType, type IIssue } from './locLoggerAPI'
 
-// Version API.
-
-export { cppVersion, wasmVersion, version } from './locVersionAPI'
-
 // File API.
 
 export { fileManager, File, FileType } from './locFileAPI'
+
+// Version API.
+
+export { cppVersion, wasmVersion, version } from './locVersionAPI'
