@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
-    <div v-if="!electronAPI">
+    <div v-show="!electronAPI">
       <MainMenu
         :hasFiles="hasFilesRef"
         @about="onAbout"
@@ -304,6 +304,10 @@ electronAPI?.onResetAll(() => {
 function onResetAll(): void {
   electronAPI?.resetAll()
 }
+
+// Track the size of our main menu.
+
+common.trackElementResizing('mainMenu')
 
 // Things that need to be done when the component is mounted.
 

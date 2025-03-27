@@ -1,7 +1,10 @@
 import { UAParser } from 'ua-parser-js'
+import * as vue from 'vue'
 
 import { electronAPI } from '../../electronAPI'
 import * as locAPI from '../../libopencor/locAPI'
+
+// Some methods to determine the operating system, whether the application is running on a mobile device, etc.
 
 const uaParser = new UAParser()
 
@@ -21,9 +24,13 @@ export function isMobile(): boolean {
   return uaParser.getDevice().type === 'mobile'
 }
 
+// A method to determine whether the Ctrl or Cmd key is pressed, depending on the operating system.
+
 export function isCtrlOrCmd(event: KeyboardEvent): boolean {
   return isMacOS() ? event.metaKey : event.ctrlKey
 }
+
+// Some methods to enable/disable the main menu and the File/Close and File/Close All menu items.
 
 export function enableDisableMainMenu(enable: boolean): void {
   electronAPI?.enableDisableMainMenu(enable)
@@ -32,6 +39,8 @@ export function enableDisableMainMenu(enable: boolean): void {
 export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
   electronAPI?.enableDisableFileCloseAndCloseAllMenuItems(enable)
 }
+
+// Some file-related methods.
 
 export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://')
@@ -88,5 +97,40 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
       .catch((error: unknown) => {
         reject(error instanceof Error ? error : new Error(String(error)))
       })
+  })
+}
+
+// A method to track the resizing of a given element and, as a result, update the available viewport height, i.e. the
+// viewport height minus that of our main menu and that of our file tabs.
+
+export function trackElementResizing(id: string): void {
+  vue.onMounted(() => {
+    const element = document.getElementById(id)
+
+    if (element !== null) {
+      const observer = new ResizeObserver(() => {
+        function elementHeight(id: string): string {
+          const element = document.getElementById(id)
+          const res = element !== null ? window.getComputedStyle(element).height : '0px'
+
+          if (res === 'auto') {
+            return '0px'
+          }
+
+          return res
+        }
+
+        document.documentElement.style.setProperty(
+          '--available-viewport-height',
+          'calc(100vh - ' + elementHeight('mainMenu') + ' - ' + elementHeight('fileTablist') + ')'
+        )
+      })
+
+      observer.observe(element)
+
+      vue.onUnmounted(() => {
+        observer.disconnect()
+      })
+    }
   })
 }

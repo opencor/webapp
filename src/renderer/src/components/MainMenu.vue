@@ -132,14 +132,22 @@ vue.onMounted(() => {
 // Keyboard shortcuts.
 
 if (!common.isMobile()) {
-  vueusecore.onKeyStroke((event) => {
+  vueusecore.onKeyStroke((event: KeyboardEvent) => {
     if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyO') {
+      event.preventDefault()
+
       emit('open')
     } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.code === 'KeyO') {
+      event.preventDefault()
+
       emit('openRemote')
     } else if (props.hasFiles && common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
+      event.preventDefault()
+
       emit('close')
     } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'Comma') {
+      event.preventDefault()
+
       emit('settings')
     }
   })
