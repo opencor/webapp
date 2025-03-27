@@ -19,8 +19,8 @@
   "version": "2025.03.27",
   "devDependencies": {
     "@primeuix/themes": "^1.0.0",
-    "@primevue/auto-import-resolver": "^4.3.2",
-    "primevue": "^4.3.2",
+    "@primevue/auto-import-resolver": "^4.3.3",
+    "primevue": "^4.3.3",
     "unplugin-vue-components": "^28.4.1",
     "vite": "^6.2.3"
   }
