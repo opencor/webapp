@@ -191,17 +191,19 @@ common.trackElementResizing('fileTabs')
 
 // Keyboard shortcuts.
 
-vueusecore.onKeyStroke((event: KeyboardEvent) => {
-  if (fileTabs.value.length === 0) {
-    return
-  }
+if (!common.isMobile()) {
+  vueusecore.onKeyStroke((event: KeyboardEvent) => {
+    if (fileTabs.value.length === 0) {
+      return
+    }
 
-  if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
-    selectNextFile()
-  } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
-    selectPreviousFile()
-  }
-})
+    if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
+      selectNextFile()
+    } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
+      selectPreviousFile()
+    }
+  })
+}
 </script>
 
 <style scoped>
