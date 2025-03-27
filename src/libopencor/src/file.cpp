@@ -5,6 +5,11 @@
 static libOpenCOR::FileManager fileManager = libOpenCOR::FileManager::instance();
 static std::vector<libOpenCOR::FilePtr> files;
 
+libOpenCOR::FilePtr pathToFile(const Napi::Value &pPath)
+{
+    return fileManager.file(pPath.ToString().Utf8Value());
+}
+
 // FileManager API.
 
 void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
@@ -25,7 +30,7 @@ void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
 
 napi_value fileContents(const Napi::CallbackInfo &pInfo)
 {
-    auto file = fileManager.file(pInfo[0].ToString().Utf8Value());
+    auto file = pathToFile(pInfo[0]);
     auto res = file->contents();
 
     return Napi::Buffer<unsigned char>::Copy(pInfo.Env(), res.data(), res.size());
@@ -49,7 +54,7 @@ napi_value fileIssues(const Napi::CallbackInfo &pInfo)
 {
     auto env = pInfo.Env();
     auto res = Napi::Array::New(env);
-    auto file = fileManager.file(pInfo[0].ToString().Utf8Value());
+    auto file = pathToFile(pInfo[0]);
     auto issues = file->issues();
 
     for (const auto &issue : issues) {
@@ -67,7 +72,7 @@ napi_value fileIssues(const Napi::CallbackInfo &pInfo)
 
 napi_value fileType(const Napi::CallbackInfo &pInfo)
 {
-    auto file = fileManager.file(pInfo[0].ToString().Utf8Value());
+    auto file = pathToFile(pInfo[0]);
 
     return Napi::Number::New(pInfo.Env(), static_cast<int>(file->type()));
 }
