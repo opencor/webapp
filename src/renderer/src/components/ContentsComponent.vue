@@ -198,8 +198,12 @@ if (!common.isMobile()) {
     }
 
     if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
+      event.preventDefault()
+
       selectNextFile()
     } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
+      event.preventDefault()
+
       selectPreviousFile()
     }
   })
