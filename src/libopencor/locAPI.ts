@@ -1,9 +1,14 @@
 import libOpenCOR from 'libopencor'
 
+import * as locLoggerAPI from './locLoggerAPI'
 import * as locVersionAPI from './locVersionAPI'
 
 // @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
 export const _locAPI = window.locAPI ?? (await libOpenCOR())
+
+// Logger API.
+
+export { IssueType, type IIssue } from './locLoggerAPI'
 
 // Version API.
 
@@ -35,30 +40,6 @@ class FileManager {
 
 export const fileManager = new FileManager()
 
-// Logger API.
-
-export enum IssueType {
-  Error,
-  Warning
-}
-
-export interface IIssue {
-  type: IssueType
-  typeAsString: string
-  description: string
-}
-
-interface IWasmIssue {
-  type: { value: IssueType }
-  typeAsString: string
-  description: string
-}
-
-interface IWasmIssues {
-  size(): number
-  get(index: number): IWasmIssue
-}
-
 // File API.
 
 export enum FileType {
@@ -71,7 +52,7 @@ export enum FileType {
 
 interface IWasmFile {
   type: { value: FileType }
-  issues: IWasmIssues
+  issues: locLoggerAPI.IWasmIssues
   contents(): Uint8Array
   setContents(ptr: number, length: number): void
 }
@@ -110,7 +91,7 @@ export class File {
     return this._path
   }
 
-  issues(): IIssue[] {
+  issues(): locLoggerAPI.IIssue[] {
     if (locVersionAPI.cppVersion()) {
       return _locAPI.fileIssues(this._path)
     }
