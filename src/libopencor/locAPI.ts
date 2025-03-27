@@ -58,15 +58,15 @@ export interface IIssue {
   description: string
 }
 
-interface ILocIssue {
+interface IWasmIssue {
   type: { value: IssueType }
   typeAsString: string
   description: string
 }
 
-interface ILocIssues {
+interface IWasmIssues {
   size(): number
-  get(index: number): ILocIssue
+  get(index: number): IWasmIssue
 }
 
 // File API.
@@ -79,16 +79,16 @@ export enum FileType {
   IrretrievableFile
 }
 
-interface ILocFile {
+interface IWasmFile {
   type: { value: FileType }
-  issues: ILocIssues
+  issues: IWasmIssues
   contents(): Uint8Array
   setContents(ptr: number, length: number): void
 }
 
 export class File {
   private _path: string
-  private _file: ILocFile = {} as ILocFile
+  private _file: IWasmFile = {} as IWasmFile
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
     this._path = path
