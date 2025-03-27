@@ -1,31 +1,21 @@
-import { electronAPI } from '../electronAPI'
-
 import libOpenCOR from 'libopencor'
 
+import * as locVersionAPI from './locVersionAPI'
+
 // @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
-const _locAPI = window.locAPI ?? (await libOpenCOR())
+export const _locAPI = window.locAPI ?? (await libOpenCOR())
 
-// Some general methods.
+// Version API.
 
-export function cppVersion(): boolean {
-  return electronAPI !== undefined
-}
-
-export function wasmVersion(): boolean {
-  return !cppVersion()
-}
-
-export function version(): string {
-  return cppVersion() ? _locAPI.version() : _locAPI.versionString()
-}
+export { cppVersion, wasmVersion, version } from './locVersionAPI'
 
 // FileManager API.
 
 class FileManager {
-  private _fileManager = cppVersion() ? undefined : _locAPI.FileManager.instance()
+  private _fileManager = locVersionAPI.cppVersion() ? undefined : _locAPI.FileManager.instance()
 
   unmanage(path: string): void {
-    if (cppVersion()) {
+    if (locVersionAPI.cppVersion()) {
       _locAPI.fileManagerUnmanage(path)
     } else {
       const files = this._fileManager.files
@@ -93,7 +83,7 @@ export class File {
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
     this._path = path
 
-    if (cppVersion()) {
+    if (locVersionAPI.cppVersion()) {
       _locAPI.fileCreate(path, contents)
     } else if (contents !== undefined) {
       this._file = new _locAPI.File(path)
@@ -113,7 +103,7 @@ export class File {
   }
 
   type(): FileType {
-    return cppVersion() ? _locAPI.fileType(this._path) : this._file.type.value
+    return locVersionAPI.cppVersion() ? _locAPI.fileType(this._path) : this._file.type.value
   }
 
   path(): string {
@@ -121,7 +111,7 @@ export class File {
   }
 
   issues(): IIssue[] {
-    if (cppVersion()) {
+    if (locVersionAPI.cppVersion()) {
       return _locAPI.fileIssues(this._path)
     }
 
@@ -142,6 +132,6 @@ export class File {
   }
 
   contents(): Uint8Array {
-    return cppVersion() ? _locAPI.fileContents(this._path) : this._file.contents()
+    return locVersionAPI.cppVersion() ? _locAPI.fileContents(this._path) : this._file.contents()
   }
 }
