@@ -132,7 +132,7 @@ vue.onMounted(() => {
 // Keyboard shortcuts.
 
 if (!common.isMobile()) {
-  vueusecore.onKeyStroke((event) => {
+  vueusecore.onKeyStroke((event: KeyboardEvent) => {
     if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyO') {
       emit('open')
     } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.code === 'KeyO') {
