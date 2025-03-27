@@ -5,7 +5,7 @@ export const _locAPI = window.locAPI ?? (await libOpenCOR())
 
 // Logger API.
 
-export { IssueType, type IIssue } from './locLoggerAPI'
+export { IssueType, type IIssue, type IWasmIssues } from './locLoggerAPI'
 
 // File API.
 

@@ -1,15 +1,12 @@
-import { _locAPI } from './locAPI'
-
-import * as locLoggerAPI from './locLoggerAPI'
-import * as locVersionAPI from './locVersionAPI'
+import { _locAPI, cppVersion, type IIssue, type IWasmIssues } from './locAPI'
 
 // FileManager API.
 
 class FileManager {
-  private _fileManager = locVersionAPI.cppVersion() ? undefined : _locAPI.FileManager.instance()
+  private _fileManager = cppVersion() ? undefined : _locAPI.FileManager.instance()
 
   unmanage(path: string): void {
-    if (locVersionAPI.cppVersion()) {
+    if (cppVersion()) {
       _locAPI.fileManagerUnmanage(path)
     } else {
       const files = this._fileManager.files
@@ -41,7 +38,7 @@ export enum FileType {
 
 interface IWasmFile {
   type: { value: FileType }
-  issues: locLoggerAPI.IWasmIssues
+  issues: IWasmIssues
   contents(): Uint8Array
   setContents(ptr: number, length: number): void
 }
@@ -53,7 +50,7 @@ export class File {
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
     this._path = path
 
-    if (locVersionAPI.cppVersion()) {
+    if (cppVersion()) {
       _locAPI.fileCreate(path, contents)
     } else if (contents !== undefined) {
       this._file = new _locAPI.File(path)
@@ -73,15 +70,15 @@ export class File {
   }
 
   type(): FileType {
-    return locVersionAPI.cppVersion() ? _locAPI.fileType(this._path) : this._file.type.value
+    return cppVersion() ? _locAPI.fileType(this._path) : this._file.type.value
   }
 
   path(): string {
     return this._path
   }
 
-  issues(): locLoggerAPI.IIssue[] {
-    if (locVersionAPI.cppVersion()) {
+  issues(): IIssue[] {
+    if (cppVersion()) {
       return _locAPI.fileIssues(this._path)
     }
 
@@ -102,6 +99,6 @@ export class File {
   }
 
   contents(): Uint8Array {
-    return locVersionAPI.cppVersion() ? _locAPI.fileContents(this._path) : this._file.contents()
+    return cppVersion() ? _locAPI.fileContents(this._path) : this._file.contents()
   }
 }
