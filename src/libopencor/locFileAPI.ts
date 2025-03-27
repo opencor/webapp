@@ -1,4 +1,9 @@
-import { _locAPI, cppVersion, type IIssue, type IWasmIssues } from './locAPI'
+import libOpenCOR from 'libopencor'
+
+import { cppVersion, type IIssue, type IWasmIssues } from './locAPI'
+
+// @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
+export const _locAPI = window.locAPI ?? (await libOpenCOR())
 
 // FileManager API.
 
