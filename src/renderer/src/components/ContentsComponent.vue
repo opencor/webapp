@@ -1,7 +1,13 @@
 <template>
-  <BackgroundComponent v-if="fileTabs.length === 0" />
-  <Tabs v-else v-model:value="activeFile" :scrollable="true" :selectOnFocus="true">
-    <TabList id="tablist" class="tablist">
+  <BackgroundComponent v-show="fileTabs.length === 0" />
+  <Tabs
+    v-show="fileTabs.length !== 0"
+    id="fileTabs"
+    v-model:value="activeFile"
+    :scrollable="true"
+    :selectOnFocus="true"
+  >
+    <TabList id="fileTablist" class="file-tablist">
       <Tab
         v-for="fileTab in fileTabs"
         :id="'Tab_' + fileTab.value"
@@ -72,6 +78,8 @@ import * as vue from 'vue'
 
 import * as locAPI from '../../../libopencor/locAPI'
 
+import * as common from '../common'
+
 interface IFileTab {
   value: string
   title: string
@@ -95,41 +103,6 @@ export interface IContentsComponent {
   selectFile(filePath: string): void
 }
 
-let mainMenuHeight = ''
-let tablistHeight = ''
-
-function updateScrollPanelHeight(): void {
-  if (fileTabs.value.length !== 1 || mainMenuHeight !== '' || tablistHeight !== '') {
-    return
-  }
-
-  vue
-    .nextTick()
-    .then(() => {
-      const mainMenu = document.getElementById('mainMenu')
-
-      if (mainMenu !== null) {
-        mainMenuHeight = window.getComputedStyle(mainMenu).height
-      } else {
-        mainMenuHeight = '0px'
-      }
-
-      const tablist = document.querySelector('.tablist')
-
-      if (tablist !== null) {
-        tablistHeight = window.getComputedStyle(tablist).height
-      } else {
-        tablistHeight = '0px'
-      }
-
-      document.documentElement.style.setProperty('--main-menu-height', mainMenuHeight)
-      document.documentElement.style.setProperty('--tablist-height', tablistHeight)
-    })
-    .catch((error: unknown) => {
-      console.error('Error updating the scroll panel height:', error)
-    })
-}
-
 function openFile(file: locAPI.File): void {
   const filePath = file.path()
   const fileContents = file.contents()
@@ -144,8 +117,6 @@ function openFile(file: locAPI.File): void {
   })
 
   selectFile(filePath)
-
-  updateScrollPanelHeight()
 }
 
 function hasFile(filePath: string): boolean {
@@ -214,6 +185,10 @@ function closeAllFiles(): void {
   }
 }
 
+// Track the size of our file tablist.
+
+common.trackElementResizing('fileTabs')
+
 // Keyboard shortcuts.
 
 vueusecore.onKeyStroke((event: KeyboardEvent) => {
@@ -230,6 +205,10 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
 </script>
 
 <style scoped>
+.file-tablist {
+  border-bottom: 1px solid var(--p-primary-color);
+}
+
 .p-tab {
   padding: 0.25rem 0.5rem;
   border-right: 1px solid var(--p-content-border-color);
@@ -291,10 +270,6 @@ vueusecore.onKeyStroke((event: KeyboardEvent) => {
 }
 
 .scroll-panel {
-  height: calc(100vh - var(--main-menu-height) - var(--tablist-height));
-}
-
-.tablist {
-  border-bottom: 1px solid var(--p-primary-color);
+  height: var(--available-viewport-height);
 }
 </style>
