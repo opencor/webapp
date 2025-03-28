@@ -12,8 +12,7 @@ void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
 
     for (auto file : files) {
         if (file->path() == path) {
-            untrackFile(file);
-            untrackSedDocument(file);
+            untrackFileData(file);
 
             fileManager.unmanage(file);
 
@@ -43,7 +42,7 @@ void fileCreate(const Napi::CallbackInfo &pInfo)
 
     // Keep track of the file so that it doesn't get garbage collected.
 
-    trackedFiles.push_back(file);
+    fileData[file] = {};
 }
 
 napi_value fileIssues(const Napi::CallbackInfo &pInfo)

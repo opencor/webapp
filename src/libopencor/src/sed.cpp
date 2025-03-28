@@ -10,7 +10,7 @@ void sedDocumentCreate(const Napi::CallbackInfo &pInfo)
     auto file = pathToFile(pInfo[0]);
     auto sedDocument = libOpenCOR::SedDocument::create(file);
 
-    trackedSedDocuments[file] = sedDocument;
+    fileData[file].sedDocument = sedDocument;
 }
 
 napi_value sedDocumentIssues(const Napi::CallbackInfo &pInfo)

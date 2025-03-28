@@ -1,8 +1,7 @@
 #include "common.h"
 
 libOpenCOR::FileManager fileManager = libOpenCOR::FileManager::instance();
-std::vector<libOpenCOR::FilePtr> trackedFiles;
-std::map<libOpenCOR::FilePtr, libOpenCOR::SedDocumentPtr> trackedSedDocuments;
+std::map<libOpenCOR::FilePtr, FileData> fileData;
 
 libOpenCOR::FilePtr pathToFile(const Napi::Value &pPath)
 {
@@ -11,17 +10,12 @@ libOpenCOR::FilePtr pathToFile(const Napi::Value &pPath)
 
 libOpenCOR::SedDocumentPtr pathToSedDocument(const Napi::Value &pPath)
 {
-    return trackedSedDocuments[pathToFile(pPath)];
+    return fileData[pathToFile(pPath)].sedDocument;
 }
 
-void untrackFile(libOpenCOR::FilePtr pFile)
+void untrackFileData(libOpenCOR::FilePtr pFile)
 {
-    trackedFiles.erase(std::remove(trackedFiles.begin(), trackedFiles.end(), pFile), trackedFiles.end());
-}
-
-void untrackSedDocument(libOpenCOR::FilePtr pFile)
-{
-    trackedSedDocuments.erase(pFile);
+    fileData.erase(pFile);
 }
 
 napi_value issues(const Napi::CallbackInfo &pInfo, libOpenCOR::IssuePtrs pIssues)
