@@ -1,4 +1,5 @@
 #include "file.h"
+#include "sed.h"
 #include "version.h"
 
 Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
@@ -19,6 +20,11 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     pExports.Set(Napi::String::New(pEnv, "fileCreate"), Napi::Function::New(pEnv, fileCreate));
     pExports.Set(Napi::String::New(pEnv, "fileIssues"), Napi::Function::New(pEnv, fileIssues));
     pExports.Set(Napi::String::New(pEnv, "fileType"), Napi::Function::New(pEnv, fileType));
+
+    // SED API.
+
+    pExports.Set(Napi::String::New(pEnv, "sedDocumentCreate"), Napi::Function::New(pEnv, sedDocumentCreate));
+    pExports.Set(Napi::String::New(pEnv, "sedDocumentIssues"), Napi::Function::New(pEnv, sedDocumentIssues));
 
     return pExports;
 }

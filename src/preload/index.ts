@@ -95,5 +95,10 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
   fileContents: (path: string) => loc.fileContents(path),
   fileCreate: (path: string, contents: object) => loc.fileCreate(path, contents),
   fileIssues: (path: string) => loc.fileIssues(path),
-  fileType: (path: string) => loc.fileType(path)
+  fileType: (path: string) => loc.fileType(path),
+
+  // SED API.
+
+  sedDocumentCreate: (path: string) => loc.sedDocumentCreate(path),
+  sedDocumentIssues: (path: string) => loc.sedDocumentIssues(path)
 })

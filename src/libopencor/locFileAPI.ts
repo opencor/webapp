@@ -1,6 +1,6 @@
 import libOpenCOR from 'libopencor'
 
-import { cppVersion, type IIssue, type IWasmIssues } from './locAPI'
+import { cppVersion, SEDDocument, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locAPI'
 
 // @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
 export const _locAPI = window.locAPI ?? (await libOpenCOR())
@@ -50,32 +50,51 @@ interface IWasmFile {
 
 export class File {
   private _path: string
-  private _file: IWasmFile = {} as IWasmFile
+  private _wasmFile: IWasmFile = {} as IWasmFile
+  private _sedDocument: SEDDocument = {} as SEDDocument
+  private _issues: IIssue[] = []
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
     this._path = path
 
     if (cppVersion()) {
       _locAPI.fileCreate(path, contents)
+
+      this._issues = _locAPI.fileIssues(path)
     } else if (contents !== undefined) {
-      this._file = new _locAPI.File(path)
+      this._wasmFile = new _locAPI.File(path)
 
       const heapContentsPtr = _locAPI._malloc(contents.length)
       const heapContents = new Uint8Array(_locAPI.HEAPU8.buffer, heapContentsPtr, contents.length)
 
       heapContents.set(contents)
 
-      this._file.setContents(heapContentsPtr, contents.length)
+      this._wasmFile.setContents(heapContentsPtr, contents.length)
+
+      this._issues = wasmIssuesToIssues(this._wasmFile.issues)
     } else {
       // Note: we should never reach this point since we should always provide some file contents when using the WASM
       //       version of libOpenCOR.
 
       console.error(`No contents provided for file '${path}'.`)
+
+      return
+    }
+
+    // Retrieve the SED-ML file associated with this file, if there are no issues with it.
+
+    if (this._issues.length === 0) {
+      this._sedDocument = new SEDDocument(this)
+      this._issues = this._sedDocument.issues()
     }
   }
 
   type(): FileType {
-    return cppVersion() ? _locAPI.fileType(this._path) : this._file.type.value
+    return cppVersion() ? _locAPI.fileType(this._path) : this._wasmFile.type.value
+  }
+
+  wasmFile(): IWasmFile {
+    return this._wasmFile
   }
 
   path(): string {
@@ -83,27 +102,10 @@ export class File {
   }
 
   issues(): IIssue[] {
-    if (cppVersion()) {
-      return _locAPI.fileIssues(this._path)
-    }
-
-    const res = []
-    const issues = this._file.issues
-
-    for (let i = 0; i < issues.size(); ++i) {
-      const issue = issues.get(i)
-
-      res.push({
-        type: issue.type.value,
-        typeAsString: issue.typeAsString,
-        description: issue.description
-      })
-    }
-
-    return res
+    return this._issues
   }
 
   contents(): Uint8Array {
-    return cppVersion() ? _locAPI.fileContents(this._path) : this._file.contents()
+    return cppVersion() ? _locAPI.fileContents(this._path) : this._wasmFile.contents()
   }
 }
