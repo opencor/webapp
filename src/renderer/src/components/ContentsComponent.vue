@@ -28,7 +28,12 @@
           <Splitter v-if="fileTab.issues.length === 0" class="border-none! h-full m-0" layout="vertical">
             <SplitterPanel :size="89">
               <Splitter>
-                <SplitterPanel class="flex items-center justify-center" :size="25"> Panel 1 </SplitterPanel>
+                <SplitterPanel class="ml-4 mr-4 mb-4" :size="25">
+                  <PropertyEditorComponent name="Simulation" />
+                  <PropertyEditorComponent name="Solvers" />
+                  <PropertyEditorComponent name="Graphs" />
+                  <PropertyEditorComponent name="Parameters" />
+                </SplitterPanel>
                 <SplitterPanel class="flex items-center justify-center" :size="75"> Panel 2 </SplitterPanel>
               </Splitter>
             </SplitterPanel>
