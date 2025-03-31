@@ -7,13 +7,11 @@ export enum IssueType {
 
 export interface IIssue {
   type: IssueType
-  typeAsString: string
   description: string
 }
 
 interface IWasmIssue {
   type: { value: IssueType }
-  typeAsString: string
   description: string
 }
 
@@ -30,7 +28,6 @@ export function wasmIssuesToIssues(issues: IWasmIssues): IIssue[] {
 
     res.push({
       type: issue.type.value,
-      typeAsString: issue.typeAsString,
       description: issue.description
     })
   }

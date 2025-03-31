@@ -27,7 +27,6 @@ napi_value issues(const Napi::CallbackInfo &pInfo, libOpenCOR::IssuePtrs pIssues
         auto object = Napi::Object::New(env);
 
         object.Set("type", Napi::Number::New(env, static_cast<int>(issue->type())));
-        object.Set("typeAsString", Napi::String::New(env, issue->typeAsString()));
         object.Set("description", Napi::String::New(env, issue->description()));
 
         res.Set(res.Length(), object);
