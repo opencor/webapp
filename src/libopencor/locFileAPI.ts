@@ -41,7 +41,7 @@ export enum FileType {
   IrretrievableFile
 }
 
-interface IWasmFile {
+export interface IWasmFile {
   type: { value: FileType }
   issues: IWasmIssues
   contents(): Uint8Array
@@ -87,7 +87,7 @@ export class File {
 
     // Retrieve the SED-ML file associated with this file.
 
-    this._sedDocument = new SEDDocument(this)
+    this._sedDocument = new SEDDocument(this._path, this._wasmFile)
     this._issues = this._sedDocument.issues()
 
     if (this._issues.length !== 0) {
@@ -111,10 +111,6 @@ export class File {
 
   type(): FileType {
     return cppVersion() ? _locAPI.fileType(this._path) : this._wasmFile.type.value
-  }
-
-  wasmFile(): IWasmFile {
-    return this._wasmFile
   }
 
   path(): string {

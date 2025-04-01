@@ -1,4 +1,4 @@
-import { _locAPI, cppVersion, File, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locAPI'
+import { _locAPI, cppVersion, wasmIssuesToIssues, type IIssue, type IWasmFile, type IWasmIssues } from './locAPI'
 
 // SED API.
 
@@ -8,24 +8,24 @@ interface IWasmSEDDocument {
 }
 
 export class SEDDocument {
-  private _file: File = {} as File
+  private _filePath: string
   private _sedDocument: IWasmSEDDocument = {} as IWasmSEDDocument
 
-  constructor(file: File) {
-    this._file = file
+  constructor(filePath: string, wasmFile: IWasmFile) {
+    this._filePath = filePath
 
     if (cppVersion()) {
-      _locAPI.sedDocumentCreate(file.path())
+      _locAPI.sedDocumentCreate(this._filePath)
     } else {
-      this._sedDocument = new _locAPI.SedDocument(file.wasmFile())
+      this._sedDocument = new _locAPI.SedDocument(wasmFile)
     }
   }
 
   issues(): IIssue[] {
-    return cppVersion() ? _locAPI.sedDocumentIssues(this._file.path()) : wasmIssuesToIssues(this._sedDocument.issues)
+    return cppVersion() ? _locAPI.sedDocumentIssues(this._filePath) : wasmIssuesToIssues(this._sedDocument.issues)
   }
 
   simulationCount(): number {
-    return cppVersion() ? _locAPI.sedDocumentSimulationCount(this._file.path()) : this._sedDocument.simulationCount
+    return cppVersion() ? _locAPI.sedDocumentSimulationCount(this._filePath) : this._sedDocument.simulationCount
   }
 }

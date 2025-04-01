@@ -4,7 +4,7 @@ export { IssueType, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './
 
 // File API.
 
-export { _locAPI, fileManager, File, FileType } from './locFileAPI'
+export { _locAPI, fileManager, File, FileType, type IWasmFile } from './locFileAPI'
 
 // SED API.
 
