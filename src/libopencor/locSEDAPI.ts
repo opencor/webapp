@@ -4,6 +4,7 @@ import { _locAPI, cppVersion, File, wasmIssuesToIssues, type IIssue, type IWasmI
 
 interface IWasmSEDDocument {
   issues: IWasmIssues
+  simulationCount: number
 }
 
 export class SEDDocument {
@@ -26,5 +27,13 @@ export class SEDDocument {
     }
 
     return wasmIssuesToIssues(this._sedDocument.issues)
+  }
+
+  simulationCount(): number {
+    if (cppVersion()) {
+      return _locAPI.sedDocumentSimulationCount(this._file.path())
+    }
+
+    return this._sedDocument.simulationCount
   }
 }

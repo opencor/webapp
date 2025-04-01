@@ -17,3 +17,8 @@ napi_value sedDocumentIssues(const Napi::CallbackInfo &pInfo)
 {
     return issues(pInfo, pathToSedDocument(pInfo[0])->issues());
 }
+
+napi_value sedDocumentSimulationCount(const Napi::CallbackInfo &pInfo)
+{
+    return Napi::Number::New(pInfo.Env(), pathToSedDocument(pInfo[0])->simulationCount());
+}

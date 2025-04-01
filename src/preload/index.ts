@@ -100,5 +100,6 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
   // SED API.
 
   sedDocumentCreate: (path: string) => loc.sedDocumentCreate(path),
-  sedDocumentIssues: (path: string) => loc.sedDocumentIssues(path)
+  sedDocumentIssues: (path: string) => loc.sedDocumentIssues(path),
+  sedDocumentSimulationCount: (path: string) => loc.sedDocumentSimulationCount(path)
 })

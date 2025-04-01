@@ -1,6 +1,6 @@
 import libOpenCOR from 'libopencor'
 
-import { cppVersion, SEDDocument, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locAPI'
+import { cppVersion, IssueType, SEDDocument, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locAPI'
 
 // @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
 export const _locAPI = window.locAPI ?? (await libOpenCOR())
@@ -81,11 +81,31 @@ export class File {
       return
     }
 
-    // Retrieve the SED-ML file associated with this file, if there are no issues with it.
+    if (this._issues.length !== 0) {
+      return
+    }
 
-    if (this._issues.length === 0) {
-      this._sedDocument = new SEDDocument(this)
-      this._issues = this._sedDocument.issues()
+    // Retrieve the SED-ML file associated with this file.
+
+    this._sedDocument = new SEDDocument(this)
+    this._issues = this._sedDocument.issues()
+
+    if (this._issues.length !== 0) {
+      return
+    }
+
+    //---OPENCOR---
+    // At this point, we only support a limited subset of SED-ML, so we need to check a few more things.
+
+    // Make sure that the SED-ML file has only one simulation.
+
+    const simulationCount = this._sedDocument.simulationCount()
+
+    if (simulationCount !== 1) {
+      this._issues.push({
+        type: IssueType.Warning,
+        description: `Only SED-ML files with one simulation are currently supported.`
+      })
     }
   }
 
