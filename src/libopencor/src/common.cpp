@@ -13,6 +13,11 @@ libOpenCOR::SedDocumentPtr valueToSedDocument(const Napi::Value &pValue)
     return fileData[valueToFile(pValue)].sedDocument;
 }
 
+int32_t valueToInt32(const Napi::Value &pValue)
+{
+    return pValue.As<Napi::Number>().Int32Value();
+}
+
 void untrackFileData(libOpenCOR::FilePtr pFile)
 {
     fileData.erase(pFile);
