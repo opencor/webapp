@@ -2,6 +2,7 @@ import electron from 'electron'
 import * as systemInformation from 'systeminformation'
 
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
+import path from 'path'
 
 // Some bridging between our main process and renderer process.
 // Note: this must be in sync with src/electronAPI.ts.
@@ -102,5 +103,14 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
   sedDocumentCreate: (path: string) => loc.sedDocumentCreate(path),
   sedDocumentIssues: (path: string) => loc.sedDocumentIssues(path),
   sedDocumentSimulationCount: (path: string) => loc.sedDocumentSimulationCount(path),
-  sedDocumentSimulationType: (path: string, index: number) => loc.sedDocumentSimulationType(path, index)
+  sedDocumentSimulationType: (path: string, index: number) => loc.sedDocumentSimulationType(path, index),
+  sedDocumentSimulationOneStepStep: (path: string, index: number) => loc.sedDocumentSimulationOneStepStep(path, index),
+  sedDocumentSimulationUniformTimeCourseInitialTime: (path: string, index: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseInitialTime(path, index),
+  sedDocumentSimulationUniformTimeCourseOutputStartTime: (path: string, index: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseOutputStartTime(path, index),
+  sedDocumentSimulationUniformTimeCourseOutputEndTime: (path: string, index: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseOutputEndTime(path, index),
+  sedDocumentSimulationUniformTimeCourseNumberOfSteps: (path: string, index: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseNumberOfSteps(path, index)
 })
