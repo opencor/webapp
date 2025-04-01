@@ -29,10 +29,12 @@
             <SplitterPanel :size="89">
               <Splitter>
                 <SplitterPanel class="ml-4 mr-4 mb-4" :size="25">
-                  <PropertyEditorComponent name="Simulation" />
+                  <PropertyEditorComponent name="Simulation" properties="" />
+                  <!--
                   <PropertyEditorComponent name="Solvers" />
                   <PropertyEditorComponent name="Graphs" :hasUnits="false" />
                   <PropertyEditorComponent name="Parameters" />
+                  -->
                 </SplitterPanel>
                 <SplitterPanel class="flex items-center justify-center" :size="75"> Panel 2 </SplitterPanel>
               </Splitter>
