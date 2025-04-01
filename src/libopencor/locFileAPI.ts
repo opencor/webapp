@@ -1,6 +1,14 @@
 import libOpenCOR from 'libopencor'
 
-import { cppVersion, IssueType, SEDDocument, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locAPI'
+import {
+  cppVersion,
+  IssueType,
+  SEDDocument,
+  SEDSimulationType,
+  wasmIssuesToIssues,
+  type IIssue,
+  type IWasmIssues
+} from './locAPI'
 
 // @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
 export const _locAPI = window.locAPI ?? (await libOpenCOR())
@@ -105,6 +113,19 @@ export class File {
       this._issues.push({
         type: IssueType.Warning,
         description: `Only SED-ML files with one simulation are currently supported.`
+      })
+
+      return
+    }
+
+    // Make sure that the simulation is a uniform time course simulation.
+
+    const simulation = this._sedDocument.simulation(0)
+
+    if (simulation.type() !== SEDSimulationType.UniformTimeCourse) {
+      this._issues.push({
+        type: IssueType.Warning,
+        description: `Only uniform time course simulations are currently supported.`
       })
     }
   }
