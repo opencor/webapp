@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "2025.03.28",
+  "version": "2025.04.01",
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
@@ -33,12 +33,12 @@
   "scripts": {
     "build": "electron-vite build",
     "build:web": "cd ./src/renderer && vite build",
-    "clean": "node res/clean.js",
+    "clean": "node scripts/clean.js",
     "dev": "electron-vite dev --watch",
     "dev:web": "cd ./src/renderer && vite dev",
     "format": "prettier --log-level silent --write . && clang-format -i src/libopencor/src/*",
     "format:check": "prettier --check . && clang-format --dry-run -Werror src/libopencor/src/*",
-    "install": "node res/version.js",
+    "install": "node scripts/version.js",
     "libopencor": "cmake-js build -B Release -O dist/libOpenCOR",
     "lint": "eslint --fix .",
     "package": "pnpm build && electron-builder",
@@ -76,7 +76,7 @@
     "tailwindcss": "^4.0.17",
     "ua-parser-js": "^2.0.3",
     "unplugin-vue-components": "^28.4.1",
-    "vite": "^6.2.3",
+    "vite": "^6.2.4",
     "vue": "^3.5.13"
   }
 }
