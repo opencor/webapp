@@ -22,18 +22,10 @@ export class SEDDocument {
   }
 
   issues(): IIssue[] {
-    if (cppVersion()) {
-      return _locAPI.sedDocumentIssues(this._file.path())
-    }
-
-    return wasmIssuesToIssues(this._sedDocument.issues)
+    return cppVersion() ? _locAPI.sedDocumentIssues(this._file.path()) : wasmIssuesToIssues(this._sedDocument.issues)
   }
 
   simulationCount(): number {
-    if (cppVersion()) {
-      return _locAPI.sedDocumentSimulationCount(this._file.path())
-    }
-
-    return this._sedDocument.simulationCount
+    return cppVersion() ? _locAPI.sedDocumentSimulationCount(this._file.path()) : this._sedDocument.simulationCount
   }
 }
