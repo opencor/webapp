@@ -3,14 +3,14 @@
 libOpenCOR::FileManager fileManager = libOpenCOR::FileManager::instance();
 std::map<libOpenCOR::FilePtr, FileData> fileData;
 
-libOpenCOR::FilePtr pathToFile(const Napi::Value &pPath)
+libOpenCOR::FilePtr valueToFile(const Napi::Value &pValue)
 {
-    return fileManager.file(pPath.ToString().Utf8Value());
+    return fileManager.file(pValue.ToString().Utf8Value());
 }
 
-libOpenCOR::SedDocumentPtr pathToSedDocument(const Napi::Value &pPath)
+libOpenCOR::SedDocumentPtr valueToSedDocument(const Napi::Value &pValue)
 {
-    return fileData[pathToFile(pPath)].sedDocument;
+    return fileData[valueToFile(pValue)].sedDocument;
 }
 
 void untrackFileData(libOpenCOR::FilePtr pFile)

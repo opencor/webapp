@@ -12,8 +12,8 @@ struct FileData
 extern libOpenCOR::FileManager fileManager;
 extern std::map<libOpenCOR::FilePtr, FileData> fileData;
 
-libOpenCOR::FilePtr pathToFile(const Napi::Value &pPath);
-libOpenCOR::SedDocumentPtr pathToSedDocument(const Napi::Value &pPath);
+libOpenCOR::FilePtr valueToFile(const Napi::Value &pValue);
+libOpenCOR::SedDocumentPtr valueToSedDocument(const Napi::Value &pValue);
 
 void untrackFileData(libOpenCOR::FilePtr pFile);
 

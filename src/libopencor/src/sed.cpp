@@ -7,7 +7,7 @@
 
 void sedDocumentCreate(const Napi::CallbackInfo &pInfo)
 {
-    auto file = pathToFile(pInfo[0]);
+    auto file = valueToFile(pInfo[0]);
     auto sedDocument = libOpenCOR::SedDocument::create(file);
 
     fileData[file].sedDocument = sedDocument;
@@ -15,17 +15,17 @@ void sedDocumentCreate(const Napi::CallbackInfo &pInfo)
 
 napi_value sedDocumentIssues(const Napi::CallbackInfo &pInfo)
 {
-    return issues(pInfo, pathToSedDocument(pInfo[0])->issues());
+    return issues(pInfo, valueToSedDocument(pInfo[0])->issues());
 }
 
 napi_value sedDocumentSimulationCount(const Napi::CallbackInfo &pInfo)
 {
-    return Napi::Number::New(pInfo.Env(), pathToSedDocument(pInfo[0])->simulationCount());
+    return Napi::Number::New(pInfo.Env(), valueToSedDocument(pInfo[0])->simulationCount());
 }
 
 napi_value sedDocumentSimulationType(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = pathToSedDocument(pInfo[0]);
+    auto sedDocument = valueToSedDocument(pInfo[0]);
     auto simulation = sedDocument->simulation(pInfo[1].As<Napi::Number>().Int32Value());
 
     if (std::dynamic_pointer_cast<libOpenCOR::SedAnalysis>(simulation) != nullptr) {
@@ -45,7 +45,7 @@ napi_value sedDocumentSimulationType(const Napi::CallbackInfo &pInfo)
 
 napi_value sedDocumentSimulationOneStepStep(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = pathToSedDocument(pInfo[0]);
+    auto sedDocument = valueToSedDocument(pInfo[0]);
     auto simulation = sedDocument->simulation(pInfo[1].As<Napi::Number>().Int32Value());
     auto oneStep = std::dynamic_pointer_cast<libOpenCOR::SedOneStep>(simulation);
 
@@ -54,7 +54,7 @@ napi_value sedDocumentSimulationOneStepStep(const Napi::CallbackInfo &pInfo)
 
 napi_value sedDocumentSimulationUniformTimeCourseInitialTime(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = pathToSedDocument(pInfo[0]);
+    auto sedDocument = valueToSedDocument(pInfo[0]);
     auto simulation = sedDocument->simulation(pInfo[1].As<Napi::Number>().Int32Value());
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
@@ -63,7 +63,7 @@ napi_value sedDocumentSimulationUniformTimeCourseInitialTime(const Napi::Callbac
 
 napi_value sedDocumentSimulationUniformTimeCourseOutputStartTime(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = pathToSedDocument(pInfo[0]);
+    auto sedDocument = valueToSedDocument(pInfo[0]);
     auto simulation = sedDocument->simulation(pInfo[1].As<Napi::Number>().Int32Value());
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
@@ -72,7 +72,7 @@ napi_value sedDocumentSimulationUniformTimeCourseOutputStartTime(const Napi::Cal
 
 napi_value sedDocumentSimulationUniformTimeCourseOutputEndTime(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = pathToSedDocument(pInfo[0]);
+    auto sedDocument = valueToSedDocument(pInfo[0]);
     auto simulation = sedDocument->simulation(pInfo[1].As<Napi::Number>().Int32Value());
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
@@ -81,7 +81,7 @@ napi_value sedDocumentSimulationUniformTimeCourseOutputEndTime(const Napi::Callb
 
 napi_value sedDocumentSimulationUniformTimeCourseNumberOfSteps(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = pathToSedDocument(pInfo[0]);
+    auto sedDocument = valueToSedDocument(pInfo[0]);
     auto simulation = sedDocument->simulation(pInfo[1].As<Napi::Number>().Int32Value());
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 

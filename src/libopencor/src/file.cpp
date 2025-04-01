@@ -25,7 +25,7 @@ void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
 
 napi_value fileContents(const Napi::CallbackInfo &pInfo)
 {
-    auto file = pathToFile(pInfo[0]);
+    auto file = valueToFile(pInfo[0]);
     auto res = file->contents();
 
     return Napi::Buffer<unsigned char>::Copy(pInfo.Env(), res.data(), res.size());
@@ -47,12 +47,12 @@ void fileCreate(const Napi::CallbackInfo &pInfo)
 
 napi_value fileIssues(const Napi::CallbackInfo &pInfo)
 {
-    return issues(pInfo, pathToFile(pInfo[0])->issues());
+    return issues(pInfo, valueToFile(pInfo[0])->issues());
 }
 
 napi_value fileType(const Napi::CallbackInfo &pInfo)
 {
-    auto file = pathToFile(pInfo[0]);
+    auto file = valueToFile(pInfo[0]);
 
     return Napi::Number::New(pInfo.Env(), static_cast<int>(file->type()));
 }
