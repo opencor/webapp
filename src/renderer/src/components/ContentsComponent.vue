@@ -154,9 +154,9 @@ function closeAllFiles(): void {
   }
 }
 
-// Track our number of files.
+// Track our number of file tablist.
 
-common.trackElementResizing('files')
+common.trackElementResizing('fileTablist')
 
 // Keyboard shortcuts.
 
