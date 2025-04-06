@@ -2,7 +2,7 @@
   <BackgroundComponent v-show="files.length === 0" />
   <Tabs v-show="files.length !== 0" id="fileTabs" v-model:value="activeFile" :scrollable="true" :selectOnFocus="true">
     <TabList id="fileTablist" class="file-tablist">
-      <Tab v-for="file in files" :id="'Tab_' + file.path()" :key="'Tab_' + file.path()" :value="file.path()">
+      <Tab v-for="file in files" :id="'tab_' + file.path()" :key="'tab_' + file.path()" :value="file.path()">
         <div class="flex gap-2 items-center">
           <div>
             {{
@@ -17,7 +17,7 @@
       </Tab>
     </TabList>
     <TabPanels class="p-0!">
-      <TabPanel v-for="file in files" :key="'TabPanel_' + file.path()" :value="file.path()">
+      <TabPanel v-for="file in files" :key="'tabPanel_' + file.path()" :value="file.path()">
         <ScrollPanel class="scroll-panel">
           <Splitter v-if="file.issues().length === 0" class="border-none! h-full m-0" layout="vertical">
             <SplitterPanel :size="89">
@@ -39,7 +39,7 @@
             <Fieldset legend="Issues">
               <div
                 v-for="(issue, index) in file.issues()"
-                :key="'Issue_' + issue.type + '_' + issue.description"
+                :key="'issue_' + issue.type + '_' + issue.description"
                 :class="index > 0 ? 'mt-4!' : ''"
               >
                 <Message v-if="issue.type === locAPI.IssueType.Error" severity="error" icon="pi pi-times-circle">
@@ -102,7 +102,7 @@ function selectFile(filePath: string): void {
   vue
     .nextTick()
     .then(() => {
-      const tabElement = document.getElementById('Tab_' + filePath)
+      const tabElement = document.getElementById('tab_' + filePath)
 
       if (tabElement !== null) {
         // Note: when removing a tab, unless it is the last one, it will flash (whether we scroll it into view or not).
