@@ -70,7 +70,7 @@ export class MainWindow extends ApplicationWindow {
     // Set our dock icon (macOS only).
 
     if (isMacOs()) {
-      electron.app.dock.setIcon(icon)
+      electron.app.dock?.setIcon(icon)
     }
 
     // Restore our state, if needed.
