@@ -49,3 +49,9 @@ function onCellEditComplete(event) {
   data[field] = newValue
 }
 </script>
+
+<style scoped>
+:deep(.p-datatable-header-cell) {
+  transition: none;
+}
+</style>
