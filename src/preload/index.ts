@@ -97,8 +97,29 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
   fileIssues: (path: string) => loc.fileIssues(path),
   fileType: (path: string) => loc.fileType(path),
 
-  // SED API.
+  // SedDocument API.
 
   sedDocumentCreate: (path: string) => loc.sedDocumentCreate(path),
-  sedDocumentIssues: (path: string) => loc.sedDocumentIssues(path)
+  sedDocumentInstantiate: (path: string) => loc.sedDocumentInstantiate(path),
+  sedDocumentIssues: (path: string) => loc.sedDocumentIssues(path),
+  sedDocumentModelCount: (path: string) => loc.sedDocumentModelCount(path),
+  sedDocumentSimulationCount: (path: string) => loc.sedDocumentSimulationCount(path),
+  sedDocumentSimulationType: (path: string, index: number) => loc.sedDocumentSimulationType(path, index),
+  sedDocumentSimulationOneStepStep: (path: string, index: number) => loc.sedDocumentSimulationOneStepStep(path, index),
+  sedDocumentSimulationUniformTimeCourseInitialTime: (path: string, index: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseInitialTime(path, index),
+  sedDocumentSimulationUniformTimeCourseOutputStartTime: (path: string, index: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseOutputStartTime(path, index),
+  sedDocumentSimulationUniformTimeCourseOutputEndTime: (path: string, index: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseOutputEndTime(path, index),
+  sedDocumentSimulationUniformTimeCourseNumberOfSteps: (path: string, index: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseNumberOfSteps(path, index),
+
+  // SedInstance API.
+
+  sedInstanceIssues: (path: string) => loc.sedInstanceIssues(path),
+
+  // SedInstanceTask API.
+
+  sedInstanceTaskVoiUnit: (path: string, index: number) => loc.sedInstanceTaskVoiUnit(path, index)
 })

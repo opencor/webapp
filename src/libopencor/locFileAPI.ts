@@ -1,6 +1,16 @@
 import libOpenCOR from 'libopencor'
 
-import { cppVersion, SEDDocument, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locAPI'
+import {
+  cppVersion,
+  IssueType,
+  SEDDocument,
+  SEDInstance,
+  SEDSimulationType,
+  SEDSimulationUniformTimeCourse,
+  wasmIssuesToIssues,
+  type IIssue,
+  type IWasmIssues
+} from './locAPI'
 
 // @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
 export const _locAPI = window.locAPI ?? (await libOpenCOR())
@@ -41,7 +51,7 @@ export enum FileType {
   IrretrievableFile
 }
 
-interface IWasmFile {
+export interface IWasmFile {
   type: { value: FileType }
   issues: IWasmIssues
   contents(): Uint8Array
@@ -52,6 +62,7 @@ export class File {
   private _path: string
   private _wasmFile: IWasmFile = {} as IWasmFile
   private _sedDocument: SEDDocument = {} as SEDDocument
+  private _sedInstance: SEDInstance = {} as SEDInstance
   private _issues: IIssue[] = []
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
@@ -81,20 +92,104 @@ export class File {
       return
     }
 
-    // Retrieve the SED-ML file associated with this file, if there are no issues with it.
-
-    if (this._issues.length === 0) {
-      this._sedDocument = new SEDDocument(this)
-      this._issues = this._sedDocument.issues()
+    if (this._issues.length !== 0) {
+      return
     }
+
+    // Retrieve the SED-ML file associated with this file.
+
+    this._sedDocument = new SEDDocument(this._path, this._wasmFile)
+    this._issues = this._sedDocument.issues()
+
+    if (this._issues.length !== 0) {
+      return
+    }
+
+    //---OPENCOR---
+    // We only support a limited subset of SED-ML for now, so we need to check a few more things. Might wnat to check
+    // https://github.com/opencor/opencor/blob/master/src/plugins/support/SEDMLSupport/src/sedmlfile.cpp#L579-L1492.
+
+    // Make sure that there is only one model.
+
+    const modelCount = this._sedDocument.modelCount()
+
+    if (modelCount !== 1) {
+      this._issues.push({
+        type: IssueType.Warning,
+        description: 'Only SED-ML files with one model are currently supported.'
+      })
+
+      return
+    }
+
+    // Make sure that the SED-ML file has only one simulation.
+
+    const simulationCount = this._sedDocument.simulationCount()
+
+    if (simulationCount !== 1) {
+      this._issues.push({
+        type: IssueType.Warning,
+        description: 'Only SED-ML files with one simulation are currently supported.'
+      })
+
+      return
+    }
+
+    // Make sure that the simulation is a uniform time course simulation.
+
+    const simulation = this._sedDocument.simulation(0) as SEDSimulationUniformTimeCourse
+
+    if (simulation.type() !== SEDSimulationType.UniformTimeCourse) {
+      this._issues.push({
+        type: IssueType.Warning,
+        description: 'Only uniform time course simulations are currently supported.'
+      })
+
+      return
+    }
+
+    // Make sure that the initial time and output start time are the same, that the output start time and output end
+    // time are different, and that the number of steps is greater than zero.
+
+    const initialTime = simulation.initialTime()
+    const outputStartTime = simulation.outputStartTime()
+    const outputEndTime = simulation.outputEndTime()
+    const numberOfSteps = simulation.numberOfSteps()
+
+    if (initialTime !== outputStartTime) {
+      this._issues.push({
+        type: IssueType.Warning,
+        description: `Only uniform time course simulations with the same values for 'initialTime' (${initialTime.toString()}) and 'outputStartTime' (${outputStartTime.toString()}) are currently supported.`
+      })
+    }
+
+    if (outputStartTime === outputEndTime) {
+      this._issues.push({
+        type: IssueType.Error,
+        description: `The uniform time course simulation must have different values for 'outputStartTime' (${outputStartTime.toString()}) and 'outputEndTime' (${outputEndTime.toString()}).`
+      })
+    }
+
+    if (numberOfSteps <= 0) {
+      this._issues.push({
+        type: IssueType.Error,
+        description: `The uniform time course simulation must have a positive value for 'numberOfSteps' (${numberOfSteps.toString()}).`
+      })
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (this._issues.length !== 0) {
+      return
+    }
+
+    // Retrieve an instance of the model.
+
+    this._sedInstance = this._sedDocument.instantiate()
+    this._issues = this._sedInstance.issues()
   }
 
   type(): FileType {
     return cppVersion() ? _locAPI.fileType(this._path) : this._wasmFile.type.value
-  }
-
-  wasmFile(): IWasmFile {
-    return this._wasmFile
   }
 
   path(): string {
@@ -107,5 +202,13 @@ export class File {
 
   contents(): Uint8Array {
     return cppVersion() ? _locAPI.fileContents(this._path) : this._wasmFile.contents()
+  }
+
+  sedDocument(): SEDDocument {
+    return this._sedDocument
+  }
+
+  sedInstance(): SEDInstance {
+    return this._sedInstance
   }
 }

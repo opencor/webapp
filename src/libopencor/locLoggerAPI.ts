@@ -7,13 +7,11 @@ export enum IssueType {
 
 export interface IIssue {
   type: IssueType
-  typeAsString: string
   description: string
 }
 
 interface IWasmIssue {
   type: { value: IssueType }
-  typeAsString: string
   description: string
 }
 
@@ -22,15 +20,14 @@ export interface IWasmIssues {
   get(index: number): IWasmIssue
 }
 
-export function wasmIssuesToIssues(issues: IWasmIssues): IIssue[] {
+export function wasmIssuesToIssues(wasmIssues: IWasmIssues): IIssue[] {
   const res = []
 
-  for (let i = 0; i < issues.size(); ++i) {
-    const issue = issues.get(i)
+  for (let i = 0; i < wasmIssues.size(); ++i) {
+    const issue = wasmIssues.get(i)
 
     res.push({
       type: issue.type.value,
-      typeAsString: issue.typeAsString,
       description: issue.description
     })
   }
