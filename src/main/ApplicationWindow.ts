@@ -2,8 +2,6 @@ import electron from 'electron'
 import path from 'path'
 
 export class ApplicationWindow extends electron.BrowserWindow {
-  private _alreadyShowedWindow = false
-
   constructor(options: electron.BrowserWindowConstructorOptions) {
     // Add some common options and call our parent constructor.
     // Note: we use backgroundColor to minimise the flickering that may occur when first showing a window. This means
@@ -21,15 +19,9 @@ export class ApplicationWindow extends electron.BrowserWindow {
     super(options)
 
     // Show our window when we are ready to show it.
-    // Note: we need to keep track of whether we have already shown our window because ready-to-show can be emitted
-    //       multiple times (e.g., when returning from sleep mode on macOS).
 
-    this.on('ready-to-show', () => {
-      if (!this._alreadyShowedWindow) {
-        this._alreadyShowedWindow = true
-
-        this.show()
-      }
+    this.once('ready-to-show', () => {
+      this.show()
     })
   }
 }
