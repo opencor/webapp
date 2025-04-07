@@ -2,7 +2,6 @@ import electron from 'electron'
 import * as systemInformation from 'systeminformation'
 
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
-import path from 'path'
 
 // Some bridging between our main process and renderer process.
 // Note: this must be in sync with src/electronAPI.ts.
