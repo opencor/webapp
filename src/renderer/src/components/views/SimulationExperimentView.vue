@@ -87,15 +87,23 @@ function onRun(): void {
   const yData = sedInstanceTask.state(0)
   const data: [number, number][] = []
 
+  data.push([xData[0], yData[0]])
+
+  option.value.xAxis.min = xData[0]
+  option.value.xAxis.max = xData[0]
+  option.value.yAxis.min = yData[0]
+  option.value.yAxis.max = yData[0]
+
   for (let i = 0; i < xData.length; ++i) {
     data.push([xData[i], yData[i]])
+
+    option.value.xAxis.min =xData[i] < option.value.xAxis.min ? xData[i] : option.value.xAxis.min
+    option.value.xAxis.max =xData[i] > option.value.xAxis.max ? xData[i] : option.value.xAxis.max
+    option.value.yAxis.min =yData[i] < option.value.yAxis.min ? yData[i] : option.value.yAxis.min
+    option.value.yAxis.max =yData[i] > option.value.yAxis.max ? yData[i] : option.value.yAxis.max
   }
 
   option.value.series[0].data = data
-  option.value.xAxis.min = Math.min(...xData)
-  option.value.xAxis.max = Math.max(...xData)
-  option.value.yAxis.min = Math.min(...yData)
-  option.value.yAxis.max = Math.max(...yData)
 }
 
 // Track the height of our file tablist toolbar.
