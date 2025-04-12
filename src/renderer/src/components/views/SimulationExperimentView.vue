@@ -36,7 +36,7 @@ import * as vue from 'vue'
 
 import * as common from '../../common'
 
-import { IFileTab } from '../ContentsComponent.vue'
+import { type IFileTab } from '../ContentsComponent.vue'
 
 import * as echarts from 'echarts/core'
 import { GridComponent } from 'echarts/components'
@@ -116,7 +116,7 @@ echarts.use([GridComponent, LineChart, CanvasRenderer])
 
 type EChartsOption = echarts.ComposeOption<LineSeriesOption>
 
-let option = vue.ref<EChartsOption>({
+const option = vue.ref<EChartsOption>({
   animation: false,
   xAxis: {
     name: 'x',
