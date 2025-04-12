@@ -32,8 +32,11 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationOneStepStep"), Napi::Function::New(pEnv, sedDocumentSimulationOneStepStep));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationUniformTimeCourseInitialTime"), Napi::Function::New(pEnv, sedDocumentSimulationUniformTimeCourseInitialTime));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationUniformTimeCourseOutputStartTime"), Napi::Function::New(pEnv, sedDocumentSimulationUniformTimeCourseOutputStartTime));
+    pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationUniformTimeCourseSetOutputStartTime"), Napi::Function::New(pEnv, sedDocumentSimulationUniformTimeCourseSetOutputStartTime));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationUniformTimeCourseOutputEndTime"), Napi::Function::New(pEnv, sedDocumentSimulationUniformTimeCourseOutputEndTime));
+    pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationUniformTimeCourseSetOutputEndTime"), Napi::Function::New(pEnv, sedDocumentSimulationUniformTimeCourseSetOutputEndTime));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationUniformTimeCourseNumberOfSteps"), Napi::Function::New(pEnv, sedDocumentSimulationUniformTimeCourseNumberOfSteps));
+    pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationUniformTimeCourseSetNumberOfSteps"), Napi::Function::New(pEnv, sedDocumentSimulationUniformTimeCourseSetNumberOfSteps));
 
     // SedInstance API.
 

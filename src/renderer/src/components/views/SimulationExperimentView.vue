@@ -10,7 +10,7 @@
       <SplitterPanel :size="89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4" :size="25">
-            <SimulationPropertyEditor :file="vue.toRaw(fileTab.file)" />
+            <SimulationPropertyEditor ref="simulationProperties" :file="vue.toRaw(fileTab.file)" />
             <!--
                   <SolversPropertyEditor />
                   <GraphsPropertyEditor />
@@ -38,6 +38,8 @@ import * as common from '../../common'
 
 import { type IFileTab } from '../ContentsComponent.vue'
 
+import ISimulationPropertyEditor from '../propertyEditors/SimulationPropertyEditor.vue'
+
 import * as echarts from 'echarts/core'
 import { GridComponent } from 'echarts/components'
 import { LineChart, type LineSeriesOption } from 'echarts/charts'
@@ -52,7 +54,13 @@ const props = defineProps<{
 const toolbarId = `simulationExperimentToolbar_${String(fileTab.file.path())}`
 const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
 
+const simulationProperties = vue.ref<InstanceType<typeof ISimulationPropertyEditor> | null>(null)
+
 function onRun(): void {
+  // Update the simulation properties.
+
+  simulationProperties.value?.update()
+
   // Run the instance and output the simulation time to the console.
 
   const sedInstance = fileTab.file.sedInstance()

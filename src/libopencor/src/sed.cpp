@@ -83,6 +83,15 @@ napi_value sedDocumentSimulationUniformTimeCourseOutputStartTime(const Napi::Cal
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->outputStartTime());
 }
 
+void sedDocumentSimulationUniformTimeCourseSetOutputStartTime(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = valueToSedDocument(pInfo[0]);
+    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
+
+    uniformTimeCourse->setOutputStartTime(valueToDouble(pInfo[2]));
+}
+
 napi_value sedDocumentSimulationUniformTimeCourseOutputEndTime(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = valueToSedDocument(pInfo[0]);
@@ -92,6 +101,15 @@ napi_value sedDocumentSimulationUniformTimeCourseOutputEndTime(const Napi::Callb
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->outputEndTime());
 }
 
+void sedDocumentSimulationUniformTimeCourseSetOutputEndTime(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = valueToSedDocument(pInfo[0]);
+    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
+
+    uniformTimeCourse->setOutputEndTime(valueToDouble(pInfo[2]));
+}
+
 napi_value sedDocumentSimulationUniformTimeCourseNumberOfSteps(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = valueToSedDocument(pInfo[0]);
@@ -99,6 +117,15 @@ napi_value sedDocumentSimulationUniformTimeCourseNumberOfSteps(const Napi::Callb
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->numberOfSteps());
+}
+
+void sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = valueToSedDocument(pInfo[0]);
+    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
+
+    uniformTimeCourse->setNumberOfSteps(valueToInt32(pInfo[2]));
 }
 
 // SedInstance API.

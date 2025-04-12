@@ -17,6 +17,7 @@ libOpenCOR::FilePtr valueToFile(const Napi::Value &pValue);
 libOpenCOR::SedDocumentPtr valueToSedDocument(const Napi::Value &pValue);
 libOpenCOR::SedInstancePtr valueToSedInstance(const Napi::Value &pValue);
 int32_t valueToInt32(const Napi::Value &pValue);
+double valueToDouble(const Napi::Value &pValue);
 
 void untrackFileData(libOpenCOR::FilePtr pFile);
 

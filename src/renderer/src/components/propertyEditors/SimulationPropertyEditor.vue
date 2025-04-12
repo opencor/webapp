@@ -10,6 +10,11 @@ import * as locAPI from '../../../../libopencor/locAPI'
 const props = defineProps<{
   file: locAPI.File
 }>()
+defineExpose({ update })
+
+export interface ISimulationPropertyEditor {
+  update(): void
+}
 
 const sedSimulationUniformTimeCourse = props.file.sedDocument().simulation(0) as locAPI.SEDSimulationUniformTimeCourse
 const voiUnit = props.file.sedInstance().task(0).voiUnit()
@@ -33,4 +38,13 @@ const properties = vue.ref([
     unit: voiUnit
   }
 ])
+
+function update(): void {
+  sedSimulationUniformTimeCourse.setOutputStartTime(properties.value[0].value)
+  sedSimulationUniformTimeCourse.setOutputEndTime(properties.value[1].value)
+  sedSimulationUniformTimeCourse.setNumberOfSteps(
+    (sedSimulationUniformTimeCourse.outputEndTime() - sedSimulationUniformTimeCourse.outputStartTime()) /
+      properties.value[2].value
+  )
+}
 </script>

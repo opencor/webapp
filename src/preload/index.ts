@@ -111,10 +111,16 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
     loc.sedDocumentSimulationUniformTimeCourseInitialTime(path, index),
   sedDocumentSimulationUniformTimeCourseOutputStartTime: (path: string, index: number) =>
     loc.sedDocumentSimulationUniformTimeCourseOutputStartTime(path, index),
+  sedDocumentSimulationUniformTimeCourseSetOutputStartTime: (path: string, index: number, value: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseSetOutputStartTime(path, index, value),
   sedDocumentSimulationUniformTimeCourseOutputEndTime: (path: string, index: number) =>
     loc.sedDocumentSimulationUniformTimeCourseOutputEndTime(path, index),
+  sedDocumentSimulationUniformTimeCourseSetOutputEndTime: (path: string, index: number, value: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseSetOutputEndTime(path, index, value),
   sedDocumentSimulationUniformTimeCourseNumberOfSteps: (path: string, index: number) =>
     loc.sedDocumentSimulationUniformTimeCourseNumberOfSteps(path, index),
+  sedDocumentSimulationUniformTimeCourseSetNumberOfSteps: (path: string, index: number, value: number) =>
+    loc.sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(path, index, value),
 
   // SedInstance API.
 

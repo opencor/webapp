@@ -176,16 +176,40 @@ export class SEDSimulationUniformTimeCourse extends SEDSimulation {
       : this._wasmSEDSimulationUniformTimeCourse.outputStartTime
   }
 
+  setOutputStartTime(value: number): void {
+    if (cppVersion()) {
+      _locAPI.sedDocumentSimulationUniformTimeCourseSetOutputStartTime(this._filePath, this._index, value)
+    } else {
+      this._wasmSEDSimulationUniformTimeCourse.outputStartTime = value
+    }
+  }
+
   outputEndTime(): number {
     return cppVersion()
       ? _locAPI.sedDocumentSimulationUniformTimeCourseOutputEndTime(this._filePath, this._index)
       : this._wasmSEDSimulationUniformTimeCourse.outputEndTime
   }
 
+  setOutputEndTime(value: number): void {
+    if (cppVersion()) {
+      _locAPI.sedDocumentSimulationUniformTimeCourseSetOutputEndTime(this._filePath, this._index, value)
+    } else {
+      this._wasmSEDSimulationUniformTimeCourse.outputEndTime = value
+    }
+  }
+
   numberOfSteps(): number {
     return cppVersion()
       ? _locAPI.sedDocumentSimulationUniformTimeCourseNumberOfSteps(this._filePath, this._index)
       : this._wasmSEDSimulationUniformTimeCourse.numberOfSteps
+  }
+
+  setNumberOfSteps(value: number): void {
+    if (cppVersion()) {
+      _locAPI.sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(this._filePath, this._index, value)
+    } else {
+      this._wasmSEDSimulationUniformTimeCourse.numberOfSteps = value
+    }
   }
 }
 
