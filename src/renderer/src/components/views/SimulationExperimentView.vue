@@ -39,9 +39,8 @@ import * as common from '../../common'
 import { IFileTab } from '../ContentsComponent.vue'
 
 import * as echarts from 'echarts/core'
-import { GridComponent, GridComponentOption, DataZoomComponent, DataZoomComponentOption } from 'echarts/components'
-import { LineChart, LineSeriesOption } from 'echarts/charts'
-import { UniversalTransition } from 'echarts/features'
+import { GridComponent } from 'echarts/components'
+import { LineChart, type LineSeriesOption } from 'echarts/charts'
 import { CanvasRenderer } from 'echarts/renderers'
 import VChart from 'vue-echarts'
 
@@ -113,9 +112,9 @@ const theme = vue.computed(() => {
   return common.isLightMode.value ? 'macarons' : 'dark'
 })
 
-echarts.use([GridComponent, DataZoomComponent, LineChart, CanvasRenderer, UniversalTransition])
+echarts.use([GridComponent, LineChart, CanvasRenderer])
 
-type EChartsOption = echarts.ComposeOption<GridComponentOption | DataZoomComponentOption | LineSeriesOption>
+type EChartsOption = echarts.ComposeOption<LineSeriesOption>
 
 let option = vue.ref<EChartsOption>({
   animation: false,
