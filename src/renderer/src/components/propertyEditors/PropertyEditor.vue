@@ -43,7 +43,7 @@ interface Props {
 const { hasUnits = true } = defineProps<Props>()
 const columnWidth = 'width: calc(100% / ' + (hasUnits ? '3' : '2') + ')'
 
-function onCellEditComplete(event) {
+function onCellEditComplete(event): void {
   const { data, newValue, field } = event
 
   data[field] = newValue
