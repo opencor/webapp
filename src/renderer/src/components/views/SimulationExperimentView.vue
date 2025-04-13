@@ -89,18 +89,8 @@ function onRun(): void {
 
   data.push([xData[0], yData[0]])
 
-  option.value.xAxis.min = xData[0]
-  option.value.xAxis.max = xData[0]
-  option.value.yAxis.min = yData[0]
-  option.value.yAxis.max = yData[0]
-
   for (let i = 0; i < xData.length; ++i) {
     data.push([xData[i], yData[i]])
-
-    option.value.xAxis.min =xData[i] < option.value.xAxis.min ? xData[i] : option.value.xAxis.min
-    option.value.xAxis.max =xData[i] > option.value.xAxis.max ? xData[i] : option.value.xAxis.max
-    option.value.yAxis.min =yData[i] < option.value.yAxis.min ? yData[i] : option.value.yAxis.min
-    option.value.yAxis.max =yData[i] > option.value.yAxis.max ? yData[i] : option.value.yAxis.max
   }
 
   option.value.series[0].data = data
@@ -136,8 +126,7 @@ const option = vue.ref<EChartsOption>({
   animation: false,
   xAxis: {
     name: 'x',
-    min: 0,
-    max: 1,
+    scale: true,
     minorTick: {
       show: true
     },
@@ -147,8 +136,7 @@ const option = vue.ref<EChartsOption>({
   },
   yAxis: {
     name: 'y',
-    min: 0,
-    max: 1,
+    scale: true,
     minorTick: {
       show: true
     },
