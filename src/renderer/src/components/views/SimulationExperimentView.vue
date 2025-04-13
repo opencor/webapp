@@ -57,10 +57,6 @@ const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
 const simulationProperties = vue.ref<InstanceType<typeof ISimulationPropertyEditor> | null>(null)
 
 function onRun(): void {
-  // Update the simulation properties.
-
-  simulationProperties.value?.update()
-
   // Run the instance and output the simulation time to the console.
 
   const sedInstance = fileTab.file.sedInstance()
