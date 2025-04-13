@@ -147,8 +147,7 @@ const option = vue.ref<EChartsOption>({
   series: [
     {
       type: 'line',
-      showSymbol: false,
-      clip: true
+      showSymbol: false
     }
   ]
 })
