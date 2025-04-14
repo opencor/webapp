@@ -250,6 +250,7 @@ interface IWasmSEDInstanceTask {
   voiName: string
   voiUnit: string
   voiAsArray: number[]
+  stateCount: number
   stateName(index: number): string
   stateUnit(index: number): string
   stateAsArray(index: number): number[]
@@ -283,6 +284,12 @@ export class SEDInstanceTask {
 
   voi(): number[] {
     return cppVersion() ? _locAPI.sedInstanceTaskVoi(this._filePath, this._index) : this._wasmSEDInstanceTask.voiAsArray
+  }
+
+  stateCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskStateCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.stateCount
   }
 
   stateName(index: number): string {
