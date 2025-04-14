@@ -81,15 +81,10 @@ function onRun(): void {
   const sedInstanceTask = sedInstance.task(0)
   const xData = sedInstanceTask.voi()
   const yData = sedInstanceTask.state(0)
-  const data: [number, number][] = []
 
-  data.push([xData[0], yData[0]])
-
-  for (let i = 0; i < xData.length; ++i) {
-    data.push([xData[i], yData[i]])
-  }
-
-  option.value.series[0].data = data
+  option.value.series[0].data = xData.map((x, index) => {
+    return [x, yData[index]]
+  })
 }
 
 // Track the height of our file tablist toolbar.
