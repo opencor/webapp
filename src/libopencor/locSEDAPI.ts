@@ -1,3 +1,5 @@
+import * as vue from 'vue'
+
 import {
   _locAPI,
   cppVersion,
@@ -174,10 +176,26 @@ export class SEDSimulationUniformTimeCourse extends SEDSimulation {
       : this._wasmSEDSimulationUniformTimeCourse.outputStartTime
   }
 
+  setOutputStartTime(value: number): void {
+    if (cppVersion()) {
+      _locAPI.sedDocumentSimulationUniformTimeCourseSetOutputStartTime(this._filePath, this._index, value)
+    } else {
+      this._wasmSEDSimulationUniformTimeCourse.outputStartTime = value
+    }
+  }
+
   outputEndTime(): number {
     return cppVersion()
       ? _locAPI.sedDocumentSimulationUniformTimeCourseOutputEndTime(this._filePath, this._index)
       : this._wasmSEDSimulationUniformTimeCourse.outputEndTime
+  }
+
+  setOutputEndTime(value: number): void {
+    if (cppVersion()) {
+      _locAPI.sedDocumentSimulationUniformTimeCourseSetOutputEndTime(this._filePath, this._index, value)
+    } else {
+      this._wasmSEDSimulationUniformTimeCourse.outputEndTime = value
+    }
   }
 
   numberOfSteps(): number {
@@ -185,11 +203,20 @@ export class SEDSimulationUniformTimeCourse extends SEDSimulation {
       ? _locAPI.sedDocumentSimulationUniformTimeCourseNumberOfSteps(this._filePath, this._index)
       : this._wasmSEDSimulationUniformTimeCourse.numberOfSteps
   }
+
+  setNumberOfSteps(value: number): void {
+    if (cppVersion()) {
+      _locAPI.sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(this._filePath, this._index, value)
+    } else {
+      this._wasmSEDSimulationUniformTimeCourse.numberOfSteps = value
+    }
+  }
 }
 
 interface IWasmSEDInstance {
   issues: IWasmIssues
   task(index: number): IWasmSEDInstanceTask
+  run(): number
 }
 
 export class SEDInstance {
@@ -213,10 +240,36 @@ export class SEDInstance {
   task(index: number): SEDInstanceTask {
     return new SEDInstanceTask(this._filePath, index, this._wasmSEDInstance)
   }
+
+  run(): number {
+    return cppVersion() ? _locAPI.sedInstanceRun(this._filePath) : vue.toRaw(this._wasmSEDInstance).run()
+  }
 }
 
 interface IWasmSEDInstanceTask {
+  voiName: string
   voiUnit: string
+  voiAsArray: number[]
+  stateCount: number
+  stateName(index: number): string
+  stateUnit(index: number): string
+  stateAsArray(index: number): number[]
+  rateCount: number
+  rateName(index: number): string
+  rateUnit(index: number): string
+  rateAsArray(index: number): number[]
+  constantCount: number
+  constantName(index: number): string
+  constantUnit(index: number): string
+  constantAsArray(index: number): number[]
+  computedConstantCount: number
+  computedConstantName(index: number): string
+  computedConstantUnit(index: number): string
+  computedConstantAsArray(index: number): number[]
+  algebraicCount: number
+  algebraicName(index: number): string
+  algebraicUnit(index: number): string
+  algebraicAsArray(index: number): number[]
 }
 
 export class SEDInstanceTask {
@@ -229,13 +282,143 @@ export class SEDInstanceTask {
     this._index = index
 
     if (wasmVersion()) {
-      this._wasmSEDInstanceTask = wasmSEDInstance.task(index)
+      this._wasmSEDInstanceTask = vue.toRaw(wasmSEDInstance).task(index)
     }
+  }
+
+  voiName(): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskVoiName(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.voiName
   }
 
   voiUnit(): string {
     return cppVersion()
       ? _locAPI.sedInstanceTaskVoiUnit(this._filePath, this._index)
       : this._wasmSEDInstanceTask.voiUnit
+  }
+
+  voi(): number[] {
+    return cppVersion() ? _locAPI.sedInstanceTaskVoi(this._filePath, this._index) : this._wasmSEDInstanceTask.voiAsArray
+  }
+
+  stateCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskStateCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.stateCount
+  }
+
+  stateName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskStateName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.stateName(index)
+  }
+
+  stateUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskStateUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.stateUnit(index)
+  }
+
+  state(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskState(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.stateAsArray(index)
+  }
+
+  rateCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskRateCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.rateCount
+  }
+
+  rateName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskRateName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.rateName(index)
+  }
+
+  rateUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskRateUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.rateUnit(index)
+  }
+
+  rate(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskRate(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.rateAsArray(index)
+  }
+
+  constantCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskConstantCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.constantCount
+  }
+
+  constantName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskConstantName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.constantName(index)
+  }
+
+  constantUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskConstantUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.constantUnit(index)
+  }
+
+  constant(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskConstant(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.constantAsArray(index)
+  }
+
+  computedConstantCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskComputedConstantCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.computedConstantCount
+  }
+
+  computedConstantName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskComputedConstantName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.computedConstantName(index)
+  }
+
+  computedConstantUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskComputedConstantUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.computedConstantUnit(index)
+  }
+
+  computedConstant(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskComputedConstant(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.computedConstantAsArray(index)
+  }
+
+  algebraicCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskAlgebraicCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.algebraicCount
+  }
+
+  algebraicName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskAlgebraicName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.algebraicName(index)
+  }
+
+  algebraicUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskAlgebraicUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.algebraicUnit(index)
+  }
+
+  algebraic(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskAlgebraic(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.algebraicAsArray(index)
   }
 }

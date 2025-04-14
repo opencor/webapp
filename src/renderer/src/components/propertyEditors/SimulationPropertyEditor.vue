@@ -1,11 +1,11 @@
 <template>
-  <PropertyEditorComponent name="Simulation" :properties="properties" />
+  <PropertyEditor name="Simulation" :properties="properties" @propertyUpdated="onPropertyUpdated" />
 </template>
 
 <script setup lang="ts">
 import * as vue from 'vue'
 
-import * as locAPI from '../../../libopencor/locAPI'
+import * as locAPI from '../../../../libopencor/locAPI'
 
 const props = defineProps<{
   file: locAPI.File
@@ -33,4 +33,14 @@ const properties = vue.ref([
     unit: voiUnit
   }
 ])
+
+function onPropertyUpdated(index, value): void {
+  if (index === 0) {
+    sedSimulationUniformTimeCourse.setOutputStartTime(value)
+  } else if (index === 1) {
+    sedSimulationUniformTimeCourse.setOutputEndTime(value)
+  } else if (index === 2) {
+    sedSimulationUniformTimeCourse.setNumberOfSteps((properties.value[1].value - properties.value[0].value) / value)
+  }
+}
 </script>

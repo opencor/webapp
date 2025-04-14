@@ -23,6 +23,11 @@ int32_t valueToInt32(const Napi::Value &pValue)
     return pValue.As<Napi::Number>().Int32Value();
 }
 
+double valueToDouble(const Napi::Value &pValue)
+{
+    return pValue.As<Napi::Number>().DoubleValue();
+}
+
 void untrackFileData(libOpenCOR::FilePtr pFile)
 {
     fileData.erase(pFile);
@@ -43,4 +48,15 @@ napi_value issues(const Napi::CallbackInfo &pInfo, libOpenCOR::IssuePtrs pIssues
     }
 
     return res;
+}
+
+napi_value doublesToNapiArray(const Napi::Env &pEnv, const std::vector<double> &pDoubles)
+{
+    auto array = Napi::Array::New(pEnv, pDoubles.size());
+
+    for (size_t i = 0; i < pDoubles.size(); ++i) {
+        array[i] = Napi::Number::New(pEnv, pDoubles[i]);
+    }
+
+    return array;
 }

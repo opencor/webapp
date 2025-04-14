@@ -24,6 +24,18 @@ export function isMobile(): boolean {
   return uaParser.getDevice().type === 'mobile'
 }
 
+// Some constants to know whether the operating system uses light mode or dark mode.
+
+const prefersColorScheme = window.matchMedia('(prefers-color-scheme: light)')
+
+export const isLightMode = vue.ref(prefersColorScheme.matches)
+export const isDarkMode = vue.ref(!prefersColorScheme.matches)
+
+prefersColorScheme.addEventListener('change', (event) => {
+  isLightMode.value = event.matches
+  isDarkMode.value = !event.matches
+})
+
 // A method to determine whether the Ctrl or Cmd key is pressed, depending on the operating system.
 
 export function isCtrlOrCmd(event: KeyboardEvent): boolean {
@@ -100,30 +112,32 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
   })
 }
 
-// A method to track the resizing of a given element and, as a result, update the available viewport height, i.e. the
-// viewport height minus that of our main menu and that of our file tabs.
+// A method to track the height of a given element.
 
-export function trackElementResizing(id: string): void {
+export function trackElementHeight(id: string): void {
   vue.onMounted(() => {
     const element = document.getElementById(id)
 
     if (element !== null) {
       const observer = new ResizeObserver(() => {
-        function elementHeight(id: string): string {
-          const element = document.getElementById(id)
-          const res = element !== null ? window.getComputedStyle(element).height : '0px'
+        let elementHeight = window.getComputedStyle(element).height
 
-          if (res === 'auto') {
-            return '0px'
-          }
-
-          return res
+        if (elementHeight === '' || elementHeight === 'auto') {
+          elementHeight = '0px'
         }
 
-        document.documentElement.style.setProperty(
-          '--available-viewport-height',
-          'calc(100vh - ' + elementHeight('mainMenu') + ' - ' + elementHeight('fileTablist') + ')'
-        )
+        const cssVariableName =
+          '--' +
+          id
+            .split('_')[0]
+            .replace(/([a-z])([A-Z])/g, '$1-$2')
+            .toLowerCase() +
+          '-height'
+        const oldElementHeight = window.getComputedStyle(document.documentElement).getPropertyValue(cssVariableName)
+
+        if (oldElementHeight === '' || (elementHeight !== '0px' && oldElementHeight !== elementHeight)) {
+          document.documentElement.style.setProperty(cssVariableName, elementHeight)
+        }
       })
 
       observer.observe(element)
@@ -133,4 +147,37 @@ export function trackElementResizing(id: string): void {
       })
     }
   })
+}
+
+// A method to format a given number of milliseconds into a string.
+
+export function formatTime(time: number): string {
+  const ms = Math.floor(time % 1000)
+  const s = Math.floor((time / 1000) % 60)
+  const m = Math.floor((time / (1000 * 60)) % 60)
+  const h = Math.floor((time / (1000 * 60 * 60)) % 24)
+  const d = Math.floor((time / (1000 * 60 * 60 * 24)) % 24)
+  let res = ''
+
+  if (d !== 0 || ((h !== 0 || m !== 0 || s !== 0 || ms !== 0) && res !== '')) {
+    res += (res === '' ? '' : ' ') + d.toString() + 'd'
+  }
+
+  if (h !== 0 || ((m !== 0 || s !== 0 || ms !== 0) && res !== '')) {
+    res += (res === '' ? '' : ' ') + h.toString() + 'h'
+  }
+
+  if (m !== 0 || ((s !== 0 || ms !== 0) && res !== '')) {
+    res += (res === '' ? '' : ' ') + m.toString() + 'm'
+  }
+
+  if (s !== 0 || (ms !== 0 && res !== '')) {
+    res += (res === '' ? '' : ' ') + s.toString() + 's'
+  }
+
+  if (ms !== 0 || res === '') {
+    res += (res === '' ? '' : ' ') + ms.toString() + 'ms'
+  }
+
+  return res
 }

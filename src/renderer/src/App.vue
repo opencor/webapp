@@ -2,9 +2,9 @@
   <div class="flex flex-col h-screen overflow-hidden">
     <div v-show="!electronAPI">
       <MainMenu
-        :hasFiles="hasFilesRef"
+        :hasFiles="hasFiles"
         @about="onAbout"
-        @open="($refs.filesRef as HTMLInputElement).click()"
+        @open="($refs.files as HTMLInputElement).click()"
         @openRemote="openRemoteVisible = true"
         @close="onClose"
         @closeAll="onCloseAll"
@@ -12,13 +12,13 @@
       />
     </div>
     <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
-      <ContentsComponent ref="contentsRef" />
+      <ContentsComponent ref="contents" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
   </div>
-  <input ref="filesRef" type="file" multiple style="display: none" @change="onChange" />
+  <input ref="files" type="file" multiple style="display: none" @change="onChange" />
   <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
   <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
@@ -38,7 +38,7 @@ import * as common from './common'
 import IContentsComponent from './components/ContentsComponent.vue'
 
 const toast = useToast()
-const contentsRef = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
+const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 
 // Handle an action.
 
@@ -94,11 +94,11 @@ function enableDisableUi(enable: boolean): void {
 
 // Enable/disable some menu items.
 
-const hasFilesRef = vue.computed(() => {
-  return contentsRef.value?.hasFiles() ?? false
+const hasFiles = vue.computed(() => {
+  return contents.value?.hasFiles() ?? false
 })
 
-vue.watch(hasFilesRef, (hasFiles) => {
+vue.watch(hasFiles, (hasFiles) => {
   electronAPI?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
 })
 
@@ -163,8 +163,8 @@ function openFile(fileOrFilePath: string | File): void {
 
   const filePath = common.filePath(fileOrFilePath)
 
-  if (contentsRef.value?.hasFile(filePath) ?? false) {
-    contentsRef.value?.selectFile(filePath)
+  if (contents.value?.hasFile(filePath) ?? false) {
+    contents.value?.selectFile(filePath)
 
     return
   }
@@ -193,7 +193,7 @@ function openFile(fileOrFilePath: string | File): void {
           life: TOAST_LIFE
         })
       } else {
-        contentsRef.value?.openFile(file)
+        contents.value?.openFile(file)
       }
 
       if (common.isRemoteFilePath(filePath)) {
@@ -280,7 +280,7 @@ electronAPI?.onClose(() => {
 })
 
 function onClose(): void {
-  contentsRef.value?.closeCurrentFile()
+  contents.value?.closeCurrentFile()
 }
 
 // Close all.
@@ -290,7 +290,7 @@ electronAPI?.onCloseAll(() => {
 })
 
 function onCloseAll(): void {
-  contentsRef.value?.closeAllFiles()
+  contents.value?.closeAllFiles()
 }
 
 // Reset all.
@@ -305,9 +305,9 @@ function onResetAll(): void {
   electronAPI?.resetAll()
 }
 
-// Track the size of our main menu.
+// Track the height of our main menu.
 
-common.trackElementResizing('mainMenu')
+common.trackElementHeight('mainMenu')
 
 // Things that need to be done when the component is mounted.
 

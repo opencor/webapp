@@ -1,57 +1,44 @@
 <template>
-  <BackgroundComponent v-show="files.length === 0" />
-  <Tabs v-show="files.length !== 0" id="fileTabs" v-model:value="activeFile" :scrollable="true" :selectOnFocus="true">
+  <BackgroundComponent v-show="fileTabs.length === 0" />
+  <Tabs
+    v-show="fileTabs.length !== 0"
+    id="fileTabs"
+    v-model:value="activeFile"
+    :scrollable="true"
+    :selectOnFocus="true"
+  >
     <TabList id="fileTablist" class="file-tablist">
-      <Tab v-for="file in files" :id="'tab_' + file.path()" :key="'tab_' + file.path()" :value="file.path()">
+      <Tab
+        v-for="fileTab in fileTabs"
+        :id="'tab_' + fileTab.file.path()"
+        :key="'tab_' + fileTab.file.path()"
+        :value="fileTab.file.path()"
+      >
         <div class="flex gap-2 items-center">
           <div>
             {{
-              file
+              fileTab.file
                 .path()
                 .split(/(\\|\/)/g)
                 .pop()
             }}
           </div>
-          <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(file.path())" />
+          <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
         </div>
       </Tab>
     </TabList>
     <TabPanels class="p-0!">
-      <TabPanel v-for="file in files" :key="'tabPanel_' + file.path()" :value="file.path()">
-        <ScrollPanel class="scroll-panel">
-          <Splitter v-if="file.issues().length === 0" class="border-none! h-full m-0" layout="vertical">
-            <SplitterPanel :size="89">
-              <Splitter>
-                <SplitterPanel class="ml-4 mr-4 mb-4" :size="25">
-                  <SimulationPropertyEditorComponent :file="vue.toRaw(file)" />
-                  <!--
-                  <SolversPropertyEditorComponent />
-                  <GraphsPropertyEditorComponent />
-                  <ParametersPropertyEditorComponent />
-                  -->
-                </SplitterPanel>
-                <SplitterPanel class="flex items-center justify-center" :size="75"> Panel 2 </SplitterPanel>
-              </Splitter>
-            </SplitterPanel>
-            <SplitterPanel class="flex items-center justify-center" :size="11"> Panel 3 </SplitterPanel>
-          </Splitter>
-          <div v-else class="issues-container">
-            <Fieldset legend="Issues">
-              <div
-                v-for="(issue, index) in file.issues()"
-                :key="'issue_' + issue.type + '_' + issue.description"
-                :class="index > 0 ? 'mt-4!' : ''"
-              >
-                <Message v-if="issue.type === locAPI.IssueType.Error" severity="error" icon="pi pi-times-circle">
-                  {{ issue.description }}
-                </Message>
-                <Message v-else severity="warn" icon="pi pi-exclamation-triangle">
-                  {{ issue.description }}
-                </Message>
-              </div>
-            </Fieldset>
-          </div>
-        </ScrollPanel>
+      <TabPanel
+        v-for="(fileTab, index) in fileTabs"
+        :key="'tabPanel_' + fileTab.file.path()"
+        :value="fileTab.file.path()"
+      >
+        <SimulationExperimentView
+          v-if="fileTab.file.issues().length === 0"
+          v-model="fileTabs[index]"
+          :isActiveFile="fileTab.file.path() === activeFile"
+        />
+        <IssuesView v-else :issues="fileTab.file.issues()" />
       </TabPanel>
     </TabPanels>
   </Tabs>
@@ -66,7 +53,12 @@ import * as locAPI from '../../../libopencor/locAPI'
 
 import * as common from '../common'
 
-const files = vue.ref<locAPI.File[]>([])
+export interface IFileTab {
+  file: locAPI.File
+  consoleContents: string
+}
+
+const fileTabs = vue.ref<IFileTab[]>([])
 const activeFile = vue.ref<string>('')
 
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
@@ -83,17 +75,20 @@ export interface IContentsComponent {
 function openFile(file: locAPI.File): void {
   const filePath = file.path()
 
-  files.value.splice(files.value.findIndex((file) => file.path() === activeFile.value) + 1, 0, file)
+  fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value) + 1, 0, {
+    file,
+    consoleContents: `<b>${file.path()}</b>`
+  })
 
   selectFile(filePath)
 }
 
 function hasFile(filePath: string): boolean {
-  return files.value.find((file) => file.path() === filePath) !== undefined
+  return fileTabs.value.find((fileTab) => fileTab.file.path() === filePath) !== undefined
 }
 
 function hasFiles(): boolean {
-  return files.value.length > 0
+  return fileTabs.value.length > 0
 }
 
 function selectFile(filePath: string): void {
@@ -119,28 +114,28 @@ function selectFile(filePath: string): void {
 }
 
 function selectNextFile(): void {
-  const activeFileIndex = files.value.findIndex((file) => file.path() === activeFile.value)
-  const nextFileIndex = (activeFileIndex + 1) % files.value.length
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
+  const nextFileIndex = (activeFileIndex + 1) % fileTabs.value.length
 
-  selectFile(files.value[nextFileIndex].path())
+  selectFile(fileTabs.value[nextFileIndex].file.path())
 }
 
 function selectPreviousFile(): void {
-  const activeFileIndex = files.value.findIndex((file) => file.path() === activeFile.value)
-  const nextFileIndex = (activeFileIndex - 1 + files.value.length) % files.value.length
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
+  const nextFileIndex = (activeFileIndex - 1 + fileTabs.value.length) % fileTabs.value.length
 
-  selectFile(files.value[nextFileIndex].path())
+  selectFile(fileTabs.value[nextFileIndex].file.path())
 }
 
 function closeFile(filePath: string): void {
   locAPI.fileManager.unmanage(filePath)
 
-  const activeFileIndex = files.value.findIndex((file) => file.path() === filePath)
+  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath)
 
-  files.value.splice(activeFileIndex, 1)
+  fileTabs.value.splice(activeFileIndex, 1)
 
-  if (activeFile.value === filePath && files.value.length > 0) {
-    selectFile(files.value[Math.min(activeFileIndex, files.value.length - 1)].path())
+  if (activeFile.value === filePath && fileTabs.value.length > 0) {
+    selectFile(fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].file.path())
   }
 }
 
@@ -149,20 +144,20 @@ function closeCurrentFile(): void {
 }
 
 function closeAllFiles(): void {
-  while (files.value.length > 0) {
+  while (fileTabs.value.length > 0) {
     closeCurrentFile()
   }
 }
 
-// Track our number of file tablist.
+// Track the height of our file tablist.
 
-common.trackElementResizing('fileTablist')
+common.trackElementHeight('fileTablist')
 
 // Keyboard shortcuts.
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (files.value.length === 0) {
+    if (fileTabs.value.length === 0) {
       return
     }
 
@@ -184,14 +179,9 @@ if (!common.isMobile()) {
   border-bottom: 1px solid var(--p-primary-color);
 }
 
-.issues-container {
-  padding: var(--p-tabs-tabpanel-padding);
-}
-
 .p-tab {
   padding: 0.25rem 0.5rem;
   border-right: 1px solid var(--p-content-border-color);
-  outline: none;
 }
 
 .p-tab:first-of-type {
@@ -221,12 +211,6 @@ if (!common.isMobile()) {
   display: none;
 }
 
-:deep(.p-tablist-prev-button),
-:deep(.p-tablist-next-button),
-:deep(.p-tabpanel) {
-  outline: none !important;
-}
-
 .remove-button {
   padding: 0.15rem;
   font-size: 0.75rem;
@@ -242,9 +226,5 @@ if (!common.isMobile()) {
   .remove-button:hover {
     background-color: var(--p-red-400);
   }
-}
-
-.scroll-panel {
-  height: var(--available-viewport-height);
 }
 </style>
