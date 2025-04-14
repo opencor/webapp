@@ -254,6 +254,10 @@ interface IWasmSEDInstanceTask {
   stateName(index: number): string
   stateUnit(index: number): string
   stateAsArray(index: number): number[]
+  rateCount: number
+  rateName(index: number): string
+  rateUnit(index: number): string
+  rateAsArray(index: number): number[]
 }
 
 export class SEDInstanceTask {
@@ -308,5 +312,29 @@ export class SEDInstanceTask {
     return cppVersion()
       ? _locAPI.sedInstanceTaskState(this._filePath, this._index, index)
       : this._wasmSEDInstanceTask.stateAsArray(index)
+  }
+
+  rateCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskRateCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.rateCount
+  }
+
+  rateName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskRateName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.rateName(index)
+  }
+
+  rateUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskRateUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.rateUnit(index)
+  }
+
+  rate(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskRate(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.rateAsArray(index)
   }
 }

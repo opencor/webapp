@@ -33,3 +33,7 @@ napi_value sedInstanceTaskStateCount(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceTaskStateName(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceTaskStateUnit(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceTaskState(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceTaskRateCount(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceTaskRateName(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceTaskRateUnit(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceTaskRate(const Napi::CallbackInfo &pInfo);

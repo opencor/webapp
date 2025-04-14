@@ -91,8 +91,6 @@ function onRun(): void {
   option.value.series[0].data = xData.map((x, index) => {
     return [x, yData[index]]
   })
-
-  console.log('stateCount:', sedInstanceTask.stateCount())
 }
 
 // Track the height of our file tablist toolbar.

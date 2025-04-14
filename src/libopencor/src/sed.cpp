@@ -199,3 +199,35 @@ napi_value sedInstanceTaskState(const Napi::CallbackInfo &pInfo)
 
     return doublesToNapiArray(pInfo.Env(), task->state(valueToInt32(pInfo[2])));
 }
+
+napi_value sedInstanceTaskRateCount(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::Number::New(pInfo.Env(), task->rateCount());
+}
+
+napi_value sedInstanceTaskRateName(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::String::New(pInfo.Env(), task->rateName(valueToInt32(pInfo[2])));
+}
+
+napi_value sedInstanceTaskRateUnit(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::String::New(pInfo.Env(), task->rateUnit(valueToInt32(pInfo[2])));
+}
+
+napi_value sedInstanceTaskRate(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return doublesToNapiArray(pInfo.Env(), task->rate(valueToInt32(pInfo[2])));
+}

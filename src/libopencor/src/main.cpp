@@ -52,6 +52,10 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskStateName"), Napi::Function::New(pEnv, sedInstanceTaskStateName));
     pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskStateUnit"), Napi::Function::New(pEnv, sedInstanceTaskStateUnit));
     pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskState"), Napi::Function::New(pEnv, sedInstanceTaskState));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskRateCount"), Napi::Function::New(pEnv, sedInstanceTaskRateCount));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskRateName"), Napi::Function::New(pEnv, sedInstanceTaskRateName));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskRateUnit"), Napi::Function::New(pEnv, sedInstanceTaskRateUnit));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskRate"), Napi::Function::New(pEnv, sedInstanceTaskRate));
 
     return pExports;
 }
