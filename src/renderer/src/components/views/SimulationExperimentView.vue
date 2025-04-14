@@ -16,6 +16,26 @@
                   <GraphsPropertyEditor />
                   <ParametersPropertyEditor />
                   -->
+            <Fieldset legend="X-axis">
+              <TreeSelect
+                v-model="xParameter"
+                filter
+                filterMode="lenient"
+                :options="parameters"
+                class="w-full"
+                @change="updatePlot()"
+              />
+            </Fieldset>
+            <Fieldset legend="Y-axis">
+              <TreeSelect
+                v-model="yParameter"
+                filter
+                filterMode="lenient"
+                :options="parameters"
+                class="w-full"
+                @change="updatePlot()"
+              />
+            </Fieldset>
           </SplitterPanel>
           <SplitterPanel :size="75">
             <v-chart autoresize :option="option" :theme="theme" />
@@ -56,6 +76,44 @@ const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
 
 const simulationProperties = vue.ref<InstanceType<typeof ISimulationPropertyEditor> | null>(null)
 
+const sedInstance = fileTab.file.sedInstance()
+const sedInstanceTask = sedInstance.task(0)
+
+interface IParameter {
+  key: string
+  label: string
+}
+
+const parameters = vue.ref<IParameter[]>([])
+const xParameter = vue.ref({ [sedInstanceTask.voiName()]: true })
+const yParameter = vue.ref({ [sedInstanceTask.stateName(0)]: true })
+
+function addParameter(param: string): void {
+  parameters.value.push({ key: param, label: param })
+}
+
+addParameter(sedInstanceTask.voiName())
+
+for (let i = 0; i < sedInstanceTask.stateCount(); i++) {
+  addParameter(sedInstanceTask.stateName(i))
+}
+
+for (let i = 0; i < sedInstanceTask.rateCount(); i++) {
+  addParameter(sedInstanceTask.rateName(i))
+}
+
+for (let i = 0; i < sedInstanceTask.constantCount(); i++) {
+  addParameter(sedInstanceTask.constantName(i))
+}
+
+for (let i = 0; i < sedInstanceTask.computedConstantCount(); i++) {
+  addParameter(sedInstanceTask.computedConstantName(i))
+}
+
+for (let i = 0; i < sedInstanceTask.algebraicCount(); i++) {
+  addParameter(sedInstanceTask.algebraicName(i))
+}
+
 function variableName(name: string): string {
   return name.replace(/.*\//, '')
 }
@@ -63,7 +121,6 @@ function variableName(name: string): string {
 function onRun(): void {
   // Run the instance and output the simulation time to the console.
 
-  const sedInstance = fileTab.file.sedInstance()
   const simulationTime = sedInstance.run()
 
   fileTab.consoleContents =
@@ -82,14 +139,93 @@ function onRun(): void {
       console.error('Error scrolling to the bottom of the console:', error)
     })
 
-  const sedInstanceTask = sedInstance.task(0)
-  const xData = sedInstanceTask.voi()
-  const yData = sedInstanceTask.state(0)
+  updatePlot()
+}
 
-  option.value.xAxis.name = variableName(sedInstanceTask.voiName()) + ' (' + sedInstanceTask.voiUnit() + ')'
-  option.value.yAxis.name = variableName(sedInstanceTask.stateName(0)) + ' (' + sedInstanceTask.stateUnit(0) + ')'
-  option.value.series[0].data = xData.map((x, index) => {
-    return [x, yData[index]]
+function updatePlot() {
+  interface IGraphParameter {
+    name: string
+    unit: string
+    data: number[]
+  }
+
+  function checkGraphParameter(param: string): IGraphParameter | undefined {
+    if (param === sedInstanceTask.voiName()) {
+      return {
+        name: sedInstanceTask.voiName(),
+        unit: sedInstanceTask.voiUnit(),
+        data: sedInstanceTask.voi()
+      }
+    }
+
+    for (let i = 0; i < sedInstanceTask.stateCount(); i++) {
+      if (param === sedInstanceTask.stateName(i)) {
+        return {
+          name: sedInstanceTask.stateName(i),
+          unit: sedInstanceTask.stateUnit(i),
+          data: sedInstanceTask.state(i)
+        }
+      }
+    }
+
+    for (let i = 0; i < sedInstanceTask.rateCount(); i++) {
+      if (param === sedInstanceTask.rateName(i)) {
+        return {
+          name: sedInstanceTask.rateName(i),
+          unit: sedInstanceTask.rateUnit(i),
+          data: sedInstanceTask.rate(i)
+        }
+      }
+    }
+
+    for (let i = 0; i < sedInstanceTask.constantCount(); i++) {
+      if (param === sedInstanceTask.constantName(i)) {
+        return {
+          name: sedInstanceTask.constantName(i),
+          unit: sedInstanceTask.constantUnit(i),
+          data: sedInstanceTask.constant(i)
+        }
+      }
+    }
+
+    for (let i = 0; i < sedInstanceTask.computedConstantCount(); i++) {
+      if (param === sedInstanceTask.computedConstantName(i)) {
+        return {
+          name: sedInstanceTask.computedConstantName(i),
+          unit: sedInstanceTask.computedConstantUnit(i),
+          data: sedInstanceTask.computedConstant(i)
+        }
+      }
+    }
+
+    for (let i = 0; i < sedInstanceTask.algebraicCount(); i++) {
+      if (param === sedInstanceTask.algebraicName(i)) {
+        return {
+          name: sedInstanceTask.algebraicName(i),
+          unit: sedInstanceTask.algebraicUnit(i),
+          data: sedInstanceTask.algebraic(i)
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  const xGraphParam = checkGraphParameter(Object.keys(xParameter.value)[0])
+  const yGraphParam = checkGraphParameter(Object.keys(yParameter.value)[0])
+
+  if (xGraphParam === undefined || yGraphParam === undefined) {
+    option.value.xAxis.name = 'x'
+    option.value.yAxis.name = 'y'
+    option.value.series[0].data = []
+
+    return
+  }
+
+  option.value.xAxis.name = variableName(xGraphParam.name) + ' (' + xGraphParam.unit + ')'
+  option.value.yAxis.name = variableName(yGraphParam.name) + ' (' + yGraphParam.unit + ')'
+  option.value.series[0].data = xGraphParam.data.map((x, index) => {
+    return [x, yGraphParam.data[index]]
   })
 }
 
