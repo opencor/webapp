@@ -258,6 +258,10 @@ interface IWasmSEDInstanceTask {
   rateName(index: number): string
   rateUnit(index: number): string
   rateAsArray(index: number): number[]
+  constantCount: number
+  constantName(index: number): string
+  constantUnit(index: number): string
+  constantAsArray(index: number): number[]
 }
 
 export class SEDInstanceTask {
@@ -336,5 +340,29 @@ export class SEDInstanceTask {
     return cppVersion()
       ? _locAPI.sedInstanceTaskRate(this._filePath, this._index, index)
       : this._wasmSEDInstanceTask.rateAsArray(index)
+  }
+
+  constantCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskConstantCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.constantCount
+  }
+
+  constantName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskConstantName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.constantName(index)
+  }
+
+  constantUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskConstantUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.constantUnit(index)
+  }
+
+  constant(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskConstant(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.constantAsArray(index)
   }
 }
