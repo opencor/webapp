@@ -56,6 +56,10 @@ const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
 
 const simulationProperties = vue.ref<InstanceType<typeof ISimulationPropertyEditor> | null>(null)
 
+function variableName(name: string): string {
+  return name.replace(/.*\//, '')
+}
+
 function onRun(): void {
   // Run the instance and output the simulation time to the console.
 
@@ -82,6 +86,8 @@ function onRun(): void {
   const xData = sedInstanceTask.voi()
   const yData = sedInstanceTask.state(0)
 
+  option.value.xAxis.name = variableName(sedInstanceTask.voiName()) + ' (' + sedInstanceTask.voiUnit() + ')'
+  option.value.yAxis.name = variableName(sedInstanceTask.stateName(0)) + ' (' + sedInstanceTask.stateUnit(0) + ')'
   option.value.series[0].data = xData.map((x, index) => {
     return [x, yData[index]]
   })

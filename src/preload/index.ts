@@ -129,8 +129,13 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
 
   // SedInstanceTask API.
 
+  sedInstanceTaskVoiName: (path: string, index: number) => loc.sedInstanceTaskVoiName(path, index),
   sedInstanceTaskVoiUnit: (path: string, index: number) => loc.sedInstanceTaskVoiUnit(path, index),
   sedInstanceTaskVoi: (path: string, index: number) => loc.sedInstanceTaskVoi(path, index),
+  sedInstanceTaskStateName: (path: string, index: number, stateIndex: number) =>
+    loc.sedInstanceTaskStateName(path, index, stateIndex),
+  sedInstanceTaskStateUnit: (path: string, index: number, stateIndex: number) =>
+    loc.sedInstanceTaskStateUnit(path, index, stateIndex),
   sedInstanceTaskState: (path: string, index: number, stateIndex: number) =>
     loc.sedInstanceTaskState(path, index, stateIndex)
 })

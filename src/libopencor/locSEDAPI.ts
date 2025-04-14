@@ -247,8 +247,11 @@ export class SEDInstance {
 }
 
 interface IWasmSEDInstanceTask {
+  voiName: string
   voiUnit: string
   voiAsArray: number[]
+  stateName(index: number): string
+  stateUnit(index: number): string
   stateAsArray(index: number): number[]
 }
 
@@ -266,6 +269,12 @@ export class SEDInstanceTask {
     }
   }
 
+  voiName(): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskVoiName(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.voiName
+  }
+
   voiUnit(): string {
     return cppVersion()
       ? _locAPI.sedInstanceTaskVoiUnit(this._filePath, this._index)
@@ -274,6 +283,18 @@ export class SEDInstanceTask {
 
   voi(): number[] {
     return cppVersion() ? _locAPI.sedInstanceTaskVoi(this._filePath, this._index) : this._wasmSEDInstanceTask.voiAsArray
+  }
+
+  stateName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskStateName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.stateName(index)
+  }
+
+  stateUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskStateUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.stateUnit(index)
   }
 
   state(index: number): number[] {

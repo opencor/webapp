@@ -144,6 +144,14 @@ napi_value sedInstanceRun(const Napi::CallbackInfo &pInfo)
 
 // SedInstanceTask API.
 
+napi_value sedInstanceTaskVoiName(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::String::New(pInfo.Env(), task->voiName());
+}
+
 napi_value sedInstanceTaskVoiUnit(const Napi::CallbackInfo &pInfo)
 {
     auto sedInstance = valueToSedInstance(pInfo[0]);
@@ -158,6 +166,22 @@ napi_value sedInstanceTaskVoi(const Napi::CallbackInfo &pInfo)
     auto task = sedInstance->task(valueToInt32(pInfo[1]));
 
     return doublesToNapiArray(pInfo.Env(), task->voi());
+}
+
+napi_value sedInstanceTaskStateName(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::String::New(pInfo.Env(), task->stateName(valueToInt32(pInfo[2])));
+}
+
+napi_value sedInstanceTaskStateUnit(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::String::New(pInfo.Env(), task->stateUnit(valueToInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskState(const Napi::CallbackInfo &pInfo)
