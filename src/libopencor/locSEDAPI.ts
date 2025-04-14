@@ -266,6 +266,10 @@ interface IWasmSEDInstanceTask {
   computedConstantName(index: number): string
   computedConstantUnit(index: number): string
   computedConstantAsArray(index: number): number[]
+  algebraicCount: number
+  algebraicName(index: number): string
+  algebraicUnit(index: number): string
+  algebraicAsArray(index: number): number[]
 }
 
 export class SEDInstanceTask {
@@ -392,5 +396,29 @@ export class SEDInstanceTask {
     return cppVersion()
       ? _locAPI.sedInstanceTaskComputedConstant(this._filePath, this._index, index)
       : this._wasmSEDInstanceTask.computedConstantAsArray(index)
+  }
+
+  algebraicCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskAlgebraicCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.algebraicCount
+  }
+
+  algebraicName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskAlgebraicName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.algebraicName(index)
+  }
+
+  algebraicUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskAlgebraicUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.algebraicUnit(index)
+  }
+
+  algebraic(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskAlgebraic(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.algebraicAsArray(index)
   }
 }

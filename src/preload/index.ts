@@ -160,5 +160,12 @@ electron.contextBridge.exposeInMainWorld('locAPI', {
   sedInstanceTaskComputedConstantUnit: (path: string, index: number, computedConstantIndex: number) =>
     loc.sedInstanceTaskComputedConstantUnit(path, index, computedConstantIndex),
   sedInstanceTaskComputedConstant: (path: string, index: number, computedConstantIndex: number) =>
-    loc.sedInstanceTaskComputedConstant(path, index, computedConstantIndex)
+    loc.sedInstanceTaskComputedConstant(path, index, computedConstantIndex),
+  sedInstanceTaskAlgebraicCount: (path: string, index: number) => loc.sedInstanceTaskAlgebraicCount(path, index),
+  sedInstanceTaskAlgebraicName: (path: string, index: number, algebraicIndex: number) =>
+    loc.sedInstanceTaskAlgebraicName(path, index, algebraicIndex),
+  sedInstanceTaskAlgebraicUnit: (path: string, index: number, algebraicIndex: number) =>
+    loc.sedInstanceTaskAlgebraicUnit(path, index, algebraicIndex),
+  sedInstanceTaskAlgebraic: (path: string, index: number, algebraicIndex: number) =>
+    loc.sedInstanceTaskAlgebraic(path, index, algebraicIndex)
 })
