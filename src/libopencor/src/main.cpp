@@ -60,6 +60,10 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskConstantName"), Napi::Function::New(pEnv, sedInstanceTaskConstantName));
     pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskConstantUnit"), Napi::Function::New(pEnv, sedInstanceTaskConstantUnit));
     pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskConstant"), Napi::Function::New(pEnv, sedInstanceTaskConstant));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskComputedConstantCount"), Napi::Function::New(pEnv, sedInstanceTaskComputedConstantCount));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskComputedConstantName"), Napi::Function::New(pEnv, sedInstanceTaskComputedConstantName));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskComputedConstantUnit"), Napi::Function::New(pEnv, sedInstanceTaskComputedConstantUnit));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceTaskComputedConstant"), Napi::Function::New(pEnv, sedInstanceTaskComputedConstant));
 
     return pExports;
 }

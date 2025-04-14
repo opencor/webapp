@@ -263,3 +263,35 @@ napi_value sedInstanceTaskConstant(const Napi::CallbackInfo &pInfo)
 
     return doublesToNapiArray(pInfo.Env(), task->constant(valueToInt32(pInfo[2])));
 }
+
+napi_value sedInstanceTaskComputedConstantCount(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::Number::New(pInfo.Env(), task->computedConstantCount());
+}
+
+napi_value sedInstanceTaskComputedConstantName(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::String::New(pInfo.Env(), task->computedConstantName(valueToInt32(pInfo[2])));
+}
+
+napi_value sedInstanceTaskComputedConstantUnit(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return Napi::String::New(pInfo.Env(), task->computedConstantUnit(valueToInt32(pInfo[2])));
+}
+
+napi_value sedInstanceTaskComputedConstant(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+
+    return doublesToNapiArray(pInfo.Env(), task->computedConstant(valueToInt32(pInfo[2])));
+}

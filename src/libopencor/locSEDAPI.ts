@@ -262,6 +262,10 @@ interface IWasmSEDInstanceTask {
   constantName(index: number): string
   constantUnit(index: number): string
   constantAsArray(index: number): number[]
+  computedConstantCount: number
+  computedConstantName(index: number): string
+  computedConstantUnit(index: number): string
+  computedConstantAsArray(index: number): number[]
 }
 
 export class SEDInstanceTask {
@@ -364,5 +368,29 @@ export class SEDInstanceTask {
     return cppVersion()
       ? _locAPI.sedInstanceTaskConstant(this._filePath, this._index, index)
       : this._wasmSEDInstanceTask.constantAsArray(index)
+  }
+
+  computedConstantCount(): number {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskComputedConstantCount(this._filePath, this._index)
+      : this._wasmSEDInstanceTask.computedConstantCount
+  }
+
+  computedConstantName(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskComputedConstantName(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.computedConstantName(index)
+  }
+
+  computedConstantUnit(index: number): string {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskComputedConstantUnit(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.computedConstantUnit(index)
+  }
+
+  computedConstant(index: number): number[] {
+    return cppVersion()
+      ? _locAPI.sedInstanceTaskComputedConstant(this._filePath, this._index, index)
+      : this._wasmSEDInstanceTask.computedConstantAsArray(index)
   }
 }

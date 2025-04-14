@@ -41,3 +41,7 @@ napi_value sedInstanceTaskConstantCount(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceTaskConstantName(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceTaskConstantUnit(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceTaskConstant(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceTaskComputedConstantCount(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceTaskComputedConstantName(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceTaskComputedConstantUnit(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceTaskComputedConstant(const Napi::CallbackInfo &pInfo);
