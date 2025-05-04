@@ -15,9 +15,8 @@ jobs:
         include:
           - name: Windows (Intel)
             os: windows-2022
-          #---OPENCOR--- The below is to be enabled once GitHub Actions has Windows ARM runners.
-          # - name: Windows (ARM)
-          #   os: windows-2022
+          - name: Windows (ARM)
+            os: windows-11-arm
           - name: Linux (Intel)
             os: ubuntu-22.04
           - name: Linux (ARM)
