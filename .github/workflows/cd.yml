@@ -82,6 +82,11 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: ./dist/OpenCOR-*.*
+      - name: Release OpenCOR
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./build/OpenCOR-*
   web_app:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
