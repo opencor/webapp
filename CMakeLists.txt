@@ -10,7 +10,7 @@ endforeach()
 
 # Project details.
 
-project(libOpenCOR VERSION 2025.04.08)
+project(libOpenCOR VERSION 20250508)
 
 # Enable C++20.
 
@@ -57,7 +57,7 @@ else()
     endif()
 endif()
 
-set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${PLATFORM}${ARCHITECTURE}-Static${MODE})
+set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION}${PLATFORM}${ARCHITECTURE}-Static${MODE})
 set(LIBOPENCOR_FILE_NAME ${LIBOPENCOR_FILE_NAME_WE}${EXTENSION})
 
 file(DOWNLOAD https://opencor.ws/libopencor/downloads/${LIBOPENCOR_FILE_NAME}
@@ -167,7 +167,7 @@ string(TIMESTAMP CURRENT_YEAR "%Y")
 string(TIMESTAMP CURRENT_MONTH "%m")
 string(TIMESTAMP CURRENT_DAY "%d")
 
-set(VERSION "${CURRENT_YEAR}.${CURRENT_MONTH}.${CURRENT_DAY}")
+set(VERSION "${CURRENT_YEAR}${CURRENT_MONTH}${CURRENT_DAY}")
 
 configure_file(src/main/assets/splashscreen.html.in
                ${CMAKE_BINARY_DIR}/../../out/splashscreen.html)
