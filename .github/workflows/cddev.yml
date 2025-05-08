@@ -6,6 +6,82 @@ on:
   workflow_dispatch:
 
 jobs:
+  packages:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows (Intel)
+            os: windows-2022
+          - name: Windows (ARM)
+            os: windows-11-arm
+          - name: Linux (Intel)
+            os: ubuntu-22.04
+          - name: Linux (ARM)
+            os: ubuntu-22.04-arm
+          - name: macOS (Intel)
+            os: macos-13
+          - name: macOS (ARM)
+            os: macos-14
+    env:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      WINDOWS_CSC_LINK: EVCertificate.pfx
+      WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.EV_CERTIFICATE_PASSWORD }}
+      EV_CERTIFICATE_BASE64: ${{ secrets.EV_CERTIFICATE_BASE64 }}
+      MACOS_CSC_LINK: DeveloperIDApplicationCertificate.p12
+      MACOS_CSC_KEY_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD }}
+      DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 }}
+    steps:
+      - name: Set the timezone to New Zealand
+        uses: szenius/set-timezone@v2.0
+        with:
+          timezoneWindows: 'New Zealand Standard Time'
+          timezoneLinux: 'Pacific/Auckland'
+          timezoneMacos: 'Pacific/Auckland'
+      - name: Check out OpenCOR
+        uses: actions/checkout@v4
+      - name: Retrieve the EV certificate (Windows only)
+        if: ${{ (matrix.name == 'Windows (Intel)') || (matrix.name == 'Windows (ARM)') }}
+        shell: bash
+        run: |
+          echo "CSC_LINK=$(echo $WINDOWS_CSC_LINK)" >> $GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=$(echo $WINDOWS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
+          echo -n $EV_CERTIFICATE_BASE64 | base64 -d > $WINDOWS_CSC_LINK
+      - name: Retrieve the Developer ID Application certificates (macOS only)
+        if: ${{ (matrix.name == 'macOS (Intel)') || (matrix.name == 'macOS (ARM)') }}
+        run: |
+          echo "CSC_LINK=$(echo $MACOS_CSC_LINK)" >> $GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=$(echo $MACOS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
+          echo -n $DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 | base64 -d > $MACOS_CSC_LINK
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: Install libopenjp2-tools (Linux ARM only)
+        if: matrix.name == 'Linux (ARM)'
+        run: |
+          sudo apt update
+          sudo apt install libopenjp2-tools
+      - name: OpenCOR dependencies
+        run: pnpm install
+      - name: Build libOpenCOR
+        run: pnpm libopencor
+      - name: Package OpenCOR
+        run: pnpm package
+      - name: Remove blockmap files
+        shell: bash
+        run: find ./dist -name '*.blockmap' -delete
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ./dist/OpenCOR-*.*
   web_app:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
