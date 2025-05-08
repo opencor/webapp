@@ -167,7 +167,7 @@ string(TIMESTAMP CURRENT_YEAR "%Y")
 string(TIMESTAMP CURRENT_MONTH "%m")
 string(TIMESTAMP CURRENT_DAY "%d")
 
-set(VERSION "${CURRENT_YEAR}.${CURRENT_MONTH}.${CURRENT_DAY}")
+set(VERSION "${CURRENT_YEAR}${CURRENT_MONTH}${CURRENT_DAY}")
 
 configure_file(src/main/assets/splashscreen.html.in
                ${CMAKE_BINARY_DIR}/../../out/splashscreen.html)
