@@ -1,18 +1,29 @@
 import fs from 'fs'
+import yaml from 'js-yaml'
 
 const now = new Date()
 const year = now.getFullYear()
 const month = now.getMonth() + 1
 const day = now.getDate()
-const version = `${year}${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}`
+const version = `${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`
 
-function updateVersion(packageJsonPath) {
-  const json = JSON.parse(fs.readFileSync(packageJsonPath))
+function updatePackageJsonFile(filePath) {
+  const contents = JSON.parse(fs.readFileSync(filePath))
 
-  json.version = version
+  contents.version = version
 
-  fs.writeFileSync(packageJsonPath, JSON.stringify(json, null, 2) + '\n')
+  fs.writeFileSync(filePath, JSON.stringify(contents, null, 2) + '\n')
 }
 
-updateVersion('package.json')
-updateVersion('src/renderer/package.json')
+updatePackageJsonFile('package.json')
+updatePackageJsonFile('src/renderer/package.json')
+
+function updateYamlFile(filePath) {
+  const contents = yaml.load(fs.readFileSync(filePath))
+
+  contents.buildVersion = version
+
+  fs.writeFileSync(filePath, yaml.dump(contents))
+}
+
+updateYamlFile('electron-builder.yml')

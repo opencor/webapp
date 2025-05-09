@@ -16,7 +16,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "20250508",
+  "version": "2025.05.09",
   "devDependencies": {
     "@primeuix/themes": "^1.1.1",
     "@primevue/auto-import-resolver": "^4.3.4",

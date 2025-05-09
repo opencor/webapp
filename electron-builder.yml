@@ -1,30 +1,22 @@
 appId: ws.opencor.app
+buildVersion: 2025.05.09
 productName: OpenCOR
 win:
-  artifactName: ${productName}-${version}-Windows-${arch}.${ext}
+  artifactName: ${productName}-${buildVersion}-Windows-${arch}.${ext}
   target:
     - nsis
     - zip
 nsis:
   uninstallDisplayName: ${productName}
 linux:
-  artifactName: ${productName}-${version}-Linux-${arch}.${ext}
+  artifactName: ${productName}-${buildVersion}-Linux-${arch}.${ext}
   category: Utility
   executableName: OpenCOR
   target:
     - AppImage
     - tar.gz
 mac:
-  # - Code signing:
-  #    - Generate a “Developer ID Application” certificate (this can only be done by the team’s account holder; see https://developer.apple.com/help/account/create-certificates/create-developer-id-certificates).
-  #    - For the certificate to be usable by other team members, the account holder must generate (and then share) a `.p12` file and its corresponding password:
-  #       - Double click on the `.cer` file (this will add the certificate to the `My Certificates` section of the `login` keychain).
-  #       - Export the certificate (by right clicking on it) and give it a password.
-  # - Notarisation:
-  #    - APPLE_ID: the team member’s email address used to login to https://account.apple.com/.
-  #    - APPLE_APP_SPECIFIC_PASSWORD: a password the team member generated using the App-Specific Passwords tool at https://account.apple.com/account/manage.
-  #    - APPLE_TEAM_ID: an id that can be found in the top right corner of https://developer.apple.com/account/resources/certificates/list.
-  artifactName: ${productName}-${version}-macOS-${arch}.${ext}
+  artifactName: ${productName}-${buildVersion}-macOS-${arch}.${ext}
   target:
     - dmg
     - pkg
