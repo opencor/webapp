@@ -10,7 +10,7 @@ endforeach()
 
 # Project details.
 
-project(libOpenCOR VERSION 2025.05.09)
+project(libOpenCOR VERSION 0.20250513.0)
 
 # Enable C++20.
 
@@ -57,7 +57,7 @@ else()
     endif()
 endif()
 
-set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${PLATFORM}${ARCHITECTURE}-Static${MODE})
+set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION}${PLATFORM}${ARCHITECTURE}-Static${MODE})
 set(LIBOPENCOR_FILE_NAME ${LIBOPENCOR_FILE_NAME_WE}${EXTENSION})
 
 file(DOWNLOAD https://opencor.ws/libopencor/downloads/${LIBOPENCOR_FILE_NAME}
@@ -155,19 +155,19 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Configure our splash screen.
 
-string(TIMESTAMP CURRENT_YEAR "%Y")
+string(TIMESTAMP YEAR "%Y")
 
-if(CURRENT_YEAR EQUAL 2025)
+if(YEAR EQUAL 2025)
     set(COPYRIGHT "2025")
 else()
-    set(COPYRIGHT "2025-${CURRENT_YEAR}")
+    set(COPYRIGHT "2025-${YEAR}")
 endif()
 
-string(TIMESTAMP CURRENT_YEAR "%Y")
-string(TIMESTAMP CURRENT_MONTH "%m")
-string(TIMESTAMP CURRENT_DAY "%d")
+string(TIMESTAMP YEAR "%Y")
+string(TIMESTAMP MONTH "%m")
+string(TIMESTAMP DAY "%d")
 
-set(VERSION "${CURRENT_YEAR}.${CURRENT_MONTH}.${CURRENT_DAY}")
+set(VERSION "0.${YEAR}${MONTH}${DAY}.0")
 
 configure_file(src/main/assets/splashscreen.html.in
                ${CMAKE_BINARY_DIR}/../../out/splashscreen.html)
