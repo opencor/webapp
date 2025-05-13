@@ -1,22 +1,21 @@
 appId: ws.opencor.app
-buildVersion: 2025.05.09
 productName: OpenCOR
 win:
-  artifactName: ${productName}-${buildVersion}-Windows-${arch}.${ext}
+  artifactName: ${productName}-${version}-Windows-${arch}.${ext}
   target:
     - nsis
     - zip
 nsis:
   uninstallDisplayName: ${productName}
 linux:
-  artifactName: ${productName}-${buildVersion}-Linux-${arch}.${ext}
+  artifactName: ${productName}-${version}-Linux-${arch}.${ext}
   category: Utility
   executableName: OpenCOR
   target:
     - AppImage
     - tar.gz
 mac:
-  artifactName: ${productName}-${buildVersion}-macOS-${arch}.${ext}
+  artifactName: ${productName}-${version}-macOS-${arch}.${ext}
   target:
     - dmg
     - pkg
