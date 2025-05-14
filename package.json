@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20250513.0",
+  "version": "0.20250514.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
@@ -55,12 +55,12 @@
     "@primevue/auto-import-resolver": "^4.3.4",
     "@tailwindcss/postcss": "^4.1.6",
     "@tailwindcss/vite": "^4.1.6",
-    "@types/node": "^22.15.17",
+    "@types/node": "^22.15.18",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.5.0",
     "@vue/tsconfig": "^0.7.0",
-    "@vueuse/core": "^13.1.0",
+    "@vueuse/core": "^13.2.0",
     "@wasm-fmt/clang-format": "^20.1.4",
     "autoprefixer": "^10.4.21",
     "cmake-js": "^7.3.1",
@@ -70,7 +70,7 @@
     "electron-settings": "^4.0.4",
     "electron-vite": "^3.1.0",
     "eslint": "^9.26.0",
-    "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.20250513.0.tgz",
+    "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.20250514.0.tgz",
     "node-addon-api": "^8.3.1",
     "prettier": "^3.5.3",
     "primeicons": "^7.0.0",
