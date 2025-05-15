@@ -1,47 +1,60 @@
 <template>
-  <BackgroundComponent v-show="fileTabs.length === 0" />
-  <Tabs
-    v-show="fileTabs.length !== 0"
-    id="fileTabs"
-    v-model:value="activeFile"
-    :scrollable="true"
-    :selectOnFocus="true"
-  >
-    <TabList id="fileTablist" class="file-tablist">
-      <Tab
-        v-for="fileTab in fileTabs"
-        :id="'tab_' + fileTab.file.path()"
-        :key="'tab_' + fileTab.file.path()"
-        :value="fileTab.file.path()"
-      >
-        <div class="flex gap-2 items-center">
-          <div>
-            {{
-              fileTab.file
-                .path()
-                .split(/(\\|\/)/g)
-                .pop()
-            }}
+  <div v-if="onlySimulationExperimentView" class="h-full">
+    <div v-for="(fileTab, index) in fileTabs" :key="'tabPanel_' + fileTab.file.path()" :value="fileTab.file.path()">
+      <SimulationExperimentView
+        v-if="fileTab.file.issues().length === 0"
+        v-model="fileTabs[index]"
+        :isActiveFile="fileTab.file.path() === activeFile"
+        :isAlone="true"
+      />
+      <IssuesView v-else :issues="fileTab.file.issues()" />
+    </div>
+  </div>
+  <div v-else class="h-full">
+    <BackgroundComponent v-show="fileTabs.length === 0" />
+    <Tabs
+      v-show="fileTabs.length !== 0"
+      id="fileTabs"
+      v-model:value="activeFile"
+      :scrollable="true"
+      :selectOnFocus="true"
+    >
+      <TabList id="fileTablist" class="file-tablist">
+        <Tab
+          v-for="fileTab in fileTabs"
+          :id="'tab_' + fileTab.file.path()"
+          :key="'tab_' + fileTab.file.path()"
+          :value="fileTab.file.path()"
+        >
+          <div class="flex gap-2 items-center">
+            <div>
+              {{
+                fileTab.file
+                  .path()
+                  .split(/(\\|\/)/g)
+                  .pop()
+              }}
+            </div>
+            <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
           </div>
-          <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
-        </div>
-      </Tab>
-    </TabList>
-    <TabPanels class="p-0!">
-      <TabPanel
-        v-for="(fileTab, index) in fileTabs"
-        :key="'tabPanel_' + fileTab.file.path()"
-        :value="fileTab.file.path()"
-      >
-        <SimulationExperimentView
-          v-if="fileTab.file.issues().length === 0"
-          v-model="fileTabs[index]"
-          :isActiveFile="fileTab.file.path() === activeFile"
-        />
-        <IssuesView v-else :issues="fileTab.file.issues()" />
-      </TabPanel>
-    </TabPanels>
-  </Tabs>
+        </Tab>
+      </TabList>
+      <TabPanels class="p-0!">
+        <TabPanel
+          v-for="(fileTab, index) in fileTabs"
+          :key="'tabPanel_' + fileTab.file.path()"
+          :value="fileTab.file.path()"
+        >
+          <SimulationExperimentView
+            v-if="fileTab.file.issues().length === 0"
+            v-model="fileTabs[index]"
+            :isActiveFile="fileTab.file.path() === activeFile"
+          />
+          <IssuesView v-else :issues="fileTab.file.issues()" />
+        </TabPanel>
+      </TabPanels>
+    </Tabs>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -61,6 +74,9 @@ export interface IFileTab {
 const fileTabs = vue.ref<IFileTab[]>([])
 const activeFile = vue.ref<string>('')
 
+defineProps<{
+  onlySimulationExperimentView?: boolean
+}>()
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
 
 export interface IContentsComponent {

@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
     <div v-if="omex !== undefined" class="grow">
-      <ContentsComponent ref="contents" />
+      <ContentsComponent ref="contents" :onlySimulationExperimentView="true" />
     </div>
     <div v-else>
       <div v-show="!electronAPI">
