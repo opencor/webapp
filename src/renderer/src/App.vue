@@ -37,6 +37,10 @@ import * as locAPI from '../../libopencor/locAPI'
 import * as common from './common'
 import IContentsComponent from './components/ContentsComponent.vue'
 
+defineProps<{
+  omex?: string
+}>()
+
 const toast = useToast()
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 
