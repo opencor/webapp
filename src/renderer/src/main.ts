@@ -10,7 +10,9 @@ import './assets/app.css'
 
 import 'primeicons/primeicons.css'
 
-const app = vue.createApp(App)
+const app = vue.createApp(App, {
+  omex: 'https://raw.githubusercontent.com/opencor/webapp/main/tests/models/lorenz.omex'
+})
 
 app.use(primeVueConfig, {
   theme: {

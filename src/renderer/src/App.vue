@@ -1,28 +1,38 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
-    <div v-show="!electronAPI">
-      <MainMenu
-        :hasFiles="hasFiles"
-        @about="onAbout"
-        @open="($refs.files as HTMLInputElement).click()"
-        @openRemote="openRemoteVisible = true"
-        @close="onClose"
-        @closeAll="onCloseAll"
-        @settings="onSettings"
-      />
-    </div>
-    <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
+    <div v-if="omex !== undefined" class="grow">
       <ContentsComponent ref="contents" />
-      <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
-      <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
+    <div v-else>
+      <div v-show="!electronAPI">
+        <MainMenu
+          :hasFiles="hasFiles"
+          @about="onAbout"
+          @open="($refs.files as HTMLInputElement).click()"
+          @openRemote="openRemoteVisible = true"
+          @close="onClose"
+          @closeAll="onCloseAll"
+          @settings="onSettings"
+        />
+      </div>
+      <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
+        <ContentsComponent ref="contents" />
+        <DragNDropComponent v-show="dropAreaCounter > 0" />
+        <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
+        <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
+      </div>
+    </div>
+    <input ref="files" type="file" multiple style="display: none" @change="onChange" />
+    <OpenRemoteDialog
+      v-model:visible="openRemoteVisible"
+      @openRemote="onOpenRemote"
+      @close="openRemoteVisible = false"
+    />
+    <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
+    <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
+    <Toast />
   </div>
-  <input ref="files" type="file" multiple style="display: none" @change="onChange" />
-  <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
-  <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
-  <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
-  <Toast />
 </template>
 
 <script setup lang="ts">
@@ -37,7 +47,7 @@ import * as locAPI from '../../libopencor/locAPI'
 import * as common from './common'
 import IContentsComponent from './components/ContentsComponent.vue'
 
-defineProps<{
+const props = defineProps<{
   omex?: string
 }>()
 
@@ -309,35 +319,42 @@ function onResetAll(): void {
   electronAPI?.resetAll()
 }
 
-// Track the height of our main menu.
+// Show either the whole OpenCOR UI or just the simulation experiment view, should a COMBINE archive have been passed to
+// us.
 
-common.trackElementHeight('mainMenu')
+if (props.omex !== undefined) {
+  openFile(props.omex)
+} else {
+  // Track the height of our main menu.
 
-// Things that need to be done when the component is mounted.
+  common.trackElementHeight('mainMenu')
 
-const action = vueusecore.useStorage('action', '')
+  // Things that need to be done when the component is mounted.
 
-vue.onMounted(() => {
-  // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
-  // logo) time to be renderered.
-  // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
+  const action = vueusecore.useStorage('action', '')
 
-  setTimeout(() => {
-    if (electronAPI === undefined) {
-      if (window.location.search !== '') {
-        action.value = window.location.search.substring(1)
+  vue.onMounted(() => {
+    // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
+    // logo) time to be renderered.
+    // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
-        window.location.search = ''
-      } else if (action.value !== '') {
-        setTimeout(() => {
-          handleAction(action.value)
+    setTimeout(() => {
+      if (electronAPI === undefined) {
+        if (window.location.search !== '') {
+          action.value = window.location.search.substring(1)
 
-          action.value = ''
-        }, SHORT_DELAY)
+          window.location.search = ''
+        } else if (action.value !== '') {
+          setTimeout(() => {
+            handleAction(action.value)
+
+            action.value = ''
+          }, SHORT_DELAY)
+        }
       }
-    }
-  }, SHORT_DELAY)
-})
+    }, SHORT_DELAY)
+  })
+}
 </script>
 
 <style scoped>
