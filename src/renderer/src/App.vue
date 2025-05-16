@@ -17,16 +17,12 @@
       <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
-    <input ref="files" type="file" multiple style="display: none" @change="onChange" />
-    <OpenRemoteDialog
-      v-model:visible="openRemoteVisible"
-      @openRemote="onOpenRemote"
-      @close="openRemoteVisible = false"
-    />
-    <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
-    <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
-    <Toast />
   </div>
+  <input ref="files" type="file" multiple style="display: none" @change="onChange" />
+  <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
+  <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
+  <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
+  <Toast />
 </template>
 
 <script setup lang="ts">
