@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
-    <div v-show="!electronAPI">
+    <div v-show="!electronAPI && omex === undefined">
       <MainMenu
         :hasFiles="hasFiles"
         @about="onAbout"
@@ -11,8 +11,8 @@
         @settings="onSettings"
       />
     </div>
-    <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
-      <ContentsComponent ref="contents" />
+    <div ref="mainDiv" class="grow">
+      <ContentsComponent ref="contents" :onlySimulationExperimentView="omex !== undefined" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
@@ -37,7 +37,12 @@ import * as locAPI from '../../libopencor/locAPI'
 import * as common from './common'
 import IContentsComponent from './components/ContentsComponent.vue'
 
+const props = defineProps<{
+  omex?: string
+}>()
+
 const toast = useToast()
+const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 
 // Handle an action.
@@ -235,6 +240,8 @@ function onDragEnter(): void {
 }
 
 function onDrop(event: DragEvent): void {
+  event.preventDefault()
+
   dropAreaCounter.value = 0
 
   const files = event.dataTransfer?.files
@@ -305,35 +312,51 @@ function onResetAll(): void {
   electronAPI?.resetAll()
 }
 
-// Track the height of our main menu.
+// If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
+// carry as normal (i.e. the whole OpenCOR UI will be shown).
 
-common.trackElementHeight('mainMenu')
+if (props.omex !== undefined) {
+  openFile(props.omex)
+} else {
+  // Track the height of our main menu.
 
-// Things that need to be done when the component is mounted.
+  common.trackElementHeight('mainMenu')
 
-const action = vueusecore.useStorage('action', '')
+  // Things that need to be done when the component is mounted.
 
-vue.onMounted(() => {
-  // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
-  // logo) time to be renderered.
-  // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
+  const action = vueusecore.useStorage('action', '')
 
-  setTimeout(() => {
-    if (electronAPI === undefined) {
-      if (window.location.search !== '') {
-        action.value = window.location.search.substring(1)
+  vue.onMounted(() => {
+    // Enable drag and drop.
 
-        window.location.search = ''
-      } else if (action.value !== '') {
-        setTimeout(() => {
-          handleAction(action.value)
+    mainDiv.value.addEventListener('dragenter', onDragEnter)
+    mainDiv.value.addEventListener('dragover', (event: DragEvent) => {
+      event.preventDefault()
+    })
+    mainDiv.value.addEventListener('drop', onDrop)
+    mainDiv.value.addEventListener('dragleave', onDragLeave)
 
-          action.value = ''
-        }, SHORT_DELAY)
+    // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
+    // logo) time to be renderered.
+    // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
+
+    setTimeout(() => {
+      if (electronAPI === undefined) {
+        if (window.location.search !== '') {
+          action.value = window.location.search.substring(1)
+
+          window.location.search = ''
+        } else if (action.value !== '') {
+          setTimeout(() => {
+            handleAction(action.value)
+
+            action.value = ''
+          }, SHORT_DELAY)
+        }
       }
-    }
-  }, SHORT_DELAY)
-})
+    }, SHORT_DELAY)
+  })
+}
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full simulation-experiment">
+  <div ref="mainDiv" class="h-full">
     <Toolbar :id="toolbarId" class="p-1!">
       <template #start>
         <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
@@ -7,10 +7,10 @@
       </template>
     </Toolbar>
     <Splitter class="border-none! h-full m-0" layout="vertical">
-      <SplitterPanel :size="89">
+      <SplitterPanel :size="isAlone ? 100 : 89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4" :size="25">
-            <SimulationPropertyEditor ref="simulationProperties" :file="vue.toRaw(fileTab.file)" />
+            <SimulationPropertyEditor :file="vue.toRaw(fileTab.file)" />
             <!--
                   <SolversPropertyEditor />
                   <GraphsPropertyEditor />
@@ -42,7 +42,7 @@
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
-      <SplitterPanel :size="11">
+      <SplitterPanel v-if="!isAlone" :size="11">
         <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="fileTab.consoleContents" />
       </SplitterPanel>
     </Splitter>
@@ -58,23 +58,22 @@ import * as common from '../../common'
 
 import { type IFileTab } from '../ContentsComponent.vue'
 
-import ISimulationPropertyEditor from '../propertyEditors/SimulationPropertyEditor.vue'
-
 import * as echarts from 'echarts/core'
 import { GridComponent } from 'echarts/components'
 import { LineChart, type LineSeriesOption } from 'echarts/charts'
 import { CanvasRenderer } from 'echarts/renderers'
 import VChart from 'vue-echarts'
 
+const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
+
 const fileTabModel = defineModel()
 const fileTab = fileTabModel.value as IFileTab
 const props = defineProps<{
   isActiveFile: boolean
+  isAlone?: boolean
 }>()
 const toolbarId = `simulationExperimentToolbar_${String(fileTab.file.path())}`
 const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
-
-const simulationProperties = vue.ref<InstanceType<typeof ISimulationPropertyEditor> | null>(null)
 
 const sedInstance = fileTab.file.sedInstance()
 const sedInstanceTask = sedInstance.task(0)
@@ -284,6 +283,12 @@ const option = vue.ref<EChartsOption>({
     }
   ]
 })
+
+// Apply the proper class to our main div.
+
+vue.onMounted(() => {
+  mainDiv.value?.classList.add(props.isAlone ? 'simulation-experiment-isolated-ui' : 'simulation-experiment-whole-ui')
+})
 </script>
 
 <style scoped>
@@ -325,7 +330,11 @@ const option = vue.ref<EChartsOption>({
   cursor: default;
 }
 
-.simulation-experiment {
+.simulation-experiment-isolated-ui {
+  height: calc(100vh - var(--simulation-experiment-toolbar-height));
+}
+
+.simulation-experiment-whole-ui {
   height: calc(
     100vh - var(--main-menu-height) - var(--file-tablist-height) - var(--simulation-experiment-toolbar-height)
   );
