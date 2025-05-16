@@ -1,26 +1,21 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
-    <div v-if="omex !== undefined" class="grow">
-      <ContentsComponent ref="contents" :onlySimulationExperimentView="true" />
+    <div v-show="!electronAPI && omex === undefined">
+      <MainMenu
+        :hasFiles="hasFiles"
+        @about="onAbout"
+        @open="($refs.files as HTMLInputElement).click()"
+        @openRemote="openRemoteVisible = true"
+        @close="onClose"
+        @closeAll="onCloseAll"
+        @settings="onSettings"
+      />
     </div>
-    <div v-else>
-      <div v-show="!electronAPI">
-        <MainMenu
-          :hasFiles="hasFiles"
-          @about="onAbout"
-          @open="($refs.files as HTMLInputElement).click()"
-          @openRemote="openRemoteVisible = true"
-          @close="onClose"
-          @closeAll="onCloseAll"
-          @settings="onSettings"
-        />
-      </div>
-      <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
-        <ContentsComponent ref="contents" />
-        <DragNDropComponent v-show="dropAreaCounter > 0" />
-        <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
-        <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
-      </div>
+    <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
+      <ContentsComponent ref="contents" :onlySimulationExperimentView="omex !== undefined" />
+      <DragNDropComponent v-show="dropAreaCounter > 0" />
+      <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
+      <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
     </div>
     <input ref="files" type="file" multiple style="display: none" @change="onChange" />
     <OpenRemoteDialog
@@ -244,10 +239,18 @@ function onChange(event: Event): void {
 const dropAreaCounter = vue.ref<number>(0)
 
 function onDragEnter(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   dropAreaCounter.value += 1
 }
 
 function onDrop(event: DragEvent): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   dropAreaCounter.value = 0
 
   const files = event.dataTransfer?.files
@@ -260,6 +263,10 @@ function onDrop(event: DragEvent): void {
 }
 
 function onDragLeave(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   dropAreaCounter.value -= 1
 }
 
