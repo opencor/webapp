@@ -321,8 +321,8 @@ function onResetAll(): void {
   electronAPI?.resetAll()
 }
 
-// Show either the whole OpenCOR UI or just the simulation experiment view, should a COMBINE archive have been passed to
-// us.
+// If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
+// carry as normal (i.e. the whole OpenCOR UI will be shown).
 
 if (props.omex !== undefined) {
   openFile(props.omex)
