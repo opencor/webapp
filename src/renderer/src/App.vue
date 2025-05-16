@@ -11,7 +11,7 @@
         @settings="onSettings"
       />
     </div>
-    <div class="grow" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
+    <div ref="mainDiv" class="grow">
       <ContentsComponent ref="contents" :onlySimulationExperimentView="omex !== undefined" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
@@ -42,6 +42,7 @@ const props = defineProps<{
 }>()
 
 const toast = useToast()
+const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 
 // Handle an action.
@@ -235,17 +236,11 @@ function onChange(event: Event): void {
 const dropAreaCounter = vue.ref<number>(0)
 
 function onDragEnter(): void {
-  if (props.omex !== undefined) {
-    return
-  }
-
   dropAreaCounter.value += 1
 }
 
 function onDrop(event: DragEvent): void {
-  if (props.omex !== undefined) {
-    return
-  }
+  event.preventDefault()
 
   dropAreaCounter.value = 0
 
@@ -259,10 +254,6 @@ function onDrop(event: DragEvent): void {
 }
 
 function onDragLeave(): void {
-  if (props.omex !== undefined) {
-    return
-  }
-
   dropAreaCounter.value -= 1
 }
 
@@ -336,6 +327,15 @@ if (props.omex !== undefined) {
   const action = vueusecore.useStorage('action', '')
 
   vue.onMounted(() => {
+    // Enable drag and drop.
+
+    mainDiv.value.addEventListener('dragenter', onDragEnter)
+    mainDiv.value.addEventListener('dragover', (event: DragEvent) => {
+      event.preventDefault()
+    })
+    mainDiv.value.addEventListener('drop', onDrop)
+    mainDiv.value.addEventListener('dragleave', onDragLeave)
+
     // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
     // logo) time to be renderered.
     // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
