@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "composite": true,
+    "lib": ["dom", "esnext"],
     "paths": {
       "@renderer/*": ["src/renderer/src/*"]
     }

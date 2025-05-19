@@ -225,7 +225,7 @@ function onChange(event: Event): void {
   const files = (event.target as HTMLInputElement).files
 
   if (files !== null) {
-    for (const file of files) {
+    for (const file of Array.from(files)) {
       openFile(file)
     }
   }
