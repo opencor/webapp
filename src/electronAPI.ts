@@ -11,6 +11,8 @@ interface IElectronAPI {
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) => void
   filePath: (file: File) => string
   resetAll: () => void
+  trackFilePaths(filePaths: string[]): void
+  trackSelectedFilePath(filePath: string): void
 
   // Renderer process listening to the main process.
 
