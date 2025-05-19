@@ -45,22 +45,29 @@ export function resetAll(): void {
   electron.app.quit()
 }
 
-let _filePaths: string[] = []
+let trackedFilePaths: string[] = []
 
 export function trackFilePaths(filePaths: string[]): void {
-  _filePaths = filePaths
+  trackedFilePaths = filePaths
+
+  MainWindow.instance?.reopenFilePathsAndSelectFilePath()
 }
 
-let _selectedFilePath: string | null = null
+let trackedSelectedFilePath: string | null = null
 
 export function trackSelectedFilePath(filePath: string): void {
-  _selectedFilePath = filePath
+  trackedSelectedFilePath = filePath
 }
 
 export class MainWindow extends ApplicationWindow {
   // Properties.
 
+  static instance: MainWindow | null = null
+
   private _splashScreenWindowClosed = false
+
+  private _filePaths: string[] | null = null
+  private _selectedFilePath: string | null = null
 
   // Constructor.
 
@@ -78,6 +85,10 @@ export class MainWindow extends ApplicationWindow {
       minHeight: 480,
       ...(isMacOs() ? {} : { icon: icon })
     })
+
+    // Keep track of the current isntance.
+
+    MainWindow.instance = this
 
     // Set our dock icon (macOS only).
 
@@ -112,19 +123,10 @@ export class MainWindow extends ApplicationWindow {
       setTimeout(() => {
         // Reopen previously opened files, if any, and select the previously selected file.
 
-        const filePaths = electronSettings.getSync('filePaths') as string[] | null
+        this._filePaths = (electronSettings.getSync('filePaths') as string[] | null) ?? null
+        this._selectedFilePath = (electronSettings.getSync('selectedFilePath') as string | null) ?? null
 
-        if (filePaths !== null) {
-          for (const filePath of filePaths) {
-            this.webContents.send('open', filePath)
-          }
-        }
-
-        const selectedFilePath = electronSettings.getSync('selectedFilePath') as string | null
-
-        if (selectedFilePath !== null) {
-          this.webContents.send('open', selectedFilePath)
-        }
+        this.reopenFilePathsAndSelectFilePath()
 
         // The command line can either be a classical command line or an OpenCOR action (i.e. an opencor:// link). In
         // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
@@ -172,8 +174,8 @@ export class MainWindow extends ApplicationWindow {
 
       // File paths and selected file path.
 
-      electronSettings.setSync('filePaths', _filePaths)
-      electronSettings.setSync('selectedFilePath', _selectedFilePath)
+      electronSettings.setSync('filePaths', trackedFilePaths)
+      electronSettings.setSync('selectedFilePath', trackedSelectedFilePath)
     })
 
     // Enable our main menu.
@@ -208,6 +210,28 @@ export class MainWindow extends ApplicationWindow {
       this.loadFile('./out/renderer/index.html').catch((error: unknown) => {
         console.error('Failed to load file:', error)
       })
+    }
+  }
+
+  // Reopen previously opened files, if any, and select the previously selected file.
+  // Note: we reopen one file at a time since a file may be a remote file which means that it may take some time to
+  //       reopen. So, we need to wait for the file to be reopened before reopening the next one.
+
+  reopenFilePathsAndSelectFilePath(): void {
+    if (this._filePaths !== null) {
+      const filePath = this._filePaths[0]
+
+      this.webContents.send('open', filePath)
+
+      this._filePaths = this._filePaths.slice(1)
+
+      if (this._filePaths.length > 0) {
+        return
+      }
+    }
+
+    if (this._selectedFilePath !== null) {
+      this.webContents.send('open', this._selectedFilePath)
     }
   }
 
