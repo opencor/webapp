@@ -100,17 +100,14 @@ const filePaths = vue.computed(() => {
 })
 
 vue.watch(filePaths, (filePaths) => {
-  electronAPI?.trackFilePaths(filePaths)
+  electronAPI?.filesOpened(filePaths)
 })
 
-const selectedFilePath = vue.computed(() => {
-  const selectedFileTab = fileTabs.value.find((fileTab) => fileTab.file.path() === activeFile.value)
+vue.watch(activeFile, (filePath) => {
+  // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
+  //       people know that a file has been selected.
 
-  return selectedFileTab !== undefined ? selectedFileTab.file.path() : ''
-})
-
-vue.watch(selectedFilePath, (selectedFilePath) => {
-  electronAPI?.trackSelectedFilePath(selectedFilePath)
+  electronAPI?.fileSelected(filePath)
 })
 
 function openFile(file: locAPI.File): void {
@@ -120,6 +117,8 @@ function openFile(file: locAPI.File): void {
     file,
     consoleContents: `<b>${file.path()}</b>`
   })
+
+  electronAPI?.fileOpened(filePath)
 
   selectFile(filePath)
 }
@@ -133,8 +132,6 @@ function hasFiles(): boolean {
 }
 
 function selectFile(filePath: string): void {
-  activeFile.value = filePath
-
   vue
     .nextTick()
     .then(() => {
@@ -147,6 +144,8 @@ function selectFile(filePath: string): void {
         tabElement.classList.remove('p-tab')
         tabElement.scrollIntoView({ block: 'nearest' })
         tabElement.classList.add('p-tab')
+
+        activeFile.value = filePath
       }
     })
     .catch((error: unknown) => {

@@ -312,6 +312,12 @@ function onResetAll(): void {
   electronAPI?.resetAll()
 }
 
+// Select.
+
+electronAPI?.onSelect((filePath: string) => {
+  contents.value?.selectFile(filePath)
+})
+
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry as normal (i.e. the whole OpenCOR UI will be shown).
 

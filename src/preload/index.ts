@@ -30,10 +30,11 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
   enableDisableMainMenu: (enable: boolean) => electron.ipcRenderer.invoke('enable-disable-main-menu', enable),
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
+  fileOpened: (filePath: string) => electron.ipcRenderer.invoke('file-opened', filePath),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
+  fileSelected: (filePath: string) => electron.ipcRenderer.invoke('file-selected', filePath),
+  filesOpened: (filePaths: string[]) => electron.ipcRenderer.invoke('files-opened', filePaths),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
-  trackFilePaths: (filePaths: string[]) => electron.ipcRenderer.invoke('track-file-paths', filePaths),
-  trackSelectedFilePath: (filePath: string) => electron.ipcRenderer.invoke('track-selected-file-path', filePath),
 
   // Renderer process listening to the main process.
 
@@ -54,7 +55,7 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
       callback(enable)
     }),
   onOpen: (callback: (filePath: string) => void) =>
-    electron.ipcRenderer.on('open', (_event, ...filePaths) => {
+    electron.ipcRenderer.on('open', (_event, ...filePaths: string[]) => {
       for (const filePath of filePaths) {
         callback(filePath)
       }
@@ -74,6 +75,10 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
   onResetAll: (callback: () => void) =>
     electron.ipcRenderer.on('reset-all', () => {
       callback()
+    }),
+  onSelect: (callback: (filePath: string) => void) =>
+    electron.ipcRenderer.on('select', (_event, filePath: string) => {
+      callback(filePath)
     }),
   onSettings: (callback: () => void) =>
     electron.ipcRenderer.on('settings', () => {

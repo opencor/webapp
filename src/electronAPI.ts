@@ -9,10 +9,11 @@ interface IElectronAPI {
 
   enableDisableMainMenu: (enable: boolean) => void
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) => void
+  fileOpened: (filePath: string) => void
   filePath: (file: File) => string
+  fileSelected(filePath: string): void
+  filesOpened(filePaths: string[]): void
   resetAll: () => void
-  trackFilePaths(filePaths: string[]): void
-  trackSelectedFilePath(filePath: string): void
 
   // Renderer process listening to the main process.
 
@@ -25,6 +26,7 @@ interface IElectronAPI {
   onClose: (callback: () => void) => void
   onCloseAll: (callback: () => void) => void
   onResetAll: (callback: () => void) => void
+  onSelect: (callback: (filePath: string) => void) => void
   onSettings: (callback: () => void) => void
 }
 
