@@ -45,6 +45,18 @@ export function resetAll(): void {
   electron.app.quit()
 }
 
+let _filePaths: string[] = []
+
+export function trackFilePaths(filePaths: string[]): void {
+  _filePaths = filePaths
+}
+
+let _selectedFilePath: string | null = null
+
+export function trackSelectedFilePath(filePath: string): void {
+  _selectedFilePath = filePath
+}
+
 export class MainWindow extends ApplicationWindow {
   // Properties.
 
@@ -98,6 +110,22 @@ export class MainWindow extends ApplicationWindow {
       }
 
       setTimeout(() => {
+        // Reopen previously opened files, if any, and select the previously selected file.
+
+        const filePaths = electronSettings.getSync('filePaths') as string[] | null
+
+        if (filePaths !== null) {
+          for (const filePath of filePaths) {
+            this.webContents.send('open', filePath)
+          }
+        }
+
+        const selectedFilePath = electronSettings.getSync('selectedFilePath') as string | null
+
+        if (selectedFilePath !== null) {
+          this.webContents.send('open', selectedFilePath)
+        }
+
         // The command line can either be a classical command line or an OpenCOR action (i.e. an opencor:// link). In
         // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
 
@@ -125,9 +153,11 @@ export class MainWindow extends ApplicationWindow {
       }, handleCommandLineDelay)
     })
 
-    // Keep track of our new state upon closing.
+    // Keep track of our settings.
 
     this.on('close', () => {
+      // Main window state.
+
       if (!this.isMaximized() && !this.isMinimized() && !this.isFullScreen()) {
         mainWindowState.x = this.getPosition()[0]
         mainWindowState.y = this.getPosition()[1]
@@ -139,6 +169,11 @@ export class MainWindow extends ApplicationWindow {
       mainWindowState.isFullScreen = this.isFullScreen()
 
       electronSettings.setSync('mainWindowState', mainWindowState)
+
+      // File paths and selected file path.
+
+      electronSettings.setSync('filePaths', _filePaths)
+      electronSettings.setSync('selectedFilePath', _selectedFilePath)
     })
 
     // Enable our main menu.

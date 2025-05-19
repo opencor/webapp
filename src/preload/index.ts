@@ -32,6 +32,8 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
     electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
+  trackFilePaths: (filePaths: string[]) => electron.ipcRenderer.invoke('track-file-paths', filePaths),
+  trackSelectedFilePath: (filePath: string) => electron.ipcRenderer.invoke('track-selected-file-path', filePath),
 
   // Renderer process listening to the main process.
 

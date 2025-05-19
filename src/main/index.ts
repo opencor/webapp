@@ -10,7 +10,7 @@ import { URI_SCHEME } from '../constants'
 import { isDevMode, isWindows, isLinux } from '../electron'
 
 import { enableDisableMainMenu, enableDisableFileCloseAndCloseAllMenuItems } from './MainMenu'
-import { MainWindow, resetAll } from './MainWindow'
+import { MainWindow, resetAll, trackFilePaths, trackSelectedFilePath } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
 // Prettify our settings.
@@ -148,6 +148,12 @@ electron.app
       enableDisableFileCloseAndCloseAllMenuItems(enable)
     })
     electron.ipcMain.handle('reset-all', resetAll)
+    electron.ipcMain.handle('track-file-paths', (_event, filePaths: string[]) => {
+      trackFilePaths(filePaths)
+    })
+    electron.ipcMain.handle('track-selected-file-path', (_event, filePath: string) => {
+      trackSelectedFilePath(filePath)
+    })
 
     // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
     // triggering URL.

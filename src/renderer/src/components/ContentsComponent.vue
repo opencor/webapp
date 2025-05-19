@@ -62,6 +62,7 @@ import * as vueusecore from '@vueuse/core'
 
 import * as vue from 'vue'
 
+import { electronAPI } from '../../../electronAPI'
 import * as locAPI from '../../../libopencor/locAPI'
 
 import * as common from '../common'
@@ -70,9 +71,6 @@ export interface IFileTab {
   file: locAPI.File
   consoleContents: string
 }
-
-const fileTabs = vue.ref<IFileTab[]>([])
-const activeFile = vue.ref<string>('')
 
 defineProps<{
   onlySimulationExperimentView?: boolean
@@ -87,6 +85,33 @@ export interface IContentsComponent {
   hasFiles(): boolean
   selectFile(filePath: string): void
 }
+
+const fileTabs = vue.ref<IFileTab[]>([])
+const activeFile = vue.ref<string>('')
+
+const filePaths = vue.computed(() => {
+  const res: string[] = []
+
+  for (const fileTab of fileTabs.value) {
+    res.push(fileTab.file.path())
+  }
+
+  return res
+})
+
+vue.watch(filePaths, (filePaths) => {
+  electronAPI?.trackFilePaths(filePaths)
+})
+
+const selectedFilePath = vue.computed(() => {
+  const selectedFileTab = fileTabs.value.find((fileTab) => fileTab.file.path() === activeFile.value)
+
+  return selectedFileTab !== undefined ? selectedFileTab.file.path() : ''
+})
+
+vue.watch(selectedFilePath, (selectedFilePath) => {
+  electronAPI?.trackSelectedFilePath(selectedFilePath)
+})
 
 function openFile(file: locAPI.File): void {
   const filePath = file.path()
