@@ -90,6 +90,27 @@ export function enableDisableMainMenu(enable: boolean): void {
         mainWindow?.webContents.send('open-remote')
       }
     })
+    fileSubMenu.push({
+      label: 'Reopen',
+      submenu: [
+        {
+          label: 'Most Recent',
+          accelerator: 'CmdOrCtrl+Shift+T',
+          click: () => {
+            mainWindow?.webContents.send('reopen-most-recent')
+          },
+          enabled: false
+        },
+        { type: 'separator' },
+        {
+          label: 'Clear Menu',
+          click: () => {
+            mainWindow?.webContents.send('reopen-clear-menu')
+          },
+          enabled: false
+        }
+      ]
+    })
     fileSubMenu.push({ type: 'separator' })
     fileSubMenu.push({
       id: 'fileClose',
