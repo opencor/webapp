@@ -95,8 +95,8 @@ export class MainWindow extends ApplicationWindow {
 
   private _splashScreenWindowClosed = false
 
-  private _openedFilePaths: string[] | null = null
-  private _selectedFilePath: string | null = null
+  private _openedFilePaths: string[] = []
+  private _selectedFilePath = ''
 
   // Constructor.
 
@@ -152,14 +152,14 @@ export class MainWindow extends ApplicationWindow {
       setTimeout(() => {
         // Retrieve the recently opened files and our Reopen menu.
 
-        recentFilePaths = (electronSettings.getSync('recentFiles') as string[] | null) ?? []
+        recentFilePaths = electronSettings.getSync('recentFiles') as string[]
 
         updateReopenMenu(recentFilePaths)
 
         // Reopen previously opened files, if any, and select the previously selected file.
 
-        this._openedFilePaths = (electronSettings.getSync('openedFiles') as string[] | null) ?? null
-        this._selectedFilePath = (electronSettings.getSync('selectedFile') as string | null) ?? null
+        this._openedFilePaths = electronSettings.getSync('openedFiles') as string[]
+        this._selectedFilePath = electronSettings.getSync('selectedFile') as string
 
         this.reopenFilePathsAndSelectFilePath()
 
@@ -257,7 +257,7 @@ export class MainWindow extends ApplicationWindow {
   //       reopen. So, we need to wait for the file to be reopened before reopening the next one.
 
   reopenFilePathsAndSelectFilePath(): void {
-    if (this._openedFilePaths !== null) {
+    if (this._openedFilePaths.length > 0) {
       const filePath = this._openedFilePaths[0]
 
       this.webContents.send('open', filePath)
@@ -269,10 +269,10 @@ export class MainWindow extends ApplicationWindow {
       }
     }
 
-    if (this._selectedFilePath !== null) {
+    if (this._selectedFilePath !== '') {
       this.webContents.send('select', this._selectedFilePath)
 
-      this._selectedFilePath = null
+      this._selectedFilePath = ''
     }
   }
 
