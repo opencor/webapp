@@ -3,17 +3,19 @@ import electron from 'electron'
 import { isMacOs } from '../electron'
 
 import { mainWindow } from './index'
+import { clearRecentFiles } from './MainWindow'
 
-let _enabledMenu: electron.Menu | null = null
-let _disabledMenu: electron.Menu | null = null
+let enabledMenu: electron.Menu | null = null
+let disabledMenu: electron.Menu | null = null
+let recentFilePaths: string[] = []
 
 export function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
 
-  if (enable && _enabledMenu !== null) {
-    electron.Menu.setApplicationMenu(_enabledMenu)
-  } else if (!enable && _disabledMenu !== null) {
-    electron.Menu.setApplicationMenu(_disabledMenu)
+  if (enable && enabledMenu !== null) {
+    electron.Menu.setApplicationMenu(enabledMenu)
+  } else if (!enable && disabledMenu !== null) {
+    electron.Menu.setApplicationMenu(disabledMenu)
   } else {
     // Some common menu items.
 
@@ -82,12 +84,52 @@ export function enableDisableMainMenu(enable: boolean): void {
         mainWindow?.open()
       }
     })
+    fileSubMenu.push({ type: 'separator' })
     fileSubMenu.push({
       label: 'Open Remote...',
       accelerator: 'CmdOrCtrl+Shift+O',
       click: () => {
         mainWindow?.webContents.send('open-remote')
       }
+    })
+
+    const fileReopenSubMenu: electron.MenuItemConstructorOptions[] = []
+
+    fileReopenSubMenu.push({
+      label: 'Most Recent',
+      accelerator: 'CmdOrCtrl+Shift+T',
+      click: () => {
+        mainWindow?.webContents.send('open', recentFilePaths[0])
+      },
+      enabled: recentFilePaths.length > 0
+    })
+
+    if (recentFilePaths.length > 0) {
+      fileReopenSubMenu.push({ type: 'separator' })
+
+      recentFilePaths.forEach((filePath: string) => {
+        fileReopenSubMenu.push({
+          label: filePath,
+          click: () => {
+            mainWindow?.webContents.send('open', filePath)
+          }
+        })
+      })
+    }
+
+    fileReopenSubMenu.push({ type: 'separator' })
+    fileReopenSubMenu.push({
+      label: 'Clear Menu',
+      click: () => {
+        clearRecentFiles()
+      },
+      enabled: recentFilePaths.length > 0
+    })
+
+    fileSubMenu.push({
+      id: 'fileReopen',
+      label: 'Reopen',
+      submenu: fileReopenSubMenu
     })
     fileSubMenu.push({ type: 'separator' })
     fileSubMenu.push({
@@ -211,7 +253,7 @@ export function enableDisableMainMenu(enable: boolean): void {
       menu.push(toolsMenu)
       menu.push(helpMenu)
 
-      _enabledMenu = electron.Menu.buildFromTemplate(menu)
+      enabledMenu = electron.Menu.buildFromTemplate(menu)
     } else {
       if (isMacOs()) {
         menu.push(appMenu)
@@ -219,21 +261,28 @@ export function enableDisableMainMenu(enable: boolean): void {
 
       menu.push(editMenu)
 
-      _disabledMenu = electron.Menu.buildFromTemplate(menu)
+      disabledMenu = electron.Menu.buildFromTemplate(menu)
     }
 
-    electron.Menu.setApplicationMenu(enable ? _enabledMenu : _disabledMenu)
+    electron.Menu.setApplicationMenu(enable ? enabledMenu : disabledMenu)
   }
 }
 
 export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
-  if (_enabledMenu !== null) {
-    const fileMenu = _enabledMenu.getMenuItemById('fileClose')
-    const fileCloseAllMenu = _enabledMenu.getMenuItemById('fileCloseAll')
+  if (enabledMenu !== null) {
+    const fileCloseMenu = enabledMenu.getMenuItemById('fileClose')
+    const fileCloseAllMenu = enabledMenu.getMenuItemById('fileCloseAll')
 
-    if (fileMenu !== null && fileCloseAllMenu !== null) {
-      fileMenu.enabled = enable
+    if (fileCloseMenu !== null && fileCloseAllMenu !== null) {
+      fileCloseMenu.enabled = enable
       fileCloseAllMenu.enabled = enable
     }
   }
+}
+
+export function updateReopenMenu(filePaths: string[]): void {
+  enabledMenu = null
+  recentFilePaths = filePaths
+
+  enableDisableMainMenu(true)
 }

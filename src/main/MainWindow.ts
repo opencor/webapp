@@ -7,7 +7,7 @@ import { isDevMode, isWindows, isLinux, isMacOs } from '../electron'
 
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'
-import { enableDisableMainMenu } from './MainMenu'
+import { enableDisableMainMenu, updateReopenMenu } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {
@@ -45,18 +45,47 @@ export function resetAll(): void {
   electron.app.quit()
 }
 
-let trackedFilePaths: string[] = []
+let recentFilePaths: string[] = []
 
-export function trackFilePaths(filePaths: string[]): void {
-  trackedFilePaths = filePaths
+export function clearRecentFiles(): void {
+  recentFilePaths = []
+
+  updateReopenMenu(recentFilePaths)
+}
+
+export function fileClosed(filePath: string): void {
+  recentFilePaths.unshift(filePath)
+  recentFilePaths = recentFilePaths.slice(0, 10)
+
+  updateReopenMenu(recentFilePaths)
+}
+
+export function fileOpened(filePath: string): void {
+  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath)
+
+  updateReopenMenu(recentFilePaths)
+
+  // A file has been opened, but it may have been opened while reopening files during OpenCOR startup, in which case we
+  // need to reopen the next file, hence our call to reopenFilePathsAndSelectFilePath(), which will do nothing if there
+  // are no more files to reopen.
 
   MainWindow.instance?.reopenFilePathsAndSelectFilePath()
 }
 
-let trackedSelectedFilePath: string | null = null
+let openedFilePaths: string[] = []
 
-export function trackSelectedFilePath(filePath: string): void {
-  trackedSelectedFilePath = filePath
+export function filesOpened(filePaths: string[]): void {
+  openedFilePaths = filePaths
+
+  if (filePaths.length === 0) {
+    selectedFilePath = null
+  }
+}
+
+let selectedFilePath: string | null = null
+
+export function fileSelected(filePath: string): void {
+  selectedFilePath = filePath
 }
 
 export class MainWindow extends ApplicationWindow {
@@ -66,7 +95,7 @@ export class MainWindow extends ApplicationWindow {
 
   private _splashScreenWindowClosed = false
 
-  private _filePaths: string[] | null = null
+  private _openedFilePaths: string[] | null = null
   private _selectedFilePath: string | null = null
 
   // Constructor.
@@ -121,10 +150,16 @@ export class MainWindow extends ApplicationWindow {
       }
 
       setTimeout(() => {
+        // Retrieve the recently opened files and our Reopen menu.
+
+        recentFilePaths = (electronSettings.getSync('recentFiles') as string[] | null) ?? []
+
+        updateReopenMenu(recentFilePaths)
+
         // Reopen previously opened files, if any, and select the previously selected file.
 
-        this._filePaths = (electronSettings.getSync('filePaths') as string[] | null) ?? null
-        this._selectedFilePath = (electronSettings.getSync('selectedFilePath') as string | null) ?? null
+        this._openedFilePaths = (electronSettings.getSync('openedFiles') as string[] | null) ?? null
+        this._selectedFilePath = (electronSettings.getSync('selectedFile') as string | null) ?? null
 
         this.reopenFilePathsAndSelectFilePath()
 
@@ -172,10 +207,14 @@ export class MainWindow extends ApplicationWindow {
 
       electronSettings.setSync('mainWindowState', mainWindowState)
 
-      // File paths and selected file path.
+      // Recent files.
 
-      electronSettings.setSync('filePaths', trackedFilePaths)
-      electronSettings.setSync('selectedFilePath', trackedSelectedFilePath)
+      electronSettings.setSync('recentFiles', recentFilePaths)
+
+      // Opened files and selected file.
+
+      electronSettings.setSync('openedFiles', openedFilePaths)
+      electronSettings.setSync('selectedFile', selectedFilePath)
     })
 
     // Enable our main menu.
@@ -218,20 +257,22 @@ export class MainWindow extends ApplicationWindow {
   //       reopen. So, we need to wait for the file to be reopened before reopening the next one.
 
   reopenFilePathsAndSelectFilePath(): void {
-    if (this._filePaths !== null) {
-      const filePath = this._filePaths[0]
+    if (this._openedFilePaths !== null) {
+      const filePath = this._openedFilePaths[0]
 
       this.webContents.send('open', filePath)
 
-      this._filePaths = this._filePaths.slice(1)
+      this._openedFilePaths = this._openedFilePaths.slice(1)
 
-      if (this._filePaths.length > 0) {
+      if (this._openedFilePaths.length > 0) {
         return
       }
     }
 
     if (this._selectedFilePath !== null) {
-      this.webContents.send('open', this._selectedFilePath)
+      this.webContents.send('select', this._selectedFilePath)
+
+      this._selectedFilePath = null
     }
   }
 
