@@ -150,18 +150,18 @@ export class MainWindow extends ApplicationWindow {
       }
 
       setTimeout(() => {
+        // Retrieve the recently opened files and our Reopen menu.
+
+        recentFilePaths = (electronSettings.getSync('recentFiles') as string[] | null) ?? []
+
+        updateReopenMenu(recentFilePaths)
+
         // Reopen previously opened files, if any, and select the previously selected file.
 
         this._openedFilePaths = (electronSettings.getSync('openedFiles') as string[] | null) ?? null
         this._selectedFilePath = (electronSettings.getSync('selectedFile') as string | null) ?? null
 
         this.reopenFilePathsAndSelectFilePath()
-
-        // Retrieve the recently opened files and our Reopen menu.
-
-        recentFilePaths = (electronSettings.getSync('recentFiles') as string[] | null) ?? []
-
-        updateReopenMenu(recentFilePaths)
 
         // The command line can either be a classical command line or an OpenCOR action (i.e. an opencor:// link). In
         // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
@@ -207,14 +207,14 @@ export class MainWindow extends ApplicationWindow {
 
       electronSettings.setSync('mainWindowState', mainWindowState)
 
+      // Recent files.
+
+      electronSettings.setSync('recentFiles', recentFilePaths)
+
       // Opened files and selected file.
 
       electronSettings.setSync('openedFiles', openedFilePaths)
       electronSettings.setSync('selectedFile', selectedFilePath)
-
-      // Recent files.
-
-      electronSettings.setSync('recentFiles', recentFilePaths)
     })
 
     // Enable our main menu.
