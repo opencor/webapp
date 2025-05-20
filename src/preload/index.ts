@@ -30,6 +30,7 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
   enableDisableMainMenu: (enable: boolean) => electron.ipcRenderer.invoke('enable-disable-main-menu', enable),
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
+  fileClosed: (filePath: string) => electron.ipcRenderer.invoke('file-closed', filePath),
   fileOpened: (filePath: string) => electron.ipcRenderer.invoke('file-opened', filePath),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   fileSelected: (filePath: string) => electron.ipcRenderer.invoke('file-selected', filePath),

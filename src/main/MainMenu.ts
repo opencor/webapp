@@ -6,6 +6,7 @@ import { mainWindow } from './index'
 
 let enabledMenu: electron.Menu | null = null
 let disabledMenu: electron.Menu | null = null
+let recentFilePaths: string[] = []
 
 export function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
@@ -90,26 +91,44 @@ export function enableDisableMainMenu(enable: boolean): void {
         mainWindow?.webContents.send('open-remote')
       }
     })
+
+    const fileReopenSubMenu: electron.MenuItemConstructorOptions[] = []
+
+    fileReopenSubMenu.push({
+      label: 'Most Recent',
+      accelerator: 'CmdOrCtrl+Shift+T',
+      click: () => {
+        mainWindow?.webContents.send('open', recentFilePaths[0])
+      },
+      enabled: recentFilePaths.length > 0
+    })
+
+    if (recentFilePaths.length > 0) {
+      fileReopenSubMenu.push({ type: 'separator' })
+
+      recentFilePaths.forEach((filePath: string) => {
+        fileReopenSubMenu.push({
+          label: filePath,
+          click: () => {
+            mainWindow?.webContents.send('open', filePath)
+          }
+        })
+      })
+    }
+
+    fileReopenSubMenu.push({ type: 'separator' })
+    fileReopenSubMenu.push({
+      label: 'Clear Menu',
+      click: () => {
+        updateReopenMenu([])
+      },
+      enabled: recentFilePaths.length > 0
+    })
+
     fileSubMenu.push({
+      id: 'fileReopen',
       label: 'Reopen',
-      submenu: [
-        {
-          label: 'Most Recent',
-          accelerator: 'CmdOrCtrl+Shift+T',
-          click: () => {
-            mainWindow?.webContents.send('reopen-most-recent')
-          },
-          enabled: false
-        },
-        { type: 'separator' },
-        {
-          label: 'Clear Menu',
-          click: () => {
-            mainWindow?.webContents.send('reopen-clear-menu')
-          },
-          enabled: false
-        }
-      ]
+      submenu: fileReopenSubMenu
     })
     fileSubMenu.push({ type: 'separator' })
     fileSubMenu.push({
@@ -258,4 +277,11 @@ export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): voi
       fileCloseAllMenu.enabled = enable
     }
   }
+}
+
+export function updateReopenMenu(filePaths: string[]): void {
+  enabledMenu = null
+  recentFilePaths = filePaths
+
+  enableDisableMainMenu(true)
 }

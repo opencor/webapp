@@ -1,13 +1,14 @@
 import electron from 'electron'
 import * as electronSettings from 'electron-settings'
 import path from 'path'
+import * as vue from 'vue'
 
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../constants'
 import { isDevMode, isWindows, isLinux, isMacOs } from '../electron'
 
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'
-import { enableDisableMainMenu } from './MainMenu'
+import { enableDisableMainMenu, updateReopenMenu } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
 export function retrieveMainWindowState(): {
@@ -45,13 +46,26 @@ export function resetAll(): void {
   electron.app.quit()
 }
 
-export function fileOpened(): void {
+const recentFilePaths = vue.ref<string[]>([])
+
+export function fileClosed(filePath: string): void {
+  recentFilePaths.value.unshift(filePath)
+  recentFilePaths.value = recentFilePaths.value.slice(0, 10)
+}
+
+export function fileOpened(filePath: string): void {
+  recentFilePaths.value = recentFilePaths.value.filter((recentFilePath) => recentFilePath !== filePath)
+
   // A file has been opened, but it may have been opened while reopening files during OpenCOR startup, in which case we
   // need to reopen the next file, hence our call to reopenFilePathsAndSelectFilePath(), which will do nothing if there
   // are no more files to reopen.
 
   MainWindow.instance?.reopenFilePathsAndSelectFilePath()
 }
+
+vue.watch(recentFilePaths, (filePaths) => {
+  updateReopenMenu(filePaths)
+})
 
 let openedFilePaths: string[] = []
 
@@ -138,6 +152,11 @@ export class MainWindow extends ApplicationWindow {
 
         this.reopenFilePathsAndSelectFilePath()
 
+        // Retrieve the recently opened files.
+        // Note: to set recentFilePaths.value will, indirectly, call updateReopenMenu().
+
+        recentFilePaths.value = (electronSettings.getSync('recentFiles') as string[] | null) ?? []
+
         // The command line can either be a classical command line or an OpenCOR action (i.e. an opencor:// link). In
         // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
 
@@ -182,10 +201,14 @@ export class MainWindow extends ApplicationWindow {
 
       electronSettings.setSync('mainWindowState', mainWindowState)
 
-      // Opened file paths and selected file path.
+      // Opened files and selected file.
 
       electronSettings.setSync('openedFiles', openedFilePaths)
       electronSettings.setSync('selectedFile', selectedFilePath)
+
+      // Recent files.
+
+      electronSettings.setSync('recentFiles', recentFilePaths.value)
     })
 
     // Enable our main menu.

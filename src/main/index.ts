@@ -10,7 +10,7 @@ import { URI_SCHEME } from '../constants'
 import { isDevMode, isWindows, isLinux } from '../electron'
 
 import { enableDisableMainMenu, enableDisableFileCloseAndCloseAllMenuItems } from './MainMenu'
-import { fileOpened, fileSelected, filesOpened, MainWindow, resetAll } from './MainWindow'
+import { fileClosed, fileOpened, fileSelected, filesOpened, MainWindow, resetAll } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
 // Prettify our settings.
@@ -146,6 +146,9 @@ electron.app
     })
     electron.ipcMain.handle('enable-disable-file-close-and-close-all-menu-items', (_event, enable: boolean) => {
       enableDisableFileCloseAndCloseAllMenuItems(enable)
+    })
+    electron.ipcMain.handle('file-closed', (_event, filePath: string) => {
+      fileClosed(filePath)
     })
     electron.ipcMain.handle('file-opened', (_event, filePath: string) => {
       fileOpened(filePath)
