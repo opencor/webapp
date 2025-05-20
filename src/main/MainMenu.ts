@@ -4,16 +4,16 @@ import { isMacOs } from '../electron'
 
 import { mainWindow } from './index'
 
-let _enabledMenu: electron.Menu | null = null
-let _disabledMenu: electron.Menu | null = null
+let enabledMenu: electron.Menu | null = null
+let disabledMenu: electron.Menu | null = null
 
 export function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
 
-  if (enable && _enabledMenu !== null) {
-    electron.Menu.setApplicationMenu(_enabledMenu)
-  } else if (!enable && _disabledMenu !== null) {
-    electron.Menu.setApplicationMenu(_disabledMenu)
+  if (enable && enabledMenu !== null) {
+    electron.Menu.setApplicationMenu(enabledMenu)
+  } else if (!enable && disabledMenu !== null) {
+    electron.Menu.setApplicationMenu(disabledMenu)
   } else {
     // Some common menu items.
 
@@ -233,7 +233,7 @@ export function enableDisableMainMenu(enable: boolean): void {
       menu.push(toolsMenu)
       menu.push(helpMenu)
 
-      _enabledMenu = electron.Menu.buildFromTemplate(menu)
+      enabledMenu = electron.Menu.buildFromTemplate(menu)
     } else {
       if (isMacOs()) {
         menu.push(appMenu)
@@ -241,20 +241,20 @@ export function enableDisableMainMenu(enable: boolean): void {
 
       menu.push(editMenu)
 
-      _disabledMenu = electron.Menu.buildFromTemplate(menu)
+      disabledMenu = electron.Menu.buildFromTemplate(menu)
     }
 
-    electron.Menu.setApplicationMenu(enable ? _enabledMenu : _disabledMenu)
+    electron.Menu.setApplicationMenu(enable ? enabledMenu : disabledMenu)
   }
 }
 
 export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
-  if (_enabledMenu !== null) {
-    const fileMenu = _enabledMenu.getMenuItemById('fileClose')
-    const fileCloseAllMenu = _enabledMenu.getMenuItemById('fileCloseAll')
+  if (enabledMenu !== null) {
+    const fileCloseMenu = enabledMenu.getMenuItemById('fileClose')
+    const fileCloseAllMenu = enabledMenu.getMenuItemById('fileCloseAll')
 
-    if (fileMenu !== null && fileCloseAllMenu !== null) {
-      fileMenu.enabled = enable
+    if (fileCloseMenu !== null && fileCloseAllMenu !== null) {
+      fileCloseMenu.enabled = enable
       fileCloseAllMenu.enabled = enable
     }
   }
