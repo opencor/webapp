@@ -60,6 +60,12 @@ export function fileClosed(filePath: string): void {
   updateReopenMenu(recentFilePaths)
 }
 
+export function fileIssue(filePath: string): void {
+  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath)
+
+  updateReopenMenu(recentFilePaths)
+}
+
 export function fileOpened(filePath: string): void {
   recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath)
 

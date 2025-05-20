@@ -197,6 +197,8 @@ function openFile(fileOrFilePath: string | File): void {
               : 'The file could not be retrieved.'),
           life: TOAST_LIFE
         })
+
+        electronAPI?.fileIssue(filePath)
       } else {
         contents.value?.openFile(file)
       }
@@ -216,6 +218,8 @@ function openFile(fileOrFilePath: string | File): void {
         detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
         life: TOAST_LIFE
       })
+
+      electronAPI?.fileIssue(filePath)
     })
 }
 
