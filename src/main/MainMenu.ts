@@ -3,6 +3,7 @@ import electron from 'electron'
 import { isMacOs } from '../electron'
 
 import { mainWindow } from './index'
+import { clearRecentFiles } from './MainWindow'
 
 let enabledMenu: electron.Menu | null = null
 let disabledMenu: electron.Menu | null = null
@@ -120,7 +121,7 @@ export function enableDisableMainMenu(enable: boolean): void {
     fileReopenSubMenu.push({
       label: 'Clear Menu',
       click: () => {
-        updateReopenMenu([])
+        clearRecentFiles()
       },
       enabled: recentFilePaths.length > 0
     })

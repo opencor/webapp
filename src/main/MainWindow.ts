@@ -1,7 +1,6 @@
 import electron from 'electron'
 import * as electronSettings from 'electron-settings'
 import path from 'path'
-import * as vue from 'vue'
 
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../constants'
 import { isDevMode, isWindows, isLinux, isMacOs } from '../electron'
@@ -46,15 +45,25 @@ export function resetAll(): void {
   electron.app.quit()
 }
 
-const recentFilePaths = vue.ref<string[]>([])
+let recentFilePaths: string[] = []
+
+export function clearRecentFiles(): void {
+  recentFilePaths = []
+
+  updateReopenMenu(recentFilePaths)
+}
 
 export function fileClosed(filePath: string): void {
-  recentFilePaths.value.unshift(filePath)
-  recentFilePaths.value = recentFilePaths.value.slice(0, 10)
+  recentFilePaths.unshift(filePath)
+  recentFilePaths = recentFilePaths.slice(0, 10)
+
+  updateReopenMenu(recentFilePaths)
 }
 
 export function fileOpened(filePath: string): void {
-  recentFilePaths.value = recentFilePaths.value.filter((recentFilePath) => recentFilePath !== filePath)
+  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath)
+
+  updateReopenMenu(recentFilePaths)
 
   // A file has been opened, but it may have been opened while reopening files during OpenCOR startup, in which case we
   // need to reopen the next file, hence our call to reopenFilePathsAndSelectFilePath(), which will do nothing if there
@@ -62,10 +71,6 @@ export function fileOpened(filePath: string): void {
 
   MainWindow.instance?.reopenFilePathsAndSelectFilePath()
 }
-
-vue.watch(recentFilePaths, (filePaths) => {
-  updateReopenMenu(filePaths)
-})
 
 let openedFilePaths: string[] = []
 
@@ -152,10 +157,11 @@ export class MainWindow extends ApplicationWindow {
 
         this.reopenFilePathsAndSelectFilePath()
 
-        // Retrieve the recently opened files.
-        // Note: to set recentFilePaths.value will, indirectly, call updateReopenMenu().
+        // Retrieve the recently opened files and our Reopen menu.
 
-        recentFilePaths.value = (electronSettings.getSync('recentFiles') as string[] | null) ?? []
+        recentFilePaths = (electronSettings.getSync('recentFiles') as string[] | null) ?? []
+
+        updateReopenMenu(recentFilePaths)
 
         // The command line can either be a classical command line or an OpenCOR action (i.e. an opencor:// link). In
         // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
@@ -208,7 +214,7 @@ export class MainWindow extends ApplicationWindow {
 
       // Recent files.
 
-      electronSettings.setSync('recentFiles', recentFilePaths.value)
+      electronSettings.setSync('recentFiles', recentFilePaths)
     })
 
     // Enable our main menu.
