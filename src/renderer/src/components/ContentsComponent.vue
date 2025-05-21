@@ -112,15 +112,16 @@ vue.watch(activeFile, (filePath) => {
 
 function openFile(file: locAPI.File): void {
   const filePath = file.path()
+  const prevActiveFile = activeFile.value
 
-  fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value) + 1, 0, {
+  selectFile(filePath)
+
+  fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file,
     consoleContents: `<b>${file.path()}</b>`
   })
 
   electronAPI?.fileOpened(filePath)
-
-  selectFile(filePath)
 }
 
 function hasFile(filePath: string): boolean {
@@ -135,21 +136,10 @@ function selectFile(filePath: string): void {
   vue
     .nextTick()
     .then(() => {
-      const tabElement = document.getElementById('tab_' + filePath)
-
-      if (tabElement !== null) {
-        // Note: when removing a tab, unless it is the last one, it will flash (whether we scroll it into view or not).
-        //       To prevent this, we temporarily remove the 'p-tab' class (!?).
-
-        tabElement.classList.remove('p-tab')
-        tabElement.scrollIntoView({ block: 'nearest' })
-        tabElement.classList.add('p-tab')
-
-        activeFile.value = filePath
-      }
+      activeFile.value = filePath
     })
     .catch((error: unknown) => {
-      console.error('Error scrolling to tab:', error)
+      console.error('Error selecting a file:', error)
     })
 }
 
