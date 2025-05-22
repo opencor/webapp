@@ -157,11 +157,11 @@ function closeFile(filePath: string): void {
 
   fileTabs.value.splice(activeFileIndex, 1)
 
-  electronAPI?.fileClosed(filePath)
-
   if (activeFile.value === filePath && fileTabs.value.length > 0) {
     selectFile(fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].file.path())
   }
+
+  electronAPI?.fileClosed(filePath)
 }
 
 function closeCurrentFile(): void {
