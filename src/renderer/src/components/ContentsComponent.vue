@@ -133,14 +133,7 @@ function hasFiles(): boolean {
 }
 
 function selectFile(filePath: string): void {
-  vue
-    .nextTick()
-    .then(() => {
-      activeFile.value = filePath
-    })
-    .catch((error: unknown) => {
-      console.error('Error selecting a file:', error)
-    })
+  activeFile.value = filePath
 }
 
 function selectNextFile(): void {
