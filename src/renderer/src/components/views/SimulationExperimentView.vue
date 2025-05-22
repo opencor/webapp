@@ -38,7 +38,7 @@
             </Fieldset>
           </SplitterPanel>
           <SplitterPanel :size="75">
-            <v-chart autoresize :option="option" :theme="theme" />
+            <v-chart :autoresize="isActiveFile" :option="option" :theme="theme" />
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>

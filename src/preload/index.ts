@@ -31,6 +31,7 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
   fileClosed: (filePath: string) => electron.ipcRenderer.invoke('file-closed', filePath),
+  fileIssue: (filePath: string) => electron.ipcRenderer.invoke('file-issue', filePath),
   fileOpened: (filePath: string) => electron.ipcRenderer.invoke('file-opened', filePath),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   fileSelected: (filePath: string) => electron.ipcRenderer.invoke('file-selected', filePath),
@@ -56,10 +57,8 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
       callback(enable)
     }),
   onOpen: (callback: (filePath: string) => void) =>
-    electron.ipcRenderer.on('open', (_event, ...filePaths: string[]) => {
-      for (const filePath of filePaths) {
-        callback(filePath)
-      }
+    electron.ipcRenderer.on('open', (_event, filePath: strin) => {
+      callback(filePath)
     }),
   onOpenRemote: (callback: () => void) =>
     electron.ipcRenderer.on('open-remote', () => {
