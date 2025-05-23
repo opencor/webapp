@@ -62,13 +62,13 @@ import * as vueusecore from '@vueuse/core'
 
 import * as vue from 'vue'
 
-import { electronAPI } from '../../../electronAPI'
-import * as locAPI from '../../../libopencor/locAPI'
+import { electronApi } from '../../../electronApi'
+import * as locApi from '../../../libopencor/locApi'
 
 import * as common from '../common'
 
 export interface IFileTab {
-  file: locAPI.File
+  file: locApi.File
   consoleContents: string
 }
 
@@ -78,7 +78,7 @@ defineProps<{
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
 
 export interface IContentsComponent {
-  openFile(file: locAPI.File): void
+  openFile(file: locApi.File): void
   closeCurrentFile(): void
   closeAllFiles(): void
   hasFile(filePath: string): boolean
@@ -100,17 +100,17 @@ const filePaths = vue.computed(() => {
 })
 
 vue.watch(filePaths, (filePaths) => {
-  electronAPI?.filesOpened(filePaths)
+  electronApi?.filesOpened(filePaths)
 })
 
 vue.watch(activeFile, (filePath) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
   //       people know that a file has been selected.
 
-  electronAPI?.fileSelected(filePath)
+  electronApi?.fileSelected(filePath)
 })
 
-function openFile(file: locAPI.File): void {
+function openFile(file: locApi.File): void {
   const filePath = file.path()
   const prevActiveFile = activeFile.value
 
@@ -121,7 +121,7 @@ function openFile(file: locAPI.File): void {
     consoleContents: `<b>${file.path()}</b>`
   })
 
-  electronAPI?.fileOpened(filePath)
+  electronApi?.fileOpened(filePath)
 }
 
 function hasFile(filePath: string): boolean {
@@ -151,7 +151,7 @@ function selectPreviousFile(): void {
 }
 
 function closeFile(filePath: string): void {
-  locAPI.fileManager.unmanage(filePath)
+  locApi.fileManager.unmanage(filePath)
 
   const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath)
 
@@ -161,7 +161,7 @@ function closeFile(filePath: string): void {
     selectFile(fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].file.path())
   }
 
-  electronAPI?.fileClosed(filePath)
+  electronApi?.fileClosed(filePath)
 }
 
 function closeCurrentFile(): void {

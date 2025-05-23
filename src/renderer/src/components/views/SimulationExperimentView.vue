@@ -252,9 +252,9 @@ const theme = vue.computed(() => {
 
 echarts.use([GridComponent, LineChart, CanvasRenderer])
 
-type EChartsOption = echarts.ComposeOption<LineSeriesOption>
+type EchartsOption = echarts.ComposeOption<LineSeriesOption>
 
-const option = vue.ref<EChartsOption>({
+const option = vue.ref<EchartsOption>({
   animation: false,
   xAxis: {
     name: 'x',

@@ -1,4 +1,4 @@
-interface IElectronAPI {
+interface IElectronApi {
   // Note: this must be in sync with src/preload/index.ts.
 
   // Some general methods.
@@ -33,7 +33,7 @@ interface IElectronAPI {
 }
 
 interface IWindow {
-  electronAPI: IElectronAPI
+  electronApi: IElectronApi
 }
 
-export const electronAPI: IElectronAPI | undefined = (window as unknown as IWindow).electronAPI
+export const electronApi: IElectronApi | undefined = (window as unknown as IWindow).electronApi

@@ -6,7 +6,7 @@
         :key="'issue_' + issue.type + '_' + issue.description"
         :class="index > 0 ? 'mt-4!' : ''"
       >
-        <Message v-if="issue.type === locAPI.IssueType.Error" severity="error" icon="pi pi-times-circle">
+        <Message v-if="issue.type === locApi.IssueType.Error" severity="error" icon="pi pi-times-circle">
           {{ issue.description }}
         </Message>
         <Message v-else severity="warn" icon="pi pi-exclamation-triangle">
@@ -18,10 +18,10 @@
 </template>
 
 <script setup lang="ts">
-import * as locAPI from '../../../../libopencor/locAPI'
+import * as locApi from '../../../../libopencor/locApi'
 
 defineProps<{
-  issues: locAPI.IIssue[]
+  issues: locApi.IIssue[]
 }>()
 </script>
 

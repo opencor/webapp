@@ -1,8 +1,8 @@
 import { UAParser } from 'ua-parser-js'
 import * as vue from 'vue'
 
-import { electronAPI } from '../../electronAPI'
-import * as locAPI from '../../libopencor/locAPI'
+import { electronApi } from '../../electronApi'
+import * as locApi from '../../libopencor/locApi'
 
 // Some methods to determine the operating system, whether the application is running on a mobile device, etc.
 
@@ -16,7 +16,7 @@ export function isLinux(): boolean {
   return uaParser.getOS().name === 'Linux'
 }
 
-export function isMacOS(): boolean {
+export function isMacOs(): boolean {
   return uaParser.getOS().name === 'macOS'
 }
 
@@ -39,13 +39,13 @@ prefersColorScheme.addEventListener('change', (event) => {
 // A method to determine whether the Ctrl or Cmd key is pressed, depending on the operating system.
 
 export function isCtrlOrCmd(event: KeyboardEvent): boolean {
-  return isMacOS() ? event.metaKey : event.ctrlKey
+  return isMacOs() ? event.metaKey : event.ctrlKey
 }
 
 // A method to enable/disable the main menu.
 
 export function enableDisableMainMenu(enable: boolean): void {
-  electronAPI?.enableDisableMainMenu(enable)
+  electronApi?.enableDisableMainMenu(enable)
 }
 
 // Some file-related methods.
@@ -56,13 +56,13 @@ export function isRemoteFilePath(filePath: string): boolean {
 
 export function filePath(fileOrFilePath: string | File): string {
   return fileOrFilePath instanceof File
-    ? electronAPI !== undefined
-      ? electronAPI.filePath(fileOrFilePath)
+    ? electronApi !== undefined
+      ? electronApi.filePath(fileOrFilePath)
       : fileOrFilePath.name
     : fileOrFilePath
 }
 
-export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
+export function file(fileOrFilePath: string | File): Promise<locApi.File> {
   if (typeof fileOrFilePath === 'string') {
     if (isRemoteFilePath(fileOrFilePath)) {
       return new Promise((resolve, reject) => {
@@ -77,7 +77,7 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer)
 
-            resolve(new locAPI.File(filePath(fileOrFilePath), fileContents))
+            resolve(new locApi.File(filePath(fileOrFilePath), fileContents))
           })
           .catch((error: unknown) => {
             reject(error instanceof Error ? error : new Error(String(error)))
@@ -86,8 +86,8 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
     }
 
     return new Promise((resolve, reject) => {
-      if (electronAPI !== undefined) {
-        resolve(new locAPI.File(filePath(fileOrFilePath)))
+      if (electronApi !== undefined) {
+        resolve(new locApi.File(filePath(fileOrFilePath)))
       } else {
         reject(new Error('Local files cannot be opened.'))
       }
@@ -100,7 +100,7 @@ export function file(fileOrFilePath: string | File): Promise<locAPI.File> {
       .then((arrayBuffer) => {
         const fileContents = new Uint8Array(arrayBuffer)
 
-        resolve(new locAPI.File(filePath(fileOrFilePath), fileContents))
+        resolve(new locApi.File(filePath(fileOrFilePath), fileContents))
       })
       .catch((error: unknown) => {
         reject(error instanceof Error ? error : new Error(String(error)))
