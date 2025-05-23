@@ -56,3 +56,17 @@ napi_value fileType(const Napi::CallbackInfo &pInfo)
 
     return Napi::Number::New(pInfo.Env(), static_cast<int>(file->type()));
 }
+
+napi_value fileUiJson(const Napi::CallbackInfo &pInfo)
+{
+    auto file = valueToFile(pInfo[0]);
+    auto uiJson = file->childFile("simulation.json");
+
+    if (uiJson == nullptr) {
+        return pInfo.Env().Undefined();
+    }
+
+    auto res = uiJson->contents();
+
+    return Napi::Buffer<unsigned char>::Copy(pInfo.Env(), res.data(), res.size());
+}

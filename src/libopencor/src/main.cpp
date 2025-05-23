@@ -20,6 +20,7 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     pExports.Set(Napi::String::New(pEnv, "fileCreate"), Napi::Function::New(pEnv, fileCreate));
     pExports.Set(Napi::String::New(pEnv, "fileIssues"), Napi::Function::New(pEnv, fileIssues));
     pExports.Set(Napi::String::New(pEnv, "fileType"), Napi::Function::New(pEnv, fileType));
+    pExports.Set(Napi::String::New(pEnv, "fileUiJson"), Napi::Function::New(pEnv, fileUiJson));
 
     // SedDocument API.
 

@@ -1,4 +1,5 @@
 import libOpenCOR from 'libopencor'
+import * as vue from 'vue'
 
 import {
   cppVersion,
@@ -56,6 +57,7 @@ export interface IWasmFile {
   issues: IWasmIssues
   contents(): Uint8Array
   setContents(ptr: number, length: number): void
+  childFileFromFileName(fileName: string): File | null
 }
 
 export class File {
@@ -210,5 +212,29 @@ export class File {
 
   sedInstance(): SEDInstance {
     return this._sedInstance
+  }
+
+  uiJson(): JSON | undefined {
+    let uiJsonContents: Uint8Array | undefined
+
+    if (cppVersion()) {
+      uiJsonContents = _locAPI.fileUiJson(this._path)
+
+      if (uiJsonContents === undefined) {
+        return undefined
+      }
+    } else {
+      const uiJson = vue.toRaw(this._wasmFile).childFileFromFileName('simulation.json')
+
+      if (uiJson === null) {
+        return undefined
+      }
+
+      uiJsonContents = uiJson.contents()
+    }
+
+    const decoder = new TextDecoder()
+
+    return JSON.parse(decoder.decode(uiJsonContents))
   }
 }
