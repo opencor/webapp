@@ -177,3 +177,10 @@ export function formatTime(time: number): string {
 
   return res
 }
+
+// A method to merge two arrays of numbers into a single array of tuples.
+// Note: we assume that both arrays have the same length.
+
+export function coordinates(x: number[], y: number[]): number[][] {
+  return x.map((value, index) => [value, y[index]])
+}
