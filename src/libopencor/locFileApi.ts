@@ -4,26 +4,26 @@ import * as vue from 'vue'
 import {
   cppVersion,
   IssueType,
-  SEDDocument,
-  SEDInstance,
-  SEDSimulationType,
-  SEDSimulationUniformTimeCourse,
+  SedDocument,
+  SedInstance,
+  SedSimulationType,
+  SedSimulationUniformTimeCourse,
   wasmIssuesToIssues,
   type IIssue,
   type IWasmIssues
-} from './locAPI'
+} from './locApi'
 
-// @ts-expect-error (window.locAPI may or may not be defined and that is why we test it)
-export const _locAPI = window.locAPI ?? (await libOpenCOR())
+// @ts-expect-error (window.locApi may or may not be defined and that is why we test it)
+export const _locApi = window.locApi ?? (await libOpenCOR())
 
 // FileManager API.
 
 class FileManager {
-  private _fileManager = cppVersion() ? undefined : _locAPI.FileManager.instance()
+  private _fileManager = cppVersion() ? undefined : _locApi.FileManager.instance()
 
   unmanage(path: string): void {
     if (cppVersion()) {
-      _locAPI.fileManagerUnmanage(path)
+      _locApi.fileManagerUnmanage(path)
     } else {
       const files = this._fileManager.files
 
@@ -46,9 +46,9 @@ export const fileManager = new FileManager()
 
 export enum FileType {
   UnknownFile,
-  CellMLFile,
-  SEDMLFile,
-  COMBINEArchive,
+  CellmlFile,
+  SedmlFile,
+  CombineArchive,
   IrretrievableFile
 }
 
@@ -63,22 +63,22 @@ export interface IWasmFile {
 export class File {
   private _path: string
   private _wasmFile: IWasmFile = {} as IWasmFile
-  private _sedDocument: SEDDocument = {} as SEDDocument
-  private _sedInstance: SEDInstance = {} as SEDInstance
+  private _sedDocument: SedDocument = {} as SedDocument
+  private _sedInstance: SedInstance = {} as SedInstance
   private _issues: IIssue[] = []
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
     this._path = path
 
     if (cppVersion()) {
-      _locAPI.fileCreate(path, contents)
+      _locApi.fileCreate(path, contents)
 
-      this._issues = _locAPI.fileIssues(path)
+      this._issues = _locApi.fileIssues(path)
     } else if (contents !== undefined) {
-      this._wasmFile = new _locAPI.File(path)
+      this._wasmFile = new _locApi.File(path)
 
-      const heapContentsPtr = _locAPI._malloc(contents.length)
-      const heapContents = new Uint8Array(_locAPI.HEAPU8.buffer, heapContentsPtr, contents.length)
+      const heapContentsPtr = _locApi._malloc(contents.length)
+      const heapContents = new Uint8Array(_locApi.HEAPU8.buffer, heapContentsPtr, contents.length)
 
       heapContents.set(contents)
 
@@ -100,7 +100,7 @@ export class File {
 
     // Retrieve the SED-ML file associated with this file.
 
-    this._sedDocument = new SEDDocument(this._path, this._wasmFile)
+    this._sedDocument = new SedDocument(this._path, this._wasmFile)
     this._issues = this._sedDocument.issues()
 
     if (this._issues.length !== 0) {
@@ -139,9 +139,9 @@ export class File {
 
     // Make sure that the simulation is a uniform time course simulation.
 
-    const simulation = this._sedDocument.simulation(0) as SEDSimulationUniformTimeCourse
+    const simulation = this._sedDocument.simulation(0) as SedSimulationUniformTimeCourse
 
-    if (simulation.type() !== SEDSimulationType.UniformTimeCourse) {
+    if (simulation.type() !== SedSimulationType.UniformTimeCourse) {
       this._issues.push({
         type: IssueType.Warning,
         description: 'Only uniform time course simulations are currently supported.'
@@ -191,7 +191,7 @@ export class File {
   }
 
   type(): FileType {
-    return cppVersion() ? _locAPI.fileType(this._path) : this._wasmFile.type.value
+    return cppVersion() ? _locApi.fileType(this._path) : this._wasmFile.type.value
   }
 
   path(): string {
@@ -203,14 +203,14 @@ export class File {
   }
 
   contents(): Uint8Array {
-    return cppVersion() ? _locAPI.fileContents(this._path) : this._wasmFile.contents()
+    return cppVersion() ? _locApi.fileContents(this._path) : this._wasmFile.contents()
   }
 
-  sedDocument(): SEDDocument {
+  sedDocument(): SedDocument {
     return this._sedDocument
   }
 
-  sedInstance(): SEDInstance {
+  sedInstance(): SedInstance {
     return this._sedInstance
   }
 

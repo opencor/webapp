@@ -5,11 +5,11 @@ import * as systemInformation from 'systeminformation'
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
 
 // Some bridging between our main process and renderer process.
-// Note: this must be in sync with src/electronAPI.ts.
+// Note: this must be in sync with src/electronApi.ts.
 
 const osInfo = await systemInformation.osInfo()
 
-electron.contextBridge.exposeInMainWorld('electronAPI', {
+electron.contextBridge.exposeInMainWorld('electronApi', {
   // Some general methods.
 
   operatingSystem: () => {
@@ -57,7 +57,7 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
       callback(enable)
     }),
   onOpen: (callback: (filePath: string) => void) =>
-    electron.ipcRenderer.on('open', (_event, filePath: strin) => {
+    electron.ipcRenderer.on('open', (_event, filePath: string) => {
       callback(filePath)
     }),
   onOpenRemote: (callback: () => void) =>
@@ -89,7 +89,7 @@ electron.contextBridge.exposeInMainWorld('electronAPI', {
 // Give our renderer process access to the native node module for libOpenCOR.
 // Note: this must be in sync with src/libopencor/src/main.cpp.
 
-electron.contextBridge.exposeInMainWorld('locAPI', {
+electron.contextBridge.exposeInMainWorld('locApi', {
   // Some general methods.
 
   version: () => loc.version(),

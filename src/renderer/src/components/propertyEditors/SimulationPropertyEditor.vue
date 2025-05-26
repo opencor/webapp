@@ -5,13 +5,13 @@
 <script setup lang="ts">
 import * as vue from 'vue'
 
-import * as locAPI from '../../../../libopencor/locAPI'
+import * as locApi from '../../../../libopencor/locApi'
 
 const props = defineProps<{
-  file: locAPI.File
+  file: locApi.File
 }>()
 
-const sedSimulationUniformTimeCourse = props.file.sedDocument().simulation(0) as locAPI.SEDSimulationUniformTimeCourse
+const sedSimulationUniformTimeCourse = props.file.sedDocument().simulation(0) as locApi.SedSimulationUniformTimeCourse
 const voiUnit = props.file.sedInstance().task(0).voiUnit()
 
 const properties = vue.ref([
