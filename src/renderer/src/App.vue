@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
-    <div v-show="!electronAPI && omex === undefined">
+    <div v-show="!electronApi && omex === undefined">
       <MainMenu
         :hasFiles="hasFiles"
         @about="onAbout"
@@ -31,8 +31,8 @@ import * as vue from 'vue'
 import * as vueusecore from '@vueuse/core'
 
 import { SHORT_DELAY, TOAST_LIFE } from '../../constants'
-import { electronAPI } from '../../electronAPI'
-import * as locAPI from '../../libopencor/locAPI'
+import { electronApi } from '../../electronApi'
+import * as locApi from '../../libopencor/locApi'
 
 import * as common from './common'
 import IContentsComponent from './components/ContentsComponent.vue'
@@ -47,7 +47,7 @@ const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 
 // Handle an action.
 
-electronAPI?.onAction((action: string) => {
+electronApi?.onAction((action: string) => {
   handleAction(action)
 })
 
@@ -89,7 +89,7 @@ function handleAction(action: string): void {
 
 const uiEnabled = vue.ref<boolean>(true)
 
-electronAPI?.onEnableDisableUi((enable: boolean) => {
+electronApi?.onEnableDisableUi((enable: boolean) => {
   enableDisableUi(enable)
 })
 
@@ -104,7 +104,7 @@ const hasFiles = vue.computed(() => {
 })
 
 vue.watch(hasFiles, (hasFiles) => {
-  electronAPI?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
+  electronApi?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
 })
 
 // Spinning wheel.
@@ -125,7 +125,7 @@ function hideSpinningWheel(): void {
 
 // Check for updates dialog.
 
-electronAPI?.onCheckForUpdates(() => {
+electronApi?.onCheckForUpdates(() => {
   toast.add({
     severity: 'info',
     summary: 'Check for updates',
@@ -138,7 +138,7 @@ electronAPI?.onCheckForUpdates(() => {
 
 const aboutVisible = vue.ref<boolean>(false)
 
-electronAPI?.onAbout(() => {
+electronApi?.onAbout(() => {
   onAbout()
 })
 
@@ -148,7 +148,7 @@ function onAbout(): void {
 
 // Settings dialog.
 
-electronAPI?.onSettings(() => {
+electronApi?.onSettings(() => {
   onSettings()
 })
 
@@ -174,7 +174,7 @@ function openFile(fileOrFilePath: string | File): void {
     return
   }
 
-  // Retrieve a locAPI.File object for the given file or file path and add it to the contents.
+  // Retrieve a locApi.File object for the given file or file path and add it to the contents.
 
   if (common.isRemoteFilePath(filePath)) {
     showSpinningWheel()
@@ -185,20 +185,20 @@ function openFile(fileOrFilePath: string | File): void {
     .then((file) => {
       const fileType = file.type()
 
-      if (fileType === locAPI.FileType.UnknownFile || fileType === locAPI.FileType.IrretrievableFile) {
+      if (fileType === locApi.FileType.UnknownFile || fileType === locApi.FileType.IrretrievableFile) {
         toast.add({
           severity: 'error',
           summary: 'Opening a file',
           detail:
             filePath +
             '\n\n' +
-            (fileType === locAPI.FileType.UnknownFile
+            (fileType === locApi.FileType.UnknownFile
               ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
               : 'The file could not be retrieved.'),
           life: TOAST_LIFE
         })
 
-        electronAPI?.fileIssue(filePath)
+        electronApi?.fileIssue(filePath)
       } else {
         contents.value?.openFile(file)
       }
@@ -219,7 +219,7 @@ function openFile(fileOrFilePath: string | File): void {
         life: TOAST_LIFE
       })
 
-      electronAPI?.fileIssue(filePath)
+      electronApi?.fileIssue(filePath)
     })
 }
 
@@ -263,7 +263,7 @@ function onDragLeave(): void {
 
 // Open.
 
-electronAPI?.onOpen((filePath: string) => {
+electronApi?.onOpen((filePath: string) => {
   openFile(filePath)
 })
 
@@ -271,7 +271,7 @@ electronAPI?.onOpen((filePath: string) => {
 
 const openRemoteVisible = vue.ref<boolean>(false)
 
-electronAPI?.onOpenRemote(() => {
+electronApi?.onOpenRemote(() => {
   openRemoteVisible.value = true
 })
 
@@ -286,7 +286,7 @@ function onOpenRemote(url: string): void {
 
 // Close.
 
-electronAPI?.onClose(() => {
+electronApi?.onClose(() => {
   onClose()
 })
 
@@ -296,7 +296,7 @@ function onClose(): void {
 
 // Close all.
 
-electronAPI?.onCloseAll(() => {
+electronApi?.onCloseAll(() => {
   onCloseAll()
 })
 
@@ -308,17 +308,17 @@ function onCloseAll(): void {
 
 const resetAllVisible = vue.ref<boolean>(false)
 
-electronAPI?.onResetAll(() => {
+electronApi?.onResetAll(() => {
   resetAllVisible.value = true
 })
 
 function onResetAll(): void {
-  electronAPI?.resetAll()
+  electronApi?.resetAll()
 }
 
 // Select.
 
-electronAPI?.onSelect((filePath: string) => {
+electronApi?.onSelect((filePath: string) => {
   contents.value?.selectFile(filePath)
 })
 
@@ -351,7 +351,7 @@ if (props.omex !== undefined) {
     // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
     setTimeout(() => {
-      if (electronAPI === undefined) {
+      if (electronApi === undefined) {
         if (window.location.search !== '') {
           action.value = window.location.search.substring(1)
 

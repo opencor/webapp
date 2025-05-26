@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20250523.0",
+  "version": "0.20250526.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
@@ -65,7 +65,7 @@
     "autoprefixer": "^10.4.21",
     "cmake-js": "^7.3.1",
     "echarts": "^5.6.0",
-    "electron": "^36.3.0",
+    "electron": "^36.3.1",
     "electron-builder": "^26.0.12",
     "electron-settings": "^4.0.4",
     "electron-vite": "^3.1.0",
@@ -76,7 +76,7 @@
     "primeicons": "^7.0.0",
     "primevue": "^4.3.4",
     "quill": "^2.0.3",
-    "systeminformation": "^5.26.1",
+    "systeminformation": "^5.27.1",
     "tailwindcss": "^4.1.7",
     "ua-parser-js": "^2.0.3",
     "unplugin-vue-components": "^28.5.0",

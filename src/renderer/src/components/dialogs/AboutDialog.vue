@@ -3,13 +3,13 @@
     <div class="space-y-7">
       <div class="text-center">
         <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
-        <div v-if="electronAPI !== undefined" class="text-xl italic font-bold">{{ electronAPI.operatingSystem() }}</div>
+        <div v-if="electronApi !== undefined" class="text-xl italic font-bold">{{ electronApi.operatingSystem() }}</div>
         <div class="text-sm italic">Copyright {{ copyright }}</div>
       </div>
       <div class="space-y-2">
         <div>
           <a href="https://opencor.ws/" target="_blank" rel="noopener">OpenCOR</a> is a frontend to
-          <a href="https://opencor.ws/libopencor/" target="_blank" rel="noopener">libOpenCOR</a> {{ locAPI.version() }},
+          <a href="https://opencor.ws/libopencor/" target="_blank" rel="noopener">libOpenCOR</a> {{ locApi.version() }},
           a library that can be used to organise, edit, simulate, and analyse
           <a href="https://cellml.org/" target="_blank" rel="noopener">CellML</a> files.
         </div>
@@ -43,8 +43,8 @@
 </template>
 
 <script setup lang="ts">
-import { electronAPI } from '../../../../electronAPI'
-import * as locAPI from '../../../../libopencor/locAPI'
+import { electronApi } from '../../../../electronApi'
+import * as locApi from '../../../../libopencor/locApi'
 
 defineEmits(['close'])
 

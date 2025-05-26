@@ -36,7 +36,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['about', 'close', 'closeAll', 'open', 'openRemote', 'settings'])
 const isWindowsOrLinux = common.isWindows() || common.isLinux()
-const isMacOS = common.isMacOS()
+const isMacOs = common.isMacOs()
 
 const items = [
   {
@@ -44,7 +44,7 @@ const items = [
     items: [
       {
         label: 'Open...',
-        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+O' : isMacOS ? '⌘⌥O' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+O' : isMacOs ? '⌘⌥O' : undefined,
         command: () => {
           emit('open')
         }
@@ -52,7 +52,7 @@ const items = [
       { separator: true },
       {
         label: 'Open Remote...',
-        shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+O' : isMacOS ? '⇧⌘⌥O' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+O' : isMacOs ? '⇧⌘⌥O' : undefined,
         command: () => {
           emit('openRemote')
         }
@@ -60,7 +60,7 @@ const items = [
       { separator: true },
       {
         label: 'Close',
-        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+W' : isMacOS ? '⌘⌥W' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+W' : isMacOs ? '⌘⌥W' : undefined,
         command: () => {
           emit('close')
         },
@@ -80,7 +80,7 @@ const items = [
     items: [
       {
         label: 'Settings...',
-        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+,' : isMacOS ? '⌘⌥,' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+,' : isMacOs ? '⌘⌥,' : undefined,
         command: () => {
           emit('settings')
         }
