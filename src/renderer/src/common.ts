@@ -70,9 +70,9 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer()
-            } else {
-              throw new Error(`The server responded with a status of ${String(response.status)}.`)
             }
+
+            throw new Error(`The server responded with a status of ${String(response.status)}.`)
           })
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer)
