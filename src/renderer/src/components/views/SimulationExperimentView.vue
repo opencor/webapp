@@ -38,7 +38,7 @@
             </Fieldset>
           </SplitterPanel>
           <SplitterPanel :size="75">
-            <v-chart :autoresize="isActiveFile" :option="option" :theme="theme" />
+            <GraphPanelWidget :canAutoResize="isActiveFile" :plots="plots" />
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
@@ -56,13 +56,8 @@ import * as vue from 'vue'
 
 import * as common from '../../common'
 
+import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 import { type IFileTab } from '../ContentsComponent.vue'
-
-import * as echarts from 'echarts/core'
-import { GridComponent } from 'echarts/components'
-import { LineChart, type LineSeriesOption } from 'echarts/charts'
-import { CanvasRenderer } from 'echarts/renderers'
-import VChart from 'vue-echarts'
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 
@@ -86,6 +81,7 @@ interface IParameter {
 const parameters = vue.ref<IParameter[]>([])
 const xParameter = vue.ref({ [sedInstanceTask.voiName()]: true })
 const yParameter = vue.ref({ [sedInstanceTask.stateName(0)]: true })
+const plots = vue.ref<IGraphPanelPlot[]>([])
 
 function addParameter(param: string): void {
   parameters.value.push({ key: param, label: param })
@@ -111,10 +107,6 @@ for (let i = 0; i < sedInstanceTask.computedConstantCount(); i++) {
 
 for (let i = 0; i < sedInstanceTask.algebraicCount(); i++) {
   addParameter(sedInstanceTask.algebraicName(i))
-}
-
-function variableName(name: string): string {
-  return name.replace(/.*\//, '')
 }
 
 function onRun(): void {
@@ -214,18 +206,21 @@ function updatePlot() {
   const yGraphParam = checkGraphParameter(Object.keys(yParameter.value)[0])
 
   if (xGraphParam === undefined || yGraphParam === undefined) {
-    option.value.xAxis.name = 'x'
-    option.value.yAxis.name = 'y'
-    option.value.series[0].data = []
+    plots.value = []
 
     return
   }
 
-  option.value.xAxis.name = variableName(xGraphParam.name) + ' (' + xGraphParam.unit + ')'
-  option.value.yAxis.name = variableName(yGraphParam.name) + ' (' + yGraphParam.unit + ')'
-  option.value.series[0].data = xGraphParam.data.map((x, index) => {
-    return [x, yGraphParam.data[index]]
-  })
+  plots.value = [
+    {
+      x: {
+        data: xGraphParam.data
+      },
+      y: {
+        data: yGraphParam.data
+      }
+    }
+  ]
 }
 
 // Track the height of our file tablist toolbar.
@@ -243,46 +238,6 @@ if (!common.isMobile()) {
     }
   })
 }
-
-// Add an ECharts object.
-
-const theme = vue.computed(() => {
-  return common.isLightMode.value ? 'macarons' : 'dark'
-})
-
-echarts.use([GridComponent, LineChart, CanvasRenderer])
-
-type EchartsOption = echarts.ComposeOption<LineSeriesOption>
-
-const option = vue.ref<EchartsOption>({
-  animation: false,
-  xAxis: {
-    name: 'x',
-    scale: true,
-    minorTick: {
-      show: true
-    },
-    minorSplitLine: {
-      show: true
-    }
-  },
-  yAxis: {
-    name: 'y',
-    scale: true,
-    minorTick: {
-      show: true
-    },
-    minorSplitLine: {
-      show: true
-    }
-  },
-  series: [
-    {
-      type: 'line',
-      showSymbol: false
-    }
-  ]
-})
 
 // Apply the proper class to our main div.
 

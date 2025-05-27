@@ -70,9 +70,9 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer()
-            } else {
-              throw new Error(`The server responded with a status of ${String(response.status)}.`)
             }
+
+            throw new Error(`The server responded with a status of ${String(response.status)}.`)
           })
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer)
@@ -176,4 +176,11 @@ export function formatTime(time: number): string {
   }
 
   return res
+}
+
+// A method to merge two arrays of numbers into a single array of tuples.
+// Note: we assume that both arrays have the same length.
+
+export function coordinates(x: number[], y: number[]): number[][] {
+  return x.map((value, index) => [value, y[index]])
 }

@@ -30,7 +30,9 @@
 </template>
 
 <script setup lang="ts">
-interface Props {
+import { type DataTableCellEditCompleteEvent } from 'primevue/datatable'
+
+interface IProps {
   name: string
   hasUnits?: boolean
   properties: {
@@ -40,11 +42,11 @@ interface Props {
   }[]
 }
 
-const { hasUnits = true } = defineProps<Props>()
+const { hasUnits = true, name, properties } = defineProps<IProps>()
 const columnWidth = 'width: calc(100% / ' + (hasUnits ? '3' : '2') + ')'
 const emit = defineEmits(['propertyUpdated'])
 
-function onCellEditComplete(event): void {
+function onCellEditComplete(event: DataTableCellEditCompleteEvent): void {
   const { data, newValue, field } = event
 
   data[field] = newValue
