@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-row h-full overflow-hidden">
+  <div class="h-full">
     <div v-if="showMarker" class="marker" />
     <v-chart :autoresize="canAutoResize" :option="option" :theme="theme" />
   </div>
