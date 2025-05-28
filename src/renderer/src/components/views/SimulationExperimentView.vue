@@ -241,7 +241,7 @@ if (!common.isMobile()) {
 // Apply the proper class to our main div.
 
 vue.onMounted(() => {
-  mainDiv.value?.classList.add(props.simulationOnly ? 'simulation-experiment-isolated-ui' : 'simulation-experiment-whole-ui')
+  mainDiv.value?.classList.add(props.simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')
 })
 </script>
 
@@ -284,11 +284,11 @@ vue.onMounted(() => {
   cursor: default;
 }
 
-.simulation-experiment-isolated-ui {
+.simulation-experiment-only {
   height: calc(100vh - var(--simulation-experiment-toolbar-height));
 }
 
-.simulation-experiment-whole-ui {
+.simulation-experiment {
   height: calc(
     100vh - var(--main-menu-height) - var(--file-tablist-height) - var(--simulation-experiment-toolbar-height)
   );
