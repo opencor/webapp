@@ -59,17 +59,16 @@ import * as common from '../../common'
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 import { type IFileTab } from '../ContentsComponent.vue'
 
-const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
-
 const fileTabModel = defineModel()
-const fileTab = fileTabModel.value as IFileTab
 const props = defineProps<{
   isActiveFile: boolean
   isAlone?: boolean
 }>()
+
+const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
+const fileTab = fileTabModel.value as IFileTab
 const toolbarId = `simulationExperimentToolbar_${String(fileTab.file.path())}`
 const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
-
 const sedInstance = fileTab.file.sedInstance()
 const sedInstanceTask = sedInstance.task(0)
 
@@ -110,7 +109,7 @@ for (let i = 0; i < sedInstanceTask.algebraicCount(); i++) {
 }
 
 function onRun(): void {
-  // Run the instance and output the simulation time to the console.
+  // Run the instance, output the simulation time to the console, and update the plot.
 
   const simulationTime = sedInstance.run()
 
