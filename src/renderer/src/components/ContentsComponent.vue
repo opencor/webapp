@@ -1,5 +1,5 @@
 <template>
-  <div v-if="onlySimulationExperimentView" class="h-full">
+  <div v-if="simulationOnly" class="h-full">
     <div v-for="(fileTab, index) in fileTabs" :key="'tabPanel_' + fileTab.file.path()" :value="fileTab.file.path()">
       <SimulationExperimentView
         v-if="fileTab.file.issues().length === 0"
@@ -73,7 +73,7 @@ export interface IFileTab {
 }
 
 defineProps<{
-  onlySimulationExperimentView?: boolean
+  simulationOnly?: boolean
 }>()
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
 

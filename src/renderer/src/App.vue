@@ -12,7 +12,7 @@
       />
     </div>
     <div ref="mainDiv" class="grow">
-      <ContentsComponent ref="contents" :onlySimulationExperimentView="omex !== undefined" />
+      <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
       <DragNDropComponent v-show="dropAreaCounter > 0" />
       <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
       <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
