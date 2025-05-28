@@ -2,7 +2,13 @@
   <div v-if="simulationOnly" class="h-full">
     <div v-for="(fileTab, index) in fileTabs" :key="'tabPanel_' + fileTab.file.path()" :value="fileTab.file.path()">
       <SimulationExperimentView
-        v-if="fileTab.file.issues().length === 0"
+        v-if="fileTab.file.issues().length === 0 && fileTab.uiJson === undefined"
+        v-model="fileTabs[index]"
+        :isActiveFile="fileTab.file.path() === activeFile"
+        :simulationOnly="true"
+      />
+      <SimulationExperimentUiView
+        v-else-if="fileTab.uiJson !== undefined"
         v-model="fileTabs[index]"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="true"
@@ -46,7 +52,12 @@
           :value="fileTab.file.path()"
         >
           <SimulationExperimentView
-            v-if="fileTab.file.issues().length === 0"
+            v-if="fileTab.file.issues().length === 0 && fileTab.uiJson === undefined"
+            v-model="fileTabs[index]"
+            :isActiveFile="fileTab.file.path() === activeFile"
+          />
+          <SimulationExperimentUiView
+            v-else-if="fileTab.uiJson !== undefined"
             v-model="fileTabs[index]"
             :isActiveFile="fileTab.file.path() === activeFile"
           />
@@ -70,6 +81,7 @@ import * as common from '../common'
 export interface IFileTab {
   file: locApi.File
   consoleContents: string
+  uiJson?: JSON
 }
 
 defineProps<{
@@ -118,7 +130,8 @@ function openFile(file: locApi.File): void {
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file,
-    consoleContents: `<b>${file.path()}</b>`
+    consoleContents: `<b>${file.path()}</b>`,
+    uiJson: file.uiJson()
   })
 
   electronApi?.fileOpened(filePath)
