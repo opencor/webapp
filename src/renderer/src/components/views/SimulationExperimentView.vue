@@ -7,7 +7,7 @@
       </template>
     </Toolbar>
     <Splitter class="border-none! h-full m-0" layout="vertical">
-      <SplitterPanel :size="isAlone ? 100 : 89">
+      <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4" :size="25">
             <SimulationPropertyEditor :file="vue.toRaw(fileTab.file)" />
@@ -42,7 +42,7 @@
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
-      <SplitterPanel v-if="!isAlone" :size="11">
+      <SplitterPanel v-if="!simulationOnly" :size="11">
         <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="fileTab.consoleContents" />
       </SplitterPanel>
     </Splitter>
@@ -62,7 +62,7 @@ import { type IFileTab } from '../ContentsComponent.vue'
 const fileTabModel = defineModel()
 const props = defineProps<{
   isActiveFile: boolean
-  isAlone?: boolean
+  simulationOnly?: boolean
 }>()
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
@@ -241,7 +241,7 @@ if (!common.isMobile()) {
 // Apply the proper class to our main div.
 
 vue.onMounted(() => {
-  mainDiv.value?.classList.add(props.isAlone ? 'simulation-experiment-isolated-ui' : 'simulation-experiment-whole-ui')
+  mainDiv.value?.classList.add(props.simulationOnly ? 'simulation-experiment-isolated-ui' : 'simulation-experiment-whole-ui')
 })
 </script>
 

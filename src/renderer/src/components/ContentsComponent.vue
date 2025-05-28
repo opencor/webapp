@@ -5,7 +5,7 @@
         v-if="fileTab.file.issues().length === 0"
         v-model="fileTabs[index]"
         :isActiveFile="fileTab.file.path() === activeFile"
-        :isAlone="true"
+        :simulationOnly="true"
       />
       <IssuesView v-else :issues="fileTab.file.issues()" />
     </div>
