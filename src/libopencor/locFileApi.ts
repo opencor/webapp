@@ -218,7 +218,7 @@ export class File {
     let uiJsonContents: Uint8Array | undefined
 
     if (cppVersion()) {
-      uiJsonContents = _locAPI.fileUiJson(this._path)
+      uiJsonContents = _locApi.fileUiJson(this._path)
 
       if (uiJsonContents === undefined) {
         return undefined
