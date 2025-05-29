@@ -1,6 +1,8 @@
 import libOpenCOR from 'libopencor'
 import * as vue from 'vue'
 
+import { type IUiJson } from '../renderer/src/components/views/SimulationExperimentUiView'
+
 import {
   cppVersion,
   IssueType,
@@ -214,7 +216,7 @@ export class File {
     return this._sedInstance
   }
 
-  uiJson(): JSON | undefined {
+  uiJson(): IUiJson | undefined {
     let uiJsonContents: Uint8Array | undefined
 
     if (cppVersion()) {

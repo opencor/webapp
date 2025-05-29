@@ -1,11 +1,7 @@
 <template>
   <Fieldset class="ml-4! mr-4! mb-4!" legend="Issues">
     <ScrollPanel :class="simulationOnly ? 'issues-scroll-panel-only' : 'issues-scroll-panel'">
-      <div
-        v-for="(issue, index) in issues"
-        :key="'issue_' + issue.type + '_' + issue.description"
-        :class="index > 0 ? 'mt-4!' : ''"
-      >
+      <div v-for="(issue, index) in issues" :key="'issue_' + index" :class="index > 0 ? 'mt-4!' : ''">
         <Message v-if="issue.type === locApi.IssueType.Error" severity="error" icon="pi pi-times-circle">
           {{ issue.description }}
         </Message>
