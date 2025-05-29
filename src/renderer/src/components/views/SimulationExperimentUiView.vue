@@ -1,5 +1,5 @@
 <template>
-  <div ref="mainDiv" class="h-full">
+  <div :class="'h-full ' + (simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')">
     <GraphPanelWidget :canAutoResize="isActiveFile" :plots="plots" />
   </div>
 </template>
@@ -11,12 +11,11 @@ import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 import { type IFileTab } from '../ContentsComponent.vue'
 
 const fileTabModel = defineModel()
-const props = defineProps<{
+defineProps<{
   isActiveFile: boolean
   simulationOnly?: boolean
 }>()
 
-const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 const fileTab = fileTabModel.value as IFileTab
 const sedInstance = fileTab.file.sedInstance()
 const sedInstanceTask = sedInstance.task(0)
@@ -45,12 +44,6 @@ vue
   .catch((error: unknown) => {
     console.error('Error running the SED-ML instance:', error)
   })
-
-// Apply the proper class to our main div.
-
-vue.onMounted(() => {
-  mainDiv.value?.classList.add(props.simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')
-})
 </script>
 
 <style scoped>
