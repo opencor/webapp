@@ -184,3 +184,11 @@ export function formatTime(time: number): string {
 export function coordinates(x: number[], y: number[]): number[][] {
   return x.map((value, index) => [value, y[index]])
 }
+
+// A method to format an issue, i.e. make sure that it starts with a capital letter and ends with a period.
+
+export function formatIssue(issue: string): string {
+  issue = issue.charAt(0).toUpperCase() + issue.slice(1)
+
+  return issue.endsWith('.') ? issue : issue + '.'
+}

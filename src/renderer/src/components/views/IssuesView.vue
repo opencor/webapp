@@ -1,6 +1,6 @@
 <template>
   <Fieldset class="ml-4! mr-4! mb-4!" legend="Issues">
-    <ScrollPanel class="issues-scroll-panel">
+    <ScrollPanel :class="simulationOnly ? 'issues-scroll-panel-only' : 'issues-scroll-panel'">
       <div
         v-for="(issue, index) in issues"
         :key="'issue_' + issue.type + '_' + issue.description"
@@ -22,10 +22,15 @@ import * as locApi from '../../../../libopencor/locApi'
 
 defineProps<{
   issues: locApi.IIssue[]
+  simulationOnly?: boolean
 }>()
 </script>
 
 <style scoped>
+.issues-scroll-panel-only {
+  height: calc(100vh - 4.75rem);
+}
+
 .issues-scroll-panel {
   height: calc(100vh - var(--main-menu-height) - var(--file-tablist-height) - 4.75rem);
 }

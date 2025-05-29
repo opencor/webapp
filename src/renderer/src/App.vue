@@ -1,22 +1,25 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
-    <div v-show="!electronApi && omex === undefined">
-      <MainMenu
-        :hasFiles="hasFiles"
-        @about="onAbout"
-        @open="($refs.files as HTMLInputElement).click()"
-        @openRemote="openRemoteVisible = true"
-        @close="onClose"
-        @closeAll="onCloseAll"
-        @settings="onSettings"
-      />
+    <div v-if="issues.length === 0" class="h-full">
+      <div v-show="!electronApi && omex === undefined">
+        <MainMenu
+          :hasFiles="hasFiles"
+          @about="onAbout"
+          @open="($refs.files as HTMLInputElement).click()"
+          @openRemote="openRemoteVisible = true"
+          @close="onClose"
+          @closeAll="onCloseAll"
+          @settings="onSettings"
+        />
+      </div>
+      <div ref="mainDiv" class="h-full">
+        <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
+        <DragNDropComponent v-show="dropAreaCounter > 0" />
+        <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
+        <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
+      </div>
     </div>
-    <div ref="mainDiv" class="grow">
-      <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
-      <DragNDropComponent v-show="dropAreaCounter > 0" />
-      <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
-      <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
-    </div>
+    <IssuesView v-else :issues="issues" :simulationOnly="omex !== undefined" />
   </div>
   <input ref="files" type="file" multiple style="display: none" @change="onChange" />
   <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
@@ -44,6 +47,7 @@ const props = defineProps<{
 const toast = useToast()
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
+const issues = vue.ref<locApi.IIssue[]>([])
 
 // Handle an action.
 
@@ -186,17 +190,34 @@ function openFile(fileOrFilePath: string | File): void {
       const fileType = file.type()
 
       if (fileType === locApi.FileType.UnknownFile || fileType === locApi.FileType.IrretrievableFile) {
-        toast.add({
-          severity: 'error',
-          summary: 'Opening a file',
-          detail:
-            filePath +
-            '\n\n' +
-            (fileType === locApi.FileType.UnknownFile
-              ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
-              : 'The file could not be retrieved.'),
-          life: TOAST_LIFE
-        })
+        if (props.omex !== undefined) {
+          vue
+            .nextTick()
+            .then(() => {
+              issues.value.push({
+                type: locApi.IssueType.Error,
+                description:
+                  fileType === locApi.FileType.UnknownFile
+                    ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
+                    : 'The file could not be retrieved.'
+              })
+            })
+            .catch((error: unknown) => {
+              console.error('Error adding issues:', error)
+            })
+        } else {
+          toast.add({
+            severity: 'error',
+            summary: 'Opening a file',
+            detail:
+              filePath +
+              '\n\n' +
+              (fileType === locApi.FileType.UnknownFile
+                ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
+                : 'The file could not be retrieved.'),
+            life: TOAST_LIFE
+          })
+        }
 
         electronApi?.fileIssue(filePath)
       } else {
@@ -212,12 +233,26 @@ function openFile(fileOrFilePath: string | File): void {
         hideSpinningWheel()
       }
 
-      toast.add({
-        severity: 'error',
-        summary: 'Opening a file',
-        detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
-        life: TOAST_LIFE
-      })
+      if (props.omex !== undefined) {
+        vue
+          .nextTick()
+          .then(() => {
+            issues.value.push({
+              type: locApi.IssueType.Error,
+              description: common.formatIssue(error instanceof Error ? error.message : String(error))
+            })
+          })
+          .catch((error: unknown) => {
+            console.error('Error adding issues:', error)
+          })
+      } else {
+        toast.add({
+          severity: 'error',
+          summary: 'Opening a file',
+          detail: filePath + '\n\n' + common.formatIssue(error instanceof Error ? error.message : String(error)),
+          life: TOAST_LIFE
+        })
+      }
 
       electronApi?.fileIssue(filePath)
     })
