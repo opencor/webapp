@@ -1,5 +1,5 @@
 <template>
-  <div ref="mainDiv" class="h-full">
+  <div :class="'h-full ' + (simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')">
     <Toolbar :id="toolbarId" class="p-1!">
       <template #start>
         <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
@@ -65,7 +65,6 @@ const props = defineProps<{
   simulationOnly?: boolean
 }>()
 
-const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 const fileTab = fileTabModel.value as IFileTab
 const toolbarId = `simulationExperimentToolbar_${String(fileTab.file.path())}`
 const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
@@ -237,12 +236,6 @@ if (!common.isMobile()) {
     }
   })
 }
-
-// Apply the proper class to our main div.
-
-vue.onMounted(() => {
-  mainDiv.value?.classList.add(props.simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')
-})
 </script>
 
 <style scoped>
