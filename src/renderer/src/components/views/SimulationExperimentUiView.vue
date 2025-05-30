@@ -8,8 +8,14 @@
           </div>
         </Fieldset>
       </div>
-      <div class="grow">
-        <GraphPanelWidget :canAutoResize="isActiveFile" :plots="plots" />
+      <div :id="plotsDivId" class="grow">
+        <GraphPanelWidget
+          v-for="(_plot, index) in (fileTab.uiJson as any).output.plots"
+          :key="'plot_' + index"
+          class="graph-panel-widget"
+          :canAutoResize="isActiveFile"
+          :plots="plots"
+        />
       </div>
     </div>
     <IssuesView v-else class="grow" :issues="issues" :simulationOnly="simulationOnly" />
@@ -33,13 +39,13 @@ defineProps<{
 const fileTab = fileTabModel.value as IFileTab
 const sedInstance = fileTab.file.sedInstance()
 const sedInstanceTask = sedInstance.task(0)
+const plotsDivId = 'plotsDiv_' + String(fileTab.file.path())
+const plots = vue.ref<IGraphPanelPlot[]>([])
 const issues = vue.ref(uiJsonIssues(fileTab.uiJson))
 
-// Run the instance and update the plot.
-
-const plots = vue.ref<IGraphPanelPlot[]>([])
-
 vue.onMounted(() => {
+  // Run the instance and update the plot.
+
   sedInstance.run()
 
   plots.value = [
@@ -52,10 +58,20 @@ vue.onMounted(() => {
       }
     }
   ]
+
+  // Determine the sibling count for the height calculation.
+
+  const plotsDiv = document.getElementById(plotsDivId)
+
+  plotsDiv?.style.setProperty('--sibling-count', plotsDiv.children.length.toString())
 })
 </script>
 
 <style scoped>
+.graph-panel-widget {
+  height: calc(100% / var(--sibling-count));
+}
+
 .simulation-experiment-only {
   height: 100vh;
 }
