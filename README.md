@@ -74,3 +74,5 @@ where `<script>` is one of the following:
 - The URI scheme works fine when using the `package`-based version of OpenCOR. When it comes to the `start`-based and `dev`-based versions of OpenCOR, the URI scheme "works" as follows:
   - On [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) and [Linux](https://en.wikipedia.org/wiki/Linux), it just does not work; and
   - On [macOS](https://en.wikipedia.org/wiki/MacOS), it only works when OpenCOR is already running.
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/opencor/webapp)
