@@ -21,29 +21,23 @@ const sedInstance = fileTab.file.sedInstance()
 const sedInstanceTask = sedInstance.task(0)
 
 // Run the instance and update the plot.
-// Note: we do this after the next tick to ensure that the DOM is ready.
 
 const plots = vue.ref<IGraphPanelPlot[]>([])
 
-vue
-  .nextTick()
-  .then(() => {
-    sedInstance.run()
+vue.onMounted(() => {
+  sedInstance.run()
 
-    plots.value = [
-      {
-        x: {
-          data: sedInstanceTask.voi()
-        },
-        y: {
-          data: sedInstanceTask.state(0)
-        }
+  plots.value = [
+    {
+      x: {
+        data: sedInstanceTask.voi()
+      },
+      y: {
+        data: sedInstanceTask.state(0)
       }
-    ]
-  })
-  .catch((error: unknown) => {
-    console.error('Error running the SED-ML instance:', error)
-  })
+    }
+  ]
+})
 </script>
 
 <style scoped>
