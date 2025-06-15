@@ -364,12 +364,12 @@ if (props.omex !== undefined) {
   vue.onMounted(() => {
     // Enable drag and drop.
 
-    mainDiv.value.addEventListener('dragenter', onDragEnter)
-    mainDiv.value.addEventListener('dragover', (event: DragEvent) => {
+    mainDiv.value?.addEventListener('dragenter', onDragEnter)
+    mainDiv.value?.addEventListener('dragover', (event: DragEvent) => {
       event.preventDefault()
     })
-    mainDiv.value.addEventListener('drop', onDrop)
-    mainDiv.value.addEventListener('dragleave', onDragLeave)
+    mainDiv.value?.addEventListener('drop', onDrop)
+    mainDiv.value?.addEventListener('dragleave', onDragLeave)
 
     // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
     // logo) time to be renderered.

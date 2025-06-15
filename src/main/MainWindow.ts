@@ -293,7 +293,7 @@ export class MainWindow extends ApplicationWindow {
       return
     }
 
-    commandLine.forEach((argument) => {
+    commandLine.forEach((argument: string) => {
       if (this.isAction(argument)) {
         this.webContents.send('action', argument.slice(FULL_URI_SCHEME.length))
       } else if (argument !== '--allow-file-access-from-files' && argument !== '--enable-avfoundation') {
