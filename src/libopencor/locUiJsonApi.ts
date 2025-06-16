@@ -7,14 +7,14 @@ import { IssueType, type IIssue } from './locLoggerApi'
 export interface IUiJson {
   input: IUiJsonInput[]
   output: IUiJsonOutput
-  parameters?: IUiJsonParameter[]
+  parameters: IUiJsonParameter[]
 }
 
-type IUiJsonInput = IUiJsonDiscreteInput | IUiJsonScalarInput
+export type IUiJsonInput = IUiJsonDiscreteInput | IUiJsonScalarInput
 
 interface IUiJsonDiscreteInput {
   defaultValue: number
-  id?: string
+  id: string
   name: string
   possibleValues?: IUiJsonDiscreteInputPossibleValue[]
   visible?: string
@@ -27,7 +27,7 @@ export interface IUiJsonDiscreteInputPossibleValue {
 
 interface IUiJsonScalarInput {
   defaultValue: number
-  id?: string
+  id: string
   minimumValue: number
   maximumValue: number
   name: string
@@ -35,7 +35,7 @@ interface IUiJsonScalarInput {
   visible?: string
 }
 
-interface IUiJsonOutput {
+export interface IUiJsonOutput {
   data: IUiJsonOutputData[]
   plots: IUiJsonOutputPlot[]
 }
@@ -52,7 +52,7 @@ interface IUiJsonOutputPlot {
   yValue: string
 }
 
-interface IUiJsonParameter {
+export interface IUiJsonParameter {
   name: string
   value: string
 }

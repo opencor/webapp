@@ -5,8 +5,8 @@
         <Fieldset legend="Input parameters">
           <SimulationExperimentUiInputWidget
             v-for="(input, index) in (fileTab.uiJson as any).input"
+            v-model="value[index]"
             :key="'input_' + index"
-            :defaultValue="input.defaultValue"
             :name="input.name"
             :maximumValue="input.maximumValue"
             :minimumValue="input.minimumValue"
@@ -31,6 +31,7 @@
 </template>
 
 <script setup lang="ts">
+import * as mathjs from 'mathjs'
 import * as vue from 'vue'
 
 import * as locApi from '../../../../libopencor/locApi'
@@ -43,12 +44,19 @@ defineProps<{
   simulationOnly?: boolean
 }>()
 
+const math = mathjs.create(mathjs.all, {})
 const fileTab = fileTabModel.value as IFileTab
+const model = fileTab.file.document().model(0)
 const instance = fileTab.file.instance()
 const instanceTask = instance.task(0)
 const plotsDivId = 'plotsDiv_' + String(fileTab.file.path())
 const plots = vue.ref<IGraphPanelPlot[]>([])
 const issues = vue.ref(locApi.uiJsonIssues(fileTab.uiJson))
+const value = vue.ref<string[]>([])
+
+for (const input of fileTab.uiJson?.input ?? []) {
+  value.value.push(input.defaultValue.toString())
+}
 
 vue.onMounted(() => {
   updateSimulation()
@@ -60,10 +68,41 @@ vue.onMounted(() => {
   plotsDiv?.style.setProperty('--graph-panel-widget-count', plotsDiv.children.length.toString())
 })
 
+function modelChanges(): locApi.ISedModelChange[] {
+  function evaluateParameterValue(parameterValue: string): string {
+    let index = -1
+    const parser = math.parser()
+
+    fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
+      parser.set(input.id, value.value[++index])
+    })
+
+    return parser.evaluate(parameterValue).toString()
+  }
+
+  const res: locApi.ISedModelChange[] = []
+
+  fileTab.uiJson?.parameters?.forEach((parameter: locApi.IUiJsonParameter) => {
+    const componentVariableNames = parameter.name.split('/')
+
+    res.push({
+      componentName: componentVariableNames[0],
+      variableName: componentVariableNames[1],
+      newValue: evaluateParameterValue(parameter.value)
+    })
+  })
+
+  return res
+}
+
 function updateSimulation() {
   // Update the SED-ML document.
 
-  //---OPENCOR--- TO BE DONE.
+  model.removeAllChanges()
+
+  for (const modelChange of modelChanges()) {
+    model.addChange(modelChange)
+  }
 
   // Run the instance and update the plots.
 

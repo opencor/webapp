@@ -9,6 +9,7 @@ export { _locApi, fileManager, File, FileType, type IWasmFile } from './locFileA
 // SED-ML API.
 
 export {
+  type ISedModelChange,
   SedDocument,
   SedInstance,
   SedInstanceTask,
@@ -18,7 +19,14 @@ export {
 
 // UI JSON API.
 
-export { type IUiJson, type IUiJsonDiscreteInputPossibleValue, uiJsonIssues } from './locUiJsonApi'
+export {
+  type IUiJson,
+  type IUiJsonDiscreteInputPossibleValue,
+  type IUiJsonInput,
+  type IUiJsonOutput,
+  type IUiJsonParameter,
+  uiJsonIssues
+} from './locUiJsonApi'
 
 // Version API.
 

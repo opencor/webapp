@@ -28,9 +28,9 @@ import * as vue from 'vue'
 
 import * as locApi from '../../../../libopencor/locApi'
 
+const value = defineModel()
 const emits = defineEmits(['change'])
 const props = defineProps<{
-  defaultValue: number
   maximumValue?: number
   minimumValue?: number
   name: string
@@ -38,9 +38,8 @@ const props = defineProps<{
   stepValue?: number
 }>()
 
-let oldValue = props.defaultValue
-const value = vue.ref<number>(props.defaultValue)
-const valueString = vue.ref<string>(String(props.defaultValue))
+let oldValue = value.value
+const valueString = vue.ref<string>(String(value.value))
 
 // Some methods to handle a scalar value using an input text and a slider.
 
