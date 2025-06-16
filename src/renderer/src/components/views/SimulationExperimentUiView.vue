@@ -22,7 +22,7 @@
           v-for="(_plot, index) in (fileTab.uiJson as any).output.plots"
           :key="'plot_' + index"
           class="graph-panel-widget"
-          :plots="plots"
+          :plots="plots.length !== 0 ? plots[index] : []"
         />
       </div>
     </div>
@@ -35,6 +35,8 @@ import * as mathjs from 'mathjs'
 import * as vue from 'vue'
 
 import * as locApi from '../../../../libopencor/locApi'
+
+import * as common from '../../common'
 
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 import { type IFileTab } from '../ContentsComponent.vue'
@@ -50,12 +52,17 @@ const model = fileTab.file.document().model(0)
 const instance = fileTab.file.instance()
 const instanceTask = instance.task(0)
 const plotsDivId = 'plotsDiv_' + String(fileTab.file.path())
-const plots = vue.ref<IGraphPanelPlot[]>([])
+const plots = vue.ref<IGraphPanelPlot[][]>([])
 const issues = vue.ref(locApi.uiJsonIssues(fileTab.uiJson))
 const value = vue.ref<string[]>([])
+const idToName = vue.ref<Record<string, string>>({})
 
 fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
   value.value.push(input.defaultValue.toString())
+})
+
+fileTab.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+  idToName.value[data.id] = data.name
 })
 
 vue.onMounted(() => {
@@ -94,16 +101,20 @@ function updateSimulation() {
 
   instance.run()
 
-  plots.value = [
-    {
-      x: {
-        data: instanceTask.voi()
-      },
-      y: {
-        data: instanceTask.state(0)
+  plots.value = []
+
+  fileTab.uiJson?.output.plots.forEach((plot: locApi.IUiJsonOutputPlot) => {
+    plots.value.push([
+      {
+        x: {
+          data: common.simulationData(instanceTask, idToName.value[plot.xValue])
+        },
+        y: {
+          data: common.simulationData(instanceTask, idToName.value[plot.yValue])
+        }
       }
-    }
-  ]
+    ])
+  })
 }
 </script>
 

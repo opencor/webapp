@@ -40,12 +40,12 @@ export interface IUiJsonOutput {
   plots: IUiJsonOutputPlot[]
 }
 
-interface IUiJsonOutputData {
+export interface IUiJsonOutputData {
   id: string
   name: string
 }
 
-interface IUiJsonOutputPlot {
+export interface IUiJsonOutputPlot {
   xAxisTitle: string
   xValue: string
   yAxisTitle: string

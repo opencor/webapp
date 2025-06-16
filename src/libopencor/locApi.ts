@@ -23,6 +23,8 @@ export {
   type IUiJsonDiscreteInputPossibleValue,
   type IUiJsonInput,
   type IUiJsonOutput,
+  type IUiJsonOutputData,
+  type IUiJsonOutputPlot,
   type IUiJsonParameter,
   uiJsonIssues
 } from './locUiJsonApi'
