@@ -127,78 +127,48 @@ function onRun(): void {
 }
 
 function updatePlot() {
-  interface IGraphParameter {
-    name: string
-    unit: string
-    data: number[]
-  }
-
-  function checkGraphParameter(param: string): IGraphParameter | undefined {
+  function checkData(param: string): number[] | undefined {
     if (param === instanceTask.voiName()) {
-      return {
-        name: instanceTask.voiName(),
-        unit: instanceTask.voiUnit(),
-        data: instanceTask.voi()
-      }
+      return instanceTask.voi()
     }
 
     for (let i = 0; i < instanceTask.stateCount(); i++) {
       if (param === instanceTask.stateName(i)) {
-        return {
-          name: instanceTask.stateName(i),
-          unit: instanceTask.stateUnit(i),
-          data: instanceTask.state(i)
-        }
+        return instanceTask.state(i)
       }
     }
 
     for (let i = 0; i < instanceTask.rateCount(); i++) {
       if (param === instanceTask.rateName(i)) {
-        return {
-          name: instanceTask.rateName(i),
-          unit: instanceTask.rateUnit(i),
-          data: instanceTask.rate(i)
-        }
+        return instanceTask.rate(i)
       }
     }
 
     for (let i = 0; i < instanceTask.constantCount(); i++) {
       if (param === instanceTask.constantName(i)) {
-        return {
-          name: instanceTask.constantName(i),
-          unit: instanceTask.constantUnit(i),
-          data: instanceTask.constant(i)
-        }
+        return instanceTask.constant(i)
       }
     }
 
     for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
       if (param === instanceTask.computedConstantName(i)) {
-        return {
-          name: instanceTask.computedConstantName(i),
-          unit: instanceTask.computedConstantUnit(i),
-          data: instanceTask.computedConstant(i)
-        }
+        return instanceTask.computedConstant(i)
       }
     }
 
     for (let i = 0; i < instanceTask.algebraicCount(); i++) {
       if (param === instanceTask.algebraicName(i)) {
-        return {
-          name: instanceTask.algebraicName(i),
-          unit: instanceTask.algebraicUnit(i),
-          data: instanceTask.algebraic(i)
-        }
+        return instanceTask.algebraic(i)
       }
     }
 
     return undefined
   }
 
-  const xGraphParam = checkGraphParameter(Object.keys(xParameter.value)[0])
-  const yGraphParam = checkGraphParameter(Object.keys(yParameter.value)[0])
+  const xData = checkData(Object.keys(xParameter.value)[0])
+  const yData = checkData(Object.keys(yParameter.value)[0])
 
-  if (xGraphParam === undefined || yGraphParam === undefined) {
+  if (xData === undefined || yData === undefined) {
     plots.value = []
 
     return
@@ -207,10 +177,10 @@ function updatePlot() {
   plots.value = [
     {
       x: {
-        data: xGraphParam.data
+        data: xData
       },
       y: {
-        data: yGraphParam.data
+        data: yData
       }
     }
   ]
