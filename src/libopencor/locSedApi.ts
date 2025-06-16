@@ -117,12 +117,6 @@ interface IWasmSedModel {
   addChange(change: _locApi.SedChange): void
 }
 
-export interface ISedModelChange {
-  componentName: string
-  variableName: string
-  newValue: string
-}
-
 export class SedModel extends SedBaseIndex {
   private _wasmSedModel: IWasmSedModel = {} as IWasmSedModel
 
@@ -142,19 +136,11 @@ export class SedModel extends SedBaseIndex {
     }
   }
 
-  addChange(change: ISedModelChange): void {
+  addChange(componentName: string, variableName: string, newValue: string): void {
     if (cppVersion()) {
-      _locApi.sedDocumentModelAddChange(
-        this._filePath,
-        this._index,
-        change.componentName,
-        change.variableName,
-        change.newValue
-      )
+      _locApi.sedDocumentModelAddChange(this._filePath, this._index, componentName, variableName, newValue)
     } else {
-      this._wasmSedModel.addChange(
-        new _locApi.SedChangeAttribute(change.componentName, change.variableName, change.newValue)
-      )
+      this._wasmSedModel.addChange(new _locApi.SedChangeAttribute(componentName, variableName, newValue))
     }
   }
 }

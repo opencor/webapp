@@ -68,7 +68,9 @@ vue.onMounted(() => {
   plotsDiv?.style.setProperty('--graph-panel-widget-count', plotsDiv.children.length.toString())
 })
 
-function modelChanges(): locApi.ISedModelChange[] {
+function updateSimulation() {
+  // Update the SED-ML document.
+
   function evaluateParameterValue(parameterValue: string): string {
     let index = -1
     const parser = math.parser()
@@ -80,29 +82,13 @@ function modelChanges(): locApi.ISedModelChange[] {
     return parser.evaluate(parameterValue).toString()
   }
 
-  const res: locApi.ISedModelChange[] = []
+  model.removeAllChanges()
 
   fileTab.uiJson?.parameters?.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/')
 
-    res.push({
-      componentName: componentVariableNames[0],
-      variableName: componentVariableNames[1],
-      newValue: evaluateParameterValue(parameter.value)
-    })
+    model.addChange(componentVariableNames[0], componentVariableNames[1], evaluateParameterValue(parameter.value))
   })
-
-  return res
-}
-
-function updateSimulation() {
-  // Update the SED-ML document.
-
-  model.removeAllChanges()
-
-  for (const modelChange of modelChanges()) {
-    model.addChange(modelChange)
-  }
 
   // Run the instance and update the plots.
 

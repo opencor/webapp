@@ -9,7 +9,6 @@ export { _locApi, fileManager, File, FileType, type IWasmFile } from './locFileA
 // SED-ML API.
 
 export {
-  type ISedModelChange,
   SedDocument,
   SedInstance,
   SedInstanceTask,
