@@ -66,7 +66,7 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
   if (typeof fileOrFilePath === 'string') {
     if (isRemoteFilePath(fileOrFilePath)) {
       return new Promise((resolve, reject) => {
-        fetch(`https://corsproxy.io/${fileOrFilePath}`)
+        fetch(`https://corsproxy.io/?url=${fileOrFilePath}`)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer()
