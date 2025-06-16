@@ -185,3 +185,47 @@ export function formatIssue(issue: string): string {
 
   return issue.endsWith('.') ? issue : issue + '.'
 }
+
+// A method to retrieve the simulation data for a given name from an instance task.
+
+export function simulationData(instanceTask: locApi.SedInstanceTask, name: string): number[] {
+  if (name === '') {
+    return []
+  }
+
+  if (name === instanceTask.voiName()) {
+    return instanceTask.voi()
+  }
+
+  for (let i = 0; i < instanceTask.stateCount(); i++) {
+    if (name === instanceTask.stateName(i)) {
+      return instanceTask.state(i)
+    }
+  }
+
+  for (let i = 0; i < instanceTask.rateCount(); i++) {
+    if (name === instanceTask.rateName(i)) {
+      return instanceTask.rate(i)
+    }
+  }
+
+  for (let i = 0; i < instanceTask.constantCount(); i++) {
+    if (name === instanceTask.constantName(i)) {
+      return instanceTask.constant(i)
+    }
+  }
+
+  for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+    if (name === instanceTask.computedConstantName(i)) {
+      return instanceTask.computedConstant(i)
+    }
+  }
+
+  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
+    if (name === instanceTask.algebraicName(i)) {
+      return instanceTask.algebraic(i)
+    }
+  }
+
+  return []
+}

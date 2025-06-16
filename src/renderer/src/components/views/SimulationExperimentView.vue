@@ -127,52 +127,8 @@ function onRun(): void {
 }
 
 function updatePlot() {
-  function checkData(param: string): number[] | undefined {
-    if (param === instanceTask.voiName()) {
-      return instanceTask.voi()
-    }
-
-    for (let i = 0; i < instanceTask.stateCount(); i++) {
-      if (param === instanceTask.stateName(i)) {
-        return instanceTask.state(i)
-      }
-    }
-
-    for (let i = 0; i < instanceTask.rateCount(); i++) {
-      if (param === instanceTask.rateName(i)) {
-        return instanceTask.rate(i)
-      }
-    }
-
-    for (let i = 0; i < instanceTask.constantCount(); i++) {
-      if (param === instanceTask.constantName(i)) {
-        return instanceTask.constant(i)
-      }
-    }
-
-    for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
-      if (param === instanceTask.computedConstantName(i)) {
-        return instanceTask.computedConstant(i)
-      }
-    }
-
-    for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-      if (param === instanceTask.algebraicName(i)) {
-        return instanceTask.algebraic(i)
-      }
-    }
-
-    return undefined
-  }
-
-  const xData = checkData(Object.keys(xParameter.value)[0])
-  const yData = checkData(Object.keys(yParameter.value)[0])
-
-  if (xData === undefined || yData === undefined) {
-    plots.value = []
-
-    return
-  }
+  const xData = common.simulationData(instanceTask, Object.keys(xParameter.value)[0])
+  const yData = common.simulationData(instanceTask, Object.keys(yParameter.value)[0])
 
   plots.value = [
     {
