@@ -5,7 +5,7 @@
         <Fieldset legend="Input parameters">
           <InputSliderWidget
             v-for="(input, index) in (fileTab.uiJson as any).input"
-            v-model="value[index]"
+            v-model="inputValues[index]"
             :key="'input_' + index"
             :name="input.name"
             :maximumValue="input.maximumValue"
@@ -54,11 +54,11 @@ const instanceTask = instance.task(0)
 const plotsDivId = 'plotsDiv_' + String(fileTab.file.path())
 const plots = vue.ref<IGraphPanelPlot[][]>([])
 const issues = vue.ref(locApi.uiJsonIssues(fileTab.uiJson))
-const value = vue.ref<string[]>([])
+const inputValues = vue.ref<string[]>([])
 const idToInfo: Record<string, common.ISimulationDataInfo> = {}
 
 fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
-  value.value.push(input.defaultValue.toString())
+  inputValues.value.push(input.defaultValue.toString())
 })
 
 fileTab.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
@@ -78,15 +78,15 @@ vue.onMounted(() => {
 function updateSimulation() {
   // Update the SED-ML document.
 
-  function evaluateParameterValue(parameterValue: string): string {
+  function evaluateValue(value: string): string {
     let index = -1
     const parser = math.parser()
 
     fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
-      parser.set(input.id, value.value[++index])
+      parser.set(input.id, inputValues.value[++index])
     })
 
-    return parser.evaluate(parameterValue).toString()
+    return parser.evaluate(value).toString()
   }
 
   model.removeAllChanges()
@@ -94,7 +94,7 @@ function updateSimulation() {
   fileTab.uiJson?.parameters?.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/')
 
-    model.addChange(componentVariableNames[0], componentVariableNames[1], evaluateParameterValue(parameter.value))
+    model.addChange(componentVariableNames[0], componentVariableNames[1], evaluateValue(parameter.value))
   })
 
   // Run the instance and update the plots.
