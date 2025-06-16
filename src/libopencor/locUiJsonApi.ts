@@ -2,7 +2,7 @@ import * as jsonschema from 'jsonschema'
 
 import * as common from '../renderer/src/common'
 
-import { IssueType, type IIssue } from './locLoggerApi'
+import { EIssueType, type IIssue } from './locLoggerApi'
 
 export interface IUiJson {
   input: IUiJsonInput[]
@@ -63,7 +63,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   if (uiJson === undefined) {
     return [
       {
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: no UI JSON was provided.'
       }
     ]
@@ -237,7 +237,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
     for (const issue of validatorRes.toString().split('\n')) {
       if (issue !== '') {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description: 'UI JSON: ' + common.formatIssue(issue)
         })
       }
@@ -255,14 +255,14 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
     if (input.id !== undefined) {
       if (input.id === '') {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description: 'UI JSON: an input id must not be empty.'
         })
       }
 
       if (inputIdUsed[input.id]) {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description: 'UI JSON: an input id must be unique (' + input.id + ' is used more than once).'
         })
       }
@@ -272,7 +272,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
     if (input.name === '') {
       res.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: an input name must not be empty.'
       })
     }
@@ -281,7 +281,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       for (const possibleValue of input.possibleValues) {
         if (possibleValue.name === '') {
           res.push({
-            type: IssueType.Warning,
+            type: EIssueType.WARNING,
             description: 'UI JSON: an input possible value name must not be empty.'
           })
         }
@@ -295,7 +295,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       for (const value of values) {
         if (valueUsed[value]) {
           res.push({
-            type: IssueType.Warning,
+            type: EIssueType.WARNING,
             description:
               'UI JSON: an input possible value must have a unique value (' +
               value.toString() +
@@ -308,7 +308,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
       if (!values.includes(input.defaultValue)) {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description:
             'UI JSON: an input default value (' +
             input.defaultValue.toString() +
@@ -322,7 +322,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
     if (input.minimumValue !== undefined && input.maximumValue !== undefined) {
       if (input.minimumValue >= input.maximumValue) {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description:
             'UI JSON: an input minimum value (' +
             input.minimumValue.toString() +
@@ -334,7 +334,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
       if (input.defaultValue < input.minimumValue || input.defaultValue > input.maximumValue) {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description:
             'UI JSON: an input default value (' +
             input.defaultValue.toString() +
@@ -351,7 +351,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       if (input.stepValue !== undefined) {
         if (input.stepValue <= 0 || input.stepValue > range) {
           res.push({
-            type: IssueType.Warning,
+            type: EIssueType.WARNING,
             description:
               'UI JSON: an input step value (' +
               input.stepValue.toString() +
@@ -363,7 +363,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
         if (!Number.isInteger(range / input.stepValue)) {
           res.push({
-            type: IssueType.Warning,
+            type: EIssueType.WARNING,
             description:
               'UI JSON: an input step value (' +
               input.stepValue.toString() +
@@ -375,7 +375,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       } else {
         if (!Number.isInteger(range)) {
           res.push({
-            type: IssueType.Warning,
+            type: EIssueType.WARNING,
             description:
               'UI JSON: a (default) input step value (1) must be a factor of the range value (' +
               range.toString() +
@@ -388,7 +388,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
     if (input.visible !== undefined) {
       if (input.visible === '') {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description: 'UI JSON: an input visible must not be empty.'
         })
       }
@@ -402,14 +402,14 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   for (const outputData of uiJson.output.data) {
     if (outputData.id === '') {
       res.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: an output data id must not be empty.'
       })
     }
 
     if (outputIdUsed[outputData.id]) {
       res.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: an output data id must be unique (' + outputData.id + ' is used more than once).'
       })
     }
@@ -418,7 +418,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
     if (outputData.name === '') {
       res.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: an output data name must not be empty.'
       })
     }
@@ -427,28 +427,28 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   for (const outputPlot of uiJson.output.plots) {
     if (outputPlot.xAxisTitle === '') {
       res.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: an output plot X axis title must not be empty.'
       })
     }
 
     if (outputPlot.xValue === '') {
       res.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: an output plot X value must not be empty.'
       })
     }
 
     if (outputPlot.yAxisTitle === '') {
       res.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: an output plot Y axis title must not be empty.'
       })
     }
 
     if (outputPlot.yValue === '') {
       res.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'UI JSON: an output plot Y value must not be empty.'
       })
     }
@@ -460,14 +460,14 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
     for (const parameter of uiJson.parameters) {
       if (parameter.name === '') {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description: 'UI JSON: a parameter name must not be empty.'
         })
       }
 
       if (parameter.value === '') {
         res.push({
-          type: IssueType.Warning,
+          type: EIssueType.WARNING,
           description: 'UI JSON: a parameter value must not be empty.'
         })
       }

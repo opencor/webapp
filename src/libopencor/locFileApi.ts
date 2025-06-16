@@ -3,10 +3,10 @@ import * as vue from 'vue'
 
 import {
   cppVersion,
-  IssueType,
+  EIssueType,
+  ESedSimulationType,
   SedDocument,
   SedInstance,
-  SedSimulationType,
   SedSimulationUniformTimeCourse,
   wasmIssuesToIssues,
   type IIssue,
@@ -45,16 +45,16 @@ export const fileManager = new FileManager()
 
 // File API.
 
-export enum FileType {
-  UnknownFile,
-  CellmlFile,
-  SedmlFile,
-  CombineArchive,
-  IrretrievableFile
+export enum EFileType {
+  UNKNOWN_FILE,
+  CELLML_FILE,
+  SEDML_FILE,
+  COMBINE_ARCHIVE,
+  IRRETRIEVABLE_FILE
 }
 
 export interface IWasmFile {
-  type: { value: FileType }
+  type: { value: EFileType }
   issues: IWasmIssues
   contents(): Uint8Array
   setContents(ptr: number, length: number): void
@@ -118,7 +118,7 @@ export class File {
 
     if (modelCount !== 1) {
       this._issues.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'Only SED-ML files with one model are currently supported.'
       })
 
@@ -131,7 +131,7 @@ export class File {
 
     if (simulationCount !== 1) {
       this._issues.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'Only SED-ML files with one simulation are currently supported.'
       })
 
@@ -142,9 +142,9 @@ export class File {
 
     const simulation = this._document.simulation(0) as SedSimulationUniformTimeCourse
 
-    if (simulation.type() !== SedSimulationType.UniformTimeCourse) {
+    if (simulation.type() !== ESedSimulationType.UNIFORM_TIME_COURSE) {
       this._issues.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: 'Only uniform time course simulations are currently supported.'
       })
 
@@ -161,21 +161,21 @@ export class File {
 
     if (initialTime !== outputStartTime) {
       this._issues.push({
-        type: IssueType.Warning,
+        type: EIssueType.WARNING,
         description: `Only uniform time course simulations with the same values for 'initialTime' (${initialTime.toString()}) and 'outputStartTime' (${outputStartTime.toString()}) are currently supported.`
       })
     }
 
     if (outputStartTime === outputEndTime) {
       this._issues.push({
-        type: IssueType.Error,
+        type: EIssueType.ERROR,
         description: `The uniform time course simulation must have different values for 'outputStartTime' (${outputStartTime.toString()}) and 'outputEndTime' (${outputEndTime.toString()}).`
       })
     }
 
     if (numberOfSteps <= 0) {
       this._issues.push({
-        type: IssueType.Error,
+        type: EIssueType.ERROR,
         description: `The uniform time course simulation must have a positive value for 'numberOfSteps' (${numberOfSteps.toString()}).`
       })
     }
@@ -191,7 +191,7 @@ export class File {
     this._issues = this._instance.issues()
   }
 
-  type(): FileType {
+  type(): EFileType {
     return cppVersion() ? _locApi.fileType(this._path) : this._wasmFile.type.value
   }
 
