@@ -54,9 +54,9 @@ const plots = vue.ref<IGraphPanelPlot[]>([])
 const issues = vue.ref(locApi.uiJsonIssues(fileTab.uiJson))
 const value = vue.ref<string[]>([])
 
-for (const input of fileTab.uiJson?.input ?? []) {
+fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
   value.value.push(input.defaultValue.toString())
-}
+})
 
 vue.onMounted(() => {
   updateSimulation()
