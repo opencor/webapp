@@ -126,17 +126,17 @@ function onRun(): void {
   updatePlot()
 }
 
-function updatePlot() {
-  const xData = common.simulationData(instanceTask, Object.keys(xParameter.value)[0])
-  const yData = common.simulationData(instanceTask, Object.keys(yParameter.value)[0])
+const xInfo = vue.computed(() => common.simulationDataInfo(instanceTask, Object.keys(xParameter.value)[0]))
+const yInfo = vue.computed(() => common.simulationDataInfo(instanceTask, Object.keys(yParameter.value)[0]))
 
+function updatePlot() {
   plots.value = [
     {
       x: {
-        data: xData
+        data: common.simulationData(instanceTask, xInfo.value)
       },
       y: {
-        data: yData
+        data: common.simulationData(instanceTask, yInfo.value)
       }
     }
   ]

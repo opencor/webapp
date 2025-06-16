@@ -186,46 +186,106 @@ export function formatIssue(issue: string): string {
   return issue.endsWith('.') ? issue : issue + '.'
 }
 
-// A method to retrieve the simulation data for a given name from an instance task.
+// A method to retrieve the simulation data information for a given name from an instance task.
 
-export function simulationData(instanceTask: locApi.SedInstanceTask, name: string): number[] {
+export enum ESimulationDataInfoType {
+  UNKNOWN,
+  VOI,
+  STATE,
+  RATE,
+  CONSTANT,
+  COMPUTED_CONSTANT,
+  ALGEBRAIC
+}
+
+export interface ISimulationDataInfo {
+  type: ESimulationDataInfoType
+  index: number
+}
+
+export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: string): ISimulationDataInfo {
   if (name === '') {
-    return []
+    return {
+      type: ESimulationDataInfoType.UNKNOWN,
+      index: -1
+    }
   }
 
   if (name === instanceTask.voiName()) {
-    return instanceTask.voi()
+    return {
+      type: ESimulationDataInfoType.VOI,
+      index: -1
+    }
   }
 
   for (let i = 0; i < instanceTask.stateCount(); i++) {
     if (name === instanceTask.stateName(i)) {
-      return instanceTask.state(i)
+      return {
+        type: ESimulationDataInfoType.STATE,
+        index: i
+      }
     }
   }
 
   for (let i = 0; i < instanceTask.rateCount(); i++) {
     if (name === instanceTask.rateName(i)) {
-      return instanceTask.rate(i)
+      return {
+        type: ESimulationDataInfoType.RATE,
+        index: i
+      }
     }
   }
 
   for (let i = 0; i < instanceTask.constantCount(); i++) {
     if (name === instanceTask.constantName(i)) {
-      return instanceTask.constant(i)
+      return {
+        type: ESimulationDataInfoType.CONSTANT,
+        index: i
+      }
     }
   }
 
   for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
     if (name === instanceTask.computedConstantName(i)) {
-      return instanceTask.computedConstant(i)
+      return {
+        type: ESimulationDataInfoType.COMPUTED_CONSTANT,
+        index: i
+      }
     }
   }
 
   for (let i = 0; i < instanceTask.algebraicCount(); i++) {
     if (name === instanceTask.algebraicName(i)) {
-      return instanceTask.algebraic(i)
+      return {
+        type: ESimulationDataInfoType.ALGEBRAIC,
+        index: i
+      }
     }
   }
 
-  return []
+  return {
+    type: ESimulationDataInfoType.UNKNOWN,
+    index: -1
+  }
+}
+
+// A method to retrieve the simulation data for a given name from an instance task.
+
+export function simulationData(instanceTask: locApi.SedInstanceTask, info: ISimulationDataInfo): number[] {
+  switch (info.type) {
+    case ESimulationDataInfoType.VOI:
+      return instanceTask.voi()
+    case ESimulationDataInfoType.STATE:
+      return instanceTask.state(info.index)
+    case ESimulationDataInfoType.RATE:
+      return instanceTask.rate(info.index)
+    case ESimulationDataInfoType.CONSTANT:
+      return instanceTask.constant(info.index)
+    case ESimulationDataInfoType.COMPUTED_CONSTANT:
+      return instanceTask.computedConstant(info.index)
+    case ESimulationDataInfoType.ALGEBRAIC:
+      return instanceTask.algebraic(info.index)
+    default:
+      return []
+  }
 }

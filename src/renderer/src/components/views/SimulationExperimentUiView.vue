@@ -55,14 +55,14 @@ const plotsDivId = 'plotsDiv_' + String(fileTab.file.path())
 const plots = vue.ref<IGraphPanelPlot[][]>([])
 const issues = vue.ref(locApi.uiJsonIssues(fileTab.uiJson))
 const value = vue.ref<string[]>([])
-const idToName = vue.ref<Record<string, string>>({})
+const idToInfo: Record<string, common.ISimulationDataInfo> = {}
 
 fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
   value.value.push(input.defaultValue.toString())
 })
 
 fileTab.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-  idToName.value[data.id] = data.name
+  idToInfo[data.id] = common.simulationDataInfo(instanceTask, data.name)
 })
 
 vue.onMounted(() => {
@@ -101,20 +101,21 @@ function updateSimulation() {
 
   instance.run()
 
-  plots.value = []
+  const parser = math.parser()
 
-  fileTab.uiJson?.output.plots.forEach((plot: locApi.IUiJsonOutputPlot) => {
-    plots.value.push([
-      {
-        x: {
-          data: common.simulationData(instanceTask, idToName.value[plot.xValue])
-        },
-        y: {
-          data: common.simulationData(instanceTask, idToName.value[plot.yValue])
-        }
-      }
-    ])
+  fileTab.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+    parser.set(data.id, common.simulationData(instanceTask, idToInfo[data.id]))
   })
+
+  plots.value =
+    fileTab.uiJson?.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
+      return [
+        {
+          x: { data: parser.evaluate(plot.xValue) },
+          y: { data: parser.evaluate(plot.yValue) }
+        }
+      ]
+    }) ?? []
 }
 </script>
 
