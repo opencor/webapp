@@ -17,7 +17,7 @@
       :max="maximumValue"
       :step="stepValue"
       @change="sliderChange"
-      class="w-full mt-4"
+      class="w-full mt-3"
       size="small"
     />
   </div>
