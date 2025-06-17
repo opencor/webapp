@@ -9,7 +9,29 @@
 import Plotly from 'plotly.js-dist-min'
 import * as vue from 'vue'
 
+import { MEDIUM_DELAY } from '../../../../constants'
+
 import * as common from '../../common'
+
+let oldMainDivClientWidth = -1
+let oldMainDivClientHeight = -1
+
+function resizeIfNeeded() {
+  if (mainDiv.value !== null) {
+    if (mainDiv.value.clientWidth !== oldMainDivClientWidth || mainDiv.value.clientHeight !== oldMainDivClientHeight) {
+      oldMainDivClientWidth = mainDiv.value.clientWidth
+      oldMainDivClientHeight = mainDiv.value.clientHeight
+
+      Plotly.Plots.resize(mainDiv.value)
+    }
+  }
+
+  setTimeout(resizeIfNeeded, MEDIUM_DELAY)
+}
+
+vue.onMounted(() => {
+  resizeIfNeeded()
+})
 
 interface IGraphPanelPlotData {
   data: number[]
