@@ -22,6 +22,7 @@
                 filter
                 filterMode="lenient"
                 :options="parameters"
+                size="small"
                 class="w-full"
                 @change="updatePlot()"
               />
@@ -32,6 +33,7 @@
                 filter
                 filterMode="lenient"
                 :options="parameters"
+                size="small"
                 class="w-full"
                 @change="updatePlot()"
               />
