@@ -137,6 +137,12 @@ function updatePlot() {
   ]
 }
 
+// "Initialise" our plot.
+
+vue.onMounted(() => {
+  updatePlot()
+})
+
 // Track the height of our file tablist toolbar.
 
 common.trackElementHeight(toolbarId)
