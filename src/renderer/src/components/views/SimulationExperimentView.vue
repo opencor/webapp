@@ -17,7 +17,7 @@
                   <ParametersPropertyEditor />
                   -->
             <Fieldset legend="X-axis">
-              <TreeSelect
+              <Select
                 v-model="xParameter"
                 filter
                 filterMode="lenient"
@@ -27,7 +27,7 @@
               />
             </Fieldset>
             <Fieldset legend="Y-axis">
-              <TreeSelect
+              <Select
                 v-model="yParameter"
                 filter
                 filterMode="lenient"
@@ -71,18 +71,13 @@ const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
 const instance = fileTab.file.instance()
 const instanceTask = instance.task(0)
 
-interface IParameter {
-  key: string
-  label: string
-}
-
-const parameters = vue.ref<IParameter[]>([])
-const xParameter = vue.ref({ [instanceTask.voiName()]: true })
-const yParameter = vue.ref({ [instanceTask.stateName(0)]: true })
+const parameters = vue.ref<string[]>([])
+const xParameter = vue.ref(instanceTask.voiName())
+const yParameter = vue.ref(instanceTask.stateName(0))
 const plots = vue.ref<IGraphPanelPlot[]>([])
 
 function addParameter(param: string): void {
-  parameters.value.push({ key: param, label: param })
+  parameters.value.push(param)
 }
 
 addParameter(instanceTask.voiName())
@@ -126,8 +121,8 @@ function onRun(): void {
   updatePlot()
 }
 
-const xInfo = vue.computed(() => common.simulationDataInfo(instanceTask, Object.keys(xParameter.value)[0]))
-const yInfo = vue.computed(() => common.simulationDataInfo(instanceTask, Object.keys(yParameter.value)[0]))
+const xInfo = vue.computed(() => common.simulationDataInfo(instanceTask, xParameter.value))
+const yInfo = vue.computed(() => common.simulationDataInfo(instanceTask, yParameter.value))
 
 function updatePlot() {
   plots.value = [
