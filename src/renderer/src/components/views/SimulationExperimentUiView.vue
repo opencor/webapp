@@ -54,11 +54,11 @@ const instanceTask = instance.task(0)
 const plotsDivId = 'plotsDiv_' + String(fileTab.file.path())
 const plots = vue.ref<IGraphPanelPlot[][]>([])
 const issues = vue.ref(locApi.uiJsonIssues(fileTab.uiJson))
-const inputValues = vue.ref<string[]>([])
+const inputValues = vue.ref<number[]>([])
 const idToInfo: Record<string, common.ISimulationDataInfo> = {}
 
 fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
-  inputValues.value.push(input.defaultValue.toString())
+  inputValues.value.push(input.defaultValue)
 })
 
 fileTab.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
