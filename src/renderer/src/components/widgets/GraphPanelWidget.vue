@@ -69,8 +69,7 @@ vue.watch(
       mainDiv.value,
       plots.map((plot) => ({
         x: plot.x.data,
-        y: plot.y.data,
-        mode: 'lines'
+        y: plot.y.data
       })),
       {
         // Note: the various keys can be found at https://plotly.com/javascript/reference/.
