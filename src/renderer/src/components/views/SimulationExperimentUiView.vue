@@ -3,7 +3,7 @@
     <div v-if="issues.length === 0" class="flex flex-row grow">
       <div class="ml-4 mr-4 mb-4">
         <Fieldset legend="Input parameters">
-          <InputSliderWidget
+          <InputWidget
             v-for="(input, index) in (fileTab.uiJson as any).input"
             v-model="inputValues[index]"
             :key="'input_' + index"
