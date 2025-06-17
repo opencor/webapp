@@ -29,9 +29,10 @@
 </template>
 
 <script setup lang="ts">
+import * as vueusecore from '@vueuse/core'
+
 import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
-import * as vueusecore from '@vueuse/core'
 
 import { SHORT_DELAY, TOAST_LIFE } from '../../constants'
 import { electronApi } from '../../electronApi'
