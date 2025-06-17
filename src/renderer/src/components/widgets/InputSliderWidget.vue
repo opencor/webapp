@@ -28,7 +28,7 @@ import * as vue from 'vue'
 
 import * as locApi from '../../../../libopencor/locApi'
 
-const value = defineModel()
+const value = defineModel<number>()
 const emits = defineEmits(['change'])
 const props = defineProps<{
   maximumValue?: number
