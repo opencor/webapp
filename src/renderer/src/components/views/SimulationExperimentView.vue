@@ -9,7 +9,7 @@
     <Splitter class="border-none! h-full m-0" layout="vertical">
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
-          <SplitterPanel class="ml-4 mr-4 mb-4" :size="25">
+          <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
             <SimulationPropertyEditor :file="vue.toRaw(fileTab.file)" />
             <!--
                   <SolversPropertyEditor />
