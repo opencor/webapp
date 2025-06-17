@@ -1,8 +1,14 @@
 <template>
-  <div>
+  <div v-if="possibleValues !== undefined">
+    <FloatLabel variant="on">
+      <Select v-model="discreteValue" :options="possibleValues" optionLabel="name" class="w-full" size="small" />
+      <label>{{ name }}</label>
+    </FloatLabel>
+  </div>
+  <div v-else>
     <FloatLabel variant="on">
       <InputText
-        v-model="valueString"
+        v-model="scalarValueString"
         v-keyfilter="{ pattern: /^[+-]?(\d*(\.\d*)?|\.d*)([eE][+-]?\d*)?$/, validateOnly: true }"
         v-on:focusout="inputTextFocusOut"
         v-on:keypress="inputTextKeyPress"
@@ -12,7 +18,7 @@
       <label>{{ name }}</label>
     </FloatLabel>
     <Slider
-      v-model="value"
+      v-model="scalarValue"
       :min="minimumValue"
       :max="maximumValue"
       :step="stepValue"
@@ -28,7 +34,7 @@ import * as vue from 'vue'
 
 import * as locApi from '../../../../libopencor/locApi'
 
-const value = defineModel<number>()
+const value = defineModel<number>({ required: true })
 const emits = defineEmits(['change'])
 const props = defineProps<{
   maximumValue?: number
@@ -38,17 +44,21 @@ const props = defineProps<{
   stepValue?: number
 }>()
 
-let oldValue = value.value
-const valueString = vue.ref<string>(String(value.value))
+const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
+  props.possibleValues ? props.possibleValues[value.value] : undefined
+)
+let oldScalarValue = value.value
+const scalarValue = vue.ref<number>(value.value)
+const scalarValueString = vue.ref<string>(String(value.value))
 
 // Some methods to handle a scalar value using an input text and a slider.
 
 function emitChange(newValue: number) {
   void vue.nextTick().then(() => {
     value.value = newValue
-    valueString.value = String(newValue) // This will properly format the input text.
+    scalarValueString.value = String(newValue) // This will properly format the input text.
 
-    oldValue = newValue
+    oldScalarValue = newValue
 
     emits('change', props.name, newValue)
   })
@@ -69,7 +79,7 @@ function inputTextChange(newValueString: string) {
 
   const newValue = Number(newValueString)
 
-  if (newValue !== oldValue) {
+  if (newValue !== oldScalarValue) {
     emitChange(newValue)
   }
 }
@@ -85,7 +95,7 @@ function inputTextKeyPress(event: KeyboardEvent) {
 }
 
 function sliderChange(newValue: number) {
-  if (newValue !== oldValue) {
+  if (newValue !== oldScalarValue) {
     emitChange(newValue)
   }
 }
