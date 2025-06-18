@@ -10,7 +10,7 @@
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
-            <SimulationPropertyEditor :file="vue.toRaw(fileTab.file)" />
+            <SimulationPropertyEditor :file="vue.toRaw(fileTabModel.file)" />
             <!--
                   <SolversPropertyEditor />
                   <GraphsPropertyEditor />
@@ -45,7 +45,7 @@
         </Splitter>
       </SplitterPanel>
       <SplitterPanel v-if="!simulationOnly" :size="11">
-        <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="fileTab.consoleContents" />
+        <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="fileTabModel.consoleContents" />
       </SplitterPanel>
     </Splitter>
   </div>
@@ -61,16 +61,15 @@ import * as common from '../../common'
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 import { type IFileTab } from '../ContentsComponent.vue'
 
-const fileTabModel = defineModel()
+const fileTabModel = defineModel<IFileTab>({ required: true })
 const props = defineProps<{
   isActiveFile: boolean
   simulationOnly?: boolean
 }>()
 
-const fileTab = fileTabModel.value as IFileTab
-const toolbarId = `simulationExperimentToolbar_${String(fileTab.file.path())}`
-const editorId = `simulationExperimentEditor_${String(fileTab.file.path())}`
-const instance = fileTab.file.instance()
+const toolbarId = `simulationExperimentToolbar_${String(fileTabModel.value.file.path())}`
+const editorId = `simulationExperimentEditor_${String(fileTabModel.value.file.path())}`
+const instance = fileTabModel.value.file.instance()
 const instanceTask = instance.task(0)
 
 const parameters = vue.ref<string[]>([])
@@ -109,8 +108,9 @@ function onRun(): void {
 
   const simulationTime = instance.run()
 
-  fileTab.consoleContents =
-    String(fileTab.consoleContents) + `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`
+  fileTabModel.value.consoleContents =
+    String(fileTabModel.value.consoleContents) +
+    `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`
 
   void vue.nextTick().then(() => {
     const consoleElement = document.getElementById(editorId)?.getElementsByClassName('ql-editor')[0]
