@@ -4,7 +4,7 @@
       <div class="ml-4 mr-4 mb-4">
         <Fieldset legend="Input parameters">
           <InputWidget
-            v-for="(input, index) in (fileTab.uiJson as any).input"
+            v-for="(input, index) in (fileTabModel.uiJson as any).input"
             v-model="inputValues[index]"
             :key="'input_' + index"
             :name="input.name"
@@ -19,7 +19,7 @@
       </div>
       <div :id="plotsDivId" class="grow">
         <GraphPanelWidget
-          v-for="(_plot, index) in (fileTab.uiJson as any).output.plots"
+          v-for="(_plot, index) in (fileTabModel.uiJson as any).output.plots"
           :key="'plot_' + index"
           class="graph-panel-widget"
           :plots="plots.length !== 0 ? plots[index] : []"
@@ -41,27 +41,26 @@ import * as common from '../../common'
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 import { type IFileTab } from '../ContentsComponent.vue'
 
-const fileTabModel = defineModel()
+const fileTabModel = defineModel<IFileTab>({ required: true })
 defineProps<{
   simulationOnly?: boolean
 }>()
 
 const math = mathjs.create(mathjs.all, {})
-const fileTab = fileTabModel.value as IFileTab
-const model = fileTab.file.document().model(0)
-const instance = fileTab.file.instance()
+const model = fileTabModel.value.file.document().model(0)
+const instance = fileTabModel.value.file.instance()
 const instanceTask = instance.task(0)
-const plotsDivId = 'plotsDiv_' + String(fileTab.file.path())
+const plotsDivId = 'plotsDiv_' + String(fileTabModel.value.file.path())
 const plots = vue.ref<IGraphPanelPlot[][]>([])
-const issues = vue.ref(locApi.uiJsonIssues(fileTab.uiJson))
+const issues = vue.ref(locApi.uiJsonIssues(fileTabModel.value.uiJson))
 const inputValues = vue.ref<number[]>([])
 const idToInfo: Record<string, common.ISimulationDataInfo> = {}
 
-fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
+fileTabModel.value.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
   inputValues.value.push(input.defaultValue)
 })
 
-fileTab.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+fileTabModel.value.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
   idToInfo[data.id] = common.simulationDataInfo(instanceTask, data.name)
 })
 
@@ -82,7 +81,7 @@ function updateSimulation() {
     let index = -1
     const parser = math.parser()
 
-    fileTab.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
+    fileTabModel.value.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
       parser.set(input.id, inputValues.value[++index])
     })
 
@@ -91,7 +90,7 @@ function updateSimulation() {
 
   model.removeAllChanges()
 
-  fileTab.uiJson?.parameters?.forEach((parameter: locApi.IUiJsonParameter) => {
+  fileTabModel.value.uiJson?.parameters?.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/')
 
     model.addChange(componentVariableNames[0], componentVariableNames[1], evaluateValue(parameter.value))
@@ -103,12 +102,12 @@ function updateSimulation() {
 
   const parser = math.parser()
 
-  fileTab.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+  fileTabModel.value.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     parser.set(data.id, common.simulationData(instanceTask, idToInfo[data.id]))
   })
 
   plots.value =
-    fileTab.uiJson?.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
+    fileTabModel.value.uiJson?.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
       return [
         {
           x: { data: parser.evaluate(plot.xValue) },
