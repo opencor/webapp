@@ -105,7 +105,7 @@ vue.watch(
         margin: {
           t: 5,
           l: 30,
-          b: 30,
+          b: 20,
           r: 5
         },
         showlegend: false,
