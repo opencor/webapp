@@ -1,6 +1,7 @@
 <template>
   <div :class="'flex flex-row h-full ' + (simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')">
-    <div v-if="issues.length === 0" class="flex flex-row grow">
+    <IssuesView v-if="issues.length !== 0" class="grow" :issues="issues" :simulationOnly="simulationOnly" />
+    <div v-else class="flex flex-row grow">
       <div class="ml-4 mr-4 mb-4">
         <Fieldset legend="Input parameters">
           <InputWidget
@@ -27,7 +28,6 @@
         />
       </div>
     </div>
-    <IssuesView v-else class="grow" :issues="issues" :simulationOnly="simulationOnly" />
   </div>
 </template>
 
