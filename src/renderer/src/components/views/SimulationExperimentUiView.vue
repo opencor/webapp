@@ -95,6 +95,12 @@ vue.onMounted(() => {
 })
 
 function updateUiAndSimulation() {
+  // Make sure that there are no issues.
+
+  if (issues.value.length > 0) {
+    return
+  }
+
   // Show/hide the input widgets.
 
   fileTabModel.value.uiJson?.input.forEach((input: locApi.IUiJsonInput, index: number) => {
