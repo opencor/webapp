@@ -1,6 +1,7 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
-    <div v-if="issues.length === 0" class="h-full">
+    <IssuesView v-if="issues.length !== 0" :issues="issues" :simulationOnly="omex !== undefined" />
+    <div v-else class="h-full">
       <div v-show="!electronApi && omex === undefined">
         <MainMenu
           :hasFiles="hasFiles"
@@ -19,7 +20,6 @@
         <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
       </div>
     </div>
-    <IssuesView v-else :issues="issues" :simulationOnly="omex !== undefined" />
   </div>
   <input type="file" multiple style="display: none" @change="onChange" />
   <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
