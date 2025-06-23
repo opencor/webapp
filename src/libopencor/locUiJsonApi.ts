@@ -252,23 +252,21 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   const inputIdUsed: Record<string, boolean> = {}
 
   for (const input of uiJson.input) {
-    if (input.id !== undefined) {
-      if (input.id === '') {
-        res.push({
-          type: EIssueType.WARNING,
-          description: 'UI JSON: an input id must not be empty.'
-        })
-      }
-
-      if (inputIdUsed[input.id]) {
-        res.push({
-          type: EIssueType.WARNING,
-          description: 'UI JSON: an input id must be unique (' + input.id + ' is used more than once).'
-        })
-      }
-
-      inputIdUsed[input.id] = true
+    if (input.id === '') {
+      res.push({
+        type: EIssueType.WARNING,
+        description: 'UI JSON: an input id must not be empty.'
+      })
     }
+
+    if (inputIdUsed[input.id]) {
+      res.push({
+        type: EIssueType.WARNING,
+        description: 'UI JSON: an input id must be unique (' + input.id + ' is used more than once).'
+      })
+    }
+
+    inputIdUsed[input.id] = true
 
     if (input.name === '') {
       res.push({
