@@ -112,8 +112,14 @@ export class SedDocument extends SedBase {
   }
 }
 
+interface IWasmSedChangeAttribute {
+  componentName: string
+  variableName: string
+  newValue: string
+}
+
 interface IWasmSedModel {
-  addChange(change: _locApi.SedChange): void
+  addChange(change: IWasmSedChangeAttribute): void
   removeAllChanges(): void
 }
 
