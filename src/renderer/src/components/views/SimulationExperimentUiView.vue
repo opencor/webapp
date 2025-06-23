@@ -105,7 +105,7 @@ function updateUiAndSimulation() {
 
   model.removeAllChanges()
 
-  fileTabModel.value.uiJson?.parameters?.forEach((parameter: locApi.IUiJsonParameter) => {
+  fileTabModel.value.uiJson?.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/')
 
     model.addChange(componentVariableNames[0], componentVariableNames[1], evaluateValue(parameter.value).toString())
