@@ -113,8 +113,8 @@ export class SedDocument extends SedBase {
 }
 
 interface IWasmSedModel {
-  removeAllChanges(): void
   addChange(change: _locApi.SedChange): void
+  removeAllChanges(): void
 }
 
 export class SedModel extends SedBaseIndex {
@@ -128,19 +128,19 @@ export class SedModel extends SedBaseIndex {
     }
   }
 
-  removeAllChanges(): void {
-    if (cppVersion()) {
-      _locApi.sedDocumentModelRemoveAllChanges(this._filePath, this._index)
-    } else {
-      this._wasmSedModel.removeAllChanges()
-    }
-  }
-
   addChange(componentName: string, variableName: string, newValue: string): void {
     if (cppVersion()) {
       _locApi.sedDocumentModelAddChange(this._filePath, this._index, componentName, variableName, newValue)
     } else {
       this._wasmSedModel.addChange(new _locApi.SedChangeAttribute(componentName, variableName, newValue))
+    }
+  }
+
+  removeAllChanges(): void {
+    if (cppVersion()) {
+      _locApi.sedDocumentModelRemoveAllChanges(this._filePath, this._index)
+    } else {
+      this._wasmSedModel.removeAllChanges()
     }
   }
 }
