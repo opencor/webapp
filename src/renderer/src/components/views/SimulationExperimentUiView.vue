@@ -64,7 +64,7 @@ function evaluateValue(value: string): any {
   const parser = math.parser()
 
   fileTabModel.value.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
-    if (input.id !== undefined) {
+    if (input.id !== undefined && input.id !== '') {
       parser.set(input.id, inputValues.value[++index])
     }
   })
