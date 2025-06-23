@@ -14,9 +14,9 @@ export type IUiJsonInput = IUiJsonDiscreteInput | IUiJsonScalarInput
 
 interface IUiJsonDiscreteInput {
   defaultValue: number
-  id: string
+  id?: string
   name: string
-  possibleValues?: IUiJsonDiscreteInputPossibleValue[]
+  possibleValues: IUiJsonDiscreteInputPossibleValue[]
   visible?: string
 }
 
@@ -27,9 +27,9 @@ export interface IUiJsonDiscreteInputPossibleValue {
 
 interface IUiJsonScalarInput {
   defaultValue: number
-  id: string
-  minimumValue: number
+  id?: string
   maximumValue: number
+  minimumValue: number
   name: string
   stepValue?: number
   visible?: string
@@ -221,8 +221,11 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
               type: 'string'
             }
           },
+          minItems: 1,
+          required: true,
           type: 'object'
         },
+        required: true,
         type: 'array'
       }
     },
