@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import Plotly from 'plotly.js-dist-min'
+import Plotly from 'plotly.js-gl2d-dist-min'
 import * as vue from 'vue'
 
 import { MEDIUM_DELAY } from '../../../../constants'

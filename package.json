@@ -74,7 +74,7 @@
     "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.20250613.0.tgz",
     "mathjs": "^14.5.2",
     "node-addon-api": "^8.4.0",
-    "plotly.js-dist-min": "^3.0.1",
+    "plotly.js-gl2d-dist-min": "^3.0.1",
     "prettier": "^3.6.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.5",
