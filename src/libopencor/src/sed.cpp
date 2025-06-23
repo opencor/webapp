@@ -31,14 +31,6 @@ napi_value sedDocumentModelCount(const Napi::CallbackInfo &pInfo)
     return Napi::Number::New(pInfo.Env(), valueToSedDocument(pInfo[0])->modelCount());
 }
 
-void sedDocumentModelRemoveAllChanges(const Napi::CallbackInfo &pInfo)
-{
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto model = sedDocument->model(valueToInt32(pInfo[1]));
-
-    model->removeAllChanges();
-}
-
 void sedDocumentModelAddChange(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = valueToSedDocument(pInfo[0]);
@@ -48,6 +40,14 @@ void sedDocumentModelAddChange(const Napi::CallbackInfo &pInfo)
                                                                   valueToString(pInfo[4]));
 
     model->addChange(changeAttribute);
+}
+
+void sedDocumentModelRemoveAllChanges(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = valueToSedDocument(pInfo[0]);
+    auto model = sedDocument->model(valueToInt32(pInfo[1]));
+
+    model->removeAllChanges();
 }
 
 napi_value sedDocumentSimulationCount(const Napi::CallbackInfo &pInfo)
