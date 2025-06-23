@@ -12,20 +12,38 @@ import {
 
 // SED-ML API.
 
+class SedBase {
+  protected _filePath: string
+
+  constructor(filePath: string) {
+    this._filePath = filePath
+  }
+}
+
+class SedBaseIndex extends SedBase {
+  protected _index: number
+
+  constructor(filePath: string, index: number) {
+    super(filePath)
+
+    this._index = index
+  }
+}
+
 interface IWasmSedDocument {
   issues: IWasmIssues
   modelCount: number
+  model(index: number): IWasmSedModel
   simulationCount: number
   simulation(index: number): IWasmSedSimulation
   instantiate(): IWasmSedInstance
 }
 
-export class SedDocument {
-  private _filePath: string
+export class SedDocument extends SedBase {
   private _wasmSedDocument: IWasmSedDocument = {} as IWasmSedDocument
 
   constructor(filePath: string, wasmFile: IWasmFile) {
-    this._filePath = filePath
+    super(filePath)
 
     if (cppVersion()) {
       _locApi.sedDocumentCreate(this._filePath)
@@ -42,43 +60,47 @@ export class SedDocument {
     return cppVersion() ? _locApi.sedDocumentModelCount(this._filePath) : this._wasmSedDocument.modelCount
   }
 
+  model(index: number): SedModel {
+    return new SedModel(this._filePath, index, this._wasmSedDocument)
+  }
+
   simulationCount(): number {
     return cppVersion() ? _locApi.sedDocumentSimulationCount(this._filePath) : this._wasmSedDocument.simulationCount
   }
 
   simulation(index: number): SedSimulation {
-    let type: SedSimulationType
+    let type: ESedSimulationType
 
     if (cppVersion()) {
       type = _locApi.sedDocumentSimulationType(this._filePath, index)
     } else {
       switch (this._wasmSedDocument.simulation(index).constructor.name) {
         case 'SedAnalysis':
-          type = SedSimulationType.Analysis
+          type = ESedSimulationType.ANALYSIS
 
           break
         case 'SedSteadyState':
-          type = SedSimulationType.SteadyState
+          type = ESedSimulationType.STEADY_STATE
 
           break
         case 'SedOneStep':
-          type = SedSimulationType.OneStep
+          type = ESedSimulationType.ONE_STEP
 
           break
         default: // 'SedUniformTimeCourse'.
-          type = SedSimulationType.UniformTimeCourse
+          type = ESedSimulationType.UNIFORM_TIME_COURSE
       }
     }
 
-    if (type === SedSimulationType.Analysis) {
+    if (type === ESedSimulationType.ANALYSIS) {
       return new SedSimulationAnalysis(this._filePath, index, this._wasmSedDocument, type)
     }
 
-    if (type === SedSimulationType.SteadyState) {
+    if (type === ESedSimulationType.STEADY_STATE) {
       return new SedSimulationSteadyState(this._filePath, index, this._wasmSedDocument, type)
     }
 
-    if (type === SedSimulationType.OneStep) {
+    if (type === ESedSimulationType.ONE_STEP) {
       return new SedSimulationOneStep(this._filePath, index, this._wasmSedDocument, type)
     }
 
@@ -90,29 +112,66 @@ export class SedDocument {
   }
 }
 
-export enum SedSimulationType {
-  Analysis,
-  SteadyState,
-  OneStep,
-  UniformTimeCourse
+interface IWasmSedChangeAttribute {
+  componentName: string
+  variableName: string
+  newValue: string
+}
+
+interface IWasmSedModel {
+  addChange(change: IWasmSedChangeAttribute): void
+  removeAllChanges(): void
+}
+
+export class SedModel extends SedBaseIndex {
+  private _wasmSedModel: IWasmSedModel = {} as IWasmSedModel
+
+  constructor(filePath: string, index: number, _wasmSedDocument: IWasmSedDocument) {
+    super(filePath, index)
+
+    if (wasmVersion()) {
+      this._wasmSedModel = _wasmSedDocument.model(index)
+    }
+  }
+
+  addChange(componentName: string, variableName: string, newValue: string): void {
+    if (cppVersion()) {
+      _locApi.sedDocumentModelAddChange(this._filePath, this._index, componentName, variableName, newValue)
+    } else {
+      this._wasmSedModel.addChange(new _locApi.SedChangeAttribute(componentName, variableName, newValue))
+    }
+  }
+
+  removeAllChanges(): void {
+    if (cppVersion()) {
+      _locApi.sedDocumentModelRemoveAllChanges(this._filePath, this._index)
+    } else {
+      this._wasmSedModel.removeAllChanges()
+    }
+  }
+}
+
+export enum ESedSimulationType {
+  ANALYSIS,
+  STEADY_STATE,
+  ONE_STEP,
+  UNIFORM_TIME_COURSE
 }
 
 interface IWasmSedSimulation {
-  type: SedSimulationType
+  type: ESedSimulationType
 }
 
-export class SedSimulation {
-  protected _filePath: string
-  protected _index: number
-  private _type: SedSimulationType
+export class SedSimulation extends SedBaseIndex {
+  private _type: ESedSimulationType
 
-  constructor(filePath: string, index: number, _wasmSedDocument: IWasmSedDocument, type: SedSimulationType) {
-    this._filePath = filePath
-    this._index = index
+  constructor(filePath: string, index: number, _wasmSedDocument: IWasmSedDocument, type: ESedSimulationType) {
+    super(filePath, index)
+
     this._type = type
   }
 
-  type(): SedSimulationType {
+  type(): ESedSimulationType {
     return this._type
   }
 }
@@ -128,7 +187,7 @@ interface IWasmSedSimulationOneStep extends IWasmSedSimulation {
 export class SedSimulationOneStep extends SedSimulation {
   private _wasmSedSimulationOneStep: IWasmSedSimulationOneStep = {} as IWasmSedSimulationOneStep
 
-  constructor(filePath: string, index: number, _wasmSedDocument: IWasmSedDocument, type: SedSimulationType) {
+  constructor(filePath: string, index: number, _wasmSedDocument: IWasmSedDocument, type: ESedSimulationType) {
     super(filePath, index, _wasmSedDocument, type)
 
     if (wasmVersion()) {
@@ -154,7 +213,7 @@ export class SedSimulationUniformTimeCourse extends SedSimulation {
   private _wasmSedSimulationUniformTimeCourse: IWasmSedSimulationUniformTimeCourse =
     {} as IWasmSedSimulationUniformTimeCourse
 
-  constructor(filePath: string, index: number, _wasmSedDocument: IWasmSedDocument, type: SedSimulationType) {
+  constructor(filePath: string, index: number, _wasmSedDocument: IWasmSedDocument, type: ESedSimulationType) {
     super(filePath, index, _wasmSedDocument, type)
 
     if (wasmVersion()) {
@@ -219,17 +278,16 @@ interface IWasmSedInstance {
   run(): number
 }
 
-export class SedInstance {
-  private _filePath: string
+export class SedInstance extends SedBase {
   private _wasmSedInstance: IWasmSedInstance = {} as IWasmSedInstance
 
   constructor(filePath: string, wasmSedDocument: IWasmSedDocument) {
-    this._filePath = filePath
+    super(filePath)
 
     if (cppVersion()) {
       _locApi.sedDocumentInstantiate(this._filePath)
     } else {
-      this._wasmSedInstance = wasmSedDocument.instantiate()
+      this._wasmSedInstance = vue.markRaw(wasmSedDocument.instantiate())
     }
   }
 
@@ -242,7 +300,7 @@ export class SedInstance {
   }
 
   run(): number {
-    return cppVersion() ? _locApi.sedInstanceRun(this._filePath) : vue.toRaw(this._wasmSedInstance).run()
+    return cppVersion() ? _locApi.sedInstanceRun(this._filePath) : this._wasmSedInstance.run()
   }
 }
 
@@ -272,17 +330,14 @@ interface IWasmSedInstanceTask {
   algebraicAsArray(index: number): number[]
 }
 
-export class SedInstanceTask {
-  private _filePath: string
-  private _index: number
+export class SedInstanceTask extends SedBaseIndex {
   private _wasmSedInstanceTask: IWasmSedInstanceTask = {} as IWasmSedInstanceTask
 
   constructor(filePath: string, index: number, wasmSedInstance: IWasmSedInstance) {
-    this._filePath = filePath
-    this._index = index
+    super(filePath, index)
 
     if (wasmVersion()) {
-      this._wasmSedInstanceTask = vue.toRaw(wasmSedInstance).task(index)
+      this._wasmSedInstanceTask = wasmSedInstance.task(index)
     }
   }
 

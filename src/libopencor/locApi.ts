@@ -1,20 +1,33 @@
 // Logger API.
 
-export { IssueType, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locLoggerApi'
+export { EIssueType, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locLoggerApi'
 
 // File API.
 
-export { _locApi, fileManager, File, FileType, type IWasmFile } from './locFileApi'
+export { _locApi, EFileType, File, fileManager, type IWasmFile } from './locFileApi'
 
 // SED-ML API.
 
 export {
+  ESedSimulationType,
   SedDocument,
   SedInstance,
   SedInstanceTask,
-  SedSimulationUniformTimeCourse,
-  SedSimulationType
+  SedSimulationUniformTimeCourse
 } from './locSedApi'
+
+// UI JSON API.
+
+export {
+  type IUiJson,
+  type IUiJsonDiscreteInputPossibleValue,
+  type IUiJsonInput,
+  type IUiJsonOutput,
+  type IUiJsonOutputData,
+  type IUiJsonOutputPlot,
+  type IUiJsonParameter,
+  uiJsonIssues
+} from './locUiJsonApi'
 
 // Version API.
 

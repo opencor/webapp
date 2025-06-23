@@ -1,24 +1,27 @@
 <template>
   <div class="flex flex-col h-screen overflow-hidden">
-    <div v-show="!electronApi && omex === undefined">
-      <MainMenu
-        :hasFiles="hasFiles"
-        @about="onAbout"
-        @open="($refs.files as HTMLInputElement).click()"
-        @openRemote="openRemoteVisible = true"
-        @close="onClose"
-        @closeAll="onCloseAll"
-        @settings="onSettings"
-      />
-    </div>
-    <div ref="mainDiv" class="grow">
-      <ContentsComponent ref="contents" :onlySimulationExperimentView="omex !== undefined" />
-      <DragNDropComponent v-show="dropAreaCounter > 0" />
-      <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
-      <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
+    <IssuesView v-if="issues.length !== 0" :issues="issues" :simulationOnly="omex !== undefined" />
+    <div v-else class="h-full">
+      <div v-show="!electronApi && omex === undefined">
+        <MainMenu
+          :hasFiles="hasFiles"
+          @about="onAbout"
+          @open="($refs.files as HTMLInputElement).click()"
+          @openRemote="openRemoteVisible = true"
+          @close="onClose"
+          @closeAll="onCloseAll"
+          @settings="onSettings"
+        />
+      </div>
+      <div class="h-full" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
+        <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
+        <DragNDropComponent v-show="dropAreaCounter > 0" />
+        <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
+        <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
+      </div>
     </div>
   </div>
-  <input ref="files" type="file" multiple style="display: none" @change="onChange" />
+  <input type="file" multiple style="display: none" @change="onChange" />
   <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
   <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
   <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
@@ -26,9 +29,10 @@
 </template>
 
 <script setup lang="ts">
+import * as vueusecore from '@vueuse/core'
+
 import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
-import * as vueusecore from '@vueuse/core'
 
 import { SHORT_DELAY, TOAST_LIFE } from '../../constants'
 import { electronApi } from '../../electronApi'
@@ -42,8 +46,8 @@ const props = defineProps<{
 }>()
 
 const toast = useToast()
-const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
+const issues = vue.ref<locApi.IIssue[]>([])
 
 // Handle an action.
 
@@ -185,18 +189,30 @@ function openFile(fileOrFilePath: string | File): void {
     .then((file) => {
       const fileType = file.type()
 
-      if (fileType === locApi.FileType.UnknownFile || fileType === locApi.FileType.IrretrievableFile) {
-        toast.add({
-          severity: 'error',
-          summary: 'Opening a file',
-          detail:
-            filePath +
-            '\n\n' +
-            (fileType === locApi.FileType.UnknownFile
-              ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
-              : 'The file could not be retrieved.'),
-          life: TOAST_LIFE
-        })
+      if (fileType === locApi.EFileType.UNKNOWN_FILE || fileType === locApi.EFileType.IRRETRIEVABLE_FILE) {
+        if (props.omex !== undefined) {
+          void vue.nextTick().then(() => {
+            issues.value.push({
+              type: locApi.EIssueType.ERROR,
+              description:
+                fileType === locApi.EFileType.UNKNOWN_FILE
+                  ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
+                  : 'The file could not be retrieved.'
+            })
+          })
+        } else {
+          toast.add({
+            severity: 'error',
+            summary: 'Opening a file',
+            detail:
+              filePath +
+              '\n\n' +
+              (fileType === locApi.EFileType.UNKNOWN_FILE
+                ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
+                : 'The file could not be retrieved.'),
+            life: TOAST_LIFE
+          })
+        }
 
         electronApi?.fileIssue(filePath)
       } else {
@@ -212,12 +228,21 @@ function openFile(fileOrFilePath: string | File): void {
         hideSpinningWheel()
       }
 
-      toast.add({
-        severity: 'error',
-        summary: 'Opening a file',
-        detail: filePath + '\n\n' + (error instanceof Error ? error.message : String(error)),
-        life: TOAST_LIFE
-      })
+      if (props.omex !== undefined) {
+        void vue.nextTick().then(() => {
+          issues.value.push({
+            type: locApi.EIssueType.ERROR,
+            description: common.formatIssue(error instanceof Error ? error.message : String(error))
+          })
+        })
+      } else {
+        toast.add({
+          severity: 'error',
+          summary: 'Opening a file',
+          detail: filePath + '\n\n' + common.formatIssue(error instanceof Error ? error.message : String(error)),
+          life: TOAST_LIFE
+        })
+      }
 
       electronApi?.fileIssue(filePath)
     })
@@ -240,11 +265,17 @@ function onChange(event: Event): void {
 const dropAreaCounter = vue.ref<number>(0)
 
 function onDragEnter(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   dropAreaCounter.value += 1
 }
 
 function onDrop(event: DragEvent): void {
-  event.preventDefault()
+  if (props.omex !== undefined) {
+    return
+  }
 
   dropAreaCounter.value = 0
 
@@ -258,6 +289,10 @@ function onDrop(event: DragEvent): void {
 }
 
 function onDragLeave(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   dropAreaCounter.value -= 1
 }
 
@@ -337,15 +372,6 @@ if (props.omex !== undefined) {
   const action = vueusecore.useStorage('action', '')
 
   vue.onMounted(() => {
-    // Enable drag and drop.
-
-    mainDiv.value.addEventListener('dragenter', onDragEnter)
-    mainDiv.value.addEventListener('dragover', (event: DragEvent) => {
-      event.preventDefault()
-    })
-    mainDiv.value.addEventListener('drop', onDrop)
-    mainDiv.value.addEventListener('dragleave', onDragLeave)
-
     // Handle the action, if any. We handle the action with a bit of a delay to give our background (with the OpenCOR
     // logo) time to be renderered.
     // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().

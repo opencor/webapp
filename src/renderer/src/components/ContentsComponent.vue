@@ -1,13 +1,19 @@
 <template>
-  <div v-if="onlySimulationExperimentView" class="h-full">
+  <div v-if="simulationOnly" class="h-full">
     <div v-for="(fileTab, index) in fileTabs" :key="'tabPanel_' + fileTab.file.path()" :value="fileTab.file.path()">
-      <SimulationExperimentView
-        v-if="fileTab.file.issues().length === 0"
+      <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
+      <SimulationExperimentUiView
+        v-else-if="fileTab.uiJson !== undefined"
         v-model="fileTabs[index]"
         :isActiveFile="fileTab.file.path() === activeFile"
-        :isAlone="true"
+        :simulationOnly="true"
       />
-      <IssuesView v-else :issues="fileTab.file.issues()" />
+      <SimulationExperimentView
+        v-else
+        v-model="fileTabs[index]"
+        :isActiveFile="fileTab.file.path() === activeFile"
+        :simulationOnly="true"
+      />
     </div>
   </div>
   <div v-else class="h-full">
@@ -45,12 +51,17 @@
           :key="'tabPanel_' + fileTab.file.path()"
           :value="fileTab.file.path()"
         >
-          <SimulationExperimentView
-            v-if="fileTab.file.issues().length === 0"
+          <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
+          <SimulationExperimentUiView
+            v-else-if="fileTab.uiJson !== undefined"
             v-model="fileTabs[index]"
             :isActiveFile="fileTab.file.path() === activeFile"
           />
-          <IssuesView v-else :issues="fileTab.file.issues()" />
+          <SimulationExperimentView
+            v-else
+            v-model="fileTabs[index]"
+            :isActiveFile="fileTab.file.path() === activeFile"
+          />
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -70,10 +81,11 @@ import * as common from '../common'
 export interface IFileTab {
   file: locApi.File
   consoleContents: string
+  uiJson?: locApi.IUiJson
 }
 
 defineProps<{
-  onlySimulationExperimentView?: boolean
+  simulationOnly?: boolean
 }>()
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
 
@@ -118,7 +130,8 @@ function openFile(file: locApi.File): void {
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file,
-    consoleContents: `<b>${file.path()}</b>`
+    consoleContents: `<b>${file.path()}</b>`,
+    uiJson: file.uiJson()
   })
 
   electronApi?.fileOpened(filePath)

@@ -1,17 +1,17 @@
 // Logger API.
 
-export enum IssueType {
-  Error,
-  Warning
+export enum EIssueType {
+  ERROR,
+  WARNING
 }
 
 export interface IIssue {
-  type: IssueType
+  type: EIssueType
   description: string
 }
 
 interface IWasmIssue {
-  type: { value: IssueType }
+  type: { value: EIssueType }
   description: string
 }
 

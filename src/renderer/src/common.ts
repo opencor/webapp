@@ -66,7 +66,7 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
   if (typeof fileOrFilePath === 'string') {
     if (isRemoteFilePath(fileOrFilePath)) {
       return new Promise((resolve, reject) => {
-        fetch(`https://corsproxy.io/${fileOrFilePath}`)
+        fetch(`https://corsproxy.io/?url=${fileOrFilePath}`)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer()
@@ -178,9 +178,114 @@ export function formatTime(time: number): string {
   return res
 }
 
-// A method to merge two arrays of numbers into a single array of tuples.
-// Note: we assume that both arrays have the same length.
+// A method to format an issue, i.e. make sure that it starts with a capital letter and ends with a period.
 
-export function coordinates(x: number[], y: number[]): number[][] {
-  return x.map((value, index) => [value, y[index]])
+export function formatIssue(issue: string): string {
+  issue = issue.charAt(0).toUpperCase() + issue.slice(1)
+
+  return issue.endsWith('.') ? issue : issue + '.'
+}
+
+// A method to retrieve the simulation data information for a given name from an instance task.
+
+export enum ESimulationDataInfoType {
+  UNKNOWN,
+  VOI,
+  STATE,
+  RATE,
+  CONSTANT,
+  COMPUTED_CONSTANT,
+  ALGEBRAIC
+}
+
+export interface ISimulationDataInfo {
+  type: ESimulationDataInfoType
+  index: number
+}
+
+export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: string): ISimulationDataInfo {
+  if (name === '') {
+    return {
+      type: ESimulationDataInfoType.UNKNOWN,
+      index: -1
+    }
+  }
+
+  if (name === instanceTask.voiName()) {
+    return {
+      type: ESimulationDataInfoType.VOI,
+      index: -1
+    }
+  }
+
+  for (let i = 0; i < instanceTask.stateCount(); i++) {
+    if (name === instanceTask.stateName(i)) {
+      return {
+        type: ESimulationDataInfoType.STATE,
+        index: i
+      }
+    }
+  }
+
+  for (let i = 0; i < instanceTask.rateCount(); i++) {
+    if (name === instanceTask.rateName(i)) {
+      return {
+        type: ESimulationDataInfoType.RATE,
+        index: i
+      }
+    }
+  }
+
+  for (let i = 0; i < instanceTask.constantCount(); i++) {
+    if (name === instanceTask.constantName(i)) {
+      return {
+        type: ESimulationDataInfoType.CONSTANT,
+        index: i
+      }
+    }
+  }
+
+  for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+    if (name === instanceTask.computedConstantName(i)) {
+      return {
+        type: ESimulationDataInfoType.COMPUTED_CONSTANT,
+        index: i
+      }
+    }
+  }
+
+  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
+    if (name === instanceTask.algebraicName(i)) {
+      return {
+        type: ESimulationDataInfoType.ALGEBRAIC,
+        index: i
+      }
+    }
+  }
+
+  return {
+    type: ESimulationDataInfoType.UNKNOWN,
+    index: -1
+  }
+}
+
+// A method to retrieve the simulation data for a given name from an instance task.
+
+export function simulationData(instanceTask: locApi.SedInstanceTask, info: ISimulationDataInfo): number[] {
+  switch (info.type) {
+    case ESimulationDataInfoType.VOI:
+      return instanceTask.voi()
+    case ESimulationDataInfoType.STATE:
+      return instanceTask.state(info.index)
+    case ESimulationDataInfoType.RATE:
+      return instanceTask.rate(info.index)
+    case ESimulationDataInfoType.CONSTANT:
+      return instanceTask.constant(info.index)
+    case ESimulationDataInfoType.COMPUTED_CONSTANT:
+      return instanceTask.computedConstant(info.index)
+    case ESimulationDataInfoType.ALGEBRAIC:
+      return instanceTask.algebraic(info.index)
+    default:
+      return []
+  }
 }
