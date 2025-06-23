@@ -255,21 +255,23 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   const inputIdUsed: Record<string, boolean> = {}
 
   for (const input of uiJson.input) {
-    if (input.id === '') {
-      res.push({
-        type: EIssueType.WARNING,
-        description: 'UI JSON: an input id must not be empty.'
-      })
-    }
+    if (input.id !== undefined) {
+      if (input.id === '') {
+        res.push({
+          type: EIssueType.WARNING,
+          description: 'UI JSON: an input id must not be empty.'
+        })
+      }
 
-    if (inputIdUsed[input.id]) {
-      res.push({
-        type: EIssueType.WARNING,
-        description: 'UI JSON: an input id must be unique (' + input.id + ' is used more than once).'
-      })
-    }
+      if (inputIdUsed[input.id]) {
+        res.push({
+          type: EIssueType.WARNING,
+          description: 'UI JSON: an input id must be unique (' + input.id + ' is used more than once).'
+        })
+      }
 
-    inputIdUsed[input.id] = true
+      inputIdUsed[input.id] = true
+    }
 
     if (input.name === '') {
       res.push({
@@ -278,7 +280,11 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       })
     }
 
-    if (input.possibleValues !== undefined) {
+    function isDiscreteInput(input: IUiJsonInput): input is IUiJsonDiscreteInput {
+      return 'possibleValues' in input
+    }
+
+    if (isDiscreteInput(input)) {
       for (const possibleValue of input.possibleValues) {
         if (possibleValue.name === '') {
           res.push({
@@ -320,7 +326,11 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       }
     }
 
-    if (input.minimumValue !== undefined && input.maximumValue !== undefined) {
+    function isScalarInput(input: IUiJsonInput): input is IUiJsonScalarInput {
+      return 'minimumValue' in input && 'maximumValue' in input
+    }
+
+    if (isScalarInput(input)) {
       if (input.minimumValue >= input.maximumValue) {
         res.push({
           type: EIssueType.WARNING,
@@ -457,21 +467,19 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
   // Make sure that the parameters information makes sense.
 
-  if (uiJson.parameters !== undefined) {
-    for (const parameter of uiJson.parameters) {
-      if (parameter.name === '') {
-        res.push({
-          type: EIssueType.WARNING,
-          description: 'UI JSON: a parameter name must not be empty.'
-        })
-      }
+  for (const parameter of uiJson.parameters) {
+    if (parameter.name === '') {
+      res.push({
+        type: EIssueType.WARNING,
+        description: 'UI JSON: a parameter name must not be empty.'
+      })
+    }
 
-      if (parameter.value === '') {
-        res.push({
-          type: EIssueType.WARNING,
-          description: 'UI JSON: a parameter value must not be empty.'
-        })
-      }
+    if (parameter.value === '') {
+      res.push({
+        type: EIssueType.WARNING,
+        description: 'UI JSON: a parameter value must not be empty.'
+      })
     }
   }
 
