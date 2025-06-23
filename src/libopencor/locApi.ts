@@ -4,7 +4,7 @@ export { EIssueType, wasmIssuesToIssues, type IIssue, type IWasmIssues } from '.
 
 // File API.
 
-export { _locApi, EFileType, fileManager, File, type IWasmFile } from './locFileApi'
+export { _locApi, EFileType, File, fileManager, type IWasmFile } from './locFileApi'
 
 // SED-ML API.
 
