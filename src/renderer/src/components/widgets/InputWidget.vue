@@ -1,7 +1,14 @@
 <template>
   <div v-if="possibleValues !== undefined">
     <FloatLabel variant="on">
-      <Select v-model="discreteValue" :options="possibleValues" optionLabel="name" class="w-full" size="small" />
+      <Select
+        v-model="discreteValue"
+        :options="possibleValues"
+        optionLabel="name"
+        @change="selectChange"
+        class="w-full"
+        size="small"
+      />
       <label>{{ name }}</label>
     </FloatLabel>
   </div>
@@ -44,10 +51,10 @@ const props = defineProps<{
   stepValue?: number
 }>()
 
+let oldValue = value.value
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
   props.possibleValues ? props.possibleValues[value.value] : undefined
 )
-let oldScalarValue = value.value
 const scalarValue = vue.ref<number>(value.value)
 const scalarValueString = vue.ref<string>(String(value.value))
 
@@ -56,12 +63,28 @@ const scalarValueString = vue.ref<string>(String(value.value))
 function emitChange(newValue: number) {
   void vue.nextTick().then(() => {
     value.value = newValue
-    scalarValueString.value = String(newValue) // This will properly format the input text.
 
-    oldScalarValue = newValue
+    if (props.possibleValues === undefined) {
+      scalarValueString.value = String(newValue) // This will properly format the input text.
+    }
+
+    oldValue = newValue
 
     emits('change', props.name, newValue)
   })
+}
+
+interface ISelectChangeEvent {
+  value: {
+    name: string
+    value: number
+  }
+}
+
+function selectChange(event: ISelectChangeEvent) {
+  if (event.value.value !== oldValue) {
+    emitChange(event.value.value)
+  }
 }
 
 function inputTextChange(newValueString: string) {
@@ -79,7 +102,7 @@ function inputTextChange(newValueString: string) {
 
   const newValue = Number(newValueString)
 
-  if (newValue !== oldScalarValue) {
+  if (newValue !== oldValue) {
     emitChange(newValue)
   }
 }
@@ -95,7 +118,7 @@ function inputTextKeyPress(event: KeyboardEvent) {
 }
 
 function sliderChange(newValue: number) {
-  if (newValue !== oldScalarValue) {
+  if (newValue !== oldValue) {
     emitChange(newValue)
   }
 }
