@@ -1,19 +1,19 @@
 <template>
   <div v-if="simulationOnly" class="h-full">
     <div v-for="(fileTab, index) in fileTabs" :key="'tabPanel_' + fileTab.file.path()" :value="fileTab.file.path()">
-      <SimulationExperimentView
-        v-if="fileTab.file.issues().length === 0 && fileTab.uiJson === undefined"
-        v-model="fileTabs[index]"
-        :isActiveFile="fileTab.file.path() === activeFile"
-        :simulationOnly="true"
-      />
+      <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
       <SimulationExperimentUiView
         v-else-if="fileTab.uiJson !== undefined"
         v-model="fileTabs[index]"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="true"
       />
-      <IssuesView v-else :issues="fileTab.file.issues()" />
+      <SimulationExperimentView
+        v-else
+        v-model="fileTabs[index]"
+        :isActiveFile="fileTab.file.path() === activeFile"
+        :simulationOnly="true"
+      />
     </div>
   </div>
   <div v-else class="h-full">
@@ -51,17 +51,17 @@
           :key="'tabPanel_' + fileTab.file.path()"
           :value="fileTab.file.path()"
         >
-          <SimulationExperimentView
-            v-if="fileTab.file.issues().length === 0 && fileTab.uiJson === undefined"
-            v-model="fileTabs[index]"
-            :isActiveFile="fileTab.file.path() === activeFile"
-          />
+          <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
           <SimulationExperimentUiView
             v-else-if="fileTab.uiJson !== undefined"
             v-model="fileTabs[index]"
             :isActiveFile="fileTab.file.path() === activeFile"
           />
-          <IssuesView v-else :issues="fileTab.file.issues()" />
+          <SimulationExperimentView
+            v-else
+            v-model="fileTabs[index]"
+            :isActiveFile="fileTab.file.path() === activeFile"
+          />
         </TabPanel>
       </TabPanels>
     </Tabs>
