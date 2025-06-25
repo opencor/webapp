@@ -68,6 +68,7 @@
     "electron": "^37.0.0",
     "electron-builder": "^26.0.12",
     "electron-settings": "^4.0.4",
+    "electron-updater": "^6.6.2",
     "electron-vite": "^3.1.0",
     "eslint": "^9.29.0",
     "jsonschema": "^1.5.0",
