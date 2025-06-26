@@ -13,7 +13,7 @@
   "productName": "OpenCOR",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/opencor/webapp.git"
+    "url": "git+https://github.com/agarny/webapp.git"
   },
   "type": "module",
   "version": "0.20250626.0",
