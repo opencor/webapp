@@ -3,7 +3,7 @@ import * as electron from 'electron'
 import * as constants from '../constants'
 
 import { ApplicationWindow } from './ApplicationWindow'
-import { retrieveMainWindowState } from './MainWindow'
+import { electronConf, type IElectronConfState } from './index'
 
 export class SplashScreenWindow extends ApplicationWindow {
   constructor() {
@@ -11,11 +11,11 @@ export class SplashScreenWindow extends ApplicationWindow {
 
     const width = 413 + 24
     const height = 351 + 42
-    const mainWindowState = retrieveMainWindowState()
+    const state: IElectronConfState = electronConf.get('app.state')
 
     super({
-      x: mainWindowState.x + ((mainWindowState.width - width) >> 1),
-      y: mainWindowState.y + ((mainWindowState.height - height) >> 1),
+      x: state.x + ((state.width - width) >> 1),
+      y: state.y + ((state.height - height) >> 1),
       width: width,
       height: height,
       minWidth: width,

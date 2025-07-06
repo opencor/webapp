@@ -1,7 +1,7 @@
 import * as electronToolkitUtils from '@electron-toolkit/utils'
 
 import electron from 'electron'
-import * as electronSettings from 'electron-settings'
+import { Conf as ElectronConf } from 'electron-conf'
 import fs from 'fs'
 import * as nodeChildProcess from 'node:child_process'
 import path from 'path'
@@ -23,6 +23,35 @@ import {
   resetAll
 } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
+
+// Electron store.
+
+export interface IElectronConfState {
+  x: number
+  y: number
+  width: number
+  height: number
+  isMaximized: boolean
+  isFullScreen: boolean
+}
+
+interface IElectronConf {
+  app: {
+    files: {
+      opened: string[]
+      recent: string[]
+      selected: string
+    }
+    state: IElectronConfState
+  }
+  settings: {
+    general: {
+      checkForUpdatesAtStartup: boolean
+    }
+  }
+}
+
+export let electronConf: ElectronConf<IElectronConf>
 
 // Allow only one instance of OpenCOR.
 
@@ -47,19 +76,6 @@ electron.app.on('second-instance', (_event, argv) => {
     mainWindow.handleArguments(argv)
   }
 })
-
-// Prettify our settings.
-
-electronSettings.configure({
-  prettify: true
-})
-
-// Resetting all of our settings, if needed.
-
-if (electronSettings.getSync('resetAll')) {
-  fs.rmSync(path.join(electron.app.getPath('userData'), 'Preferences'))
-  fs.rmSync(path.join(electron.app.getPath('userData'), 'settings.json'))
-}
 
 // Register our URI scheme.
 
@@ -126,6 +142,37 @@ electron.app
     if (!process.defaultApp) {
       process.env.NODE_ENV = 'production'
     }
+
+    // Initialise our Electron store.
+
+    const workAreaSize = electron.screen.getPrimaryDisplay().workAreaSize
+    const horizontalSpace = Math.round(workAreaSize.width / 13)
+    const verticalSpace = Math.round(workAreaSize.height / 13)
+
+    electronConf = new ElectronConf<IElectronConf>({
+      defaults: {
+        app: {
+          files: {
+            opened: [],
+            recent: [],
+            selected: ''
+          },
+          state: {
+            x: horizontalSpace,
+            y: verticalSpace,
+            width: workAreaSize.width - 2 * horizontalSpace,
+            height: workAreaSize.height - 2 * verticalSpace,
+            isMaximized: false,
+            isFullScreen: false
+          }
+        },
+        settings: {
+          general: {
+            checkForUpdatesAtStartup: true
+          }
+        }
+      }
+    })
 
     // Create our splash window.
 
