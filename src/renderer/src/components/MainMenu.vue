@@ -75,6 +75,7 @@ const items = [
       }
     ]
   },
+  /*---OPENCOR--- Enable the settings menu once we have settings for OpenCOR's Web app.
   {
     label: 'Tools',
     items: [
@@ -87,6 +88,7 @@ const items = [
       }
     ]
   },
+  */
   {
     label: 'Help',
     items: [

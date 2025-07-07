@@ -1,10 +1,9 @@
 <template>
   <BaseDialog header="Settings..." @hide="initialiseDialog">
-    <div v-if="electronApi !== undefined" class="flex gap-2 items-center">
+    <div class="flex gap-2 items-center">
       <Checkbox inputId="checkForUpdatesAtStartup" :binary="true" v-model="checkForUpdatesAtStartup" />
       <label for="checkForUpdatesAtStartup">Check for updates at startup</label>
     </div>
-    <div v-else>There are currently no settings.</div>
     <template #footer>
       <Button autofocus label="OK" @click="onOk" />
       <Button label="Cancel" severity="secondary" @click="$emit('close')" />
@@ -15,7 +14,6 @@
 <script setup lang="ts">
 import * as vue from 'vue'
 
-import { electronApi } from '../../../../electronApi'
 import { settings } from '../../../../settings'
 
 const emit = defineEmits(['close'])
