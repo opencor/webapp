@@ -1,3 +1,5 @@
+import { type ISettings } from './common'
+
 export interface ISplashScreenInfo {
   copyright: string
   version: string
@@ -27,7 +29,9 @@ interface IElectronApi {
   fileSelected(filePath: string): void
   filesOpened(filePaths: string[]): void
   installUpdateAndRestart: () => void
+  loadSettings: () => Promise<ISettings>
   resetAll: () => void
+  saveSettings: (settings: ISettings) => void
 
   // Renderer process listening to the main process.
 

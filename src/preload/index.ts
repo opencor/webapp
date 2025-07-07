@@ -4,6 +4,7 @@ import * as systemInformation from 'systeminformation'
 // @ts-expect-error (libOpenCOR.node is a native module)
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
 
+import { type ISettings } from '../common'
 import { type ISplashScreenInfo } from '../electronApi'
 
 // Some bridging between our main process and renderer process.
@@ -48,7 +49,9 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   fileSelected: (filePath: string) => electron.ipcRenderer.invoke('file-selected', filePath),
   filesOpened: (filePaths: string[]) => electron.ipcRenderer.invoke('files-opened', filePaths),
   installUpdateAndRestart: () => electron.ipcRenderer.invoke('install-update-and-restart'),
+  loadSettings: (): Promise<ISettings> => electron.ipcRenderer.invoke('load-settings'),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
+  saveSettings: (settings: ISettings) => electron.ipcRenderer.invoke('save-settings', settings),
 
   // Renderer process listening to the main process.
 

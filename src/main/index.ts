@@ -6,6 +6,7 @@ import fs from 'fs'
 import * as nodeChildProcess from 'node:child_process'
 import path from 'path'
 
+import { type ISettings } from '../common'
 import { URI_SCHEME } from '../constants'
 import { isPackaged, isWindows, isLinux } from '../electron'
 
@@ -19,8 +20,10 @@ import {
   fileSelected,
   filesOpened,
   installUpdateAndRestart,
+  loadSettings,
   MainWindow,
-  resetAll
+  resetAll,
+  saveSettings
 } from './MainWindow'
 import { SplashScreenWindow } from './SplashScreenWindow'
 
@@ -44,11 +47,7 @@ interface IElectronConf {
     }
     state: IElectronConfState
   }
-  settings: {
-    general: {
-      checkForUpdatesAtStartup: boolean
-    }
-  }
+  settings: ISettings
 }
 
 export let electronConf: ElectronConf<IElectronConf>
@@ -222,7 +221,13 @@ electron.app
     electron.ipcMain.handle('install-update-and-restart', () => {
       installUpdateAndRestart()
     })
+    electron.ipcMain.handle('load-settings', (): ISettings => {
+      return loadSettings()
+    })
     electron.ipcMain.handle('reset-all', resetAll)
+    electron.ipcMain.handle('save-settings', (_event, settings: ISettings) => {
+      saveSettings(settings)
+    })
 
     // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
     // triggering URL.

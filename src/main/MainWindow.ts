@@ -2,6 +2,7 @@ import electron from 'electron'
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater'
 import path from 'path'
 
+import { type ISettings } from '../common'
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../constants'
 import { isDevMode, isPackaged, isWindows, isLinux, isMacOs } from '../electron'
 
@@ -58,6 +59,14 @@ export function downloadAndInstallUpdate(): void {
 
 export function installUpdateAndRestart(): void {
   autoUpdater.quitAndInstall(true, true)
+}
+
+export function loadSettings(): ISettings {
+  return electronConf.get('settings')
+}
+
+export function saveSettings(settings: ISettings): void {
+  electronConf.set('settings', settings)
 }
 
 let _resetAll = false
