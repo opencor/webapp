@@ -2,7 +2,6 @@ appId: ws.opencor.app
 productName: OpenCOR
 publish:
   provider: github
-  owner: agarny
   channel: latest-${arch}
   releaseType: release
 win:
