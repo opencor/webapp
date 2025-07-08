@@ -1,3 +1,10 @@
+import { type ISettings } from './common'
+
+export interface ISplashScreenInfo {
+  copyright: string
+  version: string
+}
+
 interface IElectronApi {
   // Note: this must be in sync with src/preload/index.ts.
 
@@ -5,8 +12,14 @@ interface IElectronApi {
 
   operatingSystem: () => string
 
+  // Splash screen window.
+
+  onInitSplashScreenWindow: (callback: (info: ISplashScreenInfo) => void) => void
+
   // Renderer process asking the main process to do something for it.
 
+  checkForUpdates: (atStartup: boolean) => void
+  downloadAndInstallUpdate: () => void
   enableDisableMainMenu: (enable: boolean) => void
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) => void
   fileClosed: (filePath: string) => void
@@ -15,7 +28,10 @@ interface IElectronApi {
   filePath: (file: File) => string
   fileSelected(filePath: string): void
   filesOpened(filePaths: string[]): void
+  installUpdateAndRestart: () => void
+  loadSettings: () => Promise<ISettings>
   resetAll: () => void
+  saveSettings: (settings: ISettings) => void
 
   // Renderer process listening to the main process.
 
@@ -30,6 +46,12 @@ interface IElectronApi {
   onResetAll: (callback: () => void) => void
   onSelect: (callback: (filePath: string) => void) => void
   onSettings: (callback: () => void) => void
+  onUpdateAvailable: (callback: (version: string) => void) => void
+  onUpdateCheckError: (callback: (issue: string) => void) => void
+  onUpdateDownloaded: (callback: () => void) => void
+  onUpdateDownloadError: (callback: (issue: string) => void) => void
+  onUpdateDownloadProgress: (callback: (percent: number) => void) => void
+  onUpdateNotAvailable: (callback: () => void) => void
 }
 
 interface IWindow {

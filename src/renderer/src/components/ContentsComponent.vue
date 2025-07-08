@@ -73,10 +73,10 @@ import * as vueusecore from '@vueuse/core'
 
 import * as vue from 'vue'
 
+import * as common from '../../../common'
 import { electronApi } from '../../../electronApi'
 import * as locApi from '../../../libopencor/locApi'
-
-import * as common from '../common'
+import * as vueCommon from '../../../vueCommon'
 
 export interface IFileTab {
   file: locApi.File
@@ -189,7 +189,7 @@ function closeAllFiles(): void {
 
 // Track the height of our file tablist.
 
-common.trackElementHeight('fileTablist')
+vueCommon.trackElementHeight('fileTablist')
 
 // Keyboard shortcuts.
 

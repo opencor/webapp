@@ -4,6 +4,9 @@ import * as systemInformation from 'systeminformation'
 // @ts-expect-error (libOpenCOR.node is a native module)
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
 
+import { type ISettings } from '../common'
+import { type ISplashScreenInfo } from '../electronApi'
+
 // Some bridging between our main process and renderer process.
 // Note: this must be in sync with src/electronApi.ts.
 
@@ -25,8 +28,17 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
     return osInfo.distro + ' ' + osInfo.release + ' (' + architecture + ')'
   },
 
+  // Splash screen window.
+
+  onInitSplashScreenWindow: (callback: (info: ISplashScreenInfo) => void) =>
+    electron.ipcRenderer.on('init-splash-screen-window', (_event, info: ISplashScreenInfo) => {
+      callback(info)
+    }),
+
   // Renderer process asking the main process to do something for it.
 
+  checkForUpdates: (atStartup: boolean) => electron.ipcRenderer.invoke('check-for-updates', atStartup),
+  downloadAndInstallUpdate: () => electron.ipcRenderer.invoke('download-and-install-update'),
   enableDisableMainMenu: (enable: boolean) => electron.ipcRenderer.invoke('enable-disable-main-menu', enable),
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
@@ -36,7 +48,10 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   fileSelected: (filePath: string) => electron.ipcRenderer.invoke('file-selected', filePath),
   filesOpened: (filePaths: string[]) => electron.ipcRenderer.invoke('files-opened', filePaths),
+  installUpdateAndRestart: () => electron.ipcRenderer.invoke('install-update-and-restart'),
+  loadSettings: (): Promise<ISettings> => electron.ipcRenderer.invoke('load-settings'),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
+  saveSettings: (settings: ISettings) => electron.ipcRenderer.invoke('save-settings', settings),
 
   // Renderer process listening to the main process.
 
@@ -45,7 +60,7 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
       callback()
     }),
   onAction: (callback: (action: string) => void) =>
-    electron.ipcRenderer.on('action', (_event, action) => {
+    electron.ipcRenderer.on('action', (_event, action: string) => {
       callback(action)
     }),
   onCheckForUpdates: (callback: () => void) =>
@@ -82,6 +97,30 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
     }),
   onSettings: (callback: () => void) =>
     electron.ipcRenderer.on('settings', () => {
+      callback()
+    }),
+  onUpdateAvailable: (callback: (version: string) => void) =>
+    electron.ipcRenderer.on('update-available', (_event, version: string) => {
+      callback(version)
+    }),
+  onUpdateCheckError: (callback: (issue: string) => void) =>
+    electron.ipcRenderer.on('update-check-error', (_event, issue: string) => {
+      callback(issue)
+    }),
+  onUpdateDownloaded: (callback: () => void) =>
+    electron.ipcRenderer.on('update-downloaded', () => {
+      callback()
+    }),
+  onUpdateDownloadError: (callback: (issue: string) => void) =>
+    electron.ipcRenderer.on('update-download-error', (_event, issue: string) => {
+      callback(issue)
+    }),
+  onUpdateDownloadProgress: (callback: (percent: number) => void) =>
+    electron.ipcRenderer.on('update-download-progress', (_event, percent: number) => {
+      callback(percent)
+    }),
+  onUpdateNotAvailable: (callback: () => void) =>
+    electron.ipcRenderer.on('update-not-available', () => {
       callback()
     })
 })

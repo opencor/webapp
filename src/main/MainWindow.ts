@@ -1,45 +1,78 @@
 import electron from 'electron'
-import * as electronSettings from 'electron-settings'
+import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater'
 import path from 'path'
 
+import { type ISettings } from '../common'
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../constants'
-import { isDevMode, isWindows, isLinux, isMacOs } from '../electron'
+import { isDevMode, isPackaged, isWindows, isLinux, isMacOs } from '../electron'
 
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'
+import { electronConf, type IElectronConfState } from './index'
 import { enableDisableMainMenu, updateReopenMenu } from './MainMenu'
 import type { SplashScreenWindow } from './SplashScreenWindow'
 
-export function retrieveMainWindowState(): {
-  x: number
-  y: number
-  width: number
-  height: number
-  isMaximized: boolean
-  isFullScreen: boolean
-} {
-  const workAreaSize = electron.screen.getPrimaryDisplay().workAreaSize
-  const horizontalSpace = Math.round(workAreaSize.width / 13)
-  const verticalSpace = Math.round(workAreaSize.height / 13)
-  const x = electronSettings.getSync('mainWindowState.x')
-  const y = electronSettings.getSync('mainWindowState.y')
-  const width = electronSettings.getSync('mainWindowState.width')
-  const height = electronSettings.getSync('mainWindowState.height')
-  const isMaximized = electronSettings.getSync('mainWindowState.isMaximized')
-  const isFullScreen = electronSettings.getSync('mainWindowState.isFullScreen')
+autoUpdater.autoDownload = false
+autoUpdater.logger = null
 
-  return {
-    x: (x ?? horizontalSpace) as number,
-    y: (y ?? verticalSpace) as number,
-    width: (width ?? workAreaSize.width - 2 * horizontalSpace) as number,
-    height: (height ?? workAreaSize.height - 2 * verticalSpace) as number,
-    isMaximized: (isMaximized ?? false) as boolean,
-    isFullScreen: (isFullScreen ?? false) as boolean
+export function checkForUpdates(atStartup: boolean): void {
+  // Check for updates, if requested and if OpenCOR is packaged.
+
+  if (isPackaged() && electronConf.get('settings.general.checkForUpdatesAtStartup')) {
+    autoUpdater
+      .checkForUpdates()
+      .then((result: UpdateCheckResult | null) => {
+        const updateAvailable = result?.isUpdateAvailable ?? false
+
+        if (updateAvailable) {
+          MainWindow.instance?.webContents.send('update-available', result?.updateInfo.version)
+        } else if (!atStartup) {
+          MainWindow.instance?.webContents.send('update-not-available')
+        }
+      })
+      .catch((error: unknown) => {
+        MainWindow.instance?.webContents.send(
+          'update-check-error',
+          error instanceof Error ? error.message : String(error)
+        )
+      })
   }
 }
 
+autoUpdater.on('download-progress', (info: ProgressInfo) => {
+  MainWindow.instance?.webContents.send('update-download-progress', info.percent)
+})
+
+export function downloadAndInstallUpdate(): void {
+  autoUpdater
+    .downloadUpdate()
+    .then(() => {
+      MainWindow.instance?.webContents.send('update-downloaded')
+    })
+    .catch((error: unknown) => {
+      MainWindow.instance?.webContents.send(
+        'update-download-error',
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+}
+
+export function installUpdateAndRestart(): void {
+  autoUpdater.quitAndInstall(true, true)
+}
+
+export function loadSettings(): ISettings {
+  return electronConf.get('settings')
+}
+
+export function saveSettings(settings: ISettings): void {
+  electronConf.set('settings', settings)
+}
+
+let _resetAll = false
+
 export function resetAll(): void {
-  electronSettings.setSync('resetAll', true)
+  _resetAll = true
 
   electron.app.relaunch()
   electron.app.quit()
@@ -106,16 +139,16 @@ export class MainWindow extends ApplicationWindow {
 
   // Constructor.
 
-  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow | null) {
+  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow) {
     // Initialise ourselves.
 
-    const mainWindowState = retrieveMainWindowState()
+    const state: IElectronConfState = electronConf.get('app.state')
 
     super({
-      x: mainWindowState.x,
-      y: mainWindowState.y,
-      width: mainWindowState.width,
-      height: mainWindowState.height,
+      x: state.x,
+      y: state.y,
+      width: state.width,
+      height: state.height,
       minWidth: 640,
       minHeight: 480,
       ...(isMacOs() ? {} : { icon: icon })
@@ -133,9 +166,9 @@ export class MainWindow extends ApplicationWindow {
 
     // Restore our state, if needed.
 
-    if (mainWindowState.isMaximized) {
+    if (state.isMaximized) {
       this.maximize()
-    } else if (mainWindowState.isFullScreen) {
+    } else if (state.isFullScreen) {
       this.setFullScreen(true)
     }
 
@@ -145,7 +178,7 @@ export class MainWindow extends ApplicationWindow {
     this.once('show', () => {
       let handleCommandLineDelay = SHORT_DELAY
 
-      if (!this._splashScreenWindowClosed && !!splashScreenWindow) {
+      if (!this._splashScreenWindowClosed) {
         this._splashScreenWindowClosed = true
 
         handleCommandLineDelay = LONG_DELAY
@@ -158,14 +191,14 @@ export class MainWindow extends ApplicationWindow {
       setTimeout(() => {
         // Retrieve the recently opened files and our Reopen menu.
 
-        recentFilePaths = electronSettings.getSync('recentFiles') as string[]
+        recentFilePaths = electronConf.get('app.files.recent')
 
         updateReopenMenu(recentFilePaths)
 
         // Reopen previously opened files, if any, and select the previously selected file.
 
-        this._openedFilePaths = electronSettings.getSync('openedFiles') as string[]
-        this._selectedFilePath = electronSettings.getSync('selectedFile') as string
+        this._openedFilePaths = electronConf.get('app.files.opened')
+        this._selectedFilePath = electronConf.get('app.files.selected')
 
         this.reopenFilePathsAndSelectFilePath()
 
@@ -173,54 +206,57 @@ export class MainWindow extends ApplicationWindow {
         // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
 
         if (!this.isAction(commandLine[0])) {
-          // The first argument is not an action, so it has to be the path to either OpenCOR (when packaged) or Electron
-          // (when not packaged). So, first, we need to determine whether the first argument is the path to Electron.
-          // Then, we remove the first argument in all cases and the second argument only if the first one was the path
-          // to Electron (since it would mean that it was the path to our renderer).
-
-          const appFileName = path.basename(commandLine[0])
-          const isElectron = isWindows()
-            ? appFileName === 'electron.exe'
-            : isLinux()
-              ? appFileName === 'electron'
-              : appFileName === 'Electron'
+          // The first argument is not an action, so remove the first argument and then the second argument, but only
+          // if we are not packaged.
 
           commandLine.shift()
 
-          if (isElectron) {
+          if (!isPackaged()) {
             commandLine.shift()
           }
+        }
+
+        // When auto updating OpenCOR, we may end up with an extra argument that we need to ignore.
+
+        if ((isWindows() || isMacOs()) && commandLine[0] === '--updated') {
+          commandLine.shift()
+        } else if (isLinux() && commandLine[0] === '--no-sandbox') {
+          commandLine.shift()
         }
 
         this.handleArguments(commandLine)
       }, handleCommandLineDelay)
     })
 
-    // Keep track of our settings.
+    // Keep track of our settings unless we are resetting all.
 
     this.on('close', () => {
-      // Main window state.
+      if (_resetAll) {
+        electronConf.clear()
+      } else {
+        // Main window state.
 
-      if (!this.isMaximized() && !this.isMinimized() && !this.isFullScreen()) {
-        mainWindowState.x = this.getPosition()[0]
-        mainWindowState.y = this.getPosition()[1]
-        mainWindowState.width = this.getContentSize()[0]
-        mainWindowState.height = this.getContentSize()[1]
+        if (!this.isMaximized() && !this.isMinimized() && !this.isFullScreen()) {
+          state.x = this.getPosition()[0]
+          state.y = this.getPosition()[1]
+          state.width = this.getContentSize()[0]
+          state.height = this.getContentSize()[1]
+        }
+
+        state.isMaximized = this.isMaximized()
+        state.isFullScreen = this.isFullScreen()
+
+        electronConf.set('app.state', state)
+
+        // Recent files.
+
+        electronConf.set('app.files.recent', recentFilePaths)
+
+        // Opened files and selected file.
+
+        electronConf.set('app.files.opened', openedFilePaths)
+        electronConf.set('app.files.selected', selectedFilePath)
       }
-
-      mainWindowState.isMaximized = this.isMaximized()
-      mainWindowState.isFullScreen = this.isFullScreen()
-
-      electronSettings.setSync('mainWindowState', mainWindowState)
-
-      // Recent files.
-
-      electronSettings.setSync('recentFiles', recentFilePaths)
-
-      // Opened files and selected file.
-
-      electronSettings.setSync('openedFiles', openedFilePaths)
-      electronSettings.setSync('selectedFile', selectedFilePath)
     })
 
     // Enable our main menu.

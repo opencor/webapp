@@ -1,5 +1,9 @@
 appId: ws.opencor.app
 productName: OpenCOR
+publish:
+  provider: github
+  channel: latest-${arch}
+  releaseType: release
 win:
   artifactName: ${productName}-${version}-Windows-${arch}.${ext}
   target:
@@ -18,7 +22,6 @@ mac:
   artifactName: ${productName}-${version}-macOS-${arch}.${ext}
   target:
     - dmg
-    - pkg
     - zip
 protocols:
   name: OpenCOR
