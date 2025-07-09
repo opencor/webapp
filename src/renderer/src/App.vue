@@ -63,6 +63,7 @@ const props = defineProps<{
 }>()
 
 const toast = useToast()
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
 
