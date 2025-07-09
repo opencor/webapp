@@ -1,5 +1,5 @@
 <template>
-  <div :class="'h-full ' + (simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')">
+  <div :class="`h-full ${simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment'}`">
     <Toolbar :id="toolbarId" class="p-1!">
       <template #start>
         <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />

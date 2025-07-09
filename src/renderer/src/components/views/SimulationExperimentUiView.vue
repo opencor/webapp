@@ -1,5 +1,5 @@
 <template>
-  <div :class="'flex flex-row h-full ' + (simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')">
+  <div :class="`flex flex-row h-full ${simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment'}`">
     <IssuesView v-if="issues.length !== 0" class="grow" :issues="issues" :simulationOnly="simulationOnly" />
     <div v-else class="flex flex-row grow">
       <div class="ml-4 mr-4 mb-4">
@@ -8,7 +8,7 @@
             v-for="(input, index) in (uiJson as any).input"
             v-model="inputValues[index]"
             v-show="showInput[index]"
-            :key="'input_' + index"
+            :key="`input_${index}`"
             :name="input.name"
             :maximumValue="input.maximumValue"
             :minimumValue="input.minimumValue"
@@ -22,7 +22,7 @@
       <div :id="plotsDivId" class="grow">
         <GraphPanelWidget
           v-for="(_plot, index) in (uiJson as any).output.plots"
-          :key="'plot_' + index"
+          :key="`plot_${index}`"
           class="graph-panel-widget"
           :plots="plots.length !== 0 ? plots[index] : []"
         />

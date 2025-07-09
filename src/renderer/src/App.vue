@@ -100,7 +100,7 @@ function handleAction(action: string): void {
       toast.add({
         severity: 'error',
         summary: 'Handling an action',
-        detail: action + '\n\nThe action could not be handled.',
+        detail: `${action}\n\nThe action could not be handled.`,
         life: TOAST_LIFE
       })
     }
@@ -304,7 +304,7 @@ function openFile(fileOrFilePath: string | File): void {
         toast.add({
           severity: 'error',
           summary: 'Opening a file',
-          detail: filePath + '\n\n' + common.formatIssue(error instanceof Error ? error.message : String(error)),
+          detail: `${filePath}\n\n${common.formatIssue(error instanceof Error ? error.message : String(error))}`,
           life: TOAST_LIFE
         })
       }

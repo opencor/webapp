@@ -1,6 +1,6 @@
 <template>
   <div v-if="simulationOnly" class="h-full">
-    <div v-for="(fileTab, index) in fileTabs" :key="'tabPanel_' + fileTab.file.path()" :value="fileTab.file.path()">
+    <div v-for="(fileTab, index) in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" :value="fileTab.file.path()">
       <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
       <SimulationExperimentView
         v-else-if="fileTab.uiJson === undefined"
@@ -29,7 +29,7 @@
         <Tab
           v-for="fileTab in fileTabs"
           :id="`tab_${fileTab.file.path()}`"
-          :key="'tab_' + fileTab.file.path()"
+          :key="`tab_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
           <div class="flex gap-2 items-center">
