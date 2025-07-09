@@ -129,7 +129,7 @@ function openFile(file: locApi.File): void {
   selectFile(filePath)
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
-    file,
+    file:,
     consoleContents: `<b>${file.path()}</b>`,
     uiJson: file.uiJson()
   })
