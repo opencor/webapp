@@ -2,17 +2,17 @@
   <div v-if="simulationOnly" class="h-full">
     <div v-for="(fileTab, index) in fileTabs" :key="'tabPanel_' + fileTab.file.path()" :value="fileTab.file.path()">
       <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
-      <SimulationExperimentUiView
-        v-else-if="fileTab.uiJson !== undefined"
-        v-model="fileTabs[index]"
+      <SimulationExperimentView
+        v-else-if="fileTab.uiJson === undefined"
+        :file="fileTabs[index].file"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="true"
       />
-      <SimulationExperimentView
+      <SimulationExperimentUiView
         v-else
-        v-model="fileTabs[index]"
-        :isActiveFile="fileTab.file.path() === activeFile"
+        :file="fileTabs[index].file"
         :simulationOnly="true"
+        :uiJson="fileTabs[index].uiJson"
       />
     </div>
   </div>
@@ -28,7 +28,7 @@
       <TabList id="fileTablist" class="file-tablist">
         <Tab
           v-for="fileTab in fileTabs"
-          :id="'tab_' + fileTab.file.path()"
+          :id="`tab_${fileTab.file.path()}`"
           :key="'tab_' + fileTab.file.path()"
           :value="fileTab.file.path()"
         >
@@ -48,20 +48,16 @@
       <TabPanels class="p-0!">
         <TabPanel
           v-for="(fileTab, index) in fileTabs"
-          :key="'tabPanel_' + fileTab.file.path()"
+          :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
           <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
-          <SimulationExperimentUiView
-            v-else-if="fileTab.uiJson !== undefined"
-            v-model="fileTabs[index]"
-            :isActiveFile="fileTab.file.path() === activeFile"
-          />
           <SimulationExperimentView
-            v-else
-            v-model="fileTabs[index]"
+            v-else-if="fileTab.uiJson === undefined"
+            :file="fileTabs[index].file"
             :isActiveFile="fileTab.file.path() === activeFile"
           />
+          <SimulationExperimentUiView v-else :file="fileTabs[index].file" :uiJson="fileTabs[index].uiJson" />
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -80,7 +76,6 @@ import * as vueCommon from '../../../vueCommon'
 
 export interface IFileTab {
   file: locApi.File
-  consoleContents: string
   uiJson?: locApi.IUiJson
 }
 
@@ -129,8 +124,7 @@ function openFile(file: locApi.File): void {
   selectFile(filePath)
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
-    file:,
-    consoleContents: `<b>${file.path()}</b>`,
+    file: file,
     uiJson: file.uiJson()
   })
 

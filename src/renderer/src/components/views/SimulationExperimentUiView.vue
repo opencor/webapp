@@ -5,7 +5,7 @@
       <div class="ml-4 mr-4 mb-4">
         <Fieldset legend="Input parameters">
           <InputWidget
-            v-for="(input, index) in (fileTabModel.uiJson as any).input"
+            v-for="(input, index) in (uiJson as any).input"
             v-model="inputValues[index]"
             v-show="showInput[index]"
             :key="'input_' + index"
@@ -21,7 +21,7 @@
       </div>
       <div :id="plotsDivId" class="grow">
         <GraphPanelWidget
-          v-for="(_plot, index) in (fileTabModel.uiJson as any).output.plots"
+          v-for="(_plot, index) in (uiJson as any).output.plots"
           :key="'plot_' + index"
           class="graph-panel-widget"
           :plots="plots.length !== 0 ? plots[index] : []"
@@ -39,20 +39,20 @@ import * as locApi from '../../../../libopencor/locApi'
 import * as locCommon from '../../../../locCommon'
 
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
-import { type IFileTab } from '../ContentsComponent.vue'
 
-const fileTabModel = defineModel<IFileTab>({ required: true })
-defineProps<{
+const props = defineProps<{
+  file: locApi.File
   simulationOnly?: boolean
+  uiJson: locApi.IUiJson
 }>()
 
 const math = mathjs.create(mathjs.all, {})
-const model = fileTabModel.value.file.document().model(0)
-const instance = fileTabModel.value.file.instance()
+const model = props.file.document().model(0)
+const instance = props.file.instance()
 const instanceTask = instance.task(0)
-const plotsDivId = 'plotsDiv_' + String(fileTabModel.value.file.path())
+const plotsDivId = `plotsDiv_${props.file.path()}`
 const plots = vue.ref<IGraphPanelPlot[][]>([])
-const issues = vue.ref(locApi.uiJsonIssues(fileTabModel.value.uiJson))
+const issues = vue.ref(locApi.uiJsonIssues(props.uiJson))
 const inputValues = vue.ref<number[]>([])
 const showInput = vue.ref<boolean[]>([])
 const idToInfo: Record<string, locCommon.ISimulationDataInfo> = {}
@@ -62,7 +62,7 @@ function evaluateValue(value: string): any {
   let index = -1
   const parser = math.parser()
 
-  fileTabModel.value.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
+  props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
     if (input.id !== undefined && input.id !== '') {
       parser.set(input.id, inputValues.value[++index])
     }
@@ -71,15 +71,15 @@ function evaluateValue(value: string): any {
   return parser.evaluate(value)
 }
 
-fileTabModel.value.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
+props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
   inputValues.value.push(input.defaultValue)
 })
 
-fileTabModel.value.uiJson?.input.forEach((input: locApi.IUiJsonInput) => {
+props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
   showInput.value.push(evaluateValue(input.visible ?? 'true'))
 })
 
-fileTabModel.value.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
   idToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name)
 })
 
@@ -102,7 +102,7 @@ function updateUiAndSimulation() {
 
   // Show/hide the input widgets.
 
-  fileTabModel.value.uiJson?.input.forEach((input: locApi.IUiJsonInput, index: number) => {
+  props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
     showInput.value[index] = evaluateValue(input.visible ?? 'true')
   })
 
@@ -110,7 +110,7 @@ function updateUiAndSimulation() {
 
   model.removeAllChanges()
 
-  fileTabModel.value.uiJson?.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
+  props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/')
 
     model.addChange(componentVariableNames[0], componentVariableNames[1], evaluateValue(parameter.value).toString())
@@ -122,19 +122,18 @@ function updateUiAndSimulation() {
 
   const parser = math.parser()
 
-  fileTabModel.value.uiJson?.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+  props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     parser.set(data.id, locCommon.simulationData(instanceTask, idToInfo[data.id]))
   })
 
-  plots.value =
-    fileTabModel.value.uiJson?.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
-      return [
-        {
-          x: { data: parser.evaluate(plot.xValue) },
-          y: { data: parser.evaluate(plot.yValue) }
-        }
-      ]
-    }) ?? []
+  plots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
+    return [
+      {
+        x: { data: parser.evaluate(plot.xValue) },
+        y: { data: parser.evaluate(plot.yValue) }
+      }
+    ]
+  })
 }
 </script>
 
