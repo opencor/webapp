@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'tailwindcss-primeui';
 
 :root {
   --border-color: var(--p-content-border-color);

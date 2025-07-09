@@ -15,7 +15,7 @@ function updatePackageJsonFile(filePath) {
 
   contents.version = version
 
-  fs.writeFileSync(filePath, JSON.stringify(contents, null, 2) + '\n')
+  fs.writeFileSync(filePath, `${JSON.stringify(contents, null, 2)}\n`)
 }
 
 updatePackageJsonFile('package.json')

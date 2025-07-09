@@ -22,10 +22,10 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
       // Note: osInfo.distro returns something like "Microsoft Windows 11 Pro", but we want it to return
       //       "Windows 11 Pro", so we remove the "Microsoft " part.
 
-      return osInfo.distro.replace('Microsoft ', '') + ' (' + architecture + ')'
+      return `${osInfo.distro.replace('Microsoft ', '')} (${architecture})`
     }
 
-    return osInfo.distro + ' ' + osInfo.release + ' (' + architecture + ')'
+    return `${osInfo.distro} ${osInfo.release} (${architecture})`
   },
 
   // Splash screen window.

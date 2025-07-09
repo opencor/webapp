@@ -1,5 +1,5 @@
 <template>
-  <div :class="'h-full ' + (simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment')">
+  <div :class="`h-full ${simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment'}`">
     <Toolbar :id="toolbarId" class="p-1!">
       <template #start>
         <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
@@ -10,7 +10,7 @@
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
-            <SimulationPropertyEditor :file="fileTabModel.file" />
+            <SimulationPropertyEditor :file="file" />
             <!--
                   <SolversPropertyEditor />
                   <GraphsPropertyEditor />
@@ -45,7 +45,7 @@
         </Splitter>
       </SplitterPanel>
       <SplitterPanel v-if="!simulationOnly" :size="11">
-        <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="fileTabModel.consoleContents" />
+        <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="consoleContents" />
       </SplitterPanel>
     </Splitter>
   </div>
@@ -57,27 +57,28 @@ import * as vueusecore from '@vueuse/core'
 import * as vue from 'vue'
 
 import * as common from '../../../../common'
+import * as locApi from '../../../../libopencor/locApi'
 import * as locCommon from '../../../../locCommon'
 import * as vueCommon from '../../../../vueCommon'
 
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
-import { type IFileTab } from '../ContentsComponent.vue'
 
-const fileTabModel = defineModel<IFileTab>({ required: true })
 const props = defineProps<{
+  file: locApi.File
   isActiveFile: boolean
   simulationOnly?: boolean
 }>()
 
-const toolbarId = `simulationExperimentToolbar_${String(fileTabModel.value.file.path())}`
-const editorId = `simulationExperimentEditor_${String(fileTabModel.value.file.path())}`
-const instance = fileTabModel.value.file.instance()
+const toolbarId = `simulationExperimentToolbar_${props.file.path()}`
+const editorId = `simulationExperimentEditor_${props.file.path()}`
+const instance = props.file.instance()
 const instanceTask = instance.task(0)
 
 const parameters = vue.ref<string[]>([])
 const xParameter = vue.ref(instanceTask.voiName())
 const yParameter = vue.ref(instanceTask.stateName(0))
 const plots = vue.ref<IGraphPanelPlot[]>([])
+const consoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`)
 
 function addParameter(param: string): void {
   parameters.value.push(param)
@@ -110,9 +111,7 @@ function onRun(): void {
 
   const simulationTime = instance.run()
 
-  fileTabModel.value.consoleContents =
-    String(fileTabModel.value.consoleContents) +
-    `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`
+  consoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`
 
   void vue.nextTick().then(() => {
     const consoleElement = document.getElementById(editorId)?.getElementsByClassName('ql-editor')[0]

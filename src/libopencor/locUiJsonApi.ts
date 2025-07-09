@@ -241,7 +241,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       if (issue !== '') {
         res.push({
           type: EIssueType.WARNING,
-          description: 'UI JSON: ' + common.formatIssue(issue)
+          description: `UI JSON: ${common.formatIssue(issue)}`
         })
       }
     }
@@ -266,7 +266,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       if (inputIdUsed[input.id]) {
         res.push({
           type: EIssueType.WARNING,
-          description: 'UI JSON: an input id must be unique (' + input.id + ' is used more than once).'
+          description: `UI JSON: an input id must be unique (${input.id} is used more than once).`
         })
       }
 
@@ -421,7 +421,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
     if (outputIdUsed[outputData.id]) {
       res.push({
         type: EIssueType.WARNING,
-        description: 'UI JSON: an output data id must be unique (' + outputData.id + ' is used more than once).'
+        description: `UI JSON: an output data id must be unique (${outputData.id} is used more than once).`
       })
     }
 

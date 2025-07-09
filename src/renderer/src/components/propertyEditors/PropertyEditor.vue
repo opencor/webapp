@@ -2,13 +2,6 @@
   <Fieldset :legend="name">
     <DataTable
       editMode="cell"
-      :pt="{
-        column: {
-          bodycell: ({ state }) => ({
-            class: [{ '!py-0': state['d_editing'] }]
-          })
-        }
-      }"
       resizableColumns
       showGridlines
       size="small"
@@ -43,7 +36,7 @@ interface IProps {
 }
 
 const { hasUnits = true, name, properties } = defineProps<IProps>()
-const columnWidth = 'width: calc(100% / ' + (hasUnits ? '3' : '2') + ')'
+const columnWidth = `width: calc(100% / ${hasUnits ? '3' : '2'})`
 const emit = defineEmits(['propertyUpdated'])
 
 function onCellEditComplete(event: DataTableCellEditCompleteEvent): void {
@@ -58,5 +51,11 @@ function onCellEditComplete(event: DataTableCellEditCompleteEvent): void {
 <style scoped>
 :deep(.p-datatable-header-cell) {
   transition: none;
+}
+
+:deep(.p-inputnumber-input) {
+  padding: 0 2px !important;
+  margin: 0 !important;
+  line-height: 1.2px !important;
 }
 </style>

@@ -55,23 +55,23 @@ export function formatTime(time: number): string {
   let res = ''
 
   if (d !== 0 || ((h !== 0 || m !== 0 || s !== 0 || ms !== 0) && res !== '')) {
-    res += (res === '' ? '' : ' ') + d.toString() + 'd'
+    res += `${res === '' ? '' : ' '}${d.toString()}d`
   }
 
   if (h !== 0 || ((m !== 0 || s !== 0 || ms !== 0) && res !== '')) {
-    res += (res === '' ? '' : ' ') + h.toString() + 'h'
+    res += `${res === '' ? '' : ' '}${h.toString()}h`
   }
 
   if (m !== 0 || ((s !== 0 || ms !== 0) && res !== '')) {
-    res += (res === '' ? '' : ' ') + m.toString() + 'm'
+    res += `${res === '' ? '' : ' '}${m.toString()}m`
   }
 
   if (s !== 0 || (ms !== 0 && res !== '')) {
-    res += (res === '' ? '' : ' ') + s.toString() + 's'
+    res += `${res === '' ? '' : ' '}${s.toString()}s`
   }
 
   if (ms !== 0 || res === '') {
-    res += (res === '' ? '' : ' ') + ms.toString() + 'ms'
+    res += `${res === '' ? '' : ' '}${ms.toString()}ms`
   }
 
   return res
@@ -82,5 +82,5 @@ export function formatTime(time: number): string {
 export function formatIssue(issue: string): string {
   issue = issue.charAt(0).toUpperCase() + issue.slice(1)
 
-  return issue.endsWith('.') ? issue : issue + '.'
+  return issue.endsWith('.') ? issue : `${issue}.`
 }

@@ -33,7 +33,7 @@ const properties = vue.ref([
   }
 ])
 
-function onPropertyUpdated(index, value): void {
+function onPropertyUpdated(index: number, value: number): void {
   if (index === 0) {
     uniformTimeCourse.setOutputStartTime(value)
   } else if (index === 1) {
