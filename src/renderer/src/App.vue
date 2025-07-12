@@ -21,7 +21,7 @@
       </div>
     </div>
   </div>
-  <input type="file" multiple style="display: none" @change="onChange" />
+  <input ref="files" type="file" multiple style="display: none" @change="onChange" />
   <UpdateErrorDialog
     v-model:visible="updateErrorVisible"
     :title="updateErrorTitle"
