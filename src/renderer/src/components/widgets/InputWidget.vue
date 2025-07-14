@@ -65,6 +65,7 @@ function emitChange(newValue: number) {
     value.value = newValue
 
     if (props.possibleValues === undefined) {
+      scalarValue.value = newValue
       scalarValueString.value = String(newValue) // This will properly format the input text.
     }
 
