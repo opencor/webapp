@@ -34,7 +34,16 @@ const props = defineProps<{
   hasFiles: boolean
 }>()
 
-const emit = defineEmits(['about', 'close', 'closeAll', 'open', 'openRemote', 'settings'])
+const emit = defineEmits([
+  'about',
+  'close',
+  'closeAll',
+  'open',
+  'openRemote',
+  'openSampleLorenz',
+  'openSampleInteractiveLorenz',
+  'settings'
+])
 const isWindowsOrLinux = common.isWindows() || common.isLinux()
 const isMacOs = common.isMacOs()
 
@@ -55,6 +64,23 @@ const items = [
         command: () => {
           emit('openRemote')
         }
+      },
+      {
+        label: 'Open Sample',
+        items: [
+          {
+            label: 'Lorenz',
+            command: () => {
+              emit('openSampleLorenz')
+            }
+          },
+          {
+            label: 'Interactive Lorenz',
+            command: () => {
+              emit('openSampleInteractiveLorenz')
+            }
+          }
+        ]
       },
       { separator: true },
       {
