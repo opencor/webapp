@@ -92,13 +92,29 @@ export function enableDisableMainMenu(enable: boolean): void {
         mainWindow?.open()
       }
     })
-    fileSubMenu.push({ type: 'separator' })
     fileSubMenu.push({
       label: 'Open Remote...',
       accelerator: 'CmdOrCtrl+Shift+O',
       click: () => {
         mainWindow?.webContents.send('open-remote')
       }
+    })
+    fileSubMenu.push({
+      label: 'Open Sample',
+      submenu: [
+        {
+          label: 'Lorenz',
+          click: () => {
+            mainWindow?.webContents.send('open-sample-lorenz')
+          }
+        },
+        {
+          label: 'Interactive Lorenz',
+          click: () => {
+            mainWindow?.webContents.send('open-sample-interactive-lorenz')
+          }
+        }
+      ]
     })
 
     const fileReopenSubMenu: electron.MenuItemConstructorOptions[] = []

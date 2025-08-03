@@ -8,6 +8,8 @@
           @about="onAbout"
           @open="($refs.files as HTMLInputElement).click()"
           @openRemote="openRemoteVisible = true"
+          @openSampleLorenz="onOpenSampleLorenz"
+          @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenz"
           @close="onClose"
           @closeAll="onCloseAll"
           @settings="onSettings"
@@ -382,6 +384,26 @@ function onOpenRemote(url: string): void {
   //       and that we can show a spinning wheel to indicate that something is happening.
 
   openFile(url)
+}
+
+// Open sample Lorenz.
+
+electronApi?.onOpenSampleLorenz(() => {
+  onOpenSampleLorenz()
+})
+
+function onOpenSampleLorenz(): void {
+  openFile('https://github.com/opencor/webapp/raw/refs/heads/main/tests/models/lorenz.omex')
+}
+
+// Open sample interactive Lorenz.
+
+electronApi?.onOpenSampleInteractiveLorenz(() => {
+  onOpenSampleInteractiveLorenz()
+})
+
+function onOpenSampleInteractiveLorenz(): void {
+  openFile('https://github.com/opencor/webapp/raw/refs/heads/main/tests/models/ui/lorenz.omex')
 }
 
 // Close.
