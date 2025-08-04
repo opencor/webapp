@@ -1,10 +1,15 @@
+import libOpenCOR from 'libopencor'
+
+// @ts-expect-error (window.locApi may or may not be defined and that is why we test it)
+export const _locApi = await (window.locApi ?? libOpenCOR())
+
 // Logger API.
 
 export { EIssueType, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locLoggerApi'
 
 // File API.
 
-export { _locApi, EFileType, File, fileManager, type IWasmFile } from './locFileApi'
+export { EFileType, File, fileManager, type IWasmFile } from './locFileApi'
 
 // SED-ML API.
 

@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20250803.0",
+  "version": "0.20250805.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
@@ -56,7 +56,7 @@
     "@tailwindcss/postcss": "^4.1.11",
     "@tailwindcss/vite": "^4.1.11",
     "@types/js-cookie": "^3.0.6",
-    "@types/node": "^24.1.0",
+    "@types/node": "^24.2.0",
     "@types/plotly.js": "^3.0.3",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/eslint-config-prettier": "^10.2.0",
@@ -74,7 +74,7 @@
     "eslint": "^9.32.0",
     "js-cookie": "^3.0.5",
     "jsonschema": "^1.5.0",
-    "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.20250708.0.tgz",
+    "libopencor": "https://opencor.ws/libopencor/downloads/libopencor-0.20250805.0.tgz",
     "mathjs": "^14.6.0",
     "node-addon-api": "^8.5.0",
     "plotly.js-gl2d-dist-min": "^3.0.3",

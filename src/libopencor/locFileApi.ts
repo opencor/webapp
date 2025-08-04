@@ -1,7 +1,7 @@
-import libOpenCOR from 'libopencor'
 import * as vue from 'vue'
 
 import {
+  _locApi,
   cppVersion,
   EIssueType,
   ESedSimulationType,
@@ -14,25 +14,31 @@ import {
   type IWasmIssues
 } from './locApi'
 
-// @ts-expect-error (window.locApi may or may not be defined and that is why we test it)
-export const _locApi = window.locApi ?? (await libOpenCOR())
-
 // FileManager API.
 
 class FileManager {
-  private _fileManager = cppVersion() ? undefined : _locApi.FileManager.instance()
+  private _fileManager: unknown = undefined
+
+  private fileManager() {
+    if (this._fileManager === undefined && !cppVersion()) {
+      this._fileManager = _locApi.FileManager.instance()
+    }
+
+    return this._fileManager
+  }
 
   unmanage(path: string): void {
     if (cppVersion()) {
       _locApi.fileManagerUnmanage(path)
     } else {
-      const files = this._fileManager.files
+      const fileManager = this.fileManager() as typeof _locApi.FileManager
+      const files = fileManager.files
 
       for (let i = 0; i < files.size(); ++i) {
         const file = files.get(i)
 
         if (file.fileName === path) {
-          this._fileManager.unmanage(file)
+          fileManager.unmanage(file)
 
           break
         }
