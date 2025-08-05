@@ -1,13 +1,7 @@
 import libOpenCOR from 'libopencor'
 
 // @ts-expect-error (window.locApi may or may not be defined and that is why we test it)
-export let _locApi = window.locApi
-
-if (_locApi === undefined) {
-  libOpenCOR().then((locApi: unknown) => {
-    _locApi = locApi
-  })
-}
+export const _locApi = await (window.locApi ?? libOpenCOR())
 
 // Logger API.
 
