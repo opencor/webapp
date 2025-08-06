@@ -19,7 +19,7 @@
         <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
         <DragNDropComponent v-show="dropAreaCounter > 0" />
         <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
-        <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
+        <SpinningWheelComponent v-show="spinningWheelVisible" />
       </div>
     </div>
   </div>
@@ -487,15 +487,3 @@ if (props.omex !== undefined) {
   })
 }
 </script>
-
-<style scoped>
-.spinning-wheel {
-  width: 50% !important;
-  height: 50% !important;
-  position: fixed !important;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 99999;
-}
-</style>
