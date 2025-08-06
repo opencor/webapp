@@ -16,10 +16,11 @@
         />
       </div>
       <div class="h-full" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
+        <LoadOpencorComponent v-show="loadingLipencorWebAssemblyModuleVisible" />
         <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
         <DragNDropComponent v-show="dropAreaCounter > 0" />
         <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
-        <ProgressSpinner v-show="spinningWheelVisible" class="spinning-wheel" />
+        <SpinningWheelComponent v-show="spinningWheelVisible" />
       </div>
     </div>
   </div>
@@ -130,6 +131,30 @@ const hasFiles = vue.computed(() => {
 vue.watch(hasFiles, (hasFiles) => {
   electronApi?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
 })
+
+// Loading libOpenCOR's WebAssembly module.
+// Note: this is only done if window.locApi is not defined, which means that we are running OpenCOR's Web app.
+
+const loadingLipencorWebAssemblyModuleVisible = vue.ref<boolean>(false)
+
+// @ts-expect-error (window.locApi may or may not be defined which is why we test it)
+if (window.locApi === undefined) {
+  enableDisableUi(false)
+
+  loadingLipencorWebAssemblyModuleVisible.value = true
+
+  const locApiInitialised = vue.inject<vue.Ref<boolean>>('locApiInitialised')
+
+  if (locApiInitialised !== undefined) {
+    vue.watch(locApiInitialised, (initialised) => {
+      if (initialised) {
+        loadingLipencorWebAssemblyModuleVisible.value = false
+
+        enableDisableUi(true)
+      }
+    })
+  }
+}
 
 // Spinning wheel.
 
@@ -487,15 +512,3 @@ if (props.omex !== undefined) {
   })
 }
 </script>
-
-<style scoped>
-.spinning-wheel {
-  width: 50% !important;
-  height: 50% !important;
-  position: fixed !important;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 99999;
-}
-</style>
