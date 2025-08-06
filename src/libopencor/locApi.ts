@@ -1,7 +1,30 @@
-import libOpenCOR from 'libopencor'
+// Retrieve the version of libOpenCOR that is to be used. Two options:
+//  - OpenCOR: libOpenCOR can be accessed using window.locApi.
+//  - OpenCOR's Web app: libOpenCOR must be imported as a WebAssembly module.
 
-// @ts-expect-error (window.locApi may or may not be defined and that is why we test it)
-export const _locApi = await (window.locApi ?? libOpenCOR())
+export let _locApi = undefined
+
+export async function initialiseLocApi() {
+  // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
+  if (window.locApi !== undefined) {
+    // We are running OpenCOR, so libOpenCOR can be accessed using window.locApi.
+
+    // @ts-expect-error (window.locApi is defined)
+    _locApi = window.locApi
+  } else {
+    // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
+
+    try {
+      const libOpenCOR = (await import('libopencor')).default
+
+      _locApi = await libOpenCOR()
+    } catch (error) {
+      console.error("Failed to load libOpenCOR's WebAssembly module:", error)
+    }
+  }
+
+  return _locApi
+}
 
 // Logger API.
 
