@@ -136,14 +136,13 @@ vue.watch(hasFiles, (hasFiles) => {
 // Note: this is only done if window.locApi is not defined, which means that we are running OpenCOR's Web app.
 
 const loadingLipencorWebAssemblyModuleVisible = vue.ref<boolean>(false)
+const locApiInitialised = vue.inject<vue.Ref<boolean>>('locApiInitialised')
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 if (window.locApi === undefined) {
   enableDisableUi(false)
 
   loadingLipencorWebAssemblyModuleVisible.value = true
-
-  const locApiInitialised = vue.inject<vue.Ref<boolean>>('locApiInitialised')
 
   if (locApiInitialised !== undefined) {
     vue.watch(locApiInitialised, (initialised) => {
@@ -473,7 +472,11 @@ electronApi?.onSelect((filePath: string) => {
 // carry as normal (i.e. the whole OpenCOR UI will be shown).
 
 if (props.omex !== undefined) {
-  openFile(props.omex)
+  vue.watch(locApiInitialised, (initialised) => {
+    if (initialised) {
+      openFile(props.omex)
+    }
+  })
 } else {
   // Track the height of our main menu.
 
