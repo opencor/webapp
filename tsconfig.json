@@ -3,7 +3,6 @@
     "module": "nodenext",
     "strictNullChecks": true
   },
-  "files": [],
   "include": ["*.ts"],
   "references": [
     {

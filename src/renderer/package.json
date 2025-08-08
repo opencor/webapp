@@ -6,7 +6,7 @@
   "bugs": {
     "url": "https://github.com/opencor/webapp/issues"
   },
-  "description": "A Web-based modelling environment, which can be used to organise, edit, simulate and analyse CellML files.",
+  "description": "A Web-based modelling environment for organising, editing, simulating, and analysing CellML files.",
   "homepage": "https://opencor.ws/",
   "license": "Apache-2.0",
   "name": "opencor",
