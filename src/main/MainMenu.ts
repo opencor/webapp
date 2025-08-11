@@ -1,6 +1,6 @@
 import electron from 'electron'
 
-import { isMacOs, isPackaged } from '../electron'
+import { isMacOs, isPackaged } from '../renderer/src/common/electron'
 
 import { mainWindow } from './index'
 import { clearRecentFiles } from './MainWindow'

@@ -9,8 +9,8 @@
 import Plotly from 'plotly.js-gl2d-dist-min'
 import * as vue from 'vue'
 
-import * as vueCommon from '../../../../vueCommon'
-import { MEDIUM_DELAY } from '../../../../constants'
+import * as vueCommon from '../../common/vueCommon'
+import { MEDIUM_DELAY } from '../../common/constants'
 
 let oldMainDivClientWidth = -1
 let oldMainDivClientHeight = -1

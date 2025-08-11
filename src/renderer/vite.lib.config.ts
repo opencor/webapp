@@ -2,18 +2,31 @@ import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
 import tailwindcssPlugin from '@tailwindcss/vite'
 import vuePlugin from '@vitejs/plugin-vue'
 
-import path from 'path'
 import vitePlugin from 'unplugin-vue-components/vite'
 import * as vite from 'vite'
 
 export default vite.defineConfig({
-  base: './',
   build: {
+    lib: {
+      entry: './index.ts',
+      fileName: (format) => `opencor.${format}.js`,
+      formats: ['es', 'umd'],
+      name: 'OpenCOR'
+    },
     rollupOptions: {
+      external: ['vue'],
       output: {
-        entryFileNames: `assets/[name].js`,
-        chunkFileNames: `assets/[name].js`,
-        assetFileNames: `assets/[name].[ext]`
+        exports: 'named',
+        globals: {
+          vue: 'Vue'
+        },
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.names.includes('style.css')) {
+            return 'dist/opencor.css'
+          }
+
+          return assetInfo.names[0] || 'default-name'
+        }
       }
     },
     target: 'esnext'
@@ -24,17 +37,10 @@ export default vite.defineConfig({
     }
   },
   plugins: [
-    // Note: this must be in sync with electron.vite.config.ts.
-
     tailwindcssPlugin(),
     vuePlugin(),
     vitePlugin({
       resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     })
-  ],
-  server: {
-    fs: {
-      allow: [path.join(import.meta.dirname, '../..')]
-    }
-  }
+  ]
 })

@@ -6,5 +6,5 @@
     "noEmit": false
   },
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["src/**/*", "electron.vite.config.d.ts"]
+  "include": ["src/**/*.ts"]
 }

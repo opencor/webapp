@@ -1,14 +1,15 @@
 import * as vue from 'vue'
 
 import {
-  _locApi,
+  _cppLocApi,
+  _wasmLocApi,
   cppVersion,
   wasmIssuesToIssues,
   wasmVersion,
   type IIssue,
   type IWasmFile,
   type IWasmIssues
-} from './locApi'
+} from './locApi.js'
 
 // SED-ML API.
 
@@ -30,7 +31,7 @@ class SedBaseIndex extends SedBase {
   }
 }
 
-interface IWasmSedDocument {
+export interface IWasmSedDocument {
   issues: IWasmIssues
   modelCount: number
   model(index: number): IWasmSedModel
@@ -46,18 +47,20 @@ export class SedDocument extends SedBase {
     super(filePath)
 
     if (cppVersion()) {
-      _locApi.sedDocumentCreate(this._filePath)
+      _cppLocApi.sedDocumentCreate(this._filePath)
     } else {
-      this._wasmSedDocument = new _locApi.SedDocument(wasmFile)
+      this._wasmSedDocument = new _wasmLocApi.SedDocument(wasmFile)
     }
   }
 
   issues(): IIssue[] {
-    return cppVersion() ? _locApi.sedDocumentIssues(this._filePath) : wasmIssuesToIssues(this._wasmSedDocument.issues)
+    return cppVersion()
+      ? _cppLocApi.sedDocumentIssues(this._filePath)
+      : wasmIssuesToIssues(this._wasmSedDocument.issues)
   }
 
   modelCount(): number {
-    return cppVersion() ? _locApi.sedDocumentModelCount(this._filePath) : this._wasmSedDocument.modelCount
+    return cppVersion() ? _cppLocApi.sedDocumentModelCount(this._filePath) : this._wasmSedDocument.modelCount
   }
 
   model(index: number): SedModel {
@@ -65,14 +68,14 @@ export class SedDocument extends SedBase {
   }
 
   simulationCount(): number {
-    return cppVersion() ? _locApi.sedDocumentSimulationCount(this._filePath) : this._wasmSedDocument.simulationCount
+    return cppVersion() ? _cppLocApi.sedDocumentSimulationCount(this._filePath) : this._wasmSedDocument.simulationCount
   }
 
   simulation(index: number): SedSimulation {
     let type: ESedSimulationType
 
     if (cppVersion()) {
-      type = _locApi.sedDocumentSimulationType(this._filePath, index)
+      type = _cppLocApi.sedDocumentSimulationType(this._filePath, index)
     } else {
       switch (this._wasmSedDocument.simulation(index).constructor.name) {
         case 'SedAnalysis':
@@ -112,7 +115,7 @@ export class SedDocument extends SedBase {
   }
 }
 
-interface IWasmSedChangeAttribute {
+export interface IWasmSedChangeAttribute {
   componentName: string
   variableName: string
   newValue: string
@@ -136,15 +139,15 @@ export class SedModel extends SedBaseIndex {
 
   addChange(componentName: string, variableName: string, newValue: string): void {
     if (cppVersion()) {
-      _locApi.sedDocumentModelAddChange(this._filePath, this._index, componentName, variableName, newValue)
+      _cppLocApi.sedDocumentModelAddChange(this._filePath, this._index, componentName, variableName, newValue)
     } else {
-      this._wasmSedModel.addChange(new _locApi.SedChangeAttribute(componentName, variableName, newValue))
+      this._wasmSedModel.addChange(new _wasmLocApi.SedChangeAttribute(componentName, variableName, newValue))
     }
   }
 
   removeAllChanges(): void {
     if (cppVersion()) {
-      _locApi.sedDocumentModelRemoveAllChanges(this._filePath, this._index)
+      _cppLocApi.sedDocumentModelRemoveAllChanges(this._filePath, this._index)
     } else {
       this._wasmSedModel.removeAllChanges()
     }
@@ -197,7 +200,7 @@ export class SedSimulationOneStep extends SedSimulation {
 
   step(): number {
     return cppVersion()
-      ? _locApi.sedDocumentSimulationOneStepStep(this._filePath, this._index)
+      ? _cppLocApi.sedDocumentSimulationOneStepStep(this._filePath, this._index)
       : this._wasmSedSimulationOneStep.step
   }
 }
@@ -225,19 +228,19 @@ export class SedSimulationUniformTimeCourse extends SedSimulation {
 
   initialTime(): number {
     return cppVersion()
-      ? _locApi.sedDocumentSimulationUniformTimeCourseInitialTime(this._filePath, this._index)
+      ? _cppLocApi.sedDocumentSimulationUniformTimeCourseInitialTime(this._filePath, this._index)
       : this._wasmSedSimulationUniformTimeCourse.initialTime
   }
 
   outputStartTime(): number {
     return cppVersion()
-      ? _locApi.sedDocumentSimulationUniformTimeCourseOutputStartTime(this._filePath, this._index)
+      ? _cppLocApi.sedDocumentSimulationUniformTimeCourseOutputStartTime(this._filePath, this._index)
       : this._wasmSedSimulationUniformTimeCourse.outputStartTime
   }
 
   setOutputStartTime(value: number): void {
     if (cppVersion()) {
-      _locApi.sedDocumentSimulationUniformTimeCourseSetOutputStartTime(this._filePath, this._index, value)
+      _cppLocApi.sedDocumentSimulationUniformTimeCourseSetOutputStartTime(this._filePath, this._index, value)
     } else {
       this._wasmSedSimulationUniformTimeCourse.outputStartTime = value
     }
@@ -245,13 +248,13 @@ export class SedSimulationUniformTimeCourse extends SedSimulation {
 
   outputEndTime(): number {
     return cppVersion()
-      ? _locApi.sedDocumentSimulationUniformTimeCourseOutputEndTime(this._filePath, this._index)
+      ? _cppLocApi.sedDocumentSimulationUniformTimeCourseOutputEndTime(this._filePath, this._index)
       : this._wasmSedSimulationUniformTimeCourse.outputEndTime
   }
 
   setOutputEndTime(value: number): void {
     if (cppVersion()) {
-      _locApi.sedDocumentSimulationUniformTimeCourseSetOutputEndTime(this._filePath, this._index, value)
+      _cppLocApi.sedDocumentSimulationUniformTimeCourseSetOutputEndTime(this._filePath, this._index, value)
     } else {
       this._wasmSedSimulationUniformTimeCourse.outputEndTime = value
     }
@@ -259,13 +262,13 @@ export class SedSimulationUniformTimeCourse extends SedSimulation {
 
   numberOfSteps(): number {
     return cppVersion()
-      ? _locApi.sedDocumentSimulationUniformTimeCourseNumberOfSteps(this._filePath, this._index)
+      ? _cppLocApi.sedDocumentSimulationUniformTimeCourseNumberOfSteps(this._filePath, this._index)
       : this._wasmSedSimulationUniformTimeCourse.numberOfSteps
   }
 
   setNumberOfSteps(value: number): void {
     if (cppVersion()) {
-      _locApi.sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(this._filePath, this._index, value)
+      _cppLocApi.sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(this._filePath, this._index, value)
     } else {
       this._wasmSedSimulationUniformTimeCourse.numberOfSteps = value
     }
@@ -285,14 +288,16 @@ export class SedInstance extends SedBase {
     super(filePath)
 
     if (cppVersion()) {
-      _locApi.sedDocumentInstantiate(this._filePath)
+      _cppLocApi.sedDocumentInstantiate(this._filePath)
     } else {
       this._wasmSedInstance = vue.markRaw(wasmSedDocument.instantiate())
     }
   }
 
   issues(): IIssue[] {
-    return cppVersion() ? _locApi.sedInstanceIssues(this._filePath) : wasmIssuesToIssues(this._wasmSedInstance.issues)
+    return cppVersion()
+      ? _cppLocApi.sedInstanceIssues(this._filePath)
+      : wasmIssuesToIssues(this._wasmSedInstance.issues)
   }
 
   task(index: number): SedInstanceTask {
@@ -300,7 +305,7 @@ export class SedInstance extends SedBase {
   }
 
   run(): number {
-    return cppVersion() ? _locApi.sedInstanceRun(this._filePath) : this._wasmSedInstance.run()
+    return cppVersion() ? _cppLocApi.sedInstanceRun(this._filePath) : this._wasmSedInstance.run()
   }
 }
 
@@ -343,137 +348,139 @@ export class SedInstanceTask extends SedBaseIndex {
 
   voiName(): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskVoiName(this._filePath, this._index)
+      ? _cppLocApi.sedInstanceTaskVoiName(this._filePath, this._index)
       : this._wasmSedInstanceTask.voiName
   }
 
   voiUnit(): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskVoiUnit(this._filePath, this._index)
+      ? _cppLocApi.sedInstanceTaskVoiUnit(this._filePath, this._index)
       : this._wasmSedInstanceTask.voiUnit
   }
 
   voi(): number[] {
-    return cppVersion() ? _locApi.sedInstanceTaskVoi(this._filePath, this._index) : this._wasmSedInstanceTask.voiAsArray
+    return cppVersion()
+      ? _cppLocApi.sedInstanceTaskVoi(this._filePath, this._index)
+      : this._wasmSedInstanceTask.voiAsArray
   }
 
   stateCount(): number {
     return cppVersion()
-      ? _locApi.sedInstanceTaskStateCount(this._filePath, this._index)
+      ? _cppLocApi.sedInstanceTaskStateCount(this._filePath, this._index)
       : this._wasmSedInstanceTask.stateCount
   }
 
   stateName(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskStateName(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskStateName(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.stateName(index)
   }
 
   stateUnit(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskStateUnit(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskStateUnit(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.stateUnit(index)
   }
 
   state(index: number): number[] {
     return cppVersion()
-      ? _locApi.sedInstanceTaskState(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskState(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.stateAsArray(index)
   }
 
   rateCount(): number {
     return cppVersion()
-      ? _locApi.sedInstanceTaskRateCount(this._filePath, this._index)
+      ? _cppLocApi.sedInstanceTaskRateCount(this._filePath, this._index)
       : this._wasmSedInstanceTask.rateCount
   }
 
   rateName(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskRateName(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskRateName(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.rateName(index)
   }
 
   rateUnit(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskRateUnit(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskRateUnit(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.rateUnit(index)
   }
 
   rate(index: number): number[] {
     return cppVersion()
-      ? _locApi.sedInstanceTaskRate(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskRate(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.rateAsArray(index)
   }
 
   constantCount(): number {
     return cppVersion()
-      ? _locApi.sedInstanceTaskConstantCount(this._filePath, this._index)
+      ? _cppLocApi.sedInstanceTaskConstantCount(this._filePath, this._index)
       : this._wasmSedInstanceTask.constantCount
   }
 
   constantName(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskConstantName(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskConstantName(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.constantName(index)
   }
 
   constantUnit(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskConstantUnit(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskConstantUnit(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.constantUnit(index)
   }
 
   constant(index: number): number[] {
     return cppVersion()
-      ? _locApi.sedInstanceTaskConstant(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskConstant(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.constantAsArray(index)
   }
 
   computedConstantCount(): number {
     return cppVersion()
-      ? _locApi.sedInstanceTaskComputedConstantCount(this._filePath, this._index)
+      ? _cppLocApi.sedInstanceTaskComputedConstantCount(this._filePath, this._index)
       : this._wasmSedInstanceTask.computedConstantCount
   }
 
   computedConstantName(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskComputedConstantName(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskComputedConstantName(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.computedConstantName(index)
   }
 
   computedConstantUnit(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskComputedConstantUnit(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskComputedConstantUnit(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.computedConstantUnit(index)
   }
 
   computedConstant(index: number): number[] {
     return cppVersion()
-      ? _locApi.sedInstanceTaskComputedConstant(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskComputedConstant(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.computedConstantAsArray(index)
   }
 
   algebraicCount(): number {
     return cppVersion()
-      ? _locApi.sedInstanceTaskAlgebraicCount(this._filePath, this._index)
+      ? _cppLocApi.sedInstanceTaskAlgebraicCount(this._filePath, this._index)
       : this._wasmSedInstanceTask.algebraicCount
   }
 
   algebraicName(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskAlgebraicName(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskAlgebraicName(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.algebraicName(index)
   }
 
   algebraicUnit(index: number): string {
     return cppVersion()
-      ? _locApi.sedInstanceTaskAlgebraicUnit(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskAlgebraicUnit(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.algebraicUnit(index)
   }
 
   algebraic(index: number): number[] {
     return cppVersion()
-      ? _locApi.sedInstanceTaskAlgebraic(this._filePath, this._index, index)
+      ? _cppLocApi.sedInstanceTaskAlgebraic(this._filePath, this._index, index)
       : this._wasmSedInstanceTask.algebraicAsArray(index)
   }
 }

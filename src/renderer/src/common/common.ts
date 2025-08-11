@@ -1,6 +1,6 @@
 import { UAParser } from 'ua-parser-js'
 
-import { electronApi } from './electronApi'
+import { electronApi } from './electronApi.js'
 
 // Some interfaces.
 

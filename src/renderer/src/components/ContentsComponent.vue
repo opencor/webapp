@@ -69,10 +69,10 @@ import * as vueusecore from '@vueuse/core'
 
 import * as vue from 'vue'
 
-import * as common from '../../../common'
-import { electronApi } from '../../../electronApi'
-import * as locApi from '../../../libopencor/locApi'
-import * as vueCommon from '../../../vueCommon'
+import * as common from '../common/common'
+import { electronApi } from '../common/electronApi'
+import * as vueCommon from '../common/vueCommon'
+import * as locApi from '../libopencor/locApi'
 
 export interface IFileTab {
   file: locApi.File

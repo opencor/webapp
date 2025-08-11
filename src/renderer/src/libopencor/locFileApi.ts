@@ -1,7 +1,8 @@
 import * as vue from 'vue'
 
 import {
-  _locApi,
+  _cppLocApi,
+  _wasmLocApi,
   cppVersion,
   EIssueType,
   ESedSimulationType,
@@ -12,16 +13,28 @@ import {
   type IIssue,
   type IUiJson,
   type IWasmIssues
-} from './locApi'
+} from './locApi.js'
 
 // FileManager API.
 
+interface IWasmFileManagerInstance {
+  files: {
+    size(): number
+    get(index: number): { fileName: string }
+  }
+  unmanage(file: unknown): void
+}
+
+export interface IWasmFileManager {
+  instance(): IWasmFileManagerInstance
+}
+
 class FileManager {
-  private _fileManager: unknown = undefined
+  private _fileManager: IWasmFileManagerInstance | undefined = undefined
 
   private fileManager() {
     if (this._fileManager === undefined && !cppVersion()) {
-      this._fileManager = _locApi.FileManager.instance()
+      this._fileManager = _wasmLocApi.FileManager.instance()
     }
 
     return this._fileManager
@@ -29,18 +42,21 @@ class FileManager {
 
   unmanage(path: string): void {
     if (cppVersion()) {
-      _locApi.fileManagerUnmanage(path)
+      _cppLocApi.fileManagerUnmanage(path)
     } else {
-      const fileManager = this.fileManager() as typeof _locApi.FileManager
-      const files = fileManager.files
+      const fileManager = this.fileManager()
 
-      for (let i = 0; i < files.size(); ++i) {
-        const file = files.get(i)
+      if (fileManager !== undefined) {
+        const files = fileManager.files
 
-        if (file.fileName === path) {
-          fileManager.unmanage(file)
+        for (let i = 0; i < files.size(); ++i) {
+          const file = files.get(i)
 
-          break
+          if (file.fileName === path) {
+            fileManager.unmanage(file)
+
+            break
+          }
         }
       }
     }
@@ -78,14 +94,14 @@ export class File {
     this._path = path
 
     if (cppVersion()) {
-      _locApi.fileCreate(path, contents)
+      _cppLocApi.fileCreate(path, contents)
 
-      this._issues = _locApi.fileIssues(path)
+      this._issues = _cppLocApi.fileIssues(path)
     } else if (contents !== undefined) {
-      this._wasmFile = new _locApi.File(path)
+      this._wasmFile = new _wasmLocApi.File(path)
 
-      const heapContentsPtr = _locApi._malloc(contents.length)
-      const heapContents = new Uint8Array(_locApi.HEAPU8.buffer, heapContentsPtr, contents.length)
+      const heapContentsPtr = _wasmLocApi._malloc(contents.length)
+      const heapContents = new Uint8Array(_wasmLocApi.HEAPU8.buffer, heapContentsPtr, contents.length)
 
       heapContents.set(contents)
 
@@ -198,7 +214,7 @@ export class File {
   }
 
   type(): EFileType {
-    return cppVersion() ? _locApi.fileType(this._path) : this._wasmFile.type.value
+    return cppVersion() ? _cppLocApi.fileType(this._path) : this._wasmFile.type.value
   }
 
   path(): string {
@@ -210,7 +226,7 @@ export class File {
   }
 
   contents(): Uint8Array {
-    return cppVersion() ? _locApi.fileContents(this._path) : this._wasmFile.contents()
+    return cppVersion() ? _cppLocApi.fileContents(this._path) : this._wasmFile.contents()
   }
 
   document(): SedDocument {
@@ -225,7 +241,7 @@ export class File {
     let uiJsonContents: Uint8Array | undefined
 
     if (cppVersion()) {
-      uiJsonContents = _locApi.fileUiJson(this._path)
+      uiJsonContents = _cppLocApi.fileUiJson(this._path)
 
       if (uiJsonContents === undefined) {
         return undefined

@@ -125,7 +125,7 @@ endif()
 
 # Create our native node module as a shared library.
 
-file(GLOB CPP_FILES "src/libopencor/src/*.cpp")
+file(GLOB CPP_FILES "src/renderer/src/libopencor/src/*.cpp")
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
             ${CMAKE_JS_SRC}

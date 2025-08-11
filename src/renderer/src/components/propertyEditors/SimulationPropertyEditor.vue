@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import * as vue from 'vue'
 
-import * as locApi from '../../../../libopencor/locApi'
+import * as locApi from '../../libopencor/locApi'
 
 const props = defineProps<{
   file: locApi.File

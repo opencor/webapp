@@ -35,8 +35,8 @@
 import * as mathjs from 'mathjs'
 import * as vue from 'vue'
 
-import * as locApi from '../../../../libopencor/locApi'
-import * as locCommon from '../../../../locCommon'
+import * as locCommon from '../../common/locCommon'
+import * as locApi from '../../libopencor/locApi'
 
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 
