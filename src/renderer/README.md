@@ -7,37 +7,55 @@ There are two versions of OpenCOR:
 1. **OpenCOR:** a desktop application that can be run on [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors)-based and [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family)-based [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows), [Linux](https://en.wikipedia.org/wiki/Linux), and [macOS](https://en.wikipedia.org/wiki/MacOS) machines; and
 2. **OpenCOR's Web app:** a [Web app](https://en.wikipedia.org/wiki/Web_application) that can be run on a Web browser.
 
-This package is a [Vue 3](https://vuejs.org/) component for OpenCOR's Web app.
+This package is a [Vue 3](https://vuejs.org/) component for OpenCOR's Web app, built with the [Composition API](https://vuejs.org/guide/extras/composition-api-faq).
 
-## Prerequisites
+## Usage
 
-To build the package, you need to install [Node.js](https://nodejs.org/) and [npm](https://npmjs.com/), which you can do from [here](https://nodejs.org/en/download/package-manager). Then, you need to install [pnpm](https://pnpm.io/):
+The component comes with one prop:
 
-```bash
-npm -g install pnpm
+| Prop   | Description                                                                                                                                                                                                                                                                                              |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `omex` | The URL to the [OMEX file](https://combinearchive.org/) to load.<br>- If the `omex` prop is not provided, the component will give access to all of OpenCOR's features.<br>- If the `omex` prop is provided, the component will go straight into OpenCOR's simulation mode using the specified OMEX file. |
+
+- **main.ts:**
+
+```typescript
+import { createApp } from 'vue'
+import App from './App.vue'
+
+createApp(App).mount('#app')
 ```
 
-## Scripts
+### No `omex` prop provided
 
-Before doing anything, you need to install all of the package's dependencies:
+- **App.vue:**
 
-```bash
-pnpm install
+```vue
+<template>
+  <OpenCOR />
+</template>
+
+<script setup lang="ts">
+import OpenCOR from 'opencor'
+import 'opencor/style.css'
+</script>
 ```
 
-Then, you can run a given script:
+### With `omex` prop provided
 
-```bash
-pnpm <script>
+- **App.vue:**
+
+```vue
+<template>
+  <OpenCOR omex="https://raw.githubusercontent.com/opencor/webapp/refs/heads/main/tests/models/ui/lorenz.omex" />
+</template>
+
+<script setup lang="ts">
+import OpenCOR from 'opencor'
+import 'opencor/style.css'
+</script>
 ```
 
-where `<script>` is one of the following:
+## License
 
-- `build`: build the package;
-- `build:lib`: build the package in preparation for publishing on npm;
-- `clean`: clean the package's environment;
-- `dev`: (build and) start the package in development mode;
-- `format`: format the package's code;
-- `format:check`: check that the package's code is properly formatted;
-- `lint`: lint the package's code;
-- `serve`: (build and) serve the package in production mode.
+See [LICENSE](LICENSE).
