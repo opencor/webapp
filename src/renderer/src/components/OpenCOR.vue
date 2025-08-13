@@ -76,15 +76,19 @@ const issues = vue.ref<locApi.IIssue[]>([])
 
 // Get the current Vue app instance to use some PrimeVue components.
 
-const app = vue.getCurrentInstance()!.appContext.app
+const getCurrentInstance = vue.getCurrentInstance()
 
-app.use(primeVueConfig as unknown as vue.Plugin, {
-  theme: {
-    preset: primeVueAuraTheme
-  }
-})
-app.use(primeVueConfirmationService as unknown as vue.Plugin)
-app.use(primeVueToastService as unknown as vue.Plugin)
+if (getCurrentInstance !== null) {
+  const app = getCurrentInstance.appContext.app
+
+  app.use(primeVueConfig as unknown as vue.Plugin, {
+    theme: {
+      preset: primeVueAuraTheme
+    }
+  })
+  app.use(primeVueConfirmationService as unknown as vue.Plugin)
+  app.use(primeVueToastService as unknown as vue.Plugin)
+}
 
 const toast = useToast()
 

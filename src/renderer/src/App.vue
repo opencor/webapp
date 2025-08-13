@@ -11,7 +11,7 @@
 import OpenCOR from './components/OpenCOR.vue'
 
 function updateViewportHeight() {
-  document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`)
+  document.documentElement.style.setProperty('--vh', `${String(window.innerHeight * 0.01)}px`)
 }
 
 window.addEventListener('resize', updateViewportHeight)
