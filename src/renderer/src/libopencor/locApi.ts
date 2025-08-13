@@ -1,3 +1,5 @@
+import { proxyUrl } from '../common/locCommon.js'
+
 import { EFileType, type IWasmFile, type IWasmFileManager } from './locFileApi.js'
 import type { IIssue } from './locLoggerApi.js'
 import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi.js'
@@ -118,7 +120,9 @@ export async function initialiseLocApi() {
     // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
 
     try {
-      const libOpenCOR = (await import('libopencor')).default
+      const libOpenCOR = (
+        await import(/* @vite-ignore */ proxyUrl('https://opencor.ws/libopencor/downloads/0.20250805.0/libopencor.js'))
+      ).default
 
       _wasmLocApi = (await libOpenCOR()) as IWasmLocApi
     } catch (error) {
