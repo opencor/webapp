@@ -1,8 +1,7 @@
 import { Component } from 'vue'
 
-export interface OpenCORProps {
-  omex?: string
-}
+import { IOpenCORProps } from './index.ts'
+export { IOpenCORProps }
 
-export declare const OpenCOR: Component<OpenCORProps>
+export declare const OpenCOR: Component<IOpenCORProps>
 export default OpenCOR

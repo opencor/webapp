@@ -24,7 +24,13 @@ export default vueEslintConfigTypescript.defineConfigWithVueTs(
           ts: tsEslint.parser
         },
         projectService: {
-          allowDefaultProject: ['src/renderer/scripts/*.js', 'src/main/assets/*.js', 'src/renderer/*.js', '*.js']
+          allowDefaultProject: [
+            'src/renderer/index.d.ts',
+            'src/renderer/scripts/*.js',
+            'src/main/assets/*.js',
+            'src/renderer/*.js',
+            '*.js'
+          ]
         },
         tsconfigRootDir: import.meta.dirname
       }
