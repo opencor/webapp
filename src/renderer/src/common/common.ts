@@ -55,23 +55,23 @@ export function formatTime(time: number): string {
   let res = ''
 
   if (d !== 0 || ((h !== 0 || m !== 0 || s !== 0 || ms !== 0) && res !== '')) {
-    res += `${res === '' ? '' : ' '}${d.toString()}d`
+    res += `${res === '' ? '' : ' '}${String(d)}d`
   }
 
   if (h !== 0 || ((m !== 0 || s !== 0 || ms !== 0) && res !== '')) {
-    res += `${res === '' ? '' : ' '}${h.toString()}h`
+    res += `${res === '' ? '' : ' '}${String(h)}h`
   }
 
   if (m !== 0 || ((s !== 0 || ms !== 0) && res !== '')) {
-    res += `${res === '' ? '' : ' '}${m.toString()}m`
+    res += `${res === '' ? '' : ' '}${String(m)}m`
   }
 
   if (s !== 0 || (ms !== 0 && res !== '')) {
-    res += `${res === '' ? '' : ' '}${s.toString()}s`
+    res += `${res === '' ? '' : ' '}${String(s)}s`
   }
 
   if (ms !== 0 || res === '') {
-    res += `${res === '' ? '' : ' '}${ms.toString()}ms`
+    res += `${res === '' ? '' : ' '}${String(ms)}ms`
   }
 
   return res

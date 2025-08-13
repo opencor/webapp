@@ -184,21 +184,21 @@ export class File {
     if (initialTime !== outputStartTime) {
       this._issues.push({
         type: EIssueType.WARNING,
-        description: `Only uniform time course simulations with the same values for 'initialTime' (${initialTime.toString()}) and 'outputStartTime' (${outputStartTime.toString()}) are currently supported.`
+        description: `Only uniform time course simulations with the same values for 'initialTime' (${String(initialTime)}) and 'outputStartTime' (${String(outputStartTime)}) are currently supported.`
       })
     }
 
     if (outputStartTime === outputEndTime) {
       this._issues.push({
         type: EIssueType.ERROR,
-        description: `The uniform time course simulation must have different values for 'outputStartTime' (${outputStartTime.toString()}) and 'outputEndTime' (${outputEndTime.toString()}).`
+        description: `The uniform time course simulation must have different values for 'outputStartTime' (${String(outputStartTime)}) and 'outputEndTime' (${String(outputEndTime)}).`
       })
     }
 
     if (numberOfSteps <= 0) {
       this._issues.push({
         type: EIssueType.ERROR,
-        description: `The uniform time course simulation must have a positive value for 'numberOfSteps' (${numberOfSteps.toString()}).`
+        description: `The uniform time course simulation must have a positive value for 'numberOfSteps' (${String(numberOfSteps)}).`
       })
     }
 
