@@ -15,7 +15,7 @@
   "homepage": "https://opencor.ws/",
   "license": "Apache-2.0",
   "main": "./out/main/index.cjs",
-  "name": "opencor",
+  "name": "@opencor/opencor",
   "private": true,
   "productName": "OpenCOR",
   "repository": {
