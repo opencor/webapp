@@ -36,8 +36,8 @@ createApp(App).mount('#app')
 </template>
 
 <script setup lang="ts">
-import OpenCOR from 'opencor'
-import 'opencor/style.css'
+import OpenCOR from '@opencor/opencor'
+import '@opencor/opencor/style.css'
 </script>
 ```
 
@@ -51,8 +51,8 @@ import 'opencor/style.css'
 </template>
 
 <script setup lang="ts">
-import OpenCOR from 'opencor'
-import 'opencor/style.css'
+import OpenCOR from '@opencor/opencor'
+import '@opencor/opencor/style.css'
 </script>
 ```
 
