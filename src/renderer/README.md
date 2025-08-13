@@ -55,7 +55,3 @@ import OpenCOR from '@opencor/opencor'
 import '@opencor/opencor/style.css'
 </script>
 ```
-
-## License
-
-See [LICENSE](LICENSE).
