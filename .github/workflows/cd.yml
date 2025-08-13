@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -148,4 +148,4 @@ jobs:
       - name: Publish OpenCOR
         run: |
           cd src/renderer
-          pnpm publish --provenance --access public
+          pnpm publish --provenance --access public --no-git-checks
