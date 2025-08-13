@@ -26,6 +26,9 @@ importers:
       js-cookie:
         specifier: ^3.0.5
         version: 3.0.5
+      jsonschema:
+        specifier: ^1.5.0
+        version: 1.5.0
       libopencor:
         specifier: https://opencor.ws/libopencor/downloads/libopencor-0.20250805.0.tgz
         version: https://opencor.ws/libopencor/downloads/libopencor-0.20250805.0.tgz
@@ -114,9 +117,9 @@ importers:
       eslint:
         specifier: ^9.33.0
         version: 9.33.0(jiti@2.5.1)
-      jsonschema:
-        specifier: ^1.5.0
-        version: 1.5.0
+      node-addon-api:
+        specifier: ^8.5.0
+        version: 8.5.0
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -2275,6 +2278,10 @@ packages:
 
   node-addon-api@1.7.2:
     resolution: {integrity: sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==}
+
+  node-addon-api@8.5.0:
+    resolution: {integrity: sha512-/bRZty2mXUIFY/xU5HLvveNHlswNJej+RnxBjOMkidWfwZzgTbPG1E3K5TOxRLOR+5hX7bSofy8yf1hZevMS8A==}
+    engines: {node: ^18 || ^20 || >= 21}
 
   node-api-headers@1.5.0:
     resolution: {integrity: sha512-Yi/FgnN8IU/Cd6KeLxyHkylBUvDTsSScT0Tna2zTrz8klmc8qF2ppj6Q1LHsmOueJWhigQwR4cO2p0XBGW5IaQ==}
@@ -5327,6 +5334,8 @@ snapshots:
 
   node-addon-api@1.7.2:
     optional: true
+
+  node-addon-api@8.5.0: {}
 
   node-api-headers@1.5.0: {}
 
