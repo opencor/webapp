@@ -3,6 +3,10 @@ import * as locApi from '../libopencor/locApi.js'
 
 // Some file-related methods.
 
+export function proxyUrl(url: string): string {
+  return `https://corsproxy.io/?url=${encodeURIComponent(url)}`
+}
+
 export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://')
 }
@@ -19,7 +23,7 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
   if (typeof fileOrFilePath === 'string') {
     if (isRemoteFilePath(fileOrFilePath)) {
       return new Promise((resolve, reject) => {
-        fetch(`https://corsproxy.io/?url=${fileOrFilePath}`)
+        fetch(proxyUrl(fileOrFilePath))
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer()
