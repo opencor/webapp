@@ -35,8 +35,8 @@
 import * as mathjs from 'mathjs'
 import * as vue from 'vue'
 
-import * as locApi from '../../../../libopencor/locApi'
-import * as locCommon from '../../../../locCommon'
+import * as locCommon from '../../common/locCommon'
+import * as locApi from '../../libopencor/locApi'
 
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 
@@ -90,7 +90,7 @@ vue.onMounted(() => {
 
   const plotsDiv = document.getElementById(plotsDivId)
 
-  plotsDiv?.style.setProperty('--graph-panel-widget-count', plotsDiv.children.length.toString())
+  plotsDiv?.style.setProperty('--graph-panel-widget-count', String(plotsDiv.children.length))
 })
 
 function updateUiAndSimulation() {
@@ -113,7 +113,7 @@ function updateUiAndSimulation() {
   props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/')
 
-    model.addChange(componentVariableNames[0], componentVariableNames[1], evaluateValue(parameter.value).toString())
+    model.addChange(componentVariableNames[0], componentVariableNames[1], String(evaluateValue(parameter.value)))
   })
 
   // Run the instance and update the plots.

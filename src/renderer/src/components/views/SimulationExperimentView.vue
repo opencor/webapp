@@ -56,10 +56,10 @@ import * as vueusecore from '@vueuse/core'
 
 import * as vue from 'vue'
 
-import * as common from '../../../../common'
-import * as locApi from '../../../../libopencor/locApi'
-import * as locCommon from '../../../../locCommon'
-import * as vueCommon from '../../../../vueCommon'
+import * as common from '../../common/common'
+import * as locCommon from '../../common/locCommon'
+import * as vueCommon from '../../common/vueCommon'
+import * as locApi from '../../libopencor/locApi'
 
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 

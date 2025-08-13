@@ -1,7 +1,7 @@
 import jsCookie from 'js-cookie'
 
-import { type ISettings, type ISettingsGeneral } from './common'
-import { electronApi } from './electronApi'
+import { type ISettings, type ISettingsGeneral } from './common.js'
+import { electronApi } from './electronApi.js'
 
 class Settings {
   private static _instance: Settings | null = null

@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import * as locApi from '../../../../libopencor/locApi'
+import * as locApi from '../../libopencor/locApi'
 
 defineProps<{
   issues: locApi.IIssue[]

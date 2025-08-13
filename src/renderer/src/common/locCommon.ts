@@ -1,5 +1,5 @@
-import { electronApi } from './electronApi'
-import * as locApi from './libopencor/locApi'
+import { electronApi } from './electronApi.js'
+import * as locApi from '../libopencor/locApi.js'
 
 // Some file-related methods.
 

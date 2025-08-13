@@ -1,8 +1,8 @@
 import * as jsonschema from 'jsonschema'
 
-import * as common from '../common'
+import * as common from '../common/common.js'
 
-import { EIssueType, type IIssue } from './locLoggerApi'
+import { EIssueType, type IIssue } from './locLoggerApi.js'
 
 export interface IUiJson {
   input: IUiJsonInput[]
@@ -237,7 +237,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   if (!validatorRes.valid) {
     const res: IIssue[] = []
 
-    for (const issue of validatorRes.toString().split('\n')) {
+    for (const issue of String(validatorRes).split('\n')) {
       if (issue !== '') {
         res.push({
           type: EIssueType.WARNING,
@@ -305,7 +305,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
             type: EIssueType.WARNING,
             description:
               'UI JSON: an input possible value must have a unique value (' +
-              value.toString() +
+              String(value) +
               ' is used more than once).'
           })
         }
@@ -318,7 +318,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
           type: EIssueType.WARNING,
           description:
             'UI JSON: an input default value (' +
-            input.defaultValue.toString() +
+            String(input.defaultValue) +
             ') must be one of the possible values (' +
             values.join(', ') +
             ').'
@@ -336,9 +336,9 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
           type: EIssueType.WARNING,
           description:
             'UI JSON: an input minimum value (' +
-            input.minimumValue.toString() +
+            String(input.minimumValue) +
             ') must be lower than the maximum value (' +
-            input.maximumValue.toString() +
+            String(input.maximumValue) +
             ').'
         })
       }
@@ -348,11 +348,11 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
           type: EIssueType.WARNING,
           description:
             'UI JSON: an input default value (' +
-            input.defaultValue.toString() +
+            String(input.defaultValue) +
             ') must be greater or equal than the minimum value (' +
-            input.minimumValue.toString() +
+            String(input.minimumValue) +
             ') and lower or equal than the maximum value (' +
-            input.maximumValue.toString() +
+            String(input.maximumValue) +
             ').'
         })
       }
@@ -365,9 +365,9 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
             type: EIssueType.WARNING,
             description:
               'UI JSON: an input step value (' +
-              input.stepValue.toString() +
+              String(input.stepValue) +
               ') must be greater than zero and lower or equal than the range value (' +
-              range.toString() +
+              String(range) +
               ').'
           })
         }
@@ -377,9 +377,9 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
             type: EIssueType.WARNING,
             description:
               'UI JSON: an input step value (' +
-              input.stepValue.toString() +
+              String(input.stepValue) +
               ') must be a factor of the range value (' +
-              range.toString() +
+              String(range) +
               ').'
           })
         }
@@ -388,9 +388,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
           res.push({
             type: EIssueType.WARNING,
             description:
-              'UI JSON: a (default) input step value (1) must be a factor of the range value (' +
-              range.toString() +
-              ').'
+              'UI JSON: a (default) input step value (1) must be a factor of the range value (' + String(range) + ').'
           })
         }
       }

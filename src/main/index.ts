@@ -6,9 +6,9 @@ import fs from 'fs'
 import * as nodeChildProcess from 'node:child_process'
 import path from 'path'
 
-import { type ISettings } from '../common'
-import { URI_SCHEME } from '../constants'
-import { isPackaged, isWindows, isLinux } from '../electron'
+import { type ISettings } from '../renderer/src/common/common'
+import { URI_SCHEME } from '../renderer/src/common/constants'
+import { isPackaged, isWindows, isLinux } from '../renderer/src/common/electron'
 
 import { enableDisableMainMenu, enableDisableFileCloseAndCloseAllMenuItems } from './MainMenu'
 import {

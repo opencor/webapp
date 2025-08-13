@@ -1,4 +1,4 @@
-import { type ISettings } from './common'
+import { type ISettings } from './common.js'
 
 export interface ISplashScreenInfo {
   copyright: string

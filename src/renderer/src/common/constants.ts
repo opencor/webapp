@@ -9,4 +9,4 @@ export const TOAST_LIFE = 3000
 
 const currentYear = new Date().getFullYear()
 
-export const COPYRIGHT = currentYear === 2025 ? '2025' : `2025-${currentYear.toString()}`
+export const COPYRIGHT = currentYear === 2025 ? '2025' : `2025-${String(currentYear)}`
