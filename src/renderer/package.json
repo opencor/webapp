@@ -26,7 +26,7 @@
   "license": "Apache-2.0",
   "main": "dist/opencor.umd.js",
   "module": "dist/opencor.es.js",
-  "name": "opencor",
+  "name": "@opencor/opencor",
   "productName": "OpenCOR",
   "repository": {
     "type": "git",
