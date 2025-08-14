@@ -1,5 +1,7 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 // Major version.
 
@@ -40,5 +42,9 @@ function updatePackageJsonFile(filePath) {
   fs.writeFileSync(filePath, `${JSON.stringify(contents, null, 2)}\n`)
 }
 
-updatePackageJsonFile('package.json')
-updatePackageJsonFile('src/renderer/package.json')
+// Output the current directory.
+
+const scriptDirName = path.dirname(fileURLToPath(import.meta.url))
+
+updatePackageJsonFile(`${scriptDirName}/../../../package.json`)
+updatePackageJsonFile(`${scriptDirName}/../package.json`)

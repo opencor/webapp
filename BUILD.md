@@ -77,6 +77,7 @@ npm install -g pnpm
 | `release`      | (Build and) release OpenCOR for the current platform                  |
 | `start`        | (Build and) start (the production version of) OpenCOR                 |
 | `start:web`    | (Build and) start (the production version of) OpenCOR's Web app       |
+| `version:new`  | Update the version of OpenCOR                                         |
 
 # Notes
 

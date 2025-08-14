@@ -43,3 +43,4 @@ npm install -g pnpm
 | `format:check` | Check code formatting without making changes                          |
 | `lint`         | Lint and automatically fix issues using [ESLint](https://eslint.org/) |
 | `serve`        | (Build and) start the (production) server                             |
+| `version:new`  | Update the version of OpenCOR                                         |
