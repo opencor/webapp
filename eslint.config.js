@@ -1,30 +1,36 @@
 // @ts-check
 
 import eslintJs from '@eslint/js'
-import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
+import vueEslintConfigPrettierSkipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 import * as vueEslintConfigTypescript from '@vue/eslint-config-typescript'
 
-import pluginVue from 'eslint-plugin-vue'
-import tseslint from 'typescript-eslint'
-import vueParser from 'vue-eslint-parser'
+import eslintPluginVue from 'eslint-plugin-vue'
+import tsEslint from 'typescript-eslint'
+import vueEslintParser from 'vue-eslint-parser'
 
 export default vueEslintConfigTypescript.defineConfigWithVueTs(
-  ...pluginVue.configs['flat/essential'],
+  ...eslintPluginVue.configs['flat/essential'],
   eslintJs.configs.recommended,
-  skipFormatting,
-  ...tseslint.configs.strictTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
+  vueEslintConfigPrettierSkipFormatting,
+  ...tsEslint.configs.strictTypeChecked,
+  ...tsEslint.configs.stylisticTypeChecked,
   vueEslintConfigTypescript.vueTsConfigs.recommended,
   {
     languageOptions: {
-      parser: vueParser,
+      parser: vueEslintParser,
       parserOptions: {
         parser: {
-          js: tseslint.parser,
-          ts: tseslint.parser
+          js: tsEslint.parser,
+          ts: tsEslint.parser
         },
         projectService: {
-          allowDefaultProject: ['src/renderer/scripts/*.js', 'src/main/assets/*.js', 'src/renderer/*.js', '*.js']
+          allowDefaultProject: [
+            'src/renderer/index.d.ts',
+            'src/renderer/scripts/*.js',
+            'src/main/assets/*.js',
+            'src/renderer/*.js',
+            '*.js'
+          ]
         },
         tsconfigRootDir: import.meta.dirname
       }

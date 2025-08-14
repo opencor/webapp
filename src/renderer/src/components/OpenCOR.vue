@@ -57,6 +57,8 @@ import primeVueToastService from 'primevue/toastservice'
 import { useToast } from 'primevue/usetoast'
 import * as vue from 'vue'
 
+import type { IOpenCORProps } from '../../index'
+
 import '../assets/app.css'
 import * as common from '../common/common'
 import { SHORT_DELAY, TOAST_LIFE } from '../common/constants'
@@ -66,9 +68,7 @@ import * as vueCommon from '../common/vueCommon'
 import IContentsComponent from '../components/ContentsComponent.vue'
 import * as locApi from '../libopencor/locApi'
 
-const props = defineProps<{
-  omex?: string
-}>()
+const props = defineProps<IOpenCORProps>()
 
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
@@ -80,10 +80,25 @@ const getCurrentInstance = vue.getCurrentInstance()
 
 if (getCurrentInstance !== null) {
   const app = getCurrentInstance.appContext.app
+  let options = {}
+
+  if (props.theme === 'light') {
+    options = {
+      darkModeSelector: false
+    }
+  } else if (props.theme === 'dark') {
+    document.documentElement.classList.add('opencor-dark-mode')
+    document.body.classList.add('opencor-dark-mode')
+
+    options = {
+      darkModeSelector: '.opencor-dark-mode'
+    }
+  }
 
   app.use(primeVueConfig as unknown as vue.Plugin, {
     theme: {
-      preset: primeVueAuraTheme
+      preset: primeVueAuraTheme,
+      options: options
     }
   })
   app.use(primeVueConfirmationService as unknown as vue.Plugin)
