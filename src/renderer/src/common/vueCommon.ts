@@ -1,16 +1,40 @@
 import * as vue from 'vue'
 
+import type { Theme } from '../../index.js'
+
 // Some constants to know whether the operating system uses light mode or dark mode.
 
-const prefersColorScheme = window.matchMedia('(prefers-color-scheme: light)')
+const _prefersColorScheme = window.matchMedia('(prefers-color-scheme: light)')
+const _isLightMode = vue.ref(_prefersColorScheme.matches)
+const _isDarkMode = vue.ref(!_prefersColorScheme.matches)
+let _theme: Theme = 'system'
 
-export const isLightMode = vue.ref(prefersColorScheme.matches)
-export const isDarkMode = vue.ref(!prefersColorScheme.matches)
-
-prefersColorScheme.addEventListener('change', (event) => {
-  isLightMode.value = event.matches
-  isDarkMode.value = !event.matches
+_prefersColorScheme.addEventListener('change', (event) => {
+  if (_theme === 'system') {
+    _isLightMode.value = event.matches
+    _isDarkMode.value = !event.matches
+  }
 })
+
+export function setTheme(theme: Theme) {
+  _theme = theme
+
+  if (theme === 'light') {
+    _isLightMode.value = true
+    _isDarkMode.value = false
+  } else if (theme === 'dark') {
+    _isLightMode.value = false
+    _isDarkMode.value = true
+  }
+}
+
+export function useLightMode(): boolean {
+  return _isLightMode.value
+}
+
+export function useDarkMode(): boolean {
+  return _isDarkMode.value
+}
 
 // A method to track the height of a given element.
 

@@ -55,19 +55,19 @@ function themeData() {
 
   function axisThemeData() {
     return {
-      zerolinecolor: vueCommon.isDarkMode.value ? '#71717a' : '#94a3b8', // --p-surface-500 / --p-surface-400
-      gridcolor: vueCommon.isDarkMode.value ? '#3f3f46' : '#e2e8f0', // --p-surface-700 / --p-surface-200
+      zerolinecolor: vueCommon.useLightMode() ? '#94a3b8' : '#71717a', // --p-surface-400 / --p-surface-500
+      gridcolor: vueCommon.useLightMode() ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
       minor: {
-        gridcolor: vueCommon.isDarkMode.value ? '#27272a' : '#f1f5f9' // --p-surface-800 / --p-surface-100
+        gridcolor: vueCommon.useLightMode() ? '#f1f5f9' : '#27272a' // --p-surface-100 / --p-surface-800
       }
     }
   }
 
   return {
-    paper_bgcolor: vueCommon.isDarkMode.value ? '#18181b' : '#ffffff', // --p-content-background
-    plot_bgcolor: vueCommon.isDarkMode.value ? '#18181b' : '#ffffff', // --p-content-background
+    paper_bgcolor: vueCommon.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
+    plot_bgcolor: vueCommon.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
     font: {
-      color: vueCommon.isDarkMode.value ? '#ffffff' : '#334155' // --p-text-color
+      color: vueCommon.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
     },
     colorway: [
       '#7289ab', // Blue
@@ -84,7 +84,7 @@ function themeData() {
 }
 
 vue.watch(
-  () => [plots, vueCommon.isDarkMode.value],
+  () => [plots, vueCommon.useLightMode()],
   () => {
     Plotly.react(
       mainDiv.value,

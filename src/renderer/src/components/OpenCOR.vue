@@ -105,6 +105,10 @@ if (getCurrentInstance !== null) {
   app.use(primeVueToastService as unknown as vue.Plugin)
 }
 
+if (props.theme !== undefined) {
+  vueCommon.setTheme(props.theme)
+}
+
 const toast = useToast()
 
 // Asynchronously initialise our libOpenCOR API.
