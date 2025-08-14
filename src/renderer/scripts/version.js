@@ -20,9 +20,7 @@ const match = gitDescribe.match(/^v?(\d+)\.(\d+)\.(\d+)-(\d+)-g[0-9a-f]+$/)
 const [, , minor, patch] = match
 let patchVersion = parseInt(patch)
 
-if (minor === minorVersion) {
-  ++patchVersion
-} else {
+if (minor !== minorVersion) {
   patchVersion = 0
 }
 
