@@ -40,12 +40,12 @@
     "dev:web": "cd ./src/renderer && vite dev",
     "format": "prettier --log-level silent --write . && clang-format -i src/renderer/src/libopencor/src/*",
     "format:check": "prettier --check . && clang-format --dry-run -Werror src/renderer/src/libopencor/src/*",
-    "install": "node src/renderer/scripts/version.js",
     "libopencor": "cmake-js build -B Release -O ./dist/libOpenCOR",
     "lint": "eslint --fix .",
     "release": "pnpm electron-builder",
     "start": "electron-vite preview",
-    "start:web": "pnpm build:web && cd ./src/renderer && vite preview"
+    "start:web": "pnpm build:web && cd ./src/renderer && vite preview",
+    "version:new": "node src/renderer/scripts/version.js"
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.3",

@@ -51,7 +51,8 @@
     "format": "prettier --log-level silent --write . && clang-format -i src/libopencor/src/*",
     "format:check": "prettier --check . && clang-format --dry-run -Werror src/libopencor/src/*",
     "lint": "eslint --fix .",
-    "serve": "pnpm build && vite preview"
+    "serve": "pnpm build && vite preview",
+    "version:new": "node scripts/version.js"
   },
   "peerDependencies": {
     "vue": "^3.0.0"
