@@ -107,7 +107,7 @@ if (getCurrentInstance !== null) {
 
 const toast = useToast()
 
-// Asynchronous initialise our libOpenCOR API.
+// Asynchronously initialise our libOpenCOR API.
 
 const locApiInitialised = vue.ref(false)
 
