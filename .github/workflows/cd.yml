@@ -49,6 +49,8 @@ jobs:
           timezoneMacos: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Retrieve the EV certificate (Windows only)
         if: ${{ runner.os == 'Windows' }}
         shell: bash
@@ -99,6 +101,8 @@ jobs:
           timezoneLinux: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -130,6 +134,8 @@ jobs:
           timezoneLinux: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install Node.js and use npm to push OpenCOR
         uses: actions/setup-node@v4
         with:
