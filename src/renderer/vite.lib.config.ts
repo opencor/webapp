@@ -25,7 +25,7 @@ export default vite.defineConfig({
             return 'dist/opencor.css'
           }
 
-          return assetInfo.names[0] || 'default-name'
+          return assetInfo.names[0] ?? 'default-name'
         }
       }
     },
