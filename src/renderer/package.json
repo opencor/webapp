@@ -42,7 +42,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20250814.4",
+  "version": "0.20250818.0",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -55,33 +55,33 @@
     "version:new": "node scripts/version.js"
   },
   "peerDependencies": {
-    "vue": "^3.0.0"
+    "vue": "^3.4.21"
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.3",
-    "@primevue/auto-import-resolver": "^4.3.7",
-    "@tailwindcss/postcss": "^4.1.11",
-    "@tailwindcss/vite": "^4.1.11",
-    "@vueuse/core": "^13.6.0",
+    "@primevue/auto-import-resolver": "4.2.5",
+    "@vueuse/core": "12.8.2",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@tailwindcss/vite": "^4.1.12",
     "js-cookie": "^3.0.5",
     "jsonschema": "^1.5.0",
     "mathjs": "^14.6.0",
-    "plotly.js-gl2d-dist-min": "^3.1.0",
+    "plotly.js-gl2d-dist-min": "2.35.3",
     "primeicons": "^7.0.0",
-    "primevue": "^4.3.7",
+    "primevue": "4.2.5",
     "quill": "^2.0.3",
-    "tailwindcss": "^4.1.11",
+    "tailwindcss": "^4.1.12",
     "tailwindcss-primeui": "^0.6.1",
     "ua-parser-js": "^2.0.4"
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",
-    "@types/node": "^24.2.1",
-    "@types/plotly.js": "^3.0.3",
+    "@types/plotly.js": "2.35.3",
+    "@types/node": "^24.3.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",
-    "@vue/tsconfig": "^0.7.0",
+    "@vue/tsconfig": "^0.8.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.33.0",
     "prettier": "^3.6.2",
