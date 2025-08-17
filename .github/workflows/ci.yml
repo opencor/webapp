@@ -59,6 +59,12 @@ jobs:
       - name: Build OpenCOR's Web app
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: pnpm build:web
+      - name: Build OpenCOR's npm library
+        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
+        run: |
+          cd src/renderer
+          pnpm install
+          pnpm build:lib
       - name: Code formatting
         if: matrix.name == 'Code formatting'
         run: pnpm format:check
