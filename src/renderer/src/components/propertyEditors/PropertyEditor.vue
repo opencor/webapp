@@ -35,8 +35,10 @@ interface IProps {
   }[]
 }
 
-const { hasUnits = true, name, properties } = defineProps<IProps>()
-const columnWidth = `width: calc(100% / ${hasUnits ? '3' : '2'})`
+const props = withDefaults(defineProps<IProps>(), {
+  hasUnits: true
+})
+const columnWidth = `width: calc(100% / ${props.hasUnits ? '3' : '2'})`
 const emit = defineEmits(['propertyUpdated'])
 
 function onCellEditComplete(event: DataTableCellEditCompleteEvent): void {
