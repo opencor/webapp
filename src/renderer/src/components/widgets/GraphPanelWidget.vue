@@ -1,7 +1,7 @@
 <template>
-  <div class="h-full">
+  <div class="flex flex-row h-full">
     <div v-if="showMarker" class="marker" />
-    <div ref="mainDiv" class="h-full" />
+    <div ref="mainDiv" class="grow h-full" />
   </div>
 </template>
 
