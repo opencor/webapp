@@ -25,19 +25,20 @@
 <script setup lang="ts">
 import { type DataTableCellEditCompleteEvent } from 'primevue/datatable'
 
-interface IProps {
-  name: string
-  hasUnits?: boolean
-  properties: {
-    property: string
-    value: number
-    unit?: string
-  }[]
-}
-
-const props = withDefaults(defineProps<IProps>(), {
-  hasUnits: true
-})
+const props = withDefaults(
+  defineProps<{
+    name: string
+    hasUnits?: boolean
+    properties: {
+      property: string
+      value: number
+      unit?: string
+    }[]
+  }>(),
+  {
+    hasUnits: true
+  }
+)
 const columnWidth = `width: calc(100% / ${props.hasUnits ? '3' : '2'})`
 const emit = defineEmits(['propertyUpdated'])
 

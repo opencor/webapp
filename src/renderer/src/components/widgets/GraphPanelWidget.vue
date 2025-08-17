@@ -41,14 +41,15 @@ export interface IGraphPanelPlot {
   y: IGraphPanelPlotData
 }
 
-interface IProps {
-  plots: IGraphPanelPlot[]
-  showMarker?: boolean
-}
-
-const props = withDefaults(defineProps<IProps>(), {
-  showMarker: false
-})
+const props = withDefaults(
+  defineProps<{
+    plots: IGraphPanelPlot[]
+    showMarker?: boolean
+  }>(),
+  {
+    showMarker: false
+  }
+)
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 
