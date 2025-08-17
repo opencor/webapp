@@ -46,7 +46,9 @@ interface IProps {
   showMarker?: boolean
 }
 
-const { plots, showMarker = false } = defineProps<IProps>()
+const props = withDefaults(defineProps<IProps>(), {
+  showMarker: false
+})
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
 
@@ -84,11 +86,11 @@ function themeData() {
 }
 
 vue.watch(
-  () => [plots, vueCommon.useLightMode()],
+  () => [props.plots, vueCommon.useLightMode()],
   () => {
     Plotly.react(
       mainDiv.value,
-      plots.map((plot) => ({
+      props.plots.map((plot) => ({
         x: plot.x.data,
         y: plot.y.data,
         type: 'scattergl'
