@@ -18,7 +18,7 @@
       <div class="h-full" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
         <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingLipencorWebAssemblyModuleVisible" />
         <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
-        <DragNDropComponent v-show="dropAreaCounter > 0" />
+        <DragNDropComponent v-show="dragAndDropCounter > 0" />
         <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
         <BlockingMessageComponent message="Loading model..." v-show="spinningWheelVisible" />
       </div>
@@ -399,22 +399,22 @@ function onChange(event: Event): void {
 
 // Drag and drop.
 
-const dropAreaCounter = vue.ref<number>(0)
+const dragAndDropCounter = vue.ref<number>(0)
 
 function onDragEnter(): void {
-  if (props.omex !== undefined) {
+  if (!uiEnabled.value || props.omex !== undefined) {
     return
   }
 
-  dropAreaCounter.value += 1
+  dragAndDropCounter.value += 1
 }
 
 function onDrop(event: DragEvent): void {
-  if (props.omex !== undefined) {
+  if (dragAndDropCounter.value === 0) {
     return
   }
 
-  dropAreaCounter.value = 0
+  dragAndDropCounter.value = 0
 
   const files = event.dataTransfer?.files
 
@@ -426,11 +426,11 @@ function onDrop(event: DragEvent): void {
 }
 
 function onDragLeave(): void {
-  if (props.omex !== undefined) {
+  if (dragAndDropCounter.value === 0) {
     return
   }
 
-  dropAreaCounter.value -= 1
+  dragAndDropCounter.value -= 1
 }
 
 // Open.
