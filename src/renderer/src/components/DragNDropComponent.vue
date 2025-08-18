@@ -1,6 +1,9 @@
 <template>
   <div class="drop-area p-overlay-mask">
-    <div class="message">CellML files, SED-ML files, and COMBINE archives can be dropped here.</div>
+    <div class="message">
+      CellML files, SED-ML files, and COMBINE archives<br />
+      can be dropped here.
+    </div>
   </div>
 </template>
 
@@ -15,6 +18,7 @@
 
 .message {
   font-size: 1.5rem;
+  line-height: 1.25;
   text-align: center;
   border-radius: 1rem;
   padding: 0.5rem 1rem;
