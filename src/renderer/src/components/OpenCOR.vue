@@ -1,7 +1,16 @@
 <template>
-  <div class="flex flex-col h-screen overflow-hidden">
-    <IssuesView v-if="issues.length !== 0" :issues="issues" :simulationOnly="omex !== undefined" />
-    <div v-else class="h-full">
+  <BlockUI :blocked="!uiEnabled" class="h-full">
+    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :simulationOnly="omex !== undefined" />
+    <div
+      v-else
+      @dragenter="onDragEnter"
+      class="h-full"
+      @dragover.prevent
+      @drop.prevent="onDrop"
+      @dragleave="onDragLeave"
+    >
+      <input ref="files" type="file" multiple style="display: none" @change="onChange" />
+      <DragNDropComponent v-show="dragAndDropCounter > 0" />
       <div v-show="!electronApi && omex === undefined">
         <MainMenu
           :hasFiles="hasFiles"
@@ -15,35 +24,34 @@
           @settings="onSettings"
         />
       </div>
-      <div class="h-full" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
-        <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingLipencorWebAssemblyModuleVisible" />
-        <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
-        <DragNDropComponent v-show="dragAndDropCounter > 0" />
-        <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
-        <BlockingMessageComponent message="Loading model..." v-show="spinningWheelVisible" />
-      </div>
+      <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
+      <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingLipencorWebAssemblyModuleVisible" />
+      <BlockingMessageComponent message="Loading model..." v-show="spinningWheelVisible" />
+      <OpenRemoteDialog
+        v-model:visible="openRemoteVisible"
+        @openRemote="onOpenRemote"
+        @close="openRemoteVisible = false"
+      />
+      <Toast />
+      <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
+      <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
+      <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
     </div>
-  </div>
-  <input ref="files" type="file" multiple style="display: none" @change="onChange" />
-  <UpdateErrorDialog
-    v-model:visible="updateErrorVisible"
-    :title="updateErrorTitle"
-    :issue="updateErrorIssue"
-    @close="onUpdateErrorDialogClose"
-  />
-  <UpdateAvailableDialog
-    v-model:visible="updateAvailableVisible"
-    :version="updateVersion"
-    @downloadAndInstall="onDownloadAndInstall"
-    @close="updateAvailableVisible = false"
-  />
-  <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
-  <UpdateNotAvailableDialog v-model:visible="updateNotAvailableVisible" @close="updateNotAvailableVisible = false" />
-  <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
-  <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
-  <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
-  <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
-  <Toast />
+    <UpdateErrorDialog
+      v-model:visible="updateErrorVisible"
+      :title="updateErrorTitle"
+      :issue="updateErrorIssue"
+      @close="onUpdateErrorDialogClose"
+    />
+    <UpdateAvailableDialog
+      v-model:visible="updateAvailableVisible"
+      :version="updateVersion"
+      @downloadAndInstall="onDownloadAndInstall"
+      @close="updateAvailableVisible = false"
+    />
+    <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
+    <UpdateNotAvailableDialog v-model:visible="updateNotAvailableVisible" @close="updateNotAvailableVisible = false" />
+  </BlockUI>
 </template>
 
 <script setup lang="ts">
