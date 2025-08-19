@@ -26,3 +26,7 @@ body {
   user-select: none;
   overflow: hidden;
 }
+
+.p-component {
+  transition: none !important;
+}

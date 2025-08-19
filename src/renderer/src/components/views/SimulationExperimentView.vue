@@ -164,10 +164,6 @@ if (!common.isMobile()) {
 </script>
 
 <style scoped>
-:deep(.p-button) {
-  transition: none;
-}
-
 :deep(.p-button-icon) {
   font-size: 1.5rem;
 }
