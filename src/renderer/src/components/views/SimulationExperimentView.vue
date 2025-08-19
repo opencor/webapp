@@ -64,6 +64,7 @@ import * as locApi from '../../libopencor/locApi'
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 
 const props = defineProps<{
+  uiEnabled: boolean
   file: locApi.File
   isActiveFile: boolean
   simulationOnly?: boolean
@@ -154,6 +155,10 @@ vueCommon.trackElementHeight(toolbarId)
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
+    if (!props.uiEnabled) {
+      return
+    }
+
     if (props.isActiveFile && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.code === 'F9') {
       event.preventDefault()
 

@@ -13,6 +13,7 @@
       <DragNDropComponent v-show="dragAndDropCounter > 0" />
       <div v-show="!electronApi && omex === undefined">
         <MainMenu
+          :uiEnabled="compUiEnabled"
           :hasFiles="hasFiles"
           @about="onAbout"
           @open="($refs.files as HTMLInputElement).click()"
@@ -24,7 +25,7 @@
           @settings="onSettings"
         />
       </div>
-      <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
+      <ContentsComponent ref="contents" :uiEnabled="compUiEnabled" :simulationOnly="omex !== undefined" />
       <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingLipencorWebAssemblyModuleVisible" />
       <BlockingMessageComponent message="Loading model..." v-show="spinningWheelVisible" />
       <OpenRemoteDialog
@@ -81,6 +82,20 @@ const props = defineProps<IOpenCORProps>()
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
+
+const compUiEnabled = vue.computed(() => {
+  return (
+    uiEnabled.value &&
+    !openRemoteVisible.value &&
+    !settingsVisible.value &&
+    !resetAllVisible.value &&
+    !aboutVisible.value &&
+    !updateErrorVisible.value &&
+    !updateAvailableVisible.value &&
+    !updateDownloadProgressVisible.value &&
+    !updateNotAvailableVisible.value
+  )
+})
 
 // Get the current Vue app instance to use some PrimeVue components.
 

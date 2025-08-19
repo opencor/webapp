@@ -54,6 +54,7 @@
           <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
           <SimulationExperimentView
             v-else-if="fileTab.uiJson === undefined"
+            :uiEnabled="uiEnabled"
             :file="fileTabs[index].file"
             :isActiveFile="fileTab.file.path() === activeFile"
           />
@@ -79,7 +80,8 @@ export interface IFileTab {
   uiJson?: locApi.IUiJson
 }
 
-defineProps<{
+const props = defineProps<{
+  uiEnabled: boolean
   simulationOnly?: boolean
 }>()
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
@@ -189,7 +191,7 @@ vueCommon.trackElementHeight('fileTablist')
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (fileTabs.value.length === 0) {
+    if (!props.uiEnabled || fileTabs.value.length === 0) {
       return
     }
 
