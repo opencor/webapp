@@ -4,15 +4,15 @@
       <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
       <SimulationExperimentView
         v-else-if="fileTab.uiJson === undefined"
-        :file="fileTabs[index].file"
+        :file="fileTabs[index]?.file"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="true"
       />
       <SimulationExperimentUiView
         v-else
-        :file="fileTabs[index].file"
+        :file="fileTabs[index]?.file"
         :simulationOnly="true"
-        :uiJson="fileTabs[index].uiJson"
+        :uiJson="fileTabs[index]?.uiJson"
       />
     </div>
   </div>
@@ -55,10 +55,10 @@
           <SimulationExperimentView
             v-else-if="fileTab.uiJson === undefined"
             :uiEnabled="uiEnabled"
-            :file="fileTabs[index].file"
+            :file="fileTabs[index]?.file"
             :isActiveFile="fileTab.file.path() === activeFile"
           />
-          <SimulationExperimentUiView v-else :file="fileTabs[index].file" :uiJson="fileTabs[index].uiJson" />
+          <SimulationExperimentUiView v-else :file="fileTabs[index]?.file" :uiJson="fileTabs[index]?.uiJson" />
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -148,15 +148,21 @@ function selectFile(filePath: string): void {
 function selectNextFile(): void {
   const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
   const nextFileIndex = (activeFileIndex + 1) % fileTabs.value.length
+  const nextFileTab = fileTabs.value[nextFileIndex]
 
-  selectFile(fileTabs.value[nextFileIndex].file.path())
+  if (nextFileTab !== undefined) {
+    selectFile(nextFileTab.file.path())
+  }
 }
 
 function selectPreviousFile(): void {
   const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
   const nextFileIndex = (activeFileIndex - 1 + fileTabs.value.length) % fileTabs.value.length
+  const nextFileTab = fileTabs.value[nextFileIndex]
 
-  selectFile(fileTabs.value[nextFileIndex].file.path())
+  if (nextFileTab !== undefined) {
+    selectFile(nextFileTab.file.path())
+  }
 }
 
 function closeFile(filePath: string): void {
@@ -167,7 +173,11 @@ function closeFile(filePath: string): void {
   fileTabs.value.splice(activeFileIndex, 1)
 
   if (activeFile.value === filePath && fileTabs.value.length > 0) {
-    selectFile(fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)].file.path())
+    const nextFileTab = fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)]
+
+    if (nextFileTab !== undefined) {
+      selectFile(nextFileTab.file.path())
+    }
   }
 
   electronApi?.fileClosed(filePath)

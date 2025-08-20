@@ -46,7 +46,7 @@ const props = defineProps<{
   uiJson: locApi.IUiJson
 }>()
 
-const math = mathjs.create(mathjs.all, {})
+const math = mathjs.create(mathjs.all ?? {}, {})
 const model = props.file.document().model(0)
 const instance = props.file.instance()
 const instanceTask = instance.task(0)

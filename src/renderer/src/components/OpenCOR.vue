@@ -26,8 +26,8 @@
         />
       </div>
       <ContentsComponent ref="contents" :uiEnabled="compUiEnabled" :simulationOnly="omex !== undefined" />
-      <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingLipencorWebAssemblyModuleVisible" />
-      <BlockingMessageComponent message="Loading model..." v-show="spinningWheelVisible" />
+      <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
+      <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
       <OpenRemoteDialog
         v-model:visible="openRemoteVisible"
         @openRemote="onOpenRemote"
@@ -204,20 +204,20 @@ vue.watch(hasFiles, (hasFiles) => {
   electronApi?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
 })
 
-// Loading libOpenCOR's WebAssembly module.
+// Loading OpenCOR.
 // Note: this is only done if window.locApi is not defined, which means that we are running OpenCOR's Web app.
 
-const loadingLipencorWebAssemblyModuleVisible = vue.ref<boolean>(false)
+const loadingOpencorMessageVisible = vue.ref<boolean>(false)
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 if (window.locApi === undefined) {
   enableDisableUi(false)
 
-  loadingLipencorWebAssemblyModuleVisible.value = true
+  loadingOpencorMessageVisible.value = true
 
   vue.watch(locApiInitialised, (initialised) => {
     if (initialised) {
-      loadingLipencorWebAssemblyModuleVisible.value = false
+      loadingOpencorMessageVisible.value = false
 
       enableDisableUi(true)
     }
@@ -226,18 +226,18 @@ if (window.locApi === undefined) {
 
 // Spinning wheel.
 
-const spinningWheelVisible = vue.ref<boolean>(false)
+const loadingModelMessageVisible = vue.ref<boolean>(false)
 
-function showSpinningWheel(): void {
+function showLoadingModelMessage(): void {
   enableDisableUi(false)
 
-  spinningWheelVisible.value = true
+  loadingModelMessageVisible.value = true
 }
 
-function hideSpinningWheel(): void {
+function hideLoadingModelMessage(): void {
   enableDisableUi(true)
 
-  spinningWheelVisible.value = false
+  loadingModelMessageVisible.value = false
 }
 
 // Auto update.
@@ -341,7 +341,7 @@ function openFile(fileOrFilePath: string | File): void {
   // Retrieve a locApi.File object for the given file or file path and add it to the contents.
 
   if (locCommon.isRemoteFilePath(filePath)) {
-    showSpinningWheel()
+    showLoadingModelMessage()
   }
 
   locCommon
@@ -384,12 +384,12 @@ function openFile(fileOrFilePath: string | File): void {
       }
 
       if (locCommon.isRemoteFilePath(filePath)) {
-        hideSpinningWheel()
+        hideLoadingModelMessage()
       }
     })
     .catch((error: unknown) => {
       if (locCommon.isRemoteFilePath(filePath)) {
-        hideSpinningWheel()
+        hideLoadingModelMessage()
       }
 
       if (props.omex !== undefined) {
