@@ -1,7 +1,11 @@
 <template>
   <div v-if="simulationOnly" class="h-full">
     <div v-for="(fileTab, index) in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" :value="fileTab.file.path()">
-      <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
+      <IssuesView
+        v-if="fileTab.file.issues().length !== 0"
+        :issues="fileTab.file.issues()"
+        :simulationOnly="simulationOnly"
+      />
       <SimulationExperimentView
         v-else-if="fileTab.uiJson === undefined"
         :file="fileTabs[index]?.file"
@@ -17,7 +21,6 @@
     </div>
   </div>
   <div v-else class="h-full">
-    <BackgroundComponent v-show="fileTabs.length === 0" />
     <Tabs
       v-show="fileTabs.length !== 0"
       id="fileTabs"

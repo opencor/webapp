@@ -1,5 +1,5 @@
 <template>
-  <div :class="`h-full ${simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment'}`">
+  <div :class="`h-full ${simulationOnly ? 'div-simulation-only' : 'div-simulation'}`">
     <Toolbar :id="toolbarId" class="p-1!">
       <template #start>
         <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
@@ -10,34 +10,36 @@
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
-            <SimulationPropertyEditor :file="file" />
-            <!--
+            <ScrollPanel class="h-full">
+              <SimulationPropertyEditor :file="file" />
+              <!--
                   <SolversPropertyEditor />
                   <GraphsPropertyEditor />
                   <ParametersPropertyEditor />
                   -->
-            <Fieldset legend="X-axis">
-              <Select
-                v-model="xParameter"
-                filter
-                filterMode="lenient"
-                :options="parameters"
-                size="small"
-                class="w-full"
-                @change="updatePlot()"
-              />
-            </Fieldset>
-            <Fieldset legend="Y-axis">
-              <Select
-                v-model="yParameter"
-                filter
-                filterMode="lenient"
-                :options="parameters"
-                size="small"
-                class="w-full"
-                @change="updatePlot()"
-              />
-            </Fieldset>
+              <Fieldset legend="X-axis">
+                <Select
+                  v-model="xParameter"
+                  filter
+                  filterMode="lenient"
+                  :options="parameters"
+                  size="small"
+                  class="w-full"
+                  @change="updatePlot()"
+                />
+              </Fieldset>
+              <Fieldset legend="Y-axis">
+                <Select
+                  v-model="yParameter"
+                  filter
+                  filterMode="lenient"
+                  :options="parameters"
+                  size="small"
+                  class="w-full"
+                  @change="updatePlot()"
+                />
+              </Fieldset>
+            </ScrollPanel>
           </SplitterPanel>
           <SplitterPanel :size="75">
             <GraphPanelWidget :plots="plots" />
@@ -203,13 +205,14 @@ if (!common.isMobile()) {
   cursor: default;
 }
 
-.simulation-experiment-only {
-  height: calc(100vh - var(--simulation-experiment-toolbar-height));
+.div-simulation-only {
+  height: calc(var(--block-ui-height) - var(--simulation-experiment-toolbar-height));
 }
 
-.simulation-experiment {
+.div-simulation {
   height: calc(
-    100vh - var(--main-menu-height) - var(--file-tablist-height) - var(--simulation-experiment-toolbar-height)
+    var(--block-ui-height) - var(--main-menu-height) - var(--file-tablist-height) -
+      var(--simulation-experiment-toolbar-height)
   );
 }
 </style>

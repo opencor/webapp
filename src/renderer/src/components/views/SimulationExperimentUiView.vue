@@ -1,23 +1,25 @@
 <template>
-  <div :class="`flex flex-row h-full ${simulationOnly ? 'simulation-experiment-only' : 'simulation-experiment'}`">
+  <div :class="`flex flex-row h-full ${simulationOnly ? 'div-simulation-only' : 'div-simulation'}`">
     <IssuesView v-if="issues.length !== 0" class="grow" :issues="issues" :simulationOnly="simulationOnly" />
     <div v-else class="flex flex-row grow">
       <div class="ml-4 mr-4 mb-4">
-        <Fieldset legend="Input parameters">
-          <InputWidget
-            v-for="(input, index) in (uiJson as any).input"
-            v-model="inputValues[index]"
-            v-show="showInput[index]"
-            :key="`input_${index}`"
-            :name="input.name"
-            :maximumValue="input.maximumValue"
-            :minimumValue="input.minimumValue"
-            :possibleValues="input.possibleValues"
-            :stepValue="input.stepValue"
-            :class="index !== 0 ? 'mt-6' : ''"
-            @change="updateUiAndSimulation"
-          />
-        </Fieldset>
+        <ScrollPanel class="h-full">
+          <Fieldset legend="Input parameters">
+            <InputWidget
+              v-for="(input, index) in (uiJson as any).input"
+              v-model="inputValues[index]"
+              v-show="showInput[index]"
+              :key="`input_${index}`"
+              :name="input.name"
+              :maximumValue="input.maximumValue"
+              :minimumValue="input.minimumValue"
+              :possibleValues="input.possibleValues"
+              :stepValue="input.stepValue"
+              :class="index !== 0 ? 'mt-6' : ''"
+              @change="updateUiAndSimulation"
+            />
+          </Fieldset>
+        </ScrollPanel>
       </div>
       <div :id="plotsDivId" class="grow">
         <GraphPanelWidget
@@ -142,11 +144,11 @@ function updateUiAndSimulation() {
   height: calc(100% / var(--graph-panel-widget-count));
 }
 
-.simulation-experiment-only {
-  height: 100vh;
+.div-simulation-only {
+  height: var(--block-ui-height);
 }
 
-.simulation-experiment {
-  height: calc(100vh - var(--main-menu-height) - var(--file-tablist-height));
+.div-simulation {
+  height: calc(var(--block-ui-height) - var(--main-menu-height) - var(--file-tablist-height));
 }
 </style>

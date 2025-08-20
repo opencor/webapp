@@ -1,5 +1,9 @@
 <template>
-  <BlockUI :blocked="!uiEnabled" class="h-full">
+  <BlockUI id="blockUi" :blocked="!uiEnabled" class="h-full">
+    <Toast id="toast" :pt:root:style="{ position: 'absolute' }" />
+    <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
+    <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
+    <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
     <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :simulationOnly="omex !== undefined" />
     <div
       v-else
@@ -26,14 +30,11 @@
         />
       </div>
       <ContentsComponent ref="contents" :uiEnabled="compUiEnabled" :simulationOnly="omex !== undefined" />
-      <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
-      <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
       <OpenRemoteDialog
         v-model:visible="openRemoteVisible"
         @openRemote="onOpenRemote"
         @close="openRemoteVisible = false"
       />
-      <Toast />
       <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
       <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
       <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
@@ -224,7 +225,7 @@ if (window.locApi === undefined) {
   })
 }
 
-// Spinning wheel.
+// Loading model.
 
 const loadingModelMessageVisible = vue.ref<boolean>(false)
 
@@ -541,6 +542,10 @@ electronApi?.onSelect((filePath: string) => {
   contents.value?.selectFile(filePath)
 })
 
+// Track the height of our block UI.
+
+vueCommon.trackElementHeight('blockUi')
+
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry as normal (i.e. the whole OpenCOR UI will be shown).
 
@@ -553,7 +558,7 @@ if (props.omex !== undefined) {
     }
   })
 } else {
-  // Track the height of our main menu.
+  // (Also) track the height of our main menu.
 
   vueCommon.trackElementHeight('mainMenu')
 
@@ -563,6 +568,15 @@ if (props.omex !== undefined) {
     // Do what follows with a bit of a delay to give our background (with the OpenCOR logo) time to be renderered.
 
     setTimeout(() => {
+      // Ensure that our toasts are shown within our container.
+
+      const toastElement = document.getElementById('toast')
+      const blockUiElement = document.getElementById('blockUi')
+
+      if (toastElement !== null && blockUiElement !== null) {
+        blockUiElement.appendChild(toastElement)
+      }
+
       if (electronApi !== undefined) {
         // Check for updates.
         // Note: the main process will actually check for updates if requested and if OpenCOR is packaged.
