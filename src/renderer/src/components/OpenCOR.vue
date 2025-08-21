@@ -326,15 +326,19 @@ function openFile(fileOrFilePath: string | File): void {
     .then((file) => {
       const fileType = file.type()
 
-      if (fileType === locApi.EFileType.UNKNOWN_FILE || fileType === locApi.EFileType.IRRETRIEVABLE_FILE) {
+      if (
+        fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
+        fileType === locApi.EFileType.UNKNOWN_FILE ||
+        (props.omex !== undefined && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
+      ) {
         if (props.omex !== undefined) {
           void vue.nextTick().then(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
               description:
-                fileType === locApi.EFileType.UNKNOWN_FILE
-                  ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
-                  : 'The file could not be retrieved.'
+                fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                  ? 'The file could not be retrieved.'
+                  : 'Only COMBINE archives are supported.'
             })
           })
         } else {
@@ -344,9 +348,9 @@ function openFile(fileOrFilePath: string | File): void {
             detail:
               filePath +
               '\n\n' +
-              (fileType === locApi.EFileType.UNKNOWN_FILE
-                ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
-                : 'The file could not be retrieved.'),
+              (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                ? 'The file could not be retrieved.'
+                : 'Only CellML files, SED-ML files, and COMBINE archives are supported.'),
             life: TOAST_LIFE
           })
         }
