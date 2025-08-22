@@ -1,6 +1,6 @@
 <template>
-  <Fieldset class="ml-4! mr-4! mb-4!" legend="Issues">
-    <ScrollPanel :class="simulationOnly ? 'issues-scroll-panel-only' : 'issues-scroll-panel'">
+  <Fieldset :class="'ml-4! mr-4! mb-4! ' + (simulationOnly ? 'fieldset-simulation-only' : 'fieldset')" legend="Issues">
+    <ScrollPanel :class="simulationOnly ? 'scroll-panel-simulation-only' : 'scroll-panel'">
       <div v-for="(issue, index) in issues" :key="`issue_${index}`" :class="`issue ${index > 0 ? 'mt-4!' : ''}`">
         <Message v-if="issue.type === locApi.EIssueType.ERROR" severity="error" icon="pi pi-times-circle">
           {{ issue.description }}
@@ -23,15 +23,28 @@ defineProps<{
 </script>
 
 <style scoped>
+.fieldset,
+.fieldset-simulation-only {
+  overflow: hidden;
+}
+
+.fieldset {
+  height: calc(var(--block-ui-height) - var(--main-menu-height) - var(--file-tablist-height) - 1rem);
+}
+
+.fieldset-simulation-only {
+  height: calc(var(--block-ui-height) - 1rem);
+}
+
 .issue {
   user-select: text;
 }
 
-.issues-scroll-panel-only {
-  height: calc(100vh - 4.75rem);
+.scroll-panel {
+  height: calc(var(--block-ui-height) - var(--main-menu-height) - var(--file-tablist-height) - 4.75rem);
 }
 
-.issues-scroll-panel {
-  height: calc(100vh - var(--main-menu-height) - var(--file-tablist-height) - 4.75rem);
+.scroll-panel-simulation-only {
+  height: calc(var(--block-ui-height) - 4.75rem);
 }
 </style>

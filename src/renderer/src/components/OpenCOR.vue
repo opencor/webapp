@@ -1,9 +1,23 @@
 <template>
-  <div class="flex flex-col h-screen overflow-hidden">
-    <IssuesView v-if="issues.length !== 0" :issues="issues" :simulationOnly="omex !== undefined" />
-    <div v-else class="h-full">
+  <BlockUI id="blockUi" :blocked="!uiEnabled" class="h-full">
+    <Toast id="toast" :pt:root:style="{ position: 'absolute' }" />
+    <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
+    <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
+    <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
+    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :simulationOnly="omex !== undefined" />
+    <div
+      v-else
+      @dragenter="onDragEnter"
+      class="h-full"
+      @dragover.prevent
+      @drop.prevent="onDrop"
+      @dragleave="onDragLeave"
+    >
+      <input ref="files" type="file" multiple style="display: none" @change="onChange" />
+      <DragNDropComponent v-show="dragAndDropCounter > 0" />
       <div v-show="!electronApi && omex === undefined">
         <MainMenu
+          :uiEnabled="compUiEnabled"
           :hasFiles="hasFiles"
           @about="onAbout"
           @open="($refs.files as HTMLInputElement).click()"
@@ -15,35 +29,31 @@
           @settings="onSettings"
         />
       </div>
-      <div class="h-full" @dragenter="onDragEnter" @dragover.prevent @drop.prevent="onDrop" @dragleave="onDragLeave">
-        <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingLipencorWebAssemblyModuleVisible" />
-        <ContentsComponent ref="contents" :simulationOnly="omex !== undefined" />
-        <DragNDropComponent v-show="dropAreaCounter > 0" />
-        <BlockUI :blocked="!uiEnabled" :fullScreen="true"></BlockUI>
-        <BlockingMessageComponent message="Loading model..." v-show="spinningWheelVisible" />
-      </div>
+      <ContentsComponent ref="contents" :uiEnabled="compUiEnabled" :simulationOnly="omex !== undefined" />
+      <OpenRemoteDialog
+        v-model:visible="openRemoteVisible"
+        @openRemote="onOpenRemote"
+        @close="openRemoteVisible = false"
+      />
+      <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
+      <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
+      <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
     </div>
-  </div>
-  <input ref="files" type="file" multiple style="display: none" @change="onChange" />
-  <UpdateErrorDialog
-    v-model:visible="updateErrorVisible"
-    :title="updateErrorTitle"
-    :issue="updateErrorIssue"
-    @close="onUpdateErrorDialogClose"
-  />
-  <UpdateAvailableDialog
-    v-model:visible="updateAvailableVisible"
-    :version="updateVersion"
-    @downloadAndInstall="onDownloadAndInstall"
-    @close="updateAvailableVisible = false"
-  />
-  <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
-  <UpdateNotAvailableDialog v-model:visible="updateNotAvailableVisible" @close="updateNotAvailableVisible = false" />
-  <OpenRemoteDialog v-model:visible="openRemoteVisible" @openRemote="onOpenRemote" @close="openRemoteVisible = false" />
-  <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
-  <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
-  <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
-  <Toast />
+    <UpdateErrorDialog
+      v-model:visible="updateErrorVisible"
+      :title="updateErrorTitle"
+      :issue="updateErrorIssue"
+      @close="onUpdateErrorDialogClose"
+    />
+    <UpdateAvailableDialog
+      v-model:visible="updateAvailableVisible"
+      :version="updateVersion"
+      @downloadAndInstall="onDownloadAndInstall"
+      @close="updateAvailableVisible = false"
+    />
+    <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
+    <UpdateNotAvailableDialog v-model:visible="updateNotAvailableVisible" @close="updateNotAvailableVisible = false" />
+  </BlockUI>
 </template>
 
 <script setup lang="ts">
@@ -73,6 +83,20 @@ const props = defineProps<IOpenCORProps>()
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
+
+const compUiEnabled = vue.computed(() => {
+  return (
+    uiEnabled.value &&
+    !openRemoteVisible.value &&
+    !settingsVisible.value &&
+    !resetAllVisible.value &&
+    !aboutVisible.value &&
+    !updateErrorVisible.value &&
+    !updateAvailableVisible.value &&
+    !updateDownloadProgressVisible.value &&
+    !updateNotAvailableVisible.value
+  )
+})
 
 // Get the current Vue app instance to use some PrimeVue components.
 
@@ -181,40 +205,40 @@ vue.watch(hasFiles, (hasFiles) => {
   electronApi?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
 })
 
-// Loading libOpenCOR's WebAssembly module.
+// Loading OpenCOR.
 // Note: this is only done if window.locApi is not defined, which means that we are running OpenCOR's Web app.
 
-const loadingLipencorWebAssemblyModuleVisible = vue.ref<boolean>(false)
+const loadingOpencorMessageVisible = vue.ref<boolean>(false)
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 if (window.locApi === undefined) {
   enableDisableUi(false)
 
-  loadingLipencorWebAssemblyModuleVisible.value = true
+  loadingOpencorMessageVisible.value = true
 
   vue.watch(locApiInitialised, (initialised) => {
     if (initialised) {
-      loadingLipencorWebAssemblyModuleVisible.value = false
+      loadingOpencorMessageVisible.value = false
 
       enableDisableUi(true)
     }
   })
 }
 
-// Spinning wheel.
+// Loading model.
 
-const spinningWheelVisible = vue.ref<boolean>(false)
+const loadingModelMessageVisible = vue.ref<boolean>(false)
 
-function showSpinningWheel(): void {
+function showLoadingModelMessage(): void {
   enableDisableUi(false)
 
-  spinningWheelVisible.value = true
+  loadingModelMessageVisible.value = true
 }
 
-function hideSpinningWheel(): void {
+function hideLoadingModelMessage(): void {
   enableDisableUi(true)
 
-  spinningWheelVisible.value = false
+  loadingModelMessageVisible.value = false
 }
 
 // Auto update.
@@ -318,7 +342,7 @@ function openFile(fileOrFilePath: string | File): void {
   // Retrieve a locApi.File object for the given file or file path and add it to the contents.
 
   if (locCommon.isRemoteFilePath(filePath)) {
-    showSpinningWheel()
+    showLoadingModelMessage()
   }
 
   locCommon
@@ -326,15 +350,19 @@ function openFile(fileOrFilePath: string | File): void {
     .then((file) => {
       const fileType = file.type()
 
-      if (fileType === locApi.EFileType.UNKNOWN_FILE || fileType === locApi.EFileType.IRRETRIEVABLE_FILE) {
+      if (
+        fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
+        fileType === locApi.EFileType.UNKNOWN_FILE ||
+        (props.omex !== undefined && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
+      ) {
         if (props.omex !== undefined) {
           void vue.nextTick().then(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
               description:
-                fileType === locApi.EFileType.UNKNOWN_FILE
-                  ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
-                  : 'The file could not be retrieved.'
+                fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                  ? 'The file could not be retrieved.'
+                  : 'Only COMBINE archives are supported.'
             })
           })
         } else {
@@ -344,9 +372,9 @@ function openFile(fileOrFilePath: string | File): void {
             detail:
               filePath +
               '\n\n' +
-              (fileType === locApi.EFileType.UNKNOWN_FILE
-                ? 'Only CellML files, SED-ML files, and COMBINE archives are supported.'
-                : 'The file could not be retrieved.'),
+              (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                ? 'The file could not be retrieved.'
+                : 'Only CellML files, SED-ML files, and COMBINE archives are supported.'),
             life: TOAST_LIFE
           })
         }
@@ -357,12 +385,12 @@ function openFile(fileOrFilePath: string | File): void {
       }
 
       if (locCommon.isRemoteFilePath(filePath)) {
-        hideSpinningWheel()
+        hideLoadingModelMessage()
       }
     })
     .catch((error: unknown) => {
       if (locCommon.isRemoteFilePath(filePath)) {
-        hideSpinningWheel()
+        hideLoadingModelMessage()
       }
 
       if (props.omex !== undefined) {
@@ -399,22 +427,22 @@ function onChange(event: Event): void {
 
 // Drag and drop.
 
-const dropAreaCounter = vue.ref<number>(0)
+const dragAndDropCounter = vue.ref<number>(0)
 
 function onDragEnter(): void {
-  if (props.omex !== undefined) {
+  if (!uiEnabled.value || props.omex !== undefined) {
     return
   }
 
-  dropAreaCounter.value += 1
+  dragAndDropCounter.value += 1
 }
 
 function onDrop(event: DragEvent): void {
-  if (props.omex !== undefined) {
+  if (dragAndDropCounter.value === 0) {
     return
   }
 
-  dropAreaCounter.value = 0
+  dragAndDropCounter.value = 0
 
   const files = event.dataTransfer?.files
 
@@ -426,11 +454,11 @@ function onDrop(event: DragEvent): void {
 }
 
 function onDragLeave(): void {
-  if (props.omex !== undefined) {
+  if (dragAndDropCounter.value === 0) {
     return
   }
 
-  dropAreaCounter.value -= 1
+  dragAndDropCounter.value -= 1
 }
 
 // Open.
@@ -514,6 +542,10 @@ electronApi?.onSelect((filePath: string) => {
   contents.value?.selectFile(filePath)
 })
 
+// Track the height of our block UI.
+
+vueCommon.trackElementHeight('blockUi')
+
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry as normal (i.e. the whole OpenCOR UI will be shown).
 
@@ -526,7 +558,7 @@ if (props.omex !== undefined) {
     }
   })
 } else {
-  // Track the height of our main menu.
+  // (Also) track the height of our main menu.
 
   vueCommon.trackElementHeight('mainMenu')
 
@@ -536,6 +568,15 @@ if (props.omex !== undefined) {
     // Do what follows with a bit of a delay to give our background (with the OpenCOR logo) time to be renderered.
 
     setTimeout(() => {
+      // Ensure that our toasts are shown within our container.
+
+      const toastElement = document.getElementById('toast')
+      const blockUiElement = document.getElementById('blockUi')
+
+      if (toastElement !== null && blockUiElement !== null) {
+        blockUiElement.appendChild(toastElement)
+      }
+
       if (electronApi !== undefined) {
         // Check for updates.
         // Note: the main process will actually check for updates if requested and if OpenCOR is packaged.

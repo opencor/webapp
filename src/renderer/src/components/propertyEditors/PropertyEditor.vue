@@ -52,10 +52,6 @@ function onCellEditComplete(event: DataTableCellEditCompleteEvent): void {
 </script>
 
 <style scoped>
-:deep(.p-datatable-header-cell) {
-  transition: none;
-}
-
 :deep(.p-inputnumber-input) {
   padding: 0 2px !important;
   margin: 0 !important;

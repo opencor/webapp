@@ -17,15 +17,25 @@ const minorVersion = `${year}${String(month).padStart(2, '0')}${String(day).padS
 
 // Patch version.
 
-const gitDescribe = execSync('git describe --tags --long', { encoding: 'utf8' }).trim()
-const match = gitDescribe.match(/^v?(\d+)\.(\d+)\.(\d+)-(\d+)-g[0-9a-f]+$/)
-const [, , minor, patch] = match
-let patchVersion = parseInt(patch)
+let patchVersion = 0
 
-if (minor === minorVersion) {
-  ++patchVersion
-} else {
-  patchVersion = 0
+try {
+  const gitDescribe = execSync('git describe --tags --long', {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'ignore']
+  }).trim()
+  const match = gitDescribe.match(/^v?(\d+)\.(\d+)\.(\d+)-(\d+)-g[0-9a-f]+$/)
+  const [, , minor, patch] = match
+
+  patchVersion = parseInt(patch)
+
+  if (minor === minorVersion) {
+    ++patchVersion
+  } else {
+    patchVersion = 0
+  }
+} catch {
+  // Intentionally ignored.
 }
 
 // (Full) version.

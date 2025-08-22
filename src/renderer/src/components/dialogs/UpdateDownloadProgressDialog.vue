@@ -9,9 +9,3 @@ defineProps<{
   percent: number
 }>()
 </script>
-
-<style scoped>
-.no-animation :deep(.p-progressbar-value) {
-  transition: none !important;
-}
-</style>
