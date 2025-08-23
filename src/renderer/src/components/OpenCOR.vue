@@ -1,5 +1,5 @@
 <template>
-  <BlockUI id="blockUi" :blocked="!uiEnabled" class="h-full">
+  <BlockUI id="blockUi" :blocked="!uiEnabled" class="overflow-hidden" :style="blockUiStyle">
     <Toast id="toast" :pt:root:style="{ position: 'absolute' }" />
     <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
@@ -17,6 +17,7 @@
       <DragNDropComponent v-show="dragAndDropCounter > 0" />
       <div v-show="!electronApi && omex === undefined">
         <MainMenu
+          v-show="mainMenuVisible"
           :uiEnabled="compUiEnabled"
           :hasFiles="hasFiles"
           @about="onAbout"
@@ -545,6 +546,23 @@ electronApi?.onSelect((filePath: string) => {
 // Track the height of our block UI.
 
 vueCommon.trackElementHeight('blockUi')
+
+// Set the height of our block UI.
+
+const blockUiStyle = vue.ref({})
+const mainMenuVisible = vue.ref<boolean>(false)
+
+vue.onMounted(() => {
+  // Set the height of our block UI to either '100vh' or '100%', depending on the height of our document element.
+
+  blockUiStyle.value =
+    window.getComputedStyle(document.documentElement).height === '0px' ? { height: '100vh' } : { height: '100%' }
+
+  // We have set the height of our block UI, so we can now safely show our main menu.
+  // Note: indeed, to properly determine the height of our document element, we must ensure that our own height is zero.
+
+  mainMenuVisible.value = true
+})
 
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry as normal (i.e. the whole OpenCOR UI will be shown).
