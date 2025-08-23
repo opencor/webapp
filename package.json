@@ -84,7 +84,7 @@
     "electron-conf": "^1.3.0",
     "electron-updater": "^6.6.2",
     "electron-vite": "^4.0.0",
-    "eslint": "^9.33.0",
+    "eslint": "^9.34.0",
     "node-addon-api": "^8.5.0",
     "prettier": "^3.6.2",
     "unplugin-vue-components": "^29.0.0",
