@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import Plotly from 'plotly.js-gl2d-dist-min'
+import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.1.0/+esm'
 import * as vue from 'vue'
 
 import * as vueCommon from '../../common/vueCommon'
