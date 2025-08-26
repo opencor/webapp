@@ -24,7 +24,6 @@
     "combine"
   ],
   "license": "Apache-2.0",
-  "main": "dist/opencor.umd.js",
   "module": "dist/opencor.es.js",
   "name": "@opencor/opencor",
   "productName": "OpenCOR",
@@ -37,12 +36,11 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/opencor.es.js",
-      "require": "./dist/opencor.umd.js"
+      "import": "./dist/opencor.es.js"
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20250823.0",
+  "version": "0.20250826.0",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -65,8 +63,6 @@
     "@vueuse/core": "12.8.2",
     "js-cookie": "^3.0.5",
     "jsonschema": "^1.5.0",
-    "mathjs": "^14.6.0",
-    "plotly.js-gl2d-dist-min": "3.1.0",
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
     "quill": "^2.0.3",

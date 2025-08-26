@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import * as mathjs from 'mathjs'
+import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@14.6.0/+esm'
 import * as vue from 'vue'
 
 import * as locCommon from '../../common/locCommon'
