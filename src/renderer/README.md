@@ -13,10 +13,10 @@ This package is a [Vue 3](https://vuejs.org/) component for OpenCOR, built with 
 
 The component comes with the following props:
 
-| Name    | Type                         | Default  | Description                                                     |
-| ------- | ---------------------------- | -------- | --------------------------------------------------------------- |
-| `omex`  | String                       | `null`   | The URL of the [OMEX file](https://combinearchive.org/) to use. |
-| `theme` | `light`, `dark`, or `system` | `system` | The theme to use.                                               |
+| Name    | Type                                       | Default    | Description                                                                      |
+| ------- | ------------------------------------------ | ---------- | -------------------------------------------------------------------------------- |
+| `omex`  | String                                     | `null`     | The URL of the [OMEX file](https://combinearchive.org/) to use.                  |
+| `theme` | String: `'light'`, `'dark'`, or `'system'` | `'system'` | The theme to use. Note that it is set once and for all, i.e. it is not reactive. |
 
 - **main.ts:**
 
