@@ -95,10 +95,6 @@ vue.watch(
         x: plot.x.data,
         y: plot.y.data,
         type: 'scattergl'
-        //---OPENCOR---
-        // WebGL rendering currently results in "Performance warning: clear() called with no buffers in bitmask" being
-        // logged to the console. This is a known issue and it should hopefully be fixed in the next version of Plotly.
-        // See https://github.com/plotly/plotly.js/issues/7387 and https://github.com/plotly/plotly.js/pull/7390.
       })),
       {
         // Note: the various keys can be found at https://plotly.com/javascript/reference/.
