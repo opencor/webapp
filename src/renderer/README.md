@@ -45,7 +45,7 @@ import '@opencor/opencor/style.css'
 </script>
 ```
 
-### With `omex` prop provided
+### `omex` prop provided
 
 When an `omex` prop is provided, the component goes straight into OpenCOR's simulation mode, using the specified OMEX file.
 
