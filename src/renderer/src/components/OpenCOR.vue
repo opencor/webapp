@@ -99,35 +99,47 @@ const compUiEnabled = vue.computed(() => {
   )
 })
 
-// Get the current Vue app instance to use some PrimeVue components.
+// Get the current Vue app instance to use some PrimeVue plugins.
 
 const getCurrentInstance = vue.getCurrentInstance()
 
 if (getCurrentInstance !== null) {
   const app = getCurrentInstance.appContext.app
-  let options = {}
 
-  if (props.theme === 'light') {
-    options = {
-      darkModeSelector: false
-    }
-  } else if (props.theme === 'dark') {
-    document.documentElement.classList.add('opencor-dark-mode')
-    document.body.classList.add('opencor-dark-mode')
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (app.config.globalProperties.$primevue === undefined) {
+    let options = {}
 
-    options = {
-      darkModeSelector: '.opencor-dark-mode'
+    if (props.theme === 'light') {
+      options = {
+        darkModeSelector: false
+      }
+    } else if (props.theme === 'dark') {
+      document.documentElement.classList.add('opencor-dark-mode')
+      document.body.classList.add('opencor-dark-mode')
+
+      options = {
+        darkModeSelector: '.opencor-dark-mode'
+      }
     }
+
+    app.use(primeVueConfig as unknown as vue.Plugin, {
+      theme: {
+        preset: primeVueAuraTheme,
+        options: options
+      }
+    })
   }
 
-  app.use(primeVueConfig as unknown as vue.Plugin, {
-    theme: {
-      preset: primeVueAuraTheme,
-      options: options
-    }
-  })
-  app.use(primeVueConfirmationService as unknown as vue.Plugin)
-  app.use(primeVueToastService as unknown as vue.Plugin)
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (app.config.globalProperties.$confirm === undefined) {
+    app.use(primeVueConfirmationService as unknown as vue.Plugin)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (app.config.globalProperties.$toast === undefined) {
+    app.use(primeVueToastService as unknown as vue.Plugin)
+  }
 }
 
 if (props.theme !== undefined) {
