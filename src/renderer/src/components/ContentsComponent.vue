@@ -8,6 +8,7 @@
       />
       <SimulationExperimentView
         v-else-if="fileTab.uiJson === undefined"
+        :uiEnabled="uiEnabled"
         :file="fileTabs[index]?.file"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="true"
