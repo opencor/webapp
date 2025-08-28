@@ -1,6 +1,6 @@
 <template>
-  <BlockUI id="blockUi" :blocked="!uiEnabled" class="overflow-hidden" :style="blockUiStyle">
-    <Toast id="toast" :pt:root:style="{ position: 'absolute' }" />
+  <BlockUI :id="blockUiId" :blocked="!uiEnabled" class="overflow-hidden" :style="blockUiStyle">
+    <Toast :id="toastId" :pt:root:style="{ position: 'absolute' }" />
     <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
@@ -81,6 +81,8 @@ import * as locApi from '../libopencor/locApi'
 
 const props = defineProps<IOpenCORProps>()
 
+const blockUiId = vue.ref('blockUi')
+const toastId = vue.ref('toast')
 const files = vue.ref<HTMLInputElement | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
@@ -615,6 +617,20 @@ vue.onMounted(() => {
   // Note: indeed, to properly determine the height of our document element, we must ensure that our own height is zero.
 
   mainMenuVisible.value = true
+
+  // Ensure that our toasts are shown within our block UI.
+
+  blockUiId.value = `blockUi${String(currentInstance?.uid)}`
+  toastId.value = `toast${String(currentInstance?.uid)}`
+
+  setTimeout(() => {
+    const toastElement = document.getElementById(toastId.value)
+    const blockUiElement = document.getElementById(blockUiId.value)
+
+    if (toastElement !== null && blockUiElement !== null) {
+      blockUiElement.appendChild(toastElement)
+    }
+  }, SHORT_DELAY)
 })
 
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
@@ -639,15 +655,6 @@ if (props.omex !== undefined) {
     // Do what follows with a bit of a delay to give our background (with the OpenCOR logo) time to be renderered.
 
     setTimeout(() => {
-      // Ensure that our toasts are shown within our container.
-
-      const toastElement = document.getElementById('toast')
-      const blockUiElement = document.getElementById('blockUi')
-
-      if (toastElement !== null && blockUiElement !== null) {
-        blockUiElement.appendChild(toastElement)
-      }
-
       if (electronApi !== undefined) {
         // Check for updates.
         // Note: the main process will actually check for updates if requested and if OpenCOR is packaged.
