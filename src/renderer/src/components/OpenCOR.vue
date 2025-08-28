@@ -20,14 +20,14 @@
           v-show="mainMenuVisible"
           :uiEnabled="compUiEnabled"
           :hasFiles="hasFiles"
-          @about="onAbout"
-          @open="($refs.files as HTMLInputElement).click()"
-          @openRemote="openRemoteVisible = true"
-          @openSampleLorenz="onOpenSampleLorenz"
-          @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenz"
-          @close="onClose"
-          @closeAll="onCloseAll"
-          @settings="onSettings"
+          @about="onAboutMenu"
+          @open="onOpenMenu"
+          @openRemote="onOpenRemoteMenu"
+          @openSampleLorenz="onOpenSampleLorenzMenu"
+          @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenzMenu"
+          @close="onCloseMenu"
+          @closeAll="onCloseAllMenu"
+          @settings="onSettingsMenu"
         />
       </div>
       <ContentsComponent ref="contents" :uiEnabled="compUiEnabled" :simulationOnly="omex !== undefined" />
@@ -81,6 +81,7 @@ import * as locApi from '../libopencor/locApi'
 
 const props = defineProps<IOpenCORProps>()
 
+const files = vue.ref<HTMLInputElement | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
@@ -172,9 +173,9 @@ function handleAction(action: string): void {
   const actionArguments = index !== -1 ? action.substring(index + 1) : ''
 
   if (isAction(actionName, 'openAboutDialog')) {
-    onAbout()
+    onAboutMenu()
   } else if (isAction(actionName, 'openSettingsDialog')) {
-    onSettings()
+    onSettingsMenu()
   } else {
     const filePaths = actionArguments.split('%7C')
 
@@ -320,10 +321,14 @@ electronApi?.onUpdateCheckError((issue: string) => {
 const aboutVisible = vue.ref<boolean>(false)
 
 electronApi?.onAbout(() => {
-  onAbout()
+  onAboutMenu()
 })
 
-function onAbout(): void {
+function onAboutMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   aboutVisible.value = true
 }
 
@@ -332,10 +337,14 @@ function onAbout(): void {
 const settingsVisible = vue.ref<boolean>(false)
 
 electronApi?.onSettings(() => {
-  onSettings()
+  onSettingsMenu()
 })
 
-function onSettings(): void {
+function onSettingsMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   settingsVisible.value = true
 }
 
@@ -480,6 +489,14 @@ electronApi?.onOpen((filePath: string) => {
   openFile(filePath)
 })
 
+function onOpenMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
+  files.value?.click()
+}
+
 // Open remote.
 
 const openRemoteVisible = vue.ref<boolean>(false)
@@ -487,6 +504,14 @@ const openRemoteVisible = vue.ref<boolean>(false)
 electronApi?.onOpenRemote(() => {
   openRemoteVisible.value = true
 })
+
+function onOpenRemoteMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
+  openRemoteVisible.value = true
+}
 
 function onOpenRemote(url: string): void {
   // Note: no matter whether this is OpenCOR or OpenCOR's Web app, we always retrieve the file contents of a remote
@@ -500,40 +525,56 @@ function onOpenRemote(url: string): void {
 // Open sample Lorenz.
 
 electronApi?.onOpenSampleLorenz(() => {
-  onOpenSampleLorenz()
+  onOpenSampleLorenzMenu()
 })
 
-function onOpenSampleLorenz(): void {
+function onOpenSampleLorenzMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   openFile('https://github.com/opencor/webapp/raw/refs/heads/main/tests/models/lorenz.omex')
 }
 
 // Open sample interactive Lorenz.
 
 electronApi?.onOpenSampleInteractiveLorenz(() => {
-  onOpenSampleInteractiveLorenz()
+  onOpenSampleInteractiveLorenzMenu()
 })
 
-function onOpenSampleInteractiveLorenz(): void {
+function onOpenSampleInteractiveLorenzMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   openFile('https://github.com/opencor/webapp/raw/refs/heads/main/tests/models/ui/lorenz.omex')
 }
 
 // Close.
 
 electronApi?.onClose(() => {
-  onClose()
+  onCloseMenu()
 })
 
-function onClose(): void {
+function onCloseMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   contents.value?.closeCurrentFile()
 }
 
 // Close all.
 
 electronApi?.onCloseAll(() => {
-  onCloseAll()
+  onCloseAllMenu()
 })
 
-function onCloseAll(): void {
+function onCloseAllMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   contents.value?.closeAllFiles()
 }
 
