@@ -111,15 +111,15 @@ const filePaths = vue.computed(() => {
   return res
 })
 
-vue.watch(filePaths, (filePaths) => {
-  electronApi?.filesOpened(filePaths)
+vue.watch(filePaths, (newFilePaths: string[]) => {
+  electronApi?.filesOpened(newFilePaths)
 })
 
-vue.watch(activeFile, (filePath) => {
+vue.watch(activeFile, (newActiveFile: string) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
   //       people know that a file has been selected.
 
-  electronApi?.fileSelected(filePath)
+  electronApi?.fileSelected(newActiveFile)
 })
 
 function openFile(file: locApi.File): void {

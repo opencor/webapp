@@ -202,8 +202,8 @@ const hasFiles = vue.computed(() => {
   return contents.value?.hasFiles() ?? false
 })
 
-vue.watch(hasFiles, (hasFiles) => {
-  electronApi?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
+vue.watch(hasFiles, (newHasFiles: boolean) => {
+  electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles)
 })
 
 // Loading OpenCOR.
@@ -217,8 +217,8 @@ if (window.locApi === undefined) {
 
   loadingOpencorMessageVisible.value = true
 
-  vue.watch(locApiInitialised, (initialised) => {
-    if (initialised) {
+  vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
+    if (newLocApiInitialised) {
       loadingOpencorMessageVisible.value = false
 
       enableDisableUi(true)
@@ -568,8 +568,8 @@ vue.onMounted(() => {
 // carry as normal (i.e. the whole OpenCOR UI will be shown).
 
 if (props.omex !== undefined) {
-  vue.watch(locApiInitialised, (initialised) => {
-    if (initialised) {
+  vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
+    if (newLocApiInitialised) {
       if (props.omex !== undefined) {
         openFile(props.omex)
       }
