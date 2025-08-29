@@ -102,10 +102,10 @@ const compUiEnabled = vue.computed(() => {
 
 // Get the current Vue app instance to use some PrimeVue plugins.
 
-const getCurrentInstance = vue.getCurrentInstance()
+const currentInstance = vue.getCurrentInstance()
 
-if (getCurrentInstance !== null) {
-  const app = getCurrentInstance.appContext.app
+if (currentInstance !== null) {
+  const app = currentInstance.appContext.app
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (app.config.globalProperties.$primevue === undefined) {
@@ -600,7 +600,7 @@ electronApi?.onSelect((filePath: string) => {
 
 vueCommon.trackElementHeight('blockUi')
 
-// Set the height of our block UI.
+// A few things that can only be done when the component is mounted.
 
 const blockUiStyle = vue.ref({})
 const mainMenuVisible = vue.ref<boolean>(false)
@@ -633,7 +633,7 @@ if (props.omex !== undefined) {
 
   vueCommon.trackElementHeight('mainMenu')
 
-  // Things that need to be done when the component is mounted.
+  // A few additional things that can only be done when the component is mounted.
 
   vue.onMounted(() => {
     // Do what follows with a bit of a delay to give our background (with the OpenCOR logo) time to be renderered.
