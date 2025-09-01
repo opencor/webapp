@@ -1,8 +1,8 @@
 <template>
   <Message class="message" severity="secondary">
-    <i class="message-icon pi pi-spin pi-cog" />
+    <i class="message-icon pi pi-spin pi-cog text-center" />
     <br />
-    <span class="message-text">{{ message }}</span>
+    <span class="message-text text-center">{{ message }}</span>
   </Message>
 </template>
 
@@ -22,9 +22,12 @@ defineProps<{
   z-index: 99999;
 }
 
-.message-icon {
-  text-align: center;
+.message-icon,
+.message-text {
   display: block;
+}
+
+.message-icon {
   font-size: 3rem;
 }
 
