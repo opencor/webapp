@@ -6,7 +6,6 @@
         :width="width"
         :height="height"
         :issues="fileTab.file.issues()"
-        :simulationOnly="simulationOnly"
       />
       <SimulationExperimentView
         v-else-if="fileTab.uiJson === undefined"
@@ -15,14 +14,13 @@
         :uiEnabled="uiEnabled"
         :file="fileTabs[index]?.file"
         :isActiveFile="fileTab.file.path() === activeFile"
-        :simulationOnly="true"
+        :simulationOnly="simulationOnly"
       />
       <SimulationExperimentUiView
         v-else
         :width="width"
         :height="height"
         :file="fileTabs[index]?.file"
-        :simulationOnly="true"
         :uiJson="fileTabs[index]?.uiJson"
       />
     </div>
@@ -35,7 +33,7 @@
       :scrollable="true"
       :selectOnFocus="true"
     >
-      <TabList id="fileTablist" class="file-tablist">
+      <TabList :id="fileTablistId" class="file-tablist">
         <Tab
           v-for="fileTab in fileTabs"
           :id="`tab_${fileTab.file.path()}`"
@@ -64,13 +62,13 @@
           <IssuesView
             v-if="fileTab.file.issues().length !== 0"
             :width="width"
-            :height="height"
+            :height="heightMinusFileTablist"
             :issues="fileTab.file.issues()"
           />
           <SimulationExperimentView
             v-else-if="fileTab.uiJson === undefined"
             :width="width"
-            :height="height"
+            :height="heightMinusFileTablist"
             :uiEnabled="uiEnabled"
             :file="fileTabs[index]?.file"
             :isActiveFile="fileTab.file.path() === activeFile"
@@ -78,7 +76,7 @@
           <SimulationExperimentUiView
             v-else
             :width="width"
-            :height="height"
+            :height="heightMinusFileTablist"
             :file="fileTabs[index]?.file"
             :uiJson="fileTabs[index]?.uiJson"
           />
@@ -94,6 +92,7 @@ import * as vueusecore from '@vueuse/core'
 import * as vue from 'vue'
 
 import * as common from '../common/common'
+import { SHORT_DELAY } from '../common/constants'
 import { electronApi } from '../common/electronApi'
 import * as vueCommon from '../common/vueCommon'
 import * as locApi from '../libopencor/locApi'
@@ -120,8 +119,10 @@ export interface IContentsComponent {
   selectFile(filePath: string): void
 }
 
+const fileTablistId = vue.ref('contentsComponentFileTablist')
 const fileTabs = vue.ref<IFileTab[]>([])
 const activeFile = vue.ref<string>('')
+const heightMinusFileTablist = vue.ref<number>(0)
 
 const filePaths = vue.computed(() => {
   const res: string[] = []
@@ -218,9 +219,57 @@ function closeAllFiles(): void {
   }
 }
 
-// Track the height of our file tablist.
+// Various things that need to be done once we are mounted.
 
-vueCommon.trackElementHeight('fileTablist')
+const currentInstance = vue.getCurrentInstance()
+
+vue.onMounted(() => {
+  // Customise our IDs.
+
+  fileTablistId.value = `contentsComponentFileTablist${String(currentInstance?.uid)}`
+
+  // Track the height of our file tablist.
+
+  let fileTablistResizeObserver: ResizeObserver | undefined
+
+  setTimeout(() => {
+    fileTablistResizeObserver = vueCommon.trackElementHeight(fileTablistId.value)
+  }, SHORT_DELAY)
+
+  // Monitor "our" contents size.
+
+  const element = currentInstance?.vnode.el as HTMLElement
+
+  function resizeOurselves() {
+    heightMinusFileTablist.value = props.height - vueCommon.trackedCssVariableValue(fileTablistId.value)
+  }
+
+  const resizeObserver = new ResizeObserver(() => {
+    resizeOurselves()
+  })
+
+  let oldFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value)
+
+  const mutationObserver = new MutationObserver(() => {
+    const newFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value)
+
+    if (newFileTablistHeight !== oldFileTablistHeight) {
+      oldFileTablistHeight = newFileTablistHeight
+
+      resizeOurselves()
+    }
+  })
+
+  resizeObserver.observe(element)
+  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+
+  vue.onUnmounted(() => {
+    resizeObserver.disconnect()
+    mutationObserver.disconnect()
+
+    fileTablistResizeObserver?.disconnect()
+  })
+})
 
 // Keyboard shortcuts.
 

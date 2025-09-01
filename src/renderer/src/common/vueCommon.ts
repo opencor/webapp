@@ -36,40 +36,43 @@ export function useDarkMode(): boolean {
   return _isDarkMode.value
 }
 
-// A method to track the height of a given element.
+// A method to retrieve the name of a tracked CSS variable.
 
-export function trackElementHeight(id: string): void {
-  vue.onMounted(() => {
-    const element = document.getElementById(id)
-
-    if (element !== null) {
-      const observer = new ResizeObserver(() => {
-        let elementHeight = window.getComputedStyle(element).height
-
-        if (elementHeight === '' || elementHeight === 'auto') {
-          elementHeight = '0px'
-        }
-
-        const cssVariableName =
-          '--' + (id.split('_')[0] ?? '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '-height'
-        const oldElementHeight = document.documentElement.style.getPropertyValue(cssVariableName)
-
-        if (oldElementHeight === '' || (elementHeight !== '0px' && oldElementHeight !== elementHeight)) {
-          document.documentElement.style.setProperty(cssVariableName, elementHeight)
-        }
-      })
-
-      observer.observe(element)
-
-      vue.onUnmounted(() => {
-        observer.disconnect()
-      })
-    }
-  })
+export function trackedCssVariableName(id: string): string {
+  return '--' + (id.split('_')[0] ?? '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '-height'
 }
 
-// A method to retrieve the value of a CSS variable.
+// A method to track the height of a given element.
 
-export function cssVariableValue(cssVariableName: string): number {
-  return parseFloat(document.documentElement.style.getPropertyValue(cssVariableName))
+export function trackElementHeight(id: string): ResizeObserver | undefined {
+  const element = document.getElementById(id)
+
+  if (element !== null) {
+    const resizeObserver = new ResizeObserver(() => {
+      let elementHeight = window.getComputedStyle(element).height
+
+      if (elementHeight === '' || elementHeight === 'auto') {
+        elementHeight = '0px'
+      }
+
+      const cssVariableName = trackedCssVariableName(id)
+      const oldElementHeight = document.documentElement.style.getPropertyValue(cssVariableName)
+
+      if (oldElementHeight === '' || (elementHeight !== '0px' && oldElementHeight !== elementHeight)) {
+        document.documentElement.style.setProperty(cssVariableName, elementHeight)
+      }
+    })
+
+    resizeObserver.observe(element)
+
+    return resizeObserver
+  }
+
+  return undefined
+}
+
+// A method to retrieve the value of a tracked CSS variable.
+
+export function trackedCssVariableValue(id: string): number {
+  return parseFloat(document.documentElement.style.getPropertyValue(trackedCssVariableName(id)))
 }

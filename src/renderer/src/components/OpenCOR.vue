@@ -4,14 +4,7 @@
     <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
-    <IssuesView
-      v-if="issues.length !== 0"
-      class="h-full"
-      :issues="issues"
-      :simulationOnly="omex !== undefined"
-      :width="width"
-      :height="height"
-    />
+    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :width="width" :height="height" />
     <div
       v-else
       @dragenter="onDragEnter"
@@ -24,6 +17,7 @@
       <DragNDropComponent v-show="dragAndDropCounter > 0" />
       <div v-show="!electronApi && omex === undefined">
         <MainMenu
+          :id="mainMenuId"
           v-show="mainMenuVisible"
           :uiEnabled="compUiEnabled"
           :hasFiles="hasFiles"
@@ -42,7 +36,7 @@
         :uiEnabled="compUiEnabled"
         :simulationOnly="omex !== undefined"
         :width="width"
-        :height="height"
+        :height="heightMinusMainMenu"
       />
       <OpenRemoteDialog
         v-model:visible="openRemoteVisible"
@@ -94,8 +88,9 @@ import * as locApi from '../libopencor/locApi'
 
 const props = defineProps<IOpenCORProps>()
 
-const blockUiId = vue.ref('blockUi')
-const toastId = vue.ref('toast')
+const blockUiId = vue.ref('opencorBlockUi')
+const toastId = vue.ref('opencorToast')
+const mainMenuId = vue.ref('opencorMainMenu')
 const files = vue.ref<HTMLElement | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
@@ -617,6 +612,7 @@ const blockUiStyle = vue.ref({})
 const mainMenuVisible = vue.ref<boolean>(false)
 const width = vue.ref<number>(0)
 const height = vue.ref<number>(0)
+const heightMinusMainMenu = vue.ref<number>(0)
 
 vue.onMounted(() => {
   // Set the height of our block UI to either '100vh' or '100%', depending on the height of our document element.
@@ -629,10 +625,21 @@ vue.onMounted(() => {
 
   mainMenuVisible.value = true
 
-  // Ensure that our toasts are shown within our block UI.
+  // Customise our IDs.
 
-  blockUiId.value = `blockUi${String(currentInstance?.uid)}`
-  toastId.value = `toast${String(currentInstance?.uid)}`
+  blockUiId.value = `opencorBlockUi${String(currentInstance?.uid)}`
+  toastId.value = `opencorToast${String(currentInstance?.uid)}`
+  mainMenuId.value = `opencorMainMenu${String(currentInstance?.uid)}`
+
+  // Track the height of our main menu.
+
+  let mainMenuResizeObserver: ResizeObserver | undefined
+
+  setTimeout(() => {
+    mainMenuResizeObserver = vueCommon.trackElementHeight(mainMenuId.value)
+  }, SHORT_DELAY)
+
+  // Ensure that our toasts are shown within our block UI.
 
   setTimeout(() => {
     const toastElement = document.getElementById(toastId.value)
@@ -643,21 +650,43 @@ vue.onMounted(() => {
     }
   }, SHORT_DELAY)
 
-  // Monitor "our" size.
+  // Monitor "our" contents size.
 
   const element = currentInstance?.vnode.el as HTMLElement
 
-  const observer = new ResizeObserver(() => {
+  function resizeOurselves() {
     const style = window.getComputedStyle(element)
 
     width.value = parseFloat(style.width)
     height.value = parseFloat(style.height)
+
+    heightMinusMainMenu.value = height.value - vueCommon.trackedCssVariableValue(mainMenuId.value)
+  }
+
+  const resizeObserver = new ResizeObserver(() => {
+    resizeOurselves()
   })
 
-  observer.observe(element)
+  let oldMainMenuHeight = vueCommon.trackedCssVariableValue(mainMenuId.value)
+
+  const mutationObserver = new MutationObserver(() => {
+    const newMainMenuHeight = vueCommon.trackedCssVariableValue(mainMenuId.value)
+
+    if (newMainMenuHeight !== oldMainMenuHeight) {
+      oldMainMenuHeight = newMainMenuHeight
+
+      resizeOurselves()
+    }
+  })
+
+  resizeObserver.observe(element)
+  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
 
   vue.onUnmounted(() => {
-    observer.disconnect()
+    resizeObserver.disconnect()
+    mutationObserver.disconnect()
+
+    mainMenuResizeObserver?.disconnect()
   })
 })
 
@@ -673,10 +702,6 @@ if (props.omex !== undefined) {
     }
   })
 } else {
-  // (Also) track the height of our main menu.
-
-  vueCommon.trackElementHeight('mainMenu')
-
   // A few additional things that can only be done when the component is mounted.
 
   vue.onMounted(() => {

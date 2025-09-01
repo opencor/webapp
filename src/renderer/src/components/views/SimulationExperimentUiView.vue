@@ -1,13 +1,6 @@
 <template>
-  <div class="flex" :style="{ width: width + 'px', height: containerHeight }">
-    <IssuesView
-      v-if="issues.length !== 0"
-      class="grow"
-      :width="width"
-      :height="height"
-      :issues="issues"
-      :simulationOnly="simulationOnly"
-    />
+  <div class="flex" :style="{ width: width + 'px', height: height + 'px' }">
+    <IssuesView v-if="issues.length !== 0" class="grow" :width="width" :height="height" :issues="issues" />
     <div v-else class="flex grow">
       <div class="ml-4 mr-4 mb-4">
         <ScrollPanel class="h-full">
@@ -44,9 +37,7 @@
 import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@14.6.0/+esm'
 import * as vue from 'vue'
 
-import { NO_DELAY } from '../../common/constants'
 import * as locCommon from '../../common/locCommon'
-import * as vueCommon from '../../common/vueCommon'
 import * as locApi from '../../libopencor/locApi'
 
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
@@ -54,7 +45,6 @@ import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 const props = defineProps<{
   file: locApi.File
   height: number
-  simulationOnly?: boolean
   uiJson: locApi.IUiJson
   width: number
 }>()
@@ -148,33 +138,6 @@ function updateUiAndSimulation() {
     ]
   })
 }
-
-// Resize our container as needed.
-
-const containerHeight = vue.ref<string>('0px')
-
-function resizeContainer() {
-  const newHeight = props.simulationOnly
-    ? props.height
-    : props.height -
-      vueCommon.cssVariableValue('--main-menu-height') -
-      vueCommon.cssVariableValue('--file-tablist-height')
-
-  containerHeight.value = `${String(newHeight)}px`
-}
-
-vue.onMounted(() => {
-  setTimeout(() => {
-    resizeContainer()
-  }, NO_DELAY)
-
-  vue.watch(
-    () => [props.height],
-    () => {
-      resizeContainer()
-    }
-  )
-})
 </script>
 
 <style scoped>
