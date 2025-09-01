@@ -83,7 +83,7 @@ const props = defineProps<IOpenCORProps>()
 
 const blockUiId = vue.ref('blockUi')
 const toastId = vue.ref('toast')
-const files = vue.ref<HTMLInputElement | null>(null)
+const files = vue.ref<HTMLElement | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
