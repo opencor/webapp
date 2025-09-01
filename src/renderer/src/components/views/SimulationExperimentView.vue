@@ -1,5 +1,5 @@
 <template>
-  <div :class="`h-full ${simulationOnly ? 'div-simulation-only' : 'div-simulation'}`">
+  <div :style="{ width: width + 'px', height: containerHeight }">
     <Toolbar :id="toolbarId" class="p-1!">
       <template #start>
         <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
@@ -59,6 +59,7 @@ import * as vueusecore from '@vueuse/core'
 import * as vue from 'vue'
 
 import * as common from '../../common/common'
+import { NO_DELAY } from '../../common/constants'
 import * as locCommon from '../../common/locCommon'
 import * as vueCommon from '../../common/vueCommon'
 import * as locApi from '../../libopencor/locApi'
@@ -66,10 +67,12 @@ import * as locApi from '../../libopencor/locApi'
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 
 const props = defineProps<{
-  uiEnabled: boolean
   file: locApi.File
+  height: number
   isActiveFile: boolean
   simulationOnly?: boolean
+  uiEnabled: boolean
+  width: number
 }>()
 
 const toolbarId = `simulationExperimentToolbar_${props.file.path()}`
@@ -143,6 +146,34 @@ function updatePlot() {
   ]
 }
 
+// Resize our container as needed.
+
+const containerHeight = vue.ref<string>('0px')
+
+function resizeContainer() {
+  const newHeight = props.simulationOnly
+    ? props.height - vueCommon.cssVariableValue('--simulation-experiment-toolbar-height')
+    : props.height -
+      vueCommon.cssVariableValue('--main-menu-height') -
+      vueCommon.cssVariableValue('--file-tablist-height') -
+      vueCommon.cssVariableValue('--simulation-experiment-toolbar-height')
+
+  containerHeight.value = `${String(newHeight)}px`
+}
+
+vue.onMounted(() => {
+  setTimeout(() => {
+    resizeContainer()
+  }, NO_DELAY)
+
+  vue.watch(
+    () => [props.height],
+    () => {
+      resizeContainer()
+    }
+  )
+})
+
 // "Initialise" our plot.
 
 vue.onMounted(() => {
@@ -203,16 +234,5 @@ if (!common.isMobile()) {
 
 :deep(.ql-editor > *) {
   cursor: default;
-}
-
-.div-simulation-only {
-  height: calc(var(--block-ui-height) - var(--simulation-experiment-toolbar-height));
-}
-
-.div-simulation {
-  height: calc(
-    var(--block-ui-height) - var(--main-menu-height) - var(--file-tablist-height) -
-      var(--simulation-experiment-toolbar-height)
-  );
 }
 </style>

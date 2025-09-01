@@ -52,7 +52,7 @@ export function trackElementHeight(id: string): void {
 
         const cssVariableName =
           '--' + (id.split('_')[0] ?? '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '-height'
-        const oldElementHeight = window.getComputedStyle(document.documentElement).getPropertyValue(cssVariableName)
+        const oldElementHeight = document.documentElement.style.getPropertyValue(cssVariableName)
 
         if (oldElementHeight === '' || (elementHeight !== '0px' && oldElementHeight !== elementHeight)) {
           document.documentElement.style.setProperty(cssVariableName, elementHeight)
@@ -66,4 +66,10 @@ export function trackElementHeight(id: string): void {
       })
     }
   })
+}
+
+// A method to retrieve the value of a CSS variable.
+
+export function cssVariableValue(cssVariableName: string): number {
+  return parseFloat(document.documentElement.style.getPropertyValue(cssVariableName))
 }

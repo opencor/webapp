@@ -3,11 +3,15 @@
     <div v-for="(fileTab, index) in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" :value="fileTab.file.path()">
       <IssuesView
         v-if="fileTab.file.issues().length !== 0"
+        :width="width"
+        :height="height"
         :issues="fileTab.file.issues()"
         :simulationOnly="simulationOnly"
       />
       <SimulationExperimentView
         v-else-if="fileTab.uiJson === undefined"
+        :width="width"
+        :height="height"
         :uiEnabled="uiEnabled"
         :file="fileTabs[index]?.file"
         :isActiveFile="fileTab.file.path() === activeFile"
@@ -15,6 +19,8 @@
       />
       <SimulationExperimentUiView
         v-else
+        :width="width"
+        :height="height"
         :file="fileTabs[index]?.file"
         :simulationOnly="true"
         :uiJson="fileTabs[index]?.uiJson"
@@ -55,14 +61,27 @@
           :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
-          <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
+          <IssuesView
+            v-if="fileTab.file.issues().length !== 0"
+            :width="width"
+            :height="height"
+            :issues="fileTab.file.issues()"
+          />
           <SimulationExperimentView
             v-else-if="fileTab.uiJson === undefined"
+            :width="width"
+            :height="height"
             :uiEnabled="uiEnabled"
             :file="fileTabs[index]?.file"
             :isActiveFile="fileTab.file.path() === activeFile"
           />
-          <SimulationExperimentUiView v-else :file="fileTabs[index]?.file" :uiJson="fileTabs[index]?.uiJson" />
+          <SimulationExperimentUiView
+            v-else
+            :width="width"
+            :height="height"
+            :file="fileTabs[index]?.file"
+            :uiJson="fileTabs[index]?.uiJson"
+          />
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -85,6 +104,8 @@ export interface IFileTab {
 }
 
 const props = defineProps<{
+  width: number
+  height: number
   uiEnabled: boolean
   simulationOnly?: boolean
 }>()

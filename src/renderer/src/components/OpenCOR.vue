@@ -4,7 +4,14 @@
     <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
-    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :simulationOnly="omex !== undefined" />
+    <IssuesView
+      v-if="issues.length !== 0"
+      class="h-full"
+      :issues="issues"
+      :simulationOnly="omex !== undefined"
+      :width="width"
+      :height="height"
+    />
     <div
       v-else
       @dragenter="onDragEnter"
@@ -30,7 +37,13 @@
           @settings="onSettingsMenu"
         />
       </div>
-      <ContentsComponent ref="contents" :uiEnabled="compUiEnabled" :simulationOnly="omex !== undefined" />
+      <ContentsComponent
+        ref="contents"
+        :uiEnabled="compUiEnabled"
+        :simulationOnly="omex !== undefined"
+        :width="width"
+        :height="height"
+      />
       <OpenRemoteDialog
         v-model:visible="openRemoteVisible"
         @openRemote="onOpenRemote"
@@ -598,14 +611,12 @@ electronApi?.onSelect((filePath: string) => {
   contents.value?.selectFile(filePath)
 })
 
-// Track the height of our block UI.
-
-vueCommon.trackElementHeight('blockUi')
-
 // A few things that can only be done when the component is mounted.
 
 const blockUiStyle = vue.ref({})
 const mainMenuVisible = vue.ref<boolean>(false)
+const width = vue.ref<number>(0)
+const height = vue.ref<number>(0)
 
 vue.onMounted(() => {
   // Set the height of our block UI to either '100vh' or '100%', depending on the height of our document element.
@@ -631,6 +642,23 @@ vue.onMounted(() => {
       blockUiElement.appendChild(toastElement)
     }
   }, SHORT_DELAY)
+
+  // Monitor "our" size.
+
+  const element = currentInstance?.vnode.el as HTMLElement
+
+  const observer = new ResizeObserver(() => {
+    const style = window.getComputedStyle(element)
+
+    width.value = parseFloat(style.width)
+    height.value = parseFloat(style.height)
+  })
+
+  observer.observe(element)
+
+  vue.onUnmounted(() => {
+    observer.disconnect()
+  })
 })
 
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
