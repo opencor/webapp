@@ -117,7 +117,7 @@ export class File {
       return
     }
 
-    if (this._issues.length !== 0) {
+    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
       return
     }
 
@@ -126,7 +126,7 @@ export class File {
     this._document = vue.markRaw(new SedDocument(this._path, this._wasmFile))
     this._issues = this._document.issues()
 
-    if (this._issues.length !== 0) {
+    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
       return
     }
 
@@ -202,8 +202,7 @@ export class File {
       })
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (this._issues.length !== 0) {
+    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
       return
     }
 
