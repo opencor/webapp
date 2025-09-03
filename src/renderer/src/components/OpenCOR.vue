@@ -1,7 +1,7 @@
 <template>
   <BlockUI ref="blockUi" :id="blockUiId" :blocked="!uiEnabled" class="overflow-hidden" :style="blockUiStyle">
     <Toast :id="toastId" :pt:root:style="{ position: 'absolute' }" />
-    <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
+    <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
     <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :width="width" :height="height" />
@@ -29,7 +29,6 @@
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
       />
-      <BackgroundComponent v-show="omex === undefined" />
       <ContentsComponent
         ref="contents"
         :uiEnabled="compUiEnabled"

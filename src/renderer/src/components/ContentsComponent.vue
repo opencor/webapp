@@ -26,6 +26,7 @@
     </div>
   </div>
   <div v-else class="h-full">
+    <BackgroundComponent v-show="fileTabs.length === 0" :style="{ height: height + 'px' }" />
     <Tabs
       v-show="fileTabs.length !== 0"
       id="fileTabs"
