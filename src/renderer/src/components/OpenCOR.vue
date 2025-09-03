@@ -15,22 +15,21 @@
     >
       <input ref="files" type="file" multiple style="display: none" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter > 0" />
-      <div v-show="!electronApi && omex === undefined">
-        <MainMenu
-          :id="mainMenuId"
-          v-show="mainMenuVisible"
-          :uiEnabled="compUiEnabled"
-          :hasFiles="hasFiles"
-          @about="onAboutMenu"
-          @open="onOpenMenu"
-          @openRemote="onOpenRemoteMenu"
-          @openSampleLorenz="onOpenSampleLorenzMenu"
-          @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenzMenu"
-          @close="onCloseMenu"
-          @closeAll="onCloseAllMenu"
-          @settings="onSettingsMenu"
-        />
-      </div>
+      <MainMenu
+        :id="mainMenuId"
+        v-show="!electronApi && omex === undefined"
+        :uiEnabled="compUiEnabled"
+        :hasFiles="hasFiles"
+        @about="onAboutMenu"
+        @open="onOpenMenu"
+        @openRemote="onOpenRemoteMenu"
+        @openSampleLorenz="onOpenSampleLorenzMenu"
+        @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenzMenu"
+        @close="onCloseMenu"
+        @closeAll="onCloseAllMenu"
+        @settings="onSettingsMenu"
+      />
+      <BackgroundComponent v-show="omex === undefined" />
       <ContentsComponent
         ref="contents"
         :uiEnabled="compUiEnabled"
@@ -96,6 +95,8 @@ const files = vue.ref<HTMLElement | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
+
+// Determine if the component UI should be enabled.
 
 const compUiEnabled = vue.computed(() => {
   return (
@@ -610,7 +611,6 @@ electronApi?.onSelect((filePath: string) => {
 // A few things that can only be done when the component is mounted.
 
 const blockUiStyle = vue.ref({})
-const mainMenuVisible = vue.ref<boolean>(false)
 const width = vue.ref<number>(0)
 const height = vue.ref<number>(0)
 const heightMinusMainMenu = vue.ref<number>(0)
@@ -620,11 +620,6 @@ vue.onMounted(() => {
   // container.
 
   blockUiStyle.value = blockUi.value?.$el.parentElement.id === 'app' ? { height: '100vh' } : { height: '100%' }
-
-  // We have set the height of our block UI, so we can now safely show our main menu.
-  // Note: indeed, to properly determine the height of our document element, we must ensure that our own height is zero.
-
-  mainMenuVisible.value = true
 
   // Customise our IDs.
 
