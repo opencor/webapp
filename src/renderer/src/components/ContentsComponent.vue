@@ -34,7 +34,7 @@
       :scrollable="true"
       :selectOnFocus="true"
     >
-      <TabList :id="fileTablistId" class="file-tablist">
+      <TabList :id="fileTablistId" class="border-b border-b-(--p-primary-color)">
         <Tab
           v-for="fileTab in fileTabs"
           :id="`tab_${fileTab.file.path()}`"
@@ -294,10 +294,6 @@ if (!common.isMobile()) {
 </script>
 
 <style scoped>
-.file-tablist {
-  border-bottom: 1px solid var(--p-primary-color);
-}
-
 .p-tab {
   padding: 0.25rem 0.5rem;
   border-right: 1px solid var(--p-content-border-color);

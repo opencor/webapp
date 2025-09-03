@@ -21,11 +21,11 @@
           </Fieldset>
         </ScrollPanel>
       </div>
-      <div :id="plotsDivId" class="grow">
+      <div class="grow">
         <GraphPanelWidget
           v-for="(_plot, index) in (uiJson as any).output.plots"
           :key="`plot_${index}`"
-          class="graph-panel-widget"
+          :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
           :plots="plots.length !== 0 ? plots[index] : []"
         />
       </div>
@@ -53,7 +53,6 @@ const math = mathjs.create(mathjs.all ?? {}, {})
 const model = props.file.document().model(0)
 const instance = props.file.instance()
 const instanceTask = instance.task(0)
-const plotsDivId = `plotsDiv_${props.file.path()}`
 const plots = vue.ref<IGraphPanelPlot[][]>([])
 const issues = vue.ref(locApi.uiJsonIssues(props.uiJson))
 const inputValues = vue.ref<number[]>([])
@@ -84,16 +83,6 @@ props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
 
 props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
   idToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name)
-})
-
-vue.onMounted(() => {
-  updateUiAndSimulation()
-
-  // Determine the number of graph panel widgets (needed to set their height).
-
-  const plotsDiv = document.getElementById(plotsDivId)
-
-  plotsDiv?.style.setProperty('--graph-panel-widget-count', String(plotsDiv.children.length))
 })
 
 function updateUiAndSimulation() {
@@ -138,10 +127,8 @@ function updateUiAndSimulation() {
     ]
   })
 }
-</script>
 
-<style scoped>
-.graph-panel-widget {
-  height: calc(100% / var(--graph-panel-widget-count));
-}
-</style>
+vue.onMounted(() => {
+  updateUiAndSimulation()
+})
+</script>

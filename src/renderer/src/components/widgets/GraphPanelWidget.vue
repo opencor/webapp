@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-row h-full">
-    <div v-if="showMarker" class="marker" />
+    <div v-if="showMarker" class="w-[3px] bg-(--p-primary-color)" />
     <div ref="mainDiv" class="grow h-full" />
   </div>
 </template>
@@ -139,10 +139,3 @@ vue.watch(
   }
 )
 </script>
-
-<style scoped>
-.marker {
-  width: 3px;
-  background-color: var(--p-primary-color);
-}
-</style>
