@@ -15,7 +15,7 @@
             fill="currentColor"
           />
         </svg>
-        <div v-if="item.shortcut !== undefined" class="ml-auto border border-surface rounded bg-emphasis text-xs/3">
+        <div v-if="item.shortcut !== undefined" class="ml-auto border rounded text-xs/3">
           {{ item.shortcut }}
         </div>
       </a>
