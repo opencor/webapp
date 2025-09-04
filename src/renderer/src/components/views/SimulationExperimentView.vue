@@ -69,6 +69,7 @@ import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 const props = defineProps<{
   file: locApi.File
   height: number
+  isActive: boolean
   isActiveFile: boolean
   simulationOnly?: boolean
   uiEnabled: boolean
@@ -210,7 +211,7 @@ vue.onMounted(() => {
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.uiEnabled) {
+    if (!props.isActive || !props.uiEnabled) {
       return
     }
 

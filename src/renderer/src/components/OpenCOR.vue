@@ -1,6 +1,17 @@
 <template>
-  <BlockUI ref="blockUi" :id="blockUiId" :blocked="!uiEnabled" class="overflow-hidden" :style="blockUiStyle">
-    <Toast :id="toastId" :pt:root:style="{ position: 'absolute' }" />
+  <BlockUI
+    ref="blockUi"
+    :id="blockUiId"
+    :blocked="!uiEnabled"
+    class="overflow-hidden"
+    :style="blockUiStyle"
+    @click="activateInstance"
+    @focus="activateInstance"
+    @focusin="activateInstance"
+    @keydown="activateInstance"
+    @mousedown="activateInstance"
+  >
+    <Toast :id="toastId" :pt:root:style="{ position: 'absolute' }" :class="compIsActive ? 'visible' : 'invisible'" />
     <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
@@ -17,7 +28,8 @@
       <DragNDropComponent v-show="dragAndDropCounter > 0" />
       <MainMenu
         :id="mainMenuId"
-        v-show="!electronApi && omex === undefined"
+        v-if="!electronApi && omex === undefined"
+        :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
         @about="onAboutMenu"
@@ -31,6 +43,7 @@
       />
       <ContentsComponent
         ref="contents"
+        :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :simulationOnly="omex !== undefined"
         :width="width"
@@ -94,6 +107,17 @@ const files = vue.ref<HTMLElement | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
+const activeInstanceUid = vueCommon.activeInstanceUid()
+
+// Keep track of which instance of OpenCOR is currently active.
+
+function activateInstance(): void {
+  activeInstanceUid.value = String(currentInstance?.uid)
+}
+
+const compIsActive = vue.computed(() => {
+  return activeInstanceUid.value === String(currentInstance?.uid)
+})
 
 // Determine if the component UI should be enabled.
 
@@ -625,6 +649,12 @@ vue.onMounted(() => {
   blockUiId.value = `opencorBlockUi${String(currentInstance?.uid)}`
   toastId.value = `opencorToast${String(currentInstance?.uid)}`
   mainMenuId.value = `opencorMainMenu${String(currentInstance?.uid)}`
+
+  // Make ourselves the active instance.
+
+  setTimeout(() => {
+    activateInstance()
+  }, SHORT_DELAY)
 
   // Track the height of our main menu.
 

@@ -11,6 +11,7 @@
         v-else-if="fileTab.uiJson === undefined"
         :width="width"
         :height="height"
+        :isActive="isActive"
         :uiEnabled="uiEnabled"
         :file="fileTabs[index]?.file"
         :isActiveFile="fileTab.file.path() === activeFile"
@@ -70,6 +71,7 @@
             v-else-if="fileTab.uiJson === undefined"
             :width="width"
             :height="heightMinusFileTablist"
+            :isActive="isActive"
             :uiEnabled="uiEnabled"
             :file="fileTabs[index]?.file"
             :isActiveFile="fileTab.file.path() === activeFile"
@@ -106,6 +108,7 @@ export interface IFileTab {
 const props = defineProps<{
   width: number
   height: number
+  isActive: boolean
   uiEnabled: boolean
   simulationOnly?: boolean
 }>()
@@ -276,7 +279,7 @@ vue.onMounted(() => {
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.uiEnabled || fileTabs.value.length === 0) {
+    if (!props.isActive || !props.uiEnabled || fileTabs.value.length === 0) {
       return
     }
 

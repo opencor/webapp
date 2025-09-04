@@ -1,6 +1,12 @@
+import * as vueusecore from '@vueuse/core'
+
 import * as vue from 'vue'
 
 import type { Theme } from '../../index.js'
+
+// A constant to know the uid of the active instance of OpenCOR.
+
+export const activeInstanceUid = vueusecore.createGlobalState(() => vue.ref<string | null>(null))
 
 // Some constants to know whether the operating system uses light mode or dark mode.
 

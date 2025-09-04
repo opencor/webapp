@@ -31,6 +31,7 @@ import * as vue from 'vue'
 import * as common from '../common/common'
 
 const props = defineProps<{
+  isActive: boolean
   uiEnabled: boolean
   hasFiles: boolean
 }>()
@@ -166,7 +167,7 @@ vue.onMounted(() => {
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.uiEnabled) {
+    if (!props.isActive || !props.uiEnabled) {
       return
     }
 
