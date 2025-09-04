@@ -1,26 +1,18 @@
 <template>
-  <img class="logo" src="../assets/logo.svg" />
+  <div class="flex justify-center items-center h-full overflow-hidden">
+    <img
+      class="max-w-[311px] max-h-[266.92px] rounded-[1rem] p-2 shadow-[0_0_0.75rem_0.375rem_var(--p-content-border-color)]"
+      src="../assets/logo.svg"
+    />
+  </div>
 </template>
 
-<style scoped>
-.logo {
-  /* Original dimensions:
-   *  - Width: 828.12px; and
-   *  - Height: 704.92px.
-   * Final dimensions:
-   *  - Width: 303px + 8px = 311px; and
-   *  - Height: 257.92px + 8px = ~266px
-   */
-
-  max-width: 311px;
-  max-height: 266px;
-  border-radius: 1rem;
-  padding: 0.5rem;
-  box-shadow: 0 0 0.75rem 0.375rem var(--p-content-border-color);
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: -1;
-}
-</style>
+<script lang="ts" setup>
+/* Original dimensions:
+ *  - Width: 828.12px; and
+ *  - Height: 704.92px.
+ * Final dimensions:
+ *  - Width: 303px + 8px = 311px; and
+ *  - Height: 257.92px + 8px = 266.92px
+ */
+</script>

@@ -9,6 +9,7 @@ import * as vite from 'vite'
 export default vite.defineConfig({
   base: './',
   build: {
+    chunkSizeWarningLimit: 2048,
     rollupOptions: {
       output: {
         entryFileNames: `assets/[name].js`,

@@ -1,10 +1,21 @@
 <template>
-  <BlockUI id="blockUi" :blocked="!uiEnabled" class="overflow-hidden" :style="blockUiStyle">
-    <Toast id="toast" :pt:root:style="{ position: 'absolute' }" />
-    <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
+  <BlockUI
+    ref="blockUi"
+    :id="blockUiId"
+    :blocked="!uiEnabled"
+    class="overflow-hidden"
+    :style="blockUiStyle"
+    @click="activateInstance"
+    @focus="activateInstance"
+    @focusin="activateInstance"
+    @keydown="activateInstance"
+    @mousedown="activateInstance"
+  >
+    <Toast :id="toastId" :pt:root:style="{ position: 'absolute' }" :class="compIsActive ? 'visible' : 'invisible'" />
+    <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
-    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :simulationOnly="omex !== undefined" />
+    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :width="width" :height="height" />
     <div
       v-else
       @dragenter="onDragEnter"
@@ -15,22 +26,29 @@
     >
       <input ref="files" type="file" multiple style="display: none" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter > 0" />
-      <div v-show="!electronApi && omex === undefined">
-        <MainMenu
-          v-show="mainMenuVisible"
-          :uiEnabled="compUiEnabled"
-          :hasFiles="hasFiles"
-          @about="onAbout"
-          @open="($refs.files as HTMLInputElement).click()"
-          @openRemote="openRemoteVisible = true"
-          @openSampleLorenz="onOpenSampleLorenz"
-          @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenz"
-          @close="onClose"
-          @closeAll="onCloseAll"
-          @settings="onSettings"
-        />
-      </div>
-      <ContentsComponent ref="contents" :uiEnabled="compUiEnabled" :simulationOnly="omex !== undefined" />
+      <MainMenu
+        :id="mainMenuId"
+        v-if="!electronApi && omex === undefined"
+        :isActive="compIsActive"
+        :uiEnabled="compUiEnabled"
+        :hasFiles="hasFiles"
+        @about="onAboutMenu"
+        @open="onOpenMenu"
+        @openRemote="onOpenRemoteMenu"
+        @openSampleLorenz="onOpenSampleLorenzMenu"
+        @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenzMenu"
+        @close="onCloseMenu"
+        @closeAll="onCloseAllMenu"
+        @settings="onSettingsMenu"
+      />
+      <ContentsComponent
+        ref="contents"
+        :isActive="compIsActive"
+        :uiEnabled="compUiEnabled"
+        :simulationOnly="omex !== undefined"
+        :width="width"
+        :height="heightMinusMainMenu"
+      />
       <OpenRemoteDialog
         v-model:visible="openRemoteVisible"
         @openRemote="onOpenRemote"
@@ -81,9 +99,27 @@ import * as locApi from '../libopencor/locApi'
 
 const props = defineProps<IOpenCORProps>()
 
+const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null)
+const blockUiId = vue.ref('opencorBlockUi')
+const toastId = vue.ref('opencorToast')
+const mainMenuId = vue.ref('opencorMainMenu')
+const files = vue.ref<HTMLElement | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
+const activeInstanceUid = vueCommon.activeInstanceUid()
+
+// Keep track of which instance of OpenCOR is currently active.
+
+function activateInstance(): void {
+  activeInstanceUid.value = String(currentInstance?.uid)
+}
+
+const compIsActive = vue.computed(() => {
+  return activeInstanceUid.value === String(currentInstance?.uid)
+})
+
+// Determine if the component UI should be enabled.
 
 const compUiEnabled = vue.computed(() => {
   return (
@@ -99,35 +135,47 @@ const compUiEnabled = vue.computed(() => {
   )
 })
 
-// Get the current Vue app instance to use some PrimeVue components.
+// Get the current Vue app instance to use some PrimeVue plugins.
 
-const getCurrentInstance = vue.getCurrentInstance()
+const currentInstance = vue.getCurrentInstance()
 
-if (getCurrentInstance !== null) {
-  const app = getCurrentInstance.appContext.app
-  let options = {}
+if (currentInstance !== null) {
+  const app = currentInstance.appContext.app
 
-  if (props.theme === 'light') {
-    options = {
-      darkModeSelector: false
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (app.config.globalProperties.$primevue === undefined) {
+    let options = {}
+
+    if (props.theme === 'light') {
+      options = {
+        darkModeSelector: false
+      }
+    } else if (props.theme === 'dark') {
+      document.documentElement.classList.add('opencor-dark-mode')
+      document.body.classList.add('opencor-dark-mode')
+
+      options = {
+        darkModeSelector: '.opencor-dark-mode'
+      }
     }
-  } else if (props.theme === 'dark') {
-    document.documentElement.classList.add('opencor-dark-mode')
-    document.body.classList.add('opencor-dark-mode')
 
-    options = {
-      darkModeSelector: '.opencor-dark-mode'
-    }
+    app.use(primeVueConfig as unknown as vue.Plugin, {
+      theme: {
+        preset: primeVueAuraTheme,
+        options: options
+      }
+    })
   }
 
-  app.use(primeVueConfig as unknown as vue.Plugin, {
-    theme: {
-      preset: primeVueAuraTheme,
-      options: options
-    }
-  })
-  app.use(primeVueConfirmationService as unknown as vue.Plugin)
-  app.use(primeVueToastService as unknown as vue.Plugin)
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (app.config.globalProperties.$confirm === undefined) {
+    app.use(primeVueConfirmationService as unknown as vue.Plugin)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (app.config.globalProperties.$toast === undefined) {
+    app.use(primeVueToastService as unknown as vue.Plugin)
+  }
 }
 
 if (props.theme !== undefined) {
@@ -160,9 +208,9 @@ function handleAction(action: string): void {
   const actionArguments = index !== -1 ? action.substring(index + 1) : ''
 
   if (isAction(actionName, 'openAboutDialog')) {
-    onAbout()
+    onAboutMenu()
   } else if (isAction(actionName, 'openSettingsDialog')) {
-    onSettings()
+    onSettingsMenu()
   } else {
     const filePaths = actionArguments.split('%7C')
 
@@ -202,8 +250,8 @@ const hasFiles = vue.computed(() => {
   return contents.value?.hasFiles() ?? false
 })
 
-vue.watch(hasFiles, (hasFiles) => {
-  electronApi?.enableDisableFileCloseAndCloseAllMenuItems(hasFiles)
+vue.watch(hasFiles, (newHasFiles: boolean) => {
+  electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles)
 })
 
 // Loading OpenCOR.
@@ -217,8 +265,8 @@ if (window.locApi === undefined) {
 
   loadingOpencorMessageVisible.value = true
 
-  vue.watch(locApiInitialised, (initialised) => {
-    if (initialised) {
+  vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
+    if (newLocApiInitialised) {
       loadingOpencorMessageVisible.value = false
 
       enableDisableUi(true)
@@ -308,10 +356,14 @@ electronApi?.onUpdateCheckError((issue: string) => {
 const aboutVisible = vue.ref<boolean>(false)
 
 electronApi?.onAbout(() => {
-  onAbout()
+  onAboutMenu()
 })
 
-function onAbout(): void {
+function onAboutMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   aboutVisible.value = true
 }
 
@@ -320,10 +372,14 @@ function onAbout(): void {
 const settingsVisible = vue.ref<boolean>(false)
 
 electronApi?.onSettings(() => {
-  onSettings()
+  onSettingsMenu()
 })
 
-function onSettings(): void {
+function onSettingsMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   settingsVisible.value = true
 }
 
@@ -468,6 +524,14 @@ electronApi?.onOpen((filePath: string) => {
   openFile(filePath)
 })
 
+function onOpenMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
+  files.value?.click()
+}
+
 // Open remote.
 
 const openRemoteVisible = vue.ref<boolean>(false)
@@ -475,6 +539,14 @@ const openRemoteVisible = vue.ref<boolean>(false)
 electronApi?.onOpenRemote(() => {
   openRemoteVisible.value = true
 })
+
+function onOpenRemoteMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
+  openRemoteVisible.value = true
+}
 
 function onOpenRemote(url: string): void {
   // Note: no matter whether this is OpenCOR or OpenCOR's Web app, we always retrieve the file contents of a remote
@@ -488,40 +560,56 @@ function onOpenRemote(url: string): void {
 // Open sample Lorenz.
 
 electronApi?.onOpenSampleLorenz(() => {
-  onOpenSampleLorenz()
+  onOpenSampleLorenzMenu()
 })
 
-function onOpenSampleLorenz(): void {
+function onOpenSampleLorenzMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   openFile('https://github.com/opencor/webapp/raw/refs/heads/main/tests/models/lorenz.omex')
 }
 
 // Open sample interactive Lorenz.
 
 electronApi?.onOpenSampleInteractiveLorenz(() => {
-  onOpenSampleInteractiveLorenz()
+  onOpenSampleInteractiveLorenzMenu()
 })
 
-function onOpenSampleInteractiveLorenz(): void {
+function onOpenSampleInteractiveLorenzMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   openFile('https://github.com/opencor/webapp/raw/refs/heads/main/tests/models/ui/lorenz.omex')
 }
 
 // Close.
 
 electronApi?.onClose(() => {
-  onClose()
+  onCloseMenu()
 })
 
-function onClose(): void {
+function onCloseMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   contents.value?.closeCurrentFile()
 }
 
 // Close all.
 
 electronApi?.onCloseAll(() => {
-  onCloseAll()
+  onCloseAllMenu()
 })
 
-function onCloseAll(): void {
+function onCloseAllMenu(): void {
+  if (props.omex !== undefined) {
+    return
+  }
+
   contents.value?.closeAllFiles()
 }
 
@@ -543,58 +631,108 @@ electronApi?.onSelect((filePath: string) => {
   contents.value?.selectFile(filePath)
 })
 
-// Track the height of our block UI.
-
-vueCommon.trackElementHeight('blockUi')
-
-// Set the height of our block UI.
+// A few things that can only be done when the component is mounted.
 
 const blockUiStyle = vue.ref({})
-const mainMenuVisible = vue.ref<boolean>(false)
+const width = vue.ref<number>(0)
+const height = vue.ref<number>(0)
+const heightMinusMainMenu = vue.ref<number>(0)
 
 vue.onMounted(() => {
-  // Set the height of our block UI to either '100vh' or '100%', depending on the height of our document element.
+  // Set the height of our block UI to either '100vh' or '100%', depending on whether we are mounted on the main app
+  // container.
 
-  blockUiStyle.value =
-    window.getComputedStyle(document.documentElement).height === '0px' ? { height: '100vh' } : { height: '100%' }
+  blockUiStyle.value = blockUi.value?.$el.parentElement.id === 'app' ? { height: '100vh' } : { height: '100%' }
 
-  // We have set the height of our block UI, so we can now safely show our main menu.
-  // Note: indeed, to properly determine the height of our document element, we must ensure that our own height is zero.
+  // Customise our IDs.
 
-  mainMenuVisible.value = true
+  blockUiId.value = `opencorBlockUi${String(currentInstance?.uid)}`
+  toastId.value = `opencorToast${String(currentInstance?.uid)}`
+  mainMenuId.value = `opencorMainMenu${String(currentInstance?.uid)}`
+
+  // Make ourselves the active instance.
+
+  setTimeout(() => {
+    activateInstance()
+  }, SHORT_DELAY)
+
+  // Track the height of our main menu.
+
+  let mainMenuResizeObserver: ResizeObserver | undefined
+
+  setTimeout(() => {
+    mainMenuResizeObserver = vueCommon.trackElementHeight(mainMenuId.value)
+  }, SHORT_DELAY)
+
+  // Ensure that our toasts are shown within our block UI.
+
+  setTimeout(() => {
+    const toastElement = document.getElementById(toastId.value)
+    const blockUiElement = document.getElementById(blockUiId.value)
+
+    if (toastElement !== null && blockUiElement !== null) {
+      blockUiElement.appendChild(toastElement)
+    }
+  }, SHORT_DELAY)
+
+  // Monitor "our" contents size.
+
+  const element = currentInstance?.vnode.el as HTMLElement
+
+  function resizeOurselves() {
+    const style = window.getComputedStyle(element)
+
+    width.value = parseFloat(style.width)
+    height.value = parseFloat(style.height)
+
+    heightMinusMainMenu.value = height.value - vueCommon.trackedCssVariableValue(mainMenuId.value)
+  }
+
+  const resizeObserver = new ResizeObserver(() => {
+    resizeOurselves()
+  })
+
+  let oldMainMenuHeight = vueCommon.trackedCssVariableValue(mainMenuId.value)
+
+  const mutationObserver = new MutationObserver(() => {
+    const newMainMenuHeight = vueCommon.trackedCssVariableValue(mainMenuId.value)
+
+    if (newMainMenuHeight !== oldMainMenuHeight) {
+      oldMainMenuHeight = newMainMenuHeight
+
+      resizeOurselves()
+    }
+  })
+
+  resizeObserver.observe(element)
+  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+
+  vue.onUnmounted(() => {
+    resizeObserver.disconnect()
+    mutationObserver.disconnect()
+
+    mainMenuResizeObserver?.disconnect()
+  })
 })
 
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry as normal (i.e. the whole OpenCOR UI will be shown).
 
 if (props.omex !== undefined) {
-  vue.watch(locApiInitialised, (initialised) => {
-    if (initialised) {
+  vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
+    if (newLocApiInitialised) {
       if (props.omex !== undefined) {
         openFile(props.omex)
       }
     }
   })
 } else {
-  // (Also) track the height of our main menu.
-
-  vueCommon.trackElementHeight('mainMenu')
-
-  // Things that need to be done when the component is mounted.
+  // A few additional things that can only be done when the component is mounted.
 
   vue.onMounted(() => {
     // Do what follows with a bit of a delay to give our background (with the OpenCOR logo) time to be renderered.
 
     setTimeout(() => {
-      // Ensure that our toasts are shown within our container.
-
-      const toastElement = document.getElementById('toast')
-      const blockUiElement = document.getElementById('blockUi')
-
-      if (toastElement !== null && blockUiElement !== null) {
-        blockUiElement.appendChild(toastElement)
-      }
-
       if (electronApi !== undefined) {
         // Check for updates.
         // Note: the main process will actually check for updates if requested and if OpenCOR is packaged.

@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-row h-full">
-    <div v-if="showMarker" class="marker" />
+    <div v-if="showMarker" class="w-[3px] bg-(--p-primary-color)" />
     <div ref="mainDiv" class="grow h-full" />
   </div>
 </template>
@@ -93,12 +93,20 @@ vue.watch(
       mainDiv.value,
       props.plots.map((plot) => ({
         x: plot.x.data,
-        y: plot.y.data,
-        type: 'scattergl'
+        y: plot.y.data
+        // type: 'scattergl'
         //---OPENCOR---
-        // WebGL rendering currently results in "Performance warning: clear() called with no buffers in bitmask" being
-        // logged to the console. This is a known issue and it should hopefully be fixed in the next version of Plotly.
-        // See https://github.com/plotly/plotly.js/issues/7387 and https://github.com/plotly/plotly.js/pull/7390.
+        // Ideally, we would render using WebGL, but... Web browsers impose a limit on the number of active WebGL
+        // contexts that can be used (8 to 16, apparently). So, depending on how the OpenCOR component is used, we may
+        // reach that limit and get the following warning as a result:
+        //   Too many active WebGL contexts. Oldest context will be lost.
+        // and nothing gets rendered. Apparently, plotly.js added support for virtual-webgl in version 2.28.0 (see
+        // https://github.com/plotly/plotly.js/releases/tag/v2.28.0), but to do what they say in
+        // https://github.com/plotly/plotly.js/pull/6784#issue-1991790973 still results in the same behaviour as above.
+        // So, it looks like we have no choice but to disable WebGL rendering. The downside is that 1) it doesn't look
+        // as good and 2) it is not as fast to render when there are a lot of data points. However, to use a virtual
+        // WebGL would mean that all WebGL-based components would also be using virtual WebGL, which might not be
+        // desirable.
       })),
       {
         // Note: the various keys can be found at https://plotly.com/javascript/reference/.
@@ -131,10 +139,3 @@ vue.watch(
   }
 )
 </script>
-
-<style scoped>
-.marker {
-  width: 3px;
-  background-color: var(--p-primary-color);
-}
-</style>

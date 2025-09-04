@@ -1,7 +1,7 @@
 <template>
-  <div :class="`flex flex-row h-full ${simulationOnly ? 'div-simulation-only' : 'div-simulation'}`">
-    <IssuesView v-if="issues.length !== 0" class="grow" :issues="issues" :simulationOnly="simulationOnly" />
-    <div v-else class="flex flex-row grow">
+  <div class="flex" :style="{ width: width + 'px', height: height + 'px' }">
+    <IssuesView v-if="issues.length !== 0" class="grow" :width="width" :height="height" :issues="issues" />
+    <div v-else class="flex grow">
       <div class="ml-4 mr-4 mb-4">
         <ScrollPanel class="h-full">
           <Fieldset legend="Input parameters">
@@ -21,11 +21,11 @@
           </Fieldset>
         </ScrollPanel>
       </div>
-      <div :id="plotsDivId" class="grow">
+      <div class="grow">
         <GraphPanelWidget
           v-for="(_plot, index) in (uiJson as any).output.plots"
           :key="`plot_${index}`"
-          class="graph-panel-widget"
+          :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
           :plots="plots.length !== 0 ? plots[index] : []"
         />
       </div>
@@ -44,15 +44,15 @@ import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 
 const props = defineProps<{
   file: locApi.File
-  simulationOnly?: boolean
+  height: number
   uiJson: locApi.IUiJson
+  width: number
 }>()
 
 const math = mathjs.create(mathjs.all ?? {}, {})
 const model = props.file.document().model(0)
 const instance = props.file.instance()
 const instanceTask = instance.task(0)
-const plotsDivId = `plotsDiv_${props.file.path()}`
 const plots = vue.ref<IGraphPanelPlot[][]>([])
 const issues = vue.ref(locApi.uiJsonIssues(props.uiJson))
 const inputValues = vue.ref<number[]>([])
@@ -83,16 +83,6 @@ props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
 
 props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
   idToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name)
-})
-
-vue.onMounted(() => {
-  updateUiAndSimulation()
-
-  // Determine the number of graph panel widgets (needed to set their height).
-
-  const plotsDiv = document.getElementById(plotsDivId)
-
-  plotsDiv?.style.setProperty('--graph-panel-widget-count', String(plotsDiv.children.length))
 })
 
 function updateUiAndSimulation() {
@@ -137,18 +127,8 @@ function updateUiAndSimulation() {
     ]
   })
 }
+
+vue.onMounted(() => {
+  updateUiAndSimulation()
+})
 </script>
-
-<style scoped>
-.graph-panel-widget {
-  height: calc(100% / var(--graph-panel-widget-count));
-}
-
-.div-simulation-only {
-  height: var(--block-ui-height);
-}
-
-.div-simulation {
-  height: calc(var(--block-ui-height) - var(--main-menu-height) - var(--file-tablist-height));
-}
-</style>

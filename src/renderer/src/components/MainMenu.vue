@@ -1,5 +1,5 @@
 <template>
-  <Menubar id="mainMenu" :model="items">
+  <Menubar :id="menuBarId" :model="items">
     <template #item="{ item, props }">
       <a v-bind="props.action">
         <div class="p-menubar-item-label">{{ item.label }}</div>
@@ -15,7 +15,7 @@
             fill="currentColor"
           />
         </svg>
-        <div v-if="item.shortcut !== undefined" class="ml-auto border border-surface rounded bg-emphasis text-xs/3">
+        <div v-if="item.shortcut !== undefined" class="ml-auto border rounded text-xs/3">
           {{ item.shortcut }}
         </div>
       </a>
@@ -31,6 +31,7 @@ import * as vue from 'vue'
 import * as common from '../common/common'
 
 const props = defineProps<{
+  isActive: boolean
   uiEnabled: boolean
   hasFiles: boolean
 }>()
@@ -144,17 +145,21 @@ const items = [
 
 // Never display our menu as a hamburger menu.
 
-vue.onMounted(() => {
-  const mainMenu = document.getElementById('mainMenu')
+const menuBarId = vue.ref('menuBar')
 
-  if (mainMenu !== null) {
-    const observer = new MutationObserver(() => {
-      if (mainMenu.className.includes('p-menubar-mobile')) {
-        mainMenu.classList.remove('p-menubar-mobile')
+vue.onMounted(() => {
+  menuBarId.value = `menuBar${String(vue.getCurrentInstance()?.uid)}`
+
+  const menuBar = document.getElementById(menuBarId.value)
+
+  if (menuBar !== null) {
+    const mutationObserver = new MutationObserver(() => {
+      if (menuBar.className.includes('p-menubar-mobile')) {
+        menuBar.classList.remove('p-menubar-mobile')
       }
     })
 
-    observer.observe(mainMenu, { attributes: true })
+    mutationObserver.observe(menuBar, { attributes: true })
   }
 })
 
@@ -162,7 +167,7 @@ vue.onMounted(() => {
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.uiEnabled) {
+    if (!props.isActive || !props.uiEnabled) {
       return
     }
 

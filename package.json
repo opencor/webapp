@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20250827.1",
+  "version": "0.20250904.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
@@ -46,6 +46,11 @@
     "start": "electron-vite preview",
     "start:web": "pnpm build:web && cd ./src/renderer && vite preview",
     "version:new": "node src/renderer/scripts/version.js"
+  },
+  "peerDependencies": {
+    "mathjs": "^14.6.0",
+    "plotly.js-gl2d-dist-min": "^3.1.0",
+    "vue": "^3.4.21"
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.3",
@@ -75,7 +80,7 @@
     "@wasm-fmt/clang-format": "^20.1.7",
     "autoprefixer": "^10.4.21",
     "cmake-js": "^7.3.1",
-    "electron": "^37.3.1",
+    "electron": "^38.0.0",
     "electron-builder": "^26.0.12",
     "electron-conf": "^1.3.0",
     "electron-updater": "^6.6.2",
@@ -86,6 +91,6 @@
     "tailwindcss": "^4.1.12",
     "tailwindcss-primeui": "^0.6.1",
     "unplugin-vue-components": "^29.0.0",
-    "vite": "^7.1.3"
+    "vite": "^7.1.4"
   }
 }

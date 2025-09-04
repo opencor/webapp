@@ -1,12 +1,12 @@
 <template>
-  <div :class="`h-full ${simulationOnly ? 'div-simulation-only' : 'div-simulation'}`">
+  <div :style="{ width: width + 'px', height: height + 'px' }">
     <Toolbar :id="toolbarId" class="p-1!">
       <template #start>
         <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
         <Button class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
       </template>
     </Toolbar>
-    <Splitter class="border-none! h-full m-0" layout="vertical">
+    <Splitter class="border-none! h-full m-0" layout="vertical" :style="{ height: heightMinusToolbar + 'px' }">
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
@@ -59,6 +59,7 @@ import * as vueusecore from '@vueuse/core'
 import * as vue from 'vue'
 
 import * as common from '../../common/common'
+import { SHORT_DELAY } from '../../common/constants'
 import * as locCommon from '../../common/locCommon'
 import * as vueCommon from '../../common/vueCommon'
 import * as locApi from '../../libopencor/locApi'
@@ -66,16 +67,20 @@ import * as locApi from '../../libopencor/locApi'
 import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 
 const props = defineProps<{
-  uiEnabled: boolean
   file: locApi.File
+  height: number
+  isActive: boolean
   isActiveFile: boolean
   simulationOnly?: boolean
+  uiEnabled: boolean
+  width: number
 }>()
 
-const toolbarId = `simulationExperimentToolbar_${props.file.path()}`
-const editorId = `simulationExperimentEditor_${props.file.path()}`
+const toolbarId = vue.ref('simulationExperimentViewToolbar')
+const editorId = vue.ref('simulationExperimentViewEditor')
 const instance = props.file.instance()
 const instanceTask = instance.task(0)
+const heightMinusToolbar = vue.ref<number>(0)
 
 const parameters = vue.ref<string[]>([])
 const xParameter = vue.ref(instanceTask.voiName())
@@ -117,7 +122,7 @@ function onRun(): void {
   consoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`
 
   void vue.nextTick().then(() => {
-    const consoleElement = document.getElementById(editorId)?.getElementsByClassName('ql-editor')[0]
+    const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0]
 
     if (consoleElement !== undefined) {
       consoleElement.scrollTop = consoleElement.scrollHeight
@@ -149,15 +154,64 @@ vue.onMounted(() => {
   updatePlot()
 })
 
-// Track the height of our file tablist toolbar.
+// Various things that need to be done once we are mounted.
 
-vueCommon.trackElementHeight(toolbarId)
+const currentInstance = vue.getCurrentInstance()
+
+vue.onMounted(() => {
+  // Customise our IDs.
+
+  toolbarId.value = `simulationExperimentViewToolbar${String(currentInstance?.uid)}`
+  editorId.value = `simulationExperimentViewEditor${String(currentInstance?.uid)}`
+
+  // Track the height of our toolbar.
+
+  let toolbarResizeObserver: ResizeObserver | undefined
+
+  setTimeout(() => {
+    toolbarResizeObserver = vueCommon.trackElementHeight(toolbarId.value)
+  }, SHORT_DELAY)
+
+  // Monitor "our" contents size.
+
+  const element = currentInstance?.vnode.el as HTMLElement
+
+  function resizeOurselves() {
+    heightMinusToolbar.value = props.height - vueCommon.trackedCssVariableValue(toolbarId.value)
+  }
+
+  const resizeObserver = new ResizeObserver(() => {
+    resizeOurselves()
+  })
+
+  let oldToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value)
+
+  const mutationObserver = new MutationObserver(() => {
+    const newToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value)
+
+    if (newToolbarHeight !== oldToolbarHeight) {
+      oldToolbarHeight = newToolbarHeight
+
+      resizeOurselves()
+    }
+  })
+
+  resizeObserver.observe(element)
+  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+
+  vue.onUnmounted(() => {
+    resizeObserver.disconnect()
+    mutationObserver.disconnect()
+
+    toolbarResizeObserver?.disconnect()
+  })
+})
 
 // Keyboard shortcuts.
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.uiEnabled) {
+    if (!props.isActive || !props.uiEnabled) {
       return
     }
 
@@ -203,16 +257,5 @@ if (!common.isMobile()) {
 
 :deep(.ql-editor > *) {
   cursor: default;
-}
-
-.div-simulation-only {
-  height: calc(var(--block-ui-height) - var(--simulation-experiment-toolbar-height));
-}
-
-.div-simulation {
-  height: calc(
-    var(--block-ui-height) - var(--main-menu-height) - var(--file-tablist-height) -
-      var(--simulation-experiment-toolbar-height)
-  );
 }
 </style>

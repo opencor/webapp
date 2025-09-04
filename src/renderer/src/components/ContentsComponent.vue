@@ -3,24 +3,31 @@
     <div v-for="(fileTab, index) in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" :value="fileTab.file.path()">
       <IssuesView
         v-if="fileTab.file.issues().length !== 0"
+        :width="width"
+        :height="height"
         :issues="fileTab.file.issues()"
-        :simulationOnly="simulationOnly"
       />
       <SimulationExperimentView
         v-else-if="fileTab.uiJson === undefined"
+        :width="width"
+        :height="height"
+        :isActive="isActive"
+        :uiEnabled="uiEnabled"
         :file="fileTabs[index]?.file"
         :isActiveFile="fileTab.file.path() === activeFile"
-        :simulationOnly="true"
+        :simulationOnly="simulationOnly"
       />
       <SimulationExperimentUiView
         v-else
+        :width="width"
+        :height="height"
         :file="fileTabs[index]?.file"
-        :simulationOnly="true"
         :uiJson="fileTabs[index]?.uiJson"
       />
     </div>
   </div>
   <div v-else class="h-full">
+    <BackgroundComponent v-show="fileTabs.length === 0" :style="{ height: height + 'px' }" />
     <Tabs
       v-show="fileTabs.length !== 0"
       id="fileTabs"
@@ -28,7 +35,7 @@
       :scrollable="true"
       :selectOnFocus="true"
     >
-      <TabList id="fileTablist" class="file-tablist">
+      <TabList :id="fileTablistId" class="border-b border-b-(--p-primary-color)">
         <Tab
           v-for="fileTab in fileTabs"
           :id="`tab_${fileTab.file.path()}`"
@@ -54,14 +61,28 @@
           :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
-          <IssuesView v-if="fileTab.file.issues().length !== 0" :issues="fileTab.file.issues()" />
+          <IssuesView
+            v-if="fileTab.file.issues().length !== 0"
+            :width="width"
+            :height="heightMinusFileTablist"
+            :issues="fileTab.file.issues()"
+          />
           <SimulationExperimentView
             v-else-if="fileTab.uiJson === undefined"
+            :width="width"
+            :height="heightMinusFileTablist"
+            :isActive="isActive"
             :uiEnabled="uiEnabled"
             :file="fileTabs[index]?.file"
             :isActiveFile="fileTab.file.path() === activeFile"
           />
-          <SimulationExperimentUiView v-else :file="fileTabs[index]?.file" :uiJson="fileTabs[index]?.uiJson" />
+          <SimulationExperimentUiView
+            v-else
+            :width="width"
+            :height="heightMinusFileTablist"
+            :file="fileTabs[index]?.file"
+            :uiJson="fileTabs[index]?.uiJson"
+          />
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -74,6 +95,7 @@ import * as vueusecore from '@vueuse/core'
 import * as vue from 'vue'
 
 import * as common from '../common/common'
+import { SHORT_DELAY } from '../common/constants'
 import { electronApi } from '../common/electronApi'
 import * as vueCommon from '../common/vueCommon'
 import * as locApi from '../libopencor/locApi'
@@ -84,6 +106,9 @@ export interface IFileTab {
 }
 
 const props = defineProps<{
+  width: number
+  height: number
+  isActive: boolean
   uiEnabled: boolean
   simulationOnly?: boolean
 }>()
@@ -98,8 +123,10 @@ export interface IContentsComponent {
   selectFile(filePath: string): void
 }
 
+const fileTablistId = vue.ref('contentsComponentFileTablist')
 const fileTabs = vue.ref<IFileTab[]>([])
 const activeFile = vue.ref<string>('')
+const heightMinusFileTablist = vue.ref<number>(0)
 
 const filePaths = vue.computed(() => {
   const res: string[] = []
@@ -111,15 +138,15 @@ const filePaths = vue.computed(() => {
   return res
 })
 
-vue.watch(filePaths, (filePaths) => {
-  electronApi?.filesOpened(filePaths)
+vue.watch(filePaths, (newFilePaths: string[]) => {
+  electronApi?.filesOpened(newFilePaths)
 })
 
-vue.watch(activeFile, (filePath) => {
+vue.watch(activeFile, (newActiveFile: string) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
   //       people know that a file has been selected.
 
-  electronApi?.fileSelected(filePath)
+  electronApi?.fileSelected(newActiveFile)
 })
 
 function openFile(file: locApi.File): void {
@@ -196,15 +223,63 @@ function closeAllFiles(): void {
   }
 }
 
-// Track the height of our file tablist.
+// Various things that need to be done once we are mounted.
 
-vueCommon.trackElementHeight('fileTablist')
+const currentInstance = vue.getCurrentInstance()
+
+vue.onMounted(() => {
+  // Customise our IDs.
+
+  fileTablistId.value = `contentsComponentFileTablist${String(currentInstance?.uid)}`
+
+  // Track the height of our file tablist.
+
+  let fileTablistResizeObserver: ResizeObserver | undefined
+
+  setTimeout(() => {
+    fileTablistResizeObserver = vueCommon.trackElementHeight(fileTablistId.value)
+  }, SHORT_DELAY)
+
+  // Monitor "our" contents size.
+
+  const element = currentInstance?.vnode.el as HTMLElement
+
+  function resizeOurselves() {
+    heightMinusFileTablist.value = props.height - vueCommon.trackedCssVariableValue(fileTablistId.value)
+  }
+
+  const resizeObserver = new ResizeObserver(() => {
+    resizeOurselves()
+  })
+
+  let oldFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value)
+
+  const mutationObserver = new MutationObserver(() => {
+    const newFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value)
+
+    if (newFileTablistHeight !== oldFileTablistHeight) {
+      oldFileTablistHeight = newFileTablistHeight
+
+      resizeOurselves()
+    }
+  })
+
+  resizeObserver.observe(element)
+  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+
+  vue.onUnmounted(() => {
+    resizeObserver.disconnect()
+    mutationObserver.disconnect()
+
+    fileTablistResizeObserver?.disconnect()
+  })
+})
 
 // Keyboard shortcuts.
 
 if (!common.isMobile()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.uiEnabled || fileTabs.value.length === 0) {
+    if (!props.isActive || !props.uiEnabled || fileTabs.value.length === 0) {
       return
     }
 
@@ -222,10 +297,6 @@ if (!common.isMobile()) {
 </script>
 
 <style scoped>
-.file-tablist {
-  border-bottom: 1px solid var(--p-primary-color);
-}
-
 .p-tab {
   padding: 0.25rem 0.5rem;
   border-right: 1px solid var(--p-content-border-color);

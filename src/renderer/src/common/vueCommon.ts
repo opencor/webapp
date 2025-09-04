@@ -1,6 +1,12 @@
+import * as vueusecore from '@vueuse/core'
+
 import * as vue from 'vue'
 
 import type { Theme } from '../../index.js'
+
+// A constant to know the uid of the active instance of OpenCOR.
+
+export const activeInstanceUid = vueusecore.createGlobalState(() => vue.ref<string | null>(null))
 
 // Some constants to know whether the operating system uses light mode or dark mode.
 
@@ -36,34 +42,45 @@ export function useDarkMode(): boolean {
   return _isDarkMode.value
 }
 
+// A method to retrieve the name of a tracked CSS variable.
+
+export function trackedCssVariableName(id: string): string {
+  return '--' + (id.split('_')[0] ?? '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '-height'
+}
+
 // A method to track the height of a given element.
 
-export function trackElementHeight(id: string): void {
-  vue.onMounted(() => {
-    const element = document.getElementById(id)
+export function trackElementHeight(id: string): ResizeObserver | undefined {
+  const element = document.getElementById(id)
 
-    if (element !== null) {
-      const observer = new ResizeObserver(() => {
-        let elementHeight = window.getComputedStyle(element).height
+  if (element !== null) {
+    const resizeObserver = new ResizeObserver(() => {
+      let elementHeight = window.getComputedStyle(element).height
 
-        if (elementHeight === '' || elementHeight === 'auto') {
-          elementHeight = '0px'
-        }
+      if (elementHeight === '' || elementHeight === 'auto') {
+        elementHeight = '0px'
+      }
 
-        const cssVariableName =
-          '--' + (id.split('_')[0] ?? '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '-height'
-        const oldElementHeight = window.getComputedStyle(document.documentElement).getPropertyValue(cssVariableName)
+      const cssVariableName = trackedCssVariableName(id)
+      const oldElementHeight = document.documentElement.style.getPropertyValue(cssVariableName)
 
-        if (oldElementHeight === '' || (elementHeight !== '0px' && oldElementHeight !== elementHeight)) {
-          document.documentElement.style.setProperty(cssVariableName, elementHeight)
-        }
-      })
+      if (oldElementHeight === '' || (elementHeight !== '0px' && oldElementHeight !== elementHeight)) {
+        document.documentElement.style.setProperty(cssVariableName, elementHeight)
+      }
+    })
 
-      observer.observe(element)
+    resizeObserver.observe(element)
 
-      vue.onUnmounted(() => {
-        observer.disconnect()
-      })
-    }
-  })
+    return resizeObserver
+  }
+
+  return undefined
+}
+
+// A method to retrieve the value of a tracked CSS variable.
+
+export function trackedCssVariableValue(id: string): number {
+  const propertyValue = document.documentElement.style.getPropertyValue(trackedCssVariableName(id))
+
+  return propertyValue ? parseFloat(propertyValue) : 0
 }
