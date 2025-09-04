@@ -74,5 +74,7 @@ export function trackElementHeight(id: string): ResizeObserver | undefined {
 // A method to retrieve the value of a tracked CSS variable.
 
 export function trackedCssVariableValue(id: string): number {
-  return parseFloat(document.documentElement.style.getPropertyValue(trackedCssVariableName(id)))
+  const propertyValue = document.documentElement.style.getPropertyValue(trackedCssVariableName(id))
+
+  return propertyValue ? parseFloat(propertyValue) : 0
 }
