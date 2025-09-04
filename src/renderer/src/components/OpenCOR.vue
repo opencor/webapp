@@ -1,5 +1,5 @@
 <template>
-  <BlockUI :id="blockUiId" :blocked="!uiEnabled" class="overflow-hidden" :style="blockUiStyle">
+  <BlockUI ref="blockUi" :id="blockUiId" :blocked="!uiEnabled" class="overflow-hidden" :style="blockUiStyle">
     <Toast :id="toastId" :pt:root:style="{ position: 'absolute' }" />
     <BackgroundComponent v-show="loadingOpencorMessageVisible || loadingModelMessageVisible || omex === undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
@@ -88,6 +88,7 @@ import * as locApi from '../libopencor/locApi'
 
 const props = defineProps<IOpenCORProps>()
 
+const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null)
 const blockUiId = vue.ref('opencorBlockUi')
 const toastId = vue.ref('opencorToast')
 const mainMenuId = vue.ref('opencorMainMenu')
@@ -615,10 +616,10 @@ const height = vue.ref<number>(0)
 const heightMinusMainMenu = vue.ref<number>(0)
 
 vue.onMounted(() => {
-  // Set the height of our block UI to either '100vh' or '100%', depending on the height of our document element.
+  // Set the height of our block UI to either '100vh' or '100%', depending on whether we are mounted on the main app
+  // container.
 
-  blockUiStyle.value =
-    window.getComputedStyle(document.documentElement).height === '0px' ? { height: '100vh' } : { height: '100%' }
+  blockUiStyle.value = blockUi.value?.$el.parentElement.id === 'app' ? { height: '100vh' } : { height: '100%' }
 
   // We have set the height of our block UI, so we can now safely show our main menu.
   // Note: indeed, to properly determine the height of our document element, we must ensure that our own height is zero.
