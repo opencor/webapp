@@ -1,7 +1,6 @@
 <template>
   <BlockUI
     ref="blockUi"
-    :id="blockUiId"
     :blocked="!uiEnabled"
     class="overflow-hidden"
     :style="blockUiStyle"
@@ -11,7 +10,12 @@
     @keydown="activateInstance"
     @mousedown="activateInstance"
   >
-    <Toast :id="toastId" :pt:root:style="{ position: 'absolute' }" :class="compIsActive ? 'visible' : 'invisible'" />
+    <Toast
+      :id="toastId"
+      :group="toastId"
+      :pt:root:style="{ position: 'absolute' }"
+      :class="compIsActive ? 'visible' : 'invisible'"
+    />
     <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
@@ -100,7 +104,6 @@ import * as locApi from '../libopencor/locApi'
 const props = defineProps<IOpenCORProps>()
 
 const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null)
-const blockUiId = vue.ref('opencorBlockUi')
 const toastId = vue.ref('opencorToast')
 const mainMenuId = vue.ref('opencorMainMenu')
 const files = vue.ref<HTMLElement | null>(null)
@@ -224,6 +227,7 @@ function handleAction(action: string): void {
     } else {
       toast.add({
         severity: 'error',
+        group: toastId.value,
         summary: 'Handling an action',
         detail: `${action}\n\nThe action could not be handled.`,
         life: TOAST_LIFE
@@ -425,6 +429,7 @@ function openFile(fileOrFilePath: string | File): void {
         } else {
           toast.add({
             severity: 'error',
+            group: toastId.value,
             summary: 'Opening a file',
             detail:
               filePath +
@@ -460,6 +465,7 @@ function openFile(fileOrFilePath: string | File): void {
       } else {
         toast.add({
           severity: 'error',
+          group: toastId.value,
           summary: 'Opening a file',
           detail: `${filePath}\n\n${common.formatIssue(error instanceof Error ? error.message : String(error))}`,
           life: TOAST_LIFE
@@ -639,14 +645,25 @@ const height = vue.ref<number>(0)
 const heightMinusMainMenu = vue.ref<number>(0)
 
 vue.onMounted(() => {
-  // Set the height of our block UI to either '100vh' or '100%', depending on whether we are mounted on the main app
-  // container.
+  // Set our height to '100vh' or '100%', depending on whether we are mounted as a Vue application or a Vue component.
 
-  blockUiStyle.value = blockUi.value?.$el.parentElement.id === 'app' ? { height: '100vh' } : { height: '100%' }
+  const blockUiElement = blockUi.value?.$el as HTMLElement
+  const parentElement = blockUiElement.parentElement
+  const grandParentElement = parentElement?.parentElement
+  const greatGrandParentElement = grandParentElement?.parentElement
+  const greatGreatGrandParentElement = greatGrandParentElement?.parentElement
+
+  blockUiStyle.value =
+    parentElement?.tagName === 'DIV' &&
+    parentElement.id === 'app' &&
+    grandParentElement?.tagName === 'BODY' &&
+    greatGrandParentElement?.tagName === 'HTML' &&
+    greatGreatGrandParentElement === null
+      ? { height: '100vh' }
+      : { height: '100%' }
 
   // Customise our IDs.
 
-  blockUiId.value = `opencorBlockUi${String(currentInstance?.uid)}`
   toastId.value = `opencorToast${String(currentInstance?.uid)}`
   mainMenuId.value = `opencorMainMenu${String(currentInstance?.uid)}`
 
@@ -668,19 +685,16 @@ vue.onMounted(() => {
 
   setTimeout(() => {
     const toastElement = document.getElementById(toastId.value)
-    const blockUiElement = document.getElementById(blockUiId.value)
 
-    if (toastElement !== null && blockUiElement !== null) {
+    if (toastElement !== null) {
       blockUiElement.appendChild(toastElement)
     }
   }, SHORT_DELAY)
 
   // Monitor "our" contents size.
 
-  const element = currentInstance?.vnode.el as HTMLElement
-
   function resizeOurselves() {
-    const style = window.getComputedStyle(element)
+    const style = window.getComputedStyle(blockUiElement)
 
     width.value = parseFloat(style.width)
     height.value = parseFloat(style.height)
@@ -704,7 +718,7 @@ vue.onMounted(() => {
     }
   })
 
-  resizeObserver.observe(element)
+  resizeObserver.observe(blockUiElement)
   mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
 
   vue.onUnmounted(() => {
