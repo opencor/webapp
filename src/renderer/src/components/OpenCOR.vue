@@ -11,7 +11,12 @@
     @keydown="activateInstance"
     @mousedown="activateInstance"
   >
-    <Toast :id="toastId" :pt:root:style="{ position: 'absolute' }" :class="compIsActive ? 'visible' : 'invisible'" />
+    <Toast
+      :id="toastId"
+      :group="toastId"
+      :pt:root:style="{ position: 'absolute' }"
+      :class="compIsActive ? 'visible' : 'invisible'"
+    />
     <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
@@ -224,6 +229,7 @@ function handleAction(action: string): void {
     } else {
       toast.add({
         severity: 'error',
+        group: toastId.value,
         summary: 'Handling an action',
         detail: `${action}\n\nThe action could not be handled.`,
         life: TOAST_LIFE
@@ -425,6 +431,7 @@ function openFile(fileOrFilePath: string | File): void {
         } else {
           toast.add({
             severity: 'error',
+            group: toastId.value,
             summary: 'Opening a file',
             detail:
               filePath +
@@ -460,6 +467,7 @@ function openFile(fileOrFilePath: string | File): void {
       } else {
         toast.add({
           severity: 'error',
+          group: toastId.value,
           summary: 'Opening a file',
           detail: `${filePath}\n\n${common.formatIssue(error instanceof Error ? error.message : String(error))}`,
           life: TOAST_LIFE
