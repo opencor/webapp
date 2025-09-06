@@ -94,7 +94,7 @@ import type { IOpenCORProps } from '../../index'
 
 import '../assets/app.css'
 import * as common from '../common/common'
-import { SHORT_DELAY, TOAST_LIFE } from '../common/constants'
+import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants'
 import { electronApi } from '../common/electronApi'
 import * as locCommon from '../common/locCommon'
 import * as vueCommon from '../common/vueCommon'
@@ -758,19 +758,23 @@ if (props.omex !== undefined) {
         // Handle the action passed to our Web app, if any.
         // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
-        const action = vueusecore.useStorage('action', '')
+        vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
+          if (newLocApiInitialised) {
+            const action = vueusecore.useStorage('action', '')
 
-        if (window.location.search !== '') {
-          action.value = window.location.search.substring(1)
+            if (window.location.search !== '') {
+              action.value = window.location.search.substring(1)
 
-          window.location.search = ''
-        } else if (action.value !== '') {
-          setTimeout(() => {
-            handleAction(action.value)
+              window.location.search = ''
+            } else if (action.value !== '') {
+              setTimeout(() => {
+                handleAction(action.value.slice(FULL_URI_SCHEME.length))
 
-            action.value = ''
-          }, SHORT_DELAY)
-        }
+                action.value = ''
+              }, SHORT_DELAY)
+            }
+          }
+        })
       }
     }, SHORT_DELAY)
   })
