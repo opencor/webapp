@@ -767,4 +767,20 @@ if (props.omex !== undefined) {
     }, SHORT_DELAY)
   })
 }
+
+// Ensure that our BlockUI mask is removed when the UI is enabled.
+// Note: this is a workaround for a PrimeVue BlockUI issue when handling an action passed to our Web app.
+
+vue.watch(compUiEnabled, (newCompUiEnabled: boolean) => {
+  if (newCompUiEnabled) {
+    setTimeout(() => {
+      const blockUiElement = blockUi.value?.$el as HTMLElement
+      const maskElement = blockUiElement.querySelector('.p-blockui-mask')
+
+      if (maskElement !== null && maskElement.parentElement === blockUiElement) {
+        blockUiElement.removeChild(maskElement)
+      }
+    }, SHORT_DELAY)
+  }
+})
 </script>
