@@ -1,7 +1,7 @@
 <template>
   <BlockUI
     ref="blockUi"
-    :blocked="!uiEnabled"
+    :blocked="!compUiEnabled"
     class="overflow-hidden"
     :style="blockUiStyle"
     @click="activateInstance"
@@ -94,7 +94,7 @@ import type { IOpenCORProps } from '../../index'
 
 import '../assets/app.css'
 import * as common from '../common/common'
-import { SHORT_DELAY, TOAST_LIFE } from '../common/constants'
+import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants'
 import { electronApi } from '../common/electronApi'
 import * as locCommon from '../common/locCommon'
 import * as vueCommon from '../common/vueCommon'
@@ -127,6 +127,8 @@ const compIsActive = vue.computed(() => {
 const compUiEnabled = vue.computed(() => {
   return (
     uiEnabled.value &&
+    !loadingOpencorMessageVisible.value &&
+    !loadingModelMessageVisible.value &&
     !openRemoteVisible.value &&
     !settingsVisible.value &&
     !resetAllVisible.value &&
@@ -241,12 +243,8 @@ function handleAction(action: string): void {
 const uiEnabled = vue.ref<boolean>(true)
 
 electronApi?.onEnableDisableUi((enable: boolean) => {
-  enableDisableUi(enable)
-})
-
-function enableDisableUi(enable: boolean): void {
   uiEnabled.value = enable
-}
+})
 
 // Enable/disable some menu items.
 
@@ -265,15 +263,11 @@ const loadingOpencorMessageVisible = vue.ref<boolean>(false)
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 if (window.locApi === undefined) {
-  enableDisableUi(false)
-
   loadingOpencorMessageVisible.value = true
 
   vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
     if (newLocApiInitialised) {
       loadingOpencorMessageVisible.value = false
-
-      enableDisableUi(true)
     }
   })
 }
@@ -283,14 +277,10 @@ if (window.locApi === undefined) {
 const loadingModelMessageVisible = vue.ref<boolean>(false)
 
 function showLoadingModelMessage(): void {
-  enableDisableUi(false)
-
   loadingModelMessageVisible.value = true
 }
 
 function hideLoadingModelMessage(): void {
-  enableDisableUi(true)
-
   loadingModelMessageVisible.value = false
 }
 
@@ -703,7 +693,9 @@ vue.onMounted(() => {
   }
 
   const resizeObserver = new ResizeObserver(() => {
-    resizeOurselves()
+    setTimeout(() => {
+      resizeOurselves()
+    }, SHORT_DELAY)
   })
 
   let oldMainMenuHeight = vueCommon.trackedCssVariableValue(mainMenuId.value)
@@ -734,10 +726,8 @@ vue.onMounted(() => {
 
 if (props.omex !== undefined) {
   vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
-    if (newLocApiInitialised) {
-      if (props.omex !== undefined) {
-        openFile(props.omex)
-      }
+    if (newLocApiInitialised && props.omex !== undefined) {
+      openFile(props.omex)
     }
   })
 } else {
@@ -756,21 +746,41 @@ if (props.omex !== undefined) {
         // Handle the action passed to our Web app, if any.
         // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
-        const action = vueusecore.useStorage('action', '')
+        vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
+          if (newLocApiInitialised) {
+            const action = vueusecore.useStorage('action', '')
 
-        if (window.location.search !== '') {
-          action.value = window.location.search.substring(1)
+            if (window.location.search !== '') {
+              action.value = window.location.search.substring(1)
 
-          window.location.search = ''
-        } else if (action.value !== '') {
-          setTimeout(() => {
-            handleAction(action.value)
+              window.location.search = ''
+            } else if (action.value !== '') {
+              setTimeout(() => {
+                handleAction(action.value.slice(FULL_URI_SCHEME.length))
 
-            action.value = ''
-          }, SHORT_DELAY)
-        }
+                action.value = ''
+              }, SHORT_DELAY)
+            }
+          }
+        })
       }
     }, SHORT_DELAY)
   })
 }
+
+// Ensure that our BlockUI mask is removed when the UI is enabled.
+// Note: this is a workaround for a PrimeVue BlockUI issue when handling an action passed to our Web app.
+
+vue.watch(compUiEnabled, (newCompUiEnabled: boolean) => {
+  if (newCompUiEnabled) {
+    setTimeout(() => {
+      const blockUiElement = blockUi.value?.$el as HTMLElement
+      const maskElement = blockUiElement.querySelector('.p-blockui-mask')
+
+      if (maskElement !== null && maskElement.parentElement === blockUiElement) {
+        blockUiElement.removeChild(maskElement)
+      }
+    }, SHORT_DELAY)
+  }
+})
 </script>
