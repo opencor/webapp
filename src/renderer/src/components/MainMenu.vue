@@ -1,5 +1,5 @@
 <template>
-  <Menubar :id="menuBarId" :model="items">
+  <Menubar ref="menuBar" :model="items">
     <template #item="{ item, props }">
       <a v-bind="props.action">
         <div class="p-menubar-item-label">{{ item.label }}</div>
@@ -145,21 +145,18 @@ const items = [
 
 // Never display our menu as a hamburger menu.
 
-const menuBarId = vue.ref('menuBar')
+const menuBar = vue.ref<vue.ComponentPublicInstance | null>(null)
 
 vue.onMounted(() => {
-  menuBarId.value = `menuBar${String(vue.getCurrentInstance()?.uid)}`
-
-  const menuBar = document.getElementById(menuBarId.value)
-
-  if (menuBar !== null) {
+  if (menuBar.value !== null) {
+    const menuBarElement = menuBar.value.$el as HTMLElement
     const mutationObserver = new MutationObserver(() => {
-      if (menuBar.className.includes('p-menubar-mobile')) {
-        menuBar.classList.remove('p-menubar-mobile')
+      if (menuBarElement.classList.contains('p-menubar-mobile')) {
+        menuBarElement.classList.remove('p-menubar-mobile')
       }
     })
 
-    mutationObserver.observe(menuBar, { attributes: true })
+    mutationObserver.observe(menuBarElement, { attributes: true, attributeFilter: ['class'] })
   }
 })
 
