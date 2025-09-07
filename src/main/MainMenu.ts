@@ -8,6 +8,7 @@ import { clearRecentFiles } from './MainWindow'
 let enabledMenu: electron.Menu | null = null
 let disabledMenu: electron.Menu | null = null
 let recentFilePaths: string[] = []
+let hasFiles = false
 
 export function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
@@ -163,7 +164,7 @@ export function enableDisableMainMenu(enable: boolean): void {
       click: () => {
         mainWindow?.webContents.send('close')
       },
-      enabled: false
+      enabled: hasFiles
     })
     fileSubMenu.push({
       id: 'fileCloseAll',
@@ -171,7 +172,7 @@ export function enableDisableMainMenu(enable: boolean): void {
       click: () => {
         mainWindow?.webContents.send('close-all')
       },
-      enabled: false
+      enabled: hasFiles
     })
 
     if (!isMacOs()) {
@@ -297,12 +298,14 @@ export function enableDisableMainMenu(enable: boolean): void {
 
 export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
   if (enabledMenu !== null) {
+    hasFiles = enable
+
     const fileCloseMenu = enabledMenu.getMenuItemById('fileClose')
     const fileCloseAllMenu = enabledMenu.getMenuItemById('fileCloseAll')
 
     if (fileCloseMenu !== null && fileCloseAllMenu !== null) {
-      fileCloseMenu.enabled = enable
-      fileCloseAllMenu.enabled = enable
+      fileCloseMenu.enabled = hasFiles
+      fileCloseAllMenu.enabled = hasFiles
     }
   }
 }
