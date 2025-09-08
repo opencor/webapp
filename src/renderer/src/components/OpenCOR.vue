@@ -681,7 +681,7 @@ vue.onMounted(() => {
     }
   }, SHORT_DELAY)
 
-  // Monitor "our" contents size.
+  // Monitor our contents size.
 
   function resizeOurselves() {
     const style = window.getComputedStyle(blockUiElement)
