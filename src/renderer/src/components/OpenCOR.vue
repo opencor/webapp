@@ -635,7 +635,8 @@ const height = vue.ref<number>(0)
 const heightMinusMainMenu = vue.ref<number>(0)
 
 vue.onMounted(() => {
-  // Set our height to '100vh' or '100%', depending on whether we are mounted as a Vue application or a Vue component.
+  // Set our height to '100vh'/'100dvh' or '100%', depending on whether we are mounted as a Vue application or a Vue
+  // component.
 
   const blockUiElement = blockUi.value?.$el as HTMLElement
   const parentElement = blockUiElement.parentElement
@@ -649,7 +650,8 @@ vue.onMounted(() => {
     grandParentElement?.tagName === 'BODY' &&
     greatGrandParentElement?.tagName === 'HTML' &&
     greatGreatGrandParentElement === null
-      ? { height: '100vh' }
+      ? // @ts-expect-error (we intentionally have two height properties)
+        { height: '100vh', height: '100dvh' }
       : { height: '100%' }
 
   // Customise our IDs.
@@ -681,7 +683,16 @@ vue.onMounted(() => {
     }
   }, SHORT_DELAY)
 
-  // Monitor "our" contents size.
+  // Monitor our size.
+  // Note: this accounts for changes in viewport size (e.g., when rotating a mobile device).
+
+  window.addEventListener('resize', resizeOurselves)
+
+  vue.onUnmounted(() => {
+    window.removeEventListener('resize', resizeOurselves)
+  })
+
+  // Monitor our contents size.
 
   function resizeOurselves() {
     const style = window.getComputedStyle(blockUiElement)

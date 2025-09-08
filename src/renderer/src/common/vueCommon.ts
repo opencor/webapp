@@ -4,7 +4,7 @@ import * as vue from 'vue'
 
 import type { Theme } from '../../index.js'
 
-// A constant to know the uid of the active instance of OpenCOR.
+// A constant to know the UID of the active instance of OpenCOR.
 
 export const activeInstanceUid = vueusecore.createGlobalState(() => vue.ref<string | null>(null))
 

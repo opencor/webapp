@@ -242,15 +242,16 @@ vue.onMounted(() => {
 
   // Monitor "our" contents size.
 
-  const element = currentInstance?.vnode.el as HTMLElement
-
   function resizeOurselves() {
     heightMinusFileTablist.value = props.height - vueCommon.trackedCssVariableValue(fileTablistId.value)
   }
 
-  const resizeObserver = new ResizeObserver(() => {
-    resizeOurselves()
-  })
+  vue.watch(
+    () => props.height,
+    () => {
+      resizeOurselves()
+    }
+  )
 
   let oldFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value)
 
@@ -264,11 +265,9 @@ vue.onMounted(() => {
     }
   })
 
-  resizeObserver.observe(element)
   mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
 
   vue.onUnmounted(() => {
-    resizeObserver.disconnect()
     mutationObserver.disconnect()
 
     fileTablistResizeObserver?.disconnect()
@@ -277,7 +276,7 @@ vue.onMounted(() => {
 
 // Keyboard shortcuts.
 
-if (!common.isMobile()) {
+if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
     if (!props.isActive || !props.uiEnabled || fileTabs.value.length === 0) {
       return

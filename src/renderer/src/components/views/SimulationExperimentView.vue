@@ -174,15 +174,16 @@ vue.onMounted(() => {
 
   // Monitor "our" contents size.
 
-  const element = currentInstance?.vnode.el as HTMLElement
-
   function resizeOurselves() {
     heightMinusToolbar.value = props.height - vueCommon.trackedCssVariableValue(toolbarId.value)
   }
 
-  const resizeObserver = new ResizeObserver(() => {
-    resizeOurselves()
-  })
+  vue.watch(
+    () => props.height,
+    () => {
+      resizeOurselves()
+    }
+  )
 
   let oldToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value)
 
@@ -196,11 +197,9 @@ vue.onMounted(() => {
     }
   })
 
-  resizeObserver.observe(element)
   mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
 
   vue.onUnmounted(() => {
-    resizeObserver.disconnect()
     mutationObserver.disconnect()
 
     toolbarResizeObserver?.disconnect()
@@ -209,7 +208,7 @@ vue.onMounted(() => {
 
 // Keyboard shortcuts.
 
-if (!common.isMobile()) {
+if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
     if (!props.isActive || !props.uiEnabled) {
       return
