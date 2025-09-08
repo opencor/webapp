@@ -7,7 +7,6 @@ on:
 
 jobs:
   web_app:
-    if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
     runs-on: ubuntu-22.04
     steps:
