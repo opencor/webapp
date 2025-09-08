@@ -681,6 +681,15 @@ vue.onMounted(() => {
     }
   }, SHORT_DELAY)
 
+  // Monitor our size.
+  // Note: this accounts for changes in viewport size (e.g., when rotating a mobile device).
+
+  window.addEventListener('resize', resizeOurselves)
+
+  vue.onUnmounted(() => {
+    window.removeEventListener('resize', resizeOurselves)
+  })
+
   // Monitor our contents size.
 
   function resizeOurselves() {
