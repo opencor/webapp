@@ -28,8 +28,8 @@ export function isMacOs(): boolean {
   return uaParser.getOS().name === 'macOS'
 }
 
-export function isMobile(): boolean {
-  return uaParser.getDevice().type === 'mobile'
+export function isDesktop(): boolean {
+  return uaParser.getOS().name === 'Windows' || uaParser.getOS().name === 'Linux' || uaParser.getOS().name === 'macOS'
 }
 
 // A method to determine whether the Ctrl or Cmd key is pressed, depending on the operating system.

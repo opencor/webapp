@@ -209,7 +209,7 @@ vue.onMounted(() => {
 
 // Keyboard shortcuts.
 
-if (!common.isMobile()) {
+if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
     if (!props.isActive || !props.uiEnabled) {
       return
