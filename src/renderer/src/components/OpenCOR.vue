@@ -1,7 +1,7 @@
 <template>
   <BlockUI
     ref="blockUi"
-    :blocked="!compUiEnabled"
+    :blocked="compUiBlocked"
     class="overflow-hidden"
     :style="blockUiStyle"
     @click="activateInstance"
@@ -124,11 +124,13 @@ const compIsActive = vue.computed(() => {
 
 // Determine if the component UI should be enabled.
 
+const compUiBlocked = vue.computed(() => {
+  return !uiEnabled.value || loadingOpencorMessageVisible.value || loadingModelMessageVisible.value
+})
+
 const compUiEnabled = vue.computed(() => {
   return (
-    uiEnabled.value &&
-    !loadingOpencorMessageVisible.value &&
-    !loadingModelMessageVisible.value &&
+    !compUiBlocked.value &&
     !openRemoteVisible.value &&
     !settingsVisible.value &&
     !resetAllVisible.value &&
@@ -782,8 +784,8 @@ if (props.omex !== undefined) {
 // Ensure that our BlockUI mask is removed when the UI is enabled.
 // Note: this is a workaround for a PrimeVue BlockUI issue when handling an action passed to our Web app.
 
-vue.watch(compUiEnabled, (newCompUiEnabled: boolean) => {
-  if (newCompUiEnabled) {
+vue.watch(compUiBlocked, (newCompUiBlocked: boolean) => {
+  if (!newCompUiBlocked) {
     setTimeout(() => {
       const blockUiElement = blockUi.value?.$el as HTMLElement
       const maskElement = blockUiElement.querySelector('.p-blockui-mask')
