@@ -297,7 +297,7 @@ if (common.isDesktop()) {
 
 <style scoped>
 .p-tab {
-  padding: 0.25rem 0.5rem;
+  padding: 0.125rem 0.5rem;
   border-right: 1px solid var(--p-content-border-color);
 }
 
