@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20250908.0",
+  "version": "0.20250909.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
@@ -91,6 +91,6 @@
     "tailwindcss": "^4.1.13",
     "tailwindcss-primeui": "^0.6.1",
     "unplugin-vue-components": "^29.0.0",
-    "vite": "^7.1.4"
+    "vite": "^7.1.5"
   }
 }
