@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import * as vueusecore from '@vueuse/core'
 
+import type Menubar from 'primevue/menubar'
 import * as vue from 'vue'
 
 import * as common from '../common/common'
@@ -143,12 +144,14 @@ const items = [
   }
 ]
 
-// Never display our menu as a hamburger menu.
+// A few things that can only be done when the component is mounted.
 
-const menuBar = vue.ref<vue.ComponentPublicInstance | null>(null)
+const menuBar = vue.ref<(vue.ComponentPublicInstance<typeof Menubar> & { hide: () => void }) | null>(null)
 
 vue.onMounted(() => {
   if (menuBar.value !== null) {
+    // Ensure that the menubar never gets the 'p-menubar-mobile' class, which would turn it into a hamburger menu.
+
     const menuBarElement = menuBar.value.$el as HTMLElement
     const mutationObserver = new MutationObserver(() => {
       if (menuBarElement.classList.contains('p-menubar-mobile')) {
@@ -157,6 +160,30 @@ vue.onMounted(() => {
     })
 
     mutationObserver.observe(menuBarElement, { attributes: true, attributeFilter: ['class'] })
+
+    // Close the menu when clicking clicking on the menubar but outside of the main menu items.
+
+    function onClick(event: MouseEvent) {
+      const target = event.target as Node
+
+      if (
+        menuBarElement.contains(target) &&
+        !menuBarElement.querySelector('.p-menubar-root-list')?.contains(target) &&
+        !Array.from(document.querySelectorAll('.p-menubar-submenu')).some((submenu) => submenu.contains(target))
+      ) {
+        menuBar.value?.hide()
+      }
+    }
+
+    document.addEventListener('click', onClick)
+
+    // Clean up the mutation observer and event listener when the component is unmounted.
+
+    vue.onBeforeUnmount(() => {
+      mutationObserver.disconnect()
+
+      document.removeEventListener('click', onClick)
+    })
   }
 })
 
