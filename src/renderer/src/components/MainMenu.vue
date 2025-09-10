@@ -206,6 +206,22 @@ if (common.isDesktop()) {
   display: none;
 }
 
+:deep(.p-menubar-item .p-focus > .p-menubar-item-content > .p-menubar-item-link) {
+  border-radius: var(--p-menubar-item-border-radius);
+  background-color: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+}
+
+:deep(.p-menubar-item .p-focus > .p-menubar-item-content > .p-menubar-item-link .shortcut) {
+  border-color: var(--p-primary-contrast-color);
+  background-color: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+}
+
+:deep(.p-menubar-item .p-focus > .p-menubar-item-content > .p-menubar-item-link > .p-menubar-submenu-icon) {
+  color: var(--p-primary-contrast-color) !important;
+}
+
 .p-menubar-item-link {
   padding: 0.25rem 0.5rem !important;
 }
