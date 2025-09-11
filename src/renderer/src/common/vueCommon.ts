@@ -8,38 +8,54 @@ import type { Theme } from '../../index.js'
 
 export const activeInstanceUid = vueusecore.createGlobalState(() => vue.ref<string | null>(null))
 
-// Some constants to know whether the operating system uses light mode or dark mode.
+// Theme composable to know whether OpenCOR uses light mode or dark mode.
 
-const _prefersColorScheme = window.matchMedia('(prefers-color-scheme: light)')
-const _isLightMode = vue.ref(_prefersColorScheme.matches)
-const _isDarkMode = vue.ref(!_prefersColorScheme.matches)
-let _theme: Theme = 'system'
+export function useTheme() {
+  const prefersColorScheme = window.matchMedia('(prefers-color-scheme: light)')
+  const isLightMode = vue.ref(prefersColorScheme.matches)
+  const isDarkMode = vue.ref(!prefersColorScheme.matches)
+  let theme: Theme = 'system'
 
-_prefersColorScheme.addEventListener('change', (event) => {
-  if (_theme === 'system') {
-    _isLightMode.value = event.matches
-    _isDarkMode.value = !event.matches
+  function onChange(event) {
+    if (theme === 'system') {
+      isLightMode.value = event.matches
+      isDarkMode.value = !event.matches
+    }
   }
-})
 
-export function setTheme(theme: Theme) {
-  _theme = theme
+  vue.onMounted(() => {
+    prefersColorScheme.addEventListener('change', onChange)
+  })
 
-  if (theme === 'light') {
-    _isLightMode.value = true
-    _isDarkMode.value = false
-  } else if (theme === 'dark') {
-    _isLightMode.value = false
-    _isDarkMode.value = true
+  vue.onUnmounted(() => {
+    prefersColorScheme.removeEventListener('change', onChange)
+  })
+
+  function setTheme(newTheme: Theme) {
+    theme = newTheme
+
+    if (theme === 'light') {
+      isLightMode.value = true
+      isDarkMode.value = false
+    } else if (theme === 'dark') {
+      isLightMode.value = false
+      isDarkMode.value = true
+    }
   }
-}
 
-export function useLightMode(): boolean {
-  return _isLightMode.value
-}
+  function useLightMode(): boolean {
+    return isLightMode.value
+  }
 
-export function useDarkMode(): boolean {
-  return _isDarkMode.value
+  function useDarkMode(): boolean {
+    return isDarkMode.value
+  }
+
+  return {
+    setTheme,
+    useLightMode,
+    useDarkMode
+  }
 }
 
 // A method to retrieve the name of a tracked CSS variable.

@@ -186,7 +186,7 @@ if (currentInstance !== null) {
 }
 
 if (props.theme !== undefined) {
-  vueCommon.setTheme(props.theme)
+  vueCommon.useTheme().setTheme(props.theme)
 }
 
 const toast = useToast()

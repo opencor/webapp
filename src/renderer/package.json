@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20250910.1",
+  "version": "0.20250911.0",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -65,7 +65,7 @@
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
     "quill": "^2.0.3",
-    "ua-parser-js": "^2.0.4"
+    "ua-parser-js": "^2.0.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",

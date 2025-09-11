@@ -52,25 +52,26 @@ const props = withDefaults(
 )
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
+const theme = vueCommon.useTheme()
 
 function themeData() {
   // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 
   function axisThemeData() {
     return {
-      zerolinecolor: vueCommon.useLightMode() ? '#94a3b8' : '#71717a', // --p-surface-400 / --p-surface-500
-      gridcolor: vueCommon.useLightMode() ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
+      zerolinecolor: theme.useLightMode() ? '#94a3b8' : '#71717a', // --p-surface-400 / --p-surface-500
+      gridcolor: theme.useLightMode() ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
       minor: {
-        gridcolor: vueCommon.useLightMode() ? '#f1f5f9' : '#27272a' // --p-surface-100 / --p-surface-800
+        gridcolor: theme.useLightMode() ? '#f1f5f9' : '#27272a' // --p-surface-100 / --p-surface-800
       }
     }
   }
 
   return {
-    paper_bgcolor: vueCommon.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
-    plot_bgcolor: vueCommon.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
+    paper_bgcolor: theme.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
+    plot_bgcolor: theme.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
     font: {
-      color: vueCommon.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
+      color: theme.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
     },
     colorway: [
       '#7289ab', // Blue
@@ -87,7 +88,7 @@ function themeData() {
 }
 
 vue.watch(
-  () => [props.plots, vueCommon.useLightMode()],
+  () => [props.plots, theme.useLightMode()],
   () => {
     Plotly.react(
       mainDiv.value,
