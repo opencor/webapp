@@ -233,25 +233,19 @@ if (common.isDesktop()) {
   display: none;
 }
 
-:deep(.p-menubar-item .p-focus > .p-menubar-item-content > .p-menubar-item-link),
-:deep(.p-menubar-submenu .p-menubar-item:active:hover > .p-menubar-item-content > .p-menubar-item-link),
-:deep(.p-menubar-submenu .p-menubar-item:active:not(:has(.p-menubar-submenu)) > .p-menubar-item-content > .p-menubar-item-link) {
+:deep(.p-menubar-submenu .p-menubar-item-link:hover:not(:has(.p-menubar-submenu))) {
   border-radius: var(--p-menubar-item-border-radius);
   background-color: var(--p-primary-color);
   color: var(--p-primary-contrast-color);
 }
 
-:deep(.p-menubar-item .p-focus > .p-menubar-item-content > .p-menubar-item-link .shortcut),
-:deep(.p-menubar-submenu .p-menubar-item:active:hover > .p-menubar-item-content > .p-menubar-item-link .shortcut),
-:deep(.p-menubar-submenu .p-menubar-item:active:not(:has(.p-menubar-submenu)) > .p-menubar-item-content > .p-menubar-item-link .shortcut) {
+:deep(.p-menubar-submenu .p-menubar-item-link:hover:not(:has(.p-menubar-submenu)) .shortcut) {
   border-color: var(--p-primary-contrast-color);
   background-color: var(--p-primary-color);
   color: var(--p-primary-contrast-color);
 }
 
-:deep(.p-menubar-item .p-focus > .p-menubar-item-content > .p-menubar-item-link > .p-menubar-submenu-icon),
-:deep(.p-menubar-submenu .p-menubar-item:active:hover > .p-menubar-item-content > .p-menubar-item-link > .p-menubar-submenu-icon),
-:deep(.p-menubar-submenu .p-menubar-item:active:not(:has(.p-menubar-submenu)) > .p-menubar-item-content > .p-menubar-item-link > .p-menubar-submenu-icon) {
+:deep(.p-menubar-submenu .p-menubar-item-link:hover:not(:has(.p-menubar-submenu)) > .p-menubar-submenu-icon) {
   color: var(--p-primary-contrast-color) !important;
 }
 
