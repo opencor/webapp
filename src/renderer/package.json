@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20250911.0",
+  "version": "0.20250918.0",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -71,7 +71,7 @@
     "@tailwindcss/postcss": "^4.1.13",
     "@tailwindcss/vite": "^4.1.13",
     "@types/js-cookie": "^3.0.6",
-    "@types/node": "^24.3.1",
+    "@types/node": "^24.5.2",
     "@types/plotly.js": "3.0.3",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/eslint-config-prettier": "^10.2.0",
