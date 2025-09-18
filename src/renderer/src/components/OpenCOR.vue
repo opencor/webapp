@@ -652,8 +652,7 @@ vue.onMounted(() => {
     grandParentElement?.tagName === 'BODY' &&
     greatGrandParentElement?.tagName === 'HTML' &&
     greatGreatGrandParentElement === null
-      ? // @ts-expect-error (we intentionally have two height properties)
-        { height: '100vh', height: '100dvh' }
+      ? { height: '100vh, 100dvh' }
       : { height: '100%' }
 
   // Customise our IDs.
