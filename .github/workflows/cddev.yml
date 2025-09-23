@@ -16,8 +16,6 @@ jobs:
           timezoneLinux: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
