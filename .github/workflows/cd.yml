@@ -125,8 +125,7 @@ jobs:
           sync: full
   npm:
     runs-on: ubuntu-22.04
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    environment: npm
     steps:
       - name: Set the timezone to New Zealand
         uses: szenius/set-timezone@v2.0
@@ -154,4 +153,4 @@ jobs:
       - name: Publish OpenCOR
         run: |
           cd src/renderer
-          pnpm publish --provenance --access public --no-git-checks
+          pnpm publish --provenance --access public

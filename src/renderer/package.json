@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20250918.0",
+  "version": "0.20250923.0",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -78,11 +78,11 @@
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.21",
-    "eslint": "^9.35.0",
+    "eslint": "^9.36.0",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.13",
     "tailwindcss-primeui": "^0.6.1",
-    "unplugin-vue-components": "^29.0.0",
-    "vite": "^7.1.5"
+    "unplugin-vue-components": "^29.1.0",
+    "vite": "^7.1.7"
   }
 }
