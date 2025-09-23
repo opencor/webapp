@@ -147,4 +147,4 @@ jobs:
       - name: Publish OpenCOR
         run: |
           cd src/renderer
-          pnpm publish --provenance --access public --no-git-checks
+          npm publish --provenance --access public
