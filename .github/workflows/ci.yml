@@ -38,8 +38,6 @@ jobs:
           timezoneMacos: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: Install CMake and Ninja
         uses: lukka/get-cmake@latest
       - name: Install Node.js
