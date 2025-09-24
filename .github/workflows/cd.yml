@@ -133,6 +133,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@opencor'
       - name: Install pnpm
         run: npm install -g pnpm
       - name: OpenCOR dependencies
@@ -146,4 +148,4 @@ jobs:
       - name: Publish OpenCOR
         run: |
           cd src/renderer
-          npm publish --provenance --access public
+          pnpm publish --provenance --access public --no-git-checks
