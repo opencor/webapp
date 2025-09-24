@@ -129,7 +129,7 @@ jobs:
           timezoneLinux: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
-      - name: Install Node.js and use npm to push OpenCOR
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
@@ -140,7 +140,7 @@ jobs:
         run: |
           cd src/renderer
           pnpm install
-      - name: Build OpenCOR
+      - name: Build OpenCOR as a component
         run: |
           cd src/renderer
           pnpm build:lib
