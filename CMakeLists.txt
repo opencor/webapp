@@ -10,7 +10,7 @@ endforeach()
 
 # Project details.
 
-project(libOpenCOR VERSION 0.20250918.0)
+project(libOpenCOR VERSION 0.20250926.1)
 
 # Enable C++20.
 
@@ -60,7 +60,7 @@ endif()
 set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION}${PLATFORM}${ARCHITECTURE}-Static${MODE})
 set(LIBOPENCOR_FILE_NAME ${LIBOPENCOR_FILE_NAME_WE}${EXTENSION})
 
-file(DOWNLOAD https://opencor.ws/libopencor/downloads/${LIBOPENCOR_FILE_NAME}
+file(DOWNLOAD https://github.com/opencor/libopencor/releases/download/v${PROJECT_VERSION}/${LIBOPENCOR_FILE_NAME}
               ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME}
