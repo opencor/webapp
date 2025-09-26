@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20250924.4",
+  "version": "0.20250926.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
