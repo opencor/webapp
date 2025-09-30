@@ -83,6 +83,7 @@ export interface IWasmLocApi {
 
   HEAPU8: Uint8Array
   _malloc: (size: number) => number
+  _free: (ptr: number) => void
 
   // FileManager API.
 

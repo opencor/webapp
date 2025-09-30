@@ -107,11 +107,12 @@ export class File {
       this._wasmFile = new _wasmLocApi.File(path)
 
       const heapContentsPtr = _wasmLocApi._malloc(contents.length)
-      const heapContents = new Uint8Array(_wasmLocApi.HEAPU8.buffer, heapContentsPtr, contents.length)
 
-      heapContents.set(contents)
+      new Uint8Array(_wasmLocApi.HEAPU8.buffer, heapContentsPtr, contents.length).set(contents)
 
       this._wasmFile.setContents(heapContentsPtr, contents.length)
+
+      _wasmLocApi._free(heapContentsPtr)
 
       this._issues = wasmIssuesToIssues(this._wasmFile.issues)
     } else {
