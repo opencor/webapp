@@ -30,12 +30,21 @@ export interface IWasmFileManager {
 }
 
 class FileManager {
+  private static _instance: FileManager | undefined = undefined
   private _fileManager: IWasmFileManagerInstance | undefined = undefined
 
+  static instance(): FileManager {
+    FileManager._instance ??= new FileManager()
+
+    return FileManager._instance
+  }
+
+  private constructor() {
+    // Have a private constructor so that we cannot instantiate this class directly.
+  }
+
   private fileManager() {
-    if (this._fileManager === undefined && !cppVersion()) {
-      this._fileManager = _wasmLocApi.FileManager.instance()
-    }
+    this._fileManager ??= _wasmLocApi.FileManager.instance()
 
     return this._fileManager
   }
@@ -45,25 +54,22 @@ class FileManager {
       _cppLocApi.fileManagerUnmanage(path)
     } else {
       const fileManager = this.fileManager()
+      const files = fileManager.files
 
-      if (fileManager !== undefined) {
-        const files = fileManager.files
+      for (let i = 0; i < files.size(); ++i) {
+        const file = files.get(i)
 
-        for (let i = 0; i < files.size(); ++i) {
-          const file = files.get(i)
+        if (file.fileName === path) {
+          fileManager.unmanage(file)
 
-          if (file.fileName === path) {
-            fileManager.unmanage(file)
-
-            break
-          }
+          break
         }
       }
     }
   }
 }
 
-export const fileManager = new FileManager()
+export const fileManager = FileManager.instance()
 
 // File API.
 
