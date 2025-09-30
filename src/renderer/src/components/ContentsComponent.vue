@@ -176,9 +176,9 @@ function selectFile(filePath: string): void {
 }
 
 function selectNextFile(): void {
-  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
-  const nextFileIndex = (activeFileIndex + 1) % fileTabs.value.length
-  const nextFileTab = fileTabs.value[nextFileIndex]
+  const crtFileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
+  const nextFileTabIndex = (crtFileTabIndex + 1) % fileTabs.value.length
+  const nextFileTab = fileTabs.value[nextFileTabIndex]
 
   if (nextFileTab !== undefined) {
     selectFile(nextFileTab.file.path())
@@ -186,9 +186,9 @@ function selectNextFile(): void {
 }
 
 function selectPreviousFile(): void {
-  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
-  const nextFileIndex = (activeFileIndex - 1 + fileTabs.value.length) % fileTabs.value.length
-  const nextFileTab = fileTabs.value[nextFileIndex]
+  const crtFileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
+  const nextFileTabIndex = (crtFileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length
+  const nextFileTab = fileTabs.value[nextFileTabIndex]
 
   if (nextFileTab !== undefined) {
     selectFile(nextFileTab.file.path())
@@ -198,12 +198,12 @@ function selectPreviousFile(): void {
 function closeFile(filePath: string): void {
   locApi.fileManager.unmanage(filePath)
 
-  const activeFileIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath)
+  const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath)
 
-  fileTabs.value.splice(activeFileIndex, 1)
+  fileTabs.value.splice(fileTabIndex, 1)
 
   if (activeFile.value === filePath && fileTabs.value.length > 0) {
-    const nextFileTab = fileTabs.value[Math.min(activeFileIndex, fileTabs.value.length - 1)]
+    const nextFileTab = fileTabs.value[Math.min(fileTabIndex, fileTabs.value.length - 1)]
 
     if (nextFileTab !== undefined) {
       selectFile(nextFileTab.file.path())
@@ -225,12 +225,12 @@ function closeAllFiles(): void {
 
 // Various things that need to be done once we are mounted.
 
-const currentInstance = vue.getCurrentInstance()
+const crtInstance = vue.getCurrentInstance()
 
 vue.onMounted(() => {
   // Customise our IDs.
 
-  fileTablistId.value = `contentsComponentFileTablist${String(currentInstance?.uid)}`
+  fileTablistId.value = `contentsComponentFileTablist${String(crtInstance?.uid)}`
 
   // Track the height of our file tablist.
 
