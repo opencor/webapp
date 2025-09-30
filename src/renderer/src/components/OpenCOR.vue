@@ -31,7 +31,7 @@
       <DragNDropComponent v-show="dragAndDropCounter > 0" />
       <MainMenu
         :id="mainMenuId"
-        v-if="!electronApi && omex === undefined"
+        v-if="electronApi === undefined && omex === undefined"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
