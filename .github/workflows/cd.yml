@@ -119,6 +119,12 @@ jobs:
           local-path: ./src/renderer/dist
           remote-path: /home/www/opencor.ws/app
           sync: full
+      - name: Archive OpenCOR's Web app
+        run: pnpm archive:web
+      - name: Release OpenCOR's Web app
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/OpenCOR-*-WebApp.tar.gz
   npm:
     runs-on: ubuntu-22.04
     env:
