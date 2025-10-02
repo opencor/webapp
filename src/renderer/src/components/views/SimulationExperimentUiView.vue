@@ -105,6 +105,7 @@ function updateUiAndSimulation() {
   props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/')
 
+    // @ts-expect-error (we trust that we have a valid component and variable name)
     model.addChange(componentVariableNames[0], componentVariableNames[1], String(evaluateValue(parameter.value)))
   })
 
@@ -115,6 +116,7 @@ function updateUiAndSimulation() {
   const parser = math.parser()
 
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+    // @ts-expect-error (we trust that we have some valid information)
     parser.set(data.id, locCommon.simulationData(instanceTask, idToInfo[data.id]))
   })
 

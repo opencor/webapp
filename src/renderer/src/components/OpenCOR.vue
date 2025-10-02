@@ -31,7 +31,7 @@
       <DragNDropComponent v-show="dragAndDropCounter > 0" />
       <MainMenu
         :id="mainMenuId"
-        v-if="!electronApi && omex === undefined"
+        v-if="electronApi === undefined && omex === undefined"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -114,11 +114,11 @@ const activeInstanceUid = vueCommon.activeInstanceUid()
 // Keep track of which instance of OpenCOR is currently active.
 
 function activateInstance(): void {
-  activeInstanceUid.value = String(currentInstance?.uid)
+  activeInstanceUid.value = String(crtInstance?.uid)
 }
 
 const compIsActive = vue.computed(() => {
-  return activeInstanceUid.value === String(currentInstance?.uid)
+  return activeInstanceUid.value === String(crtInstance?.uid)
 })
 
 // Determine if the component UI should be enabled.
@@ -143,10 +143,10 @@ const compUiEnabled = vue.computed(() => {
 
 // Get the current Vue app instance to use some PrimeVue plugins.
 
-const currentInstance = vue.getCurrentInstance()
+const crtInstance = vue.getCurrentInstance()
 
-if (currentInstance !== null) {
-  const app = currentInstance.appContext.app
+if (crtInstance !== null) {
+  const app = crtInstance.appContext.app
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (app.config.globalProperties.$primevue === undefined) {
@@ -656,8 +656,8 @@ vue.onMounted(() => {
 
   // Customise our IDs.
 
-  toastId.value = `opencorToast${String(currentInstance?.uid)}`
-  mainMenuId.value = `opencorMainMenu${String(currentInstance?.uid)}`
+  toastId.value = `opencorToast${String(crtInstance?.uid)}`
+  mainMenuId.value = `opencorMainMenu${String(crtInstance?.uid)}`
 
   // Make ourselves the active instance.
 

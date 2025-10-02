@@ -156,13 +156,13 @@ vue.onMounted(() => {
 
 // Various things that need to be done once we are mounted.
 
-const currentInstance = vue.getCurrentInstance()
+const crtInstance = vue.getCurrentInstance()
 
 vue.onMounted(() => {
   // Customise our IDs.
 
-  toolbarId.value = `simulationExperimentViewToolbar${String(currentInstance?.uid)}`
-  editorId.value = `simulationExperimentViewEditor${String(currentInstance?.uid)}`
+  toolbarId.value = `simulationExperimentViewToolbar${String(crtInstance?.uid)}`
+  editorId.value = `simulationExperimentViewEditor${String(crtInstance?.uid)}`
 
   // Track the height of our toolbar.
 
