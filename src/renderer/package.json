@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20251002.0",
+  "version": "0.20251002.1",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -83,6 +83,6 @@
     "tailwindcss": "^4.1.14",
     "tailwindcss-primeui": "^0.6.1",
     "unplugin-vue-components": "^29.1.0",
-    "vite": "^7.1.7"
+    "vite": "^7.1.8"
   }
 }

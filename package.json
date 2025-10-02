@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20251002.0",
+  "version": "0.20251002.1",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
@@ -33,6 +33,7 @@
     ]
   },
   "scripts": {
+    "archive:web": "node src/renderer/scripts/archive.web.js",
     "build": "electron-vite build",
     "build:web": "cd ./src/renderer && vite build",
     "clean": "node src/renderer/scripts/clean.js",
@@ -90,7 +91,8 @@
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.14",
     "tailwindcss-primeui": "^0.6.1",
+    "tar": "^7.5.1",
     "unplugin-vue-components": "^29.1.0",
-    "vite": "^7.1.7"
+    "vite": "^7.1.8"
   }
 }
