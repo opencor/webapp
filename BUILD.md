@@ -65,6 +65,7 @@ npm install -g pnpm
 
 | Script         | Description                                                           |
 | -------------- | --------------------------------------------------------------------- |
+| `archive:web`  | Archive OpenCOR's Web app                                             |
 | `build`        | Build OpenCOR                                                         |
 | `build:web`    | Build OpenCOR's Web app                                               |
 | `clean`        | Clean OpenCOR's environment                                           |
