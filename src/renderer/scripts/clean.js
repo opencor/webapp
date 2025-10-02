@@ -1,14 +1,6 @@
 import fs from 'fs'
 
-function clean(paths) {
-  for (const path of paths) {
-    if (fs.existsSync(path)) {
-      fs.rmSync(path, { recursive: true, force: true })
-    }
-  }
-}
-
-clean([
+for (const path of [
   'dist',
   'node_modules',
   'out',
@@ -16,4 +8,8 @@ clean([
   'src/renderer/components.d.ts',
   'src/renderer/dist',
   'src/renderer/node_modules'
-])
+]) {
+  if (fs.existsSync(path)) {
+    fs.rmSync(path, { recursive: true, force: true })
+  }
+}
