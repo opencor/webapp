@@ -22,9 +22,9 @@ jobs:
           - name: Linux (ARM)
             os: ubuntu-22.04-arm
           - name: macOS (Intel)
-            os: macos-13
+            os: macos-15-intel
           - name: macOS (ARM)
-            os: macos-14
+            os: macos-15
           - name: Code formatting
             os: ubuntu-22.04
           - name: Linting
