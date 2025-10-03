@@ -28,7 +28,7 @@ jobs:
           - name: macOS (Intel)
             os: macos-15-intel
           - name: macOS (ARM)
-            os: macos-14
+            os: macos-15
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       APPLE_ID: ${{ secrets.APPLE_ID }}

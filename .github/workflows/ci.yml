@@ -24,7 +24,7 @@ jobs:
           - name: macOS (Intel)
             os: macos-15-intel
           - name: macOS (ARM)
-            os: macos-14
+            os: macos-15
           - name: Code formatting
             os: ubuntu-22.04
           - name: Linting
