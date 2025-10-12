@@ -27,5 +27,5 @@ out
 
 *.tsbuildinfo
 
-# PrimeVue auto import
+# unplugin-vue-components
 src/renderer/components.d.ts

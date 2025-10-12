@@ -24,14 +24,6 @@
   },
   "type": "module",
   "version": "0.20251014.0",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@tailwindcss/oxide",
-      "electron",
-      "electron-winstaller",
-      "esbuild"
-    ]
-  },
   "scripts": {
     "archive:web": "node src/renderer/scripts/archive.web.js",
     "build": "electron-vite build",
@@ -43,7 +35,7 @@
     "format:check": "prettier --check . && clang-format --dry-run -Werror src/renderer/src/libopencor/src/*",
     "libopencor": "cmake-js build -B Release -O ./dist/libOpenCOR",
     "lint": "eslint --fix .",
-    "release": "pnpm electron-builder",
+    "release": "electron-builder",
     "start": "electron-vite preview",
     "start:web": "pnpm build:web && cd ./src/renderer && vite preview",
     "version:new": "node src/renderer/scripts/version.js"
