@@ -37,6 +37,8 @@ export default vite.defineConfig({
     }
   },
   plugins: [
+    // Note: this must be in sync with vite.config.ts.
+
     tailwindcssPlugin(),
     vuePlugin(),
     vitePlugin({
