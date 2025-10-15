@@ -66,8 +66,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Install bun
+        if: ${{ matrix.name != 'Windows (ARM)' }}
+        uses: oven-sh/setup-bun@v2
+      - name: Install bun (Windows ARM only)
+        if: ${{ matrix.name == 'Windows (ARM)' }}
+        run: |
+          curl -L https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64-baseline.zip -o bun.zip
+          unzip -j bun.zip -d $env:USERPROFILE\.bun
+          del bun.zip
+          echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
       - name: Make sure that we can sign OpenCOR (Windows ARM only)
         if: matrix.name == 'Windows (ARM)'
         run: |
@@ -81,13 +89,16 @@ jobs:
           sudo apt update
           sudo apt install libopenjp2-tools
       - name: OpenCOR dependencies
-        run: pnpm install
+        run: bun install
+      - name: Install some native packages (Windows ARM only)
+        if: ${{ matrix.name == 'Windows (ARM)' }}
+        run: npm install @rollup/rollup-win32-arm64-msvc @tailwindcss/oxide-win32-arm64-msvc lightningcss-win32-arm64-msvc
       - name: Build libOpenCOR
-        run: pnpm libopencor
+        run: bun libopencor
       - name: Build OpenCOR
-        run: pnpm build
+        run: bun run build
       - name: Release OpenCOR
-        run: pnpm release
+        run: bun release
   web_app:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
@@ -103,12 +114,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Install bun
+        run: npm install -g bun
       - name: OpenCOR dependencies
-        run: pnpm install
+        run: bun install
       - name: Build OpenCOR's Web app
-        run: pnpm build:web
+        run: bun build:web
       - name: Deploy to https://opencor.ws/app/
         uses: milanmk/actions-file-deployer@master
         with:
@@ -120,7 +131,7 @@ jobs:
           remote-path: /home/www/opencor.ws/app
           sync: full
       - name: Archive OpenCOR's Web app
-        run: pnpm archive:web
+        run: bun archive:web
       - name: Release OpenCOR's Web app
         uses: softprops/action-gh-release@v2
         with:
@@ -141,17 +152,17 @@ jobs:
         with:
           node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Install bun
+        run: npm install -g bun
       - name: OpenCOR dependencies
         run: |
           cd src/renderer
-          pnpm install
+          bun install
       - name: Build OpenCOR as a component
         run: |
           cd src/renderer
-          pnpm build:lib
+          bun build:lib
       - name: Publish OpenCOR
         run: |
           cd src/renderer
-          pnpm publish --provenance --access public --no-git-checks
+          bun publish --provenance --access public --no-git-checks
