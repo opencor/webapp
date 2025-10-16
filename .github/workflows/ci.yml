@@ -55,10 +55,11 @@ jobs:
           del bun.zip
           echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
       - name: OpenCOR dependencies
+        if: ${{ matrix.name != 'Windows (ARM)' }}
         run: bun install
-      - name: Install some native packages (Windows ARM only)
+      - name: OpenCOR dependencies (Windows ARM only)
         if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: npm install @rollup/rollup-win32-arm64-msvc @tailwindcss/oxide-win32-arm64-msvc lightningcss-win32-arm64-msvc
+        run: bun install --cpu=arm64
       - name: Build libOpenCOR
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: bun libopencor
@@ -75,10 +76,10 @@ jobs:
           bun install
           bun build:lib
       - name: Code formatting
-        if: matrix.name == 'Code formatting'
+        if: ${{ matrix.name == 'Code formatting' }}
         run: bun format:check
       - name: Linting
-        if: matrix.name == 'Linting'
+        if: ${{ matrix.name == 'Linting' }}
         run: bun lint
       - name: Clean OpenCOR
         run: bun clean
