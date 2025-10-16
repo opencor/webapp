@@ -89,10 +89,11 @@ jobs:
           sudo apt update
           sudo apt install libopenjp2-tools
       - name: OpenCOR dependencies
+        if: ${{ matrix.name != 'Windows (ARM)' }}
         run: bun install
-      - name: Install some native packages (Windows ARM only)
+      - name: OpenCOR dependencies (Windows ARM only)
         if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: npm install @rollup/rollup-win32-arm64-msvc @tailwindcss/oxide-win32-arm64-msvc lightningcss-win32-arm64-msvc
+        run: bun install --cpu=arm64
       - name: Build libOpenCOR
         run: bun libopencor
       - name: Build OpenCOR
