@@ -20,12 +20,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Install bun
+        run: npm install -g bun
       - name: OpenCOR dependencies
-        run: pnpm install
+        run: bun install
       - name: Build OpenCOR's Web app
-        run: pnpm build:web
+        run: bun build:web
       - name: Deploy to https://opencor.ws/appdev/
         uses: milanmk/actions-file-deployer@master
         with:

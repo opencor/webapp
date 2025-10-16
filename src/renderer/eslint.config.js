@@ -1,5 +1,5 @@
 // @ts-check
-// Note: this must be in sync with src/renderer/eslint.config.js.
+// Note: this must be in sync with eslint.config.js.
 
 import eslintJs from '@eslint/js'
 import vueEslintConfigPrettierSkipFormatting from '@vue/eslint-config-prettier/skip-formatting'

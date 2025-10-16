@@ -44,30 +44,41 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Install bun
+        if: ${{ matrix.name != 'Windows (ARM)' }}
+        uses: oven-sh/setup-bun@v2
+      - name: Install bun (Windows ARM only)
+        if: ${{ matrix.name == 'Windows (ARM)' }}
+        run: |
+          curl -L https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64-baseline.zip -o bun.zip
+          unzip -j bun.zip -d $env:USERPROFILE\.bun
+          del bun.zip
+          echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
       - name: OpenCOR dependencies
-        run: pnpm install
+        run: bun install
+      - name: Install some native packages (Windows ARM only)
+        if: ${{ matrix.name == 'Windows (ARM)' }}
+        run: npm install @rollup/rollup-win32-arm64-msvc @tailwindcss/oxide-win32-arm64-msvc lightningcss-win32-arm64-msvc
       - name: Build libOpenCOR
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
-        run: pnpm libopencor
+        run: bun libopencor
       - name: Build OpenCOR
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
-        run: pnpm build
+        run: bun run build
       - name: Build OpenCOR's Web app
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
-        run: pnpm build:web
+        run: bun build:web
       - name: Build OpenCOR's npm library
         if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
         run: |
           cd src/renderer
-          pnpm install
-          pnpm build:lib
+          bun install
+          bun build:lib
       - name: Code formatting
         if: matrix.name == 'Code formatting'
-        run: pnpm format:check
+        run: bun format:check
       - name: Linting
         if: matrix.name == 'Linting'
-        run: pnpm lint
+        run: bun lint
       - name: Clean OpenCOR
-        run: pnpm clean
+        run: bun clean

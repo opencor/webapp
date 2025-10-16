@@ -2,7 +2,7 @@
 
 - [Node.js](https://nodejs.org/) (version 22+);
 - [npm](https://npmjs.com/) (it comes with Node.js);
-- [pnpm](https://pnpm.io/) (for package management); and
+- [bun](https://bun.com/package-manager) (for package management); and
 - [C](<https://en.wikipedia.org/wiki/C_(programming_language)>)/[C++](https://en.wikipedia.org/wiki/C%2B%2B) toolchain.
 
 ## Installation
@@ -10,10 +10,10 @@
 1. **Install Node.js and npm from [here](https://nodejs.org/en/download/package-manager);**
    **Note:** on [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you can install [Node.js](https://nodejs.org/) using [fnm](https://github.com/Schniz/fnm). However, if you use `fnm install --lts`, it will install the [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors) version of [Node.js](https://nodejs.org/), which may or may not be what you want. If you want to install the [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) version of [Node.js](https://nodejs.org/), you should use `fnm install --lts --arch arm64`.
 
-2. **Install pnpm globally:**
+2. **Install bun globally:**
 
 ```bash
-npm install -g pnpm
+npm install -g bun
 ```
 
 3. **Install a C/C++ toolchain:**
@@ -35,26 +35,26 @@ npm install -g pnpm
 1. **Install OpenCOR's dependencies:**
 
    ```bash
-   pnpm install
+   bun install
    ```
 
 2. **Build libOpenCOR's native Node.js module:**
 
    ```bash
-   pnpm libopencor
+   bun libopencor
    ```
 
 3. **Start the development version of OpenCOR:**
    - **Desktop version:**
 
      ```bash
-     pnpm dev
+     bun dev
      ```
 
    - **Web app version:**
 
      ```bash
-     pnpm dev:web
+     bun dev:web
      ```
 
 4. **Test OpenCOR:**

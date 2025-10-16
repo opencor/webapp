@@ -10,5 +10,5 @@
     "resolveJsonModule": true
   },
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["src/**/*.ts", "src/**/*.vue", "index.d.ts", "index.ts", "package.json"]
+  "include": ["**/*.js", "**/*.ts", "**/*.vue", "package.json"]
 }
