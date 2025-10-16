@@ -140,7 +140,7 @@ jobs:
   npm:
     runs-on: ubuntu-22.04
     env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Set the timezone to New Zealand
         uses: szenius/set-timezone@v2.0
@@ -153,6 +153,7 @@ jobs:
         with:
           node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install bun
         run: npm install -g bun
       - name: OpenCOR dependencies
@@ -166,4 +167,5 @@ jobs:
       - name: Publish OpenCOR
         run: |
           cd src/renderer
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
           bun publish --provenance --access public --no-git-checks
