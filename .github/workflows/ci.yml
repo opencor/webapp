@@ -75,10 +75,10 @@ jobs:
           bun install
           bun build:lib
       - name: Code formatting
-        if: matrix.name == 'Code formatting'
+        if: ${{ matrix.name == 'Code formatting' }}
         run: bun format:check
       - name: Linting
-        if: matrix.name == 'Linting'
+        if: ${{ matrix.name == 'Linting' }}
         run: bun lint
       - name: Clean OpenCOR
         run: bun clean
