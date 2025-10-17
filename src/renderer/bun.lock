@@ -19,7 +19,7 @@
         "@tailwindcss/postcss": "^4.1.14",
         "@tailwindcss/vite": "^4.1.14",
         "@types/js-cookie": "^3.0.6",
-        "@types/node": "^24.7.2",
+        "@types/node": "^24.8.0",
         "@types/plotly.js": "3.0.6",
         "@vitejs/plugin-vue": "^6.0.1",
         "@vue/eslint-config-prettier": "^10.2.0",
@@ -249,7 +249,7 @@
 
     "@types/json-schema": ["@types/json-schema@7.0.15", "", {}, "sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA=="],
 
-    "@types/node": ["@types/node@24.7.2", "", { "dependencies": { "undici-types": "~7.14.0" } }, "sha512-/NbVmcGTP+lj5oa4yiYxxeBjRivKQ5Ns1eSZeB99ExsEQ6rX5XYU1Zy/gGxY/ilqtD4Etx9mKyrPxZRetiahhA=="],
+    "@types/node": ["@types/node@24.8.1", "", { "dependencies": { "undici-types": "~7.14.0" } }, "sha512-alv65KGRadQVfVcG69MuB4IzdYVpRwMG/mq8KWOaoOdyY617P5ivaDiMCGOFDWD2sAn5Q0mR3mRtUOgm99hL9Q=="],
 
     "@types/plotly.js": ["@types/plotly.js@3.0.6", "", {}, "sha512-K+EhZsMUZ2Zjna5gaDOaEfdwKLtHUT7sSsBw2gbRT2mOLWVl9pI4FF8EDH2ytNAdgM/Gh6UhgfRiAtHfDAcY5g=="],
 
