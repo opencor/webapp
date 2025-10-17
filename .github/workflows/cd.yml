@@ -153,7 +153,10 @@ jobs:
         with:
           node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update npm
+        # We need npm 11.5.1 or later to publish to npm using OIDC (see
+        # https://docs.npmjs.com/trusted-publishers#supported-cicd-providers).
+        run: npm install -g npm@latest
       - name: Install bun
         run: npm install -g bun
       - name: OpenCOR dependencies
@@ -165,7 +168,9 @@ jobs:
           cd src/renderer
           bun build:lib
       - name: Publish OpenCOR
+        # OIDC implies automatic provenance generation, so no need to specify --provenance (see
+        # https://docs.npmjs.com/trusted-publishers#supported-cicd-providers). Otherwise, bun cannot be used to publish
+        # using OIDC, so we use npm instead.
         run: |
           cd src/renderer
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
-          bun publish --provenance --access public --no-git-checks
+          npm publish --access public --no-git-checks

@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20251017.0",
+  "version": "0.20251017.3",
   "scripts": {
     "archive:web": "node src/renderer/scripts/archive.web.js",
     "build": "electron-vite build",
@@ -64,7 +64,7 @@
     "@tailwindcss/postcss": "^4.1.14",
     "@tailwindcss/vite": "^4.1.14",
     "@types/js-cookie": "^3.0.6",
-    "@types/node": "^24.7.2",
+    "@types/node": "^24.8.1",
     "@types/plotly.js": "3.0.3",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/eslint-config-prettier": "^10.2.0",
