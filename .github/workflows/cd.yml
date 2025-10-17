@@ -139,8 +139,6 @@ jobs:
           files: dist/OpenCOR-*-WebApp.tar.gz
   npm:
     runs-on: ubuntu-22.04
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Set the timezone to New Zealand
         uses: szenius/set-timezone@v2.0
