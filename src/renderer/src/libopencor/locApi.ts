@@ -1,6 +1,6 @@
 import { proxyUrl } from '../common/locCommon.js'
 
-import { EFileType, type IWasmFile, type IWasmFileManager } from './locFileApi.js'
+import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.js'
 import type { IIssue } from './locLoggerApi.js'
 import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi.js'
 
@@ -91,11 +91,15 @@ export interface IWasmLocApi {
 
   // File API.
 
-  File: new (path: string) => IWasmFile
+  File: new (
+    path: string
+  ) => IWasmFile
 
   // SedDocument API
 
-  SedDocument: new (wasmFile: IWasmFile) => IWasmSedDocument
+  SedDocument: new (
+    wasmFile: IWasmFile
+  ) => IWasmSedDocument
   SedChangeAttribute: new (componentName: string, variableName: string, newValue: string) => IWasmSedChangeAttribute
 
   // Version API.
@@ -136,7 +140,7 @@ export async function initialiseLocApi() {
 
 // Logger API.
 
-export { EIssueType, wasmIssuesToIssues, type IIssue, type IWasmIssues } from './locLoggerApi.js'
+export { EIssueType, type IIssue, type IWasmIssues, wasmIssuesToIssues } from './locLoggerApi.js'
 
 // File API.
 
@@ -167,4 +171,4 @@ export {
 
 // Version API.
 
-export { cppVersion, wasmVersion, version } from './locVersionApi.js'
+export { cppVersion, version, wasmVersion } from './locVersionApi.js'

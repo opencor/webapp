@@ -6,13 +6,13 @@ import {
   cppVersion,
   EIssueType,
   ESedSimulationType,
-  SedDocument,
-  SedInstance,
-  SedSimulationUniformTimeCourse,
-  wasmIssuesToIssues,
   type IIssue,
   type IUiJson,
-  type IWasmIssues
+  type IWasmIssues,
+  SedDocument,
+  type SedInstance,
+  type SedSimulationUniformTimeCourse,
+  wasmIssuesToIssues
 } from './locApi.js'
 
 // FileManager API.

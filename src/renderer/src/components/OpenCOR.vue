@@ -97,7 +97,7 @@ import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants'
 import { electronApi } from '../common/electronApi'
 import * as locCommon from '../common/locCommon'
 import * as vueCommon from '../common/vueCommon'
-import IContentsComponent from '../components/ContentsComponent.vue'
+import type IContentsComponent from '../components/ContentsComponent.vue'
 import * as locApi from '../libopencor/locApi'
 
 const props = defineProps<IOpenCORProps>()
@@ -106,7 +106,6 @@ const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null)
 const toastId = vue.ref('opencorToast')
 const mainMenuId = vue.ref('opencorMainMenu')
 const files = vue.ref<HTMLElement | null>(null)
-// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null)
 const issues = vue.ref<locApi.IIssue[]>([])
 const activeInstanceUid = vueCommon.activeInstanceUid()
@@ -148,7 +147,6 @@ const crtInstance = vue.getCurrentInstance()
 if (crtInstance !== null) {
   const app = crtInstance.appContext.app
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (app.config.globalProperties.$primevue === undefined) {
     let options = {}
 
@@ -173,12 +171,10 @@ if (crtInstance !== null) {
     })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (app.config.globalProperties.$confirm === undefined) {
     app.use(primeVueConfirmationService as unknown as vue.Plugin)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (app.config.globalProperties.$toast === undefined) {
     app.use(primeVueToastService as unknown as vue.Plugin)
   }

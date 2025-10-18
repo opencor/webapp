@@ -63,22 +63,22 @@ npm install -g bun
 
 # Available Scripts
 
-| Script         | Description                                                           |
-| -------------- | --------------------------------------------------------------------- |
-| `archive:web`  | Archive OpenCOR's Web app                                             |
-| `build`        | Build OpenCOR                                                         |
-| `build:web`    | Build OpenCOR's Web app                                               |
-| `clean`        | Clean OpenCOR's environment                                           |
-| `dev`          | (Build and) start OpenCOR and OpenCOR's Web app with hot reload       |
-| `dev:web`      | (Build and) start OpenCOR's Web app with hot reload                   |
-| `format`       | Format the code using [Prettier](https://prettier.io/)                |
-| `format:check` | Check code formatting without making changes                          |
-| `libopencor`   | Build libOpenCOR's native Node.js module                              |
-| `lint`         | Lint and automatically fix issues using [ESLint](https://eslint.org/) |
-| `release`      | (Build and) release OpenCOR for the current platform                  |
-| `start`        | (Build and) start (the production version of) OpenCOR                 |
-| `start:web`    | (Build and) start (the production version of) OpenCOR's Web app       |
-| `version:new`  | Update the version of OpenCOR                                         |
+| Script         | Description                                                     |
+| -------------- | --------------------------------------------------------------- |
+| `archive:web`  | Archive OpenCOR's Web app                                       |
+| `build`        | Build OpenCOR                                                   |
+| `build:web`    | Build OpenCOR's Web app                                         |
+| `clean`        | Clean OpenCOR's environment                                     |
+| `dev`          | (Build and) start OpenCOR and OpenCOR's Web app with hot reload |
+| `dev:web`      | (Build and) start OpenCOR's Web app with hot reload             |
+| `format`       | Format the code                                                 |
+| `format:check` | Check code formatting without making changes                    |
+| `libopencor`   | Build libOpenCOR's native Node.js module                        |
+| `lint`         | Lint and automatically fix issues                               |
+| `release`      | (Build and) release OpenCOR for the current platform            |
+| `start`        | (Build and) start (the production version of) OpenCOR           |
+| `start:web`    | (Build and) start (the production version of) OpenCOR's Web app |
+| `version:new`  | Update the version of OpenCOR                                   |
 
 # Notes
 

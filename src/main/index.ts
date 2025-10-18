@@ -2,15 +2,16 @@ import * as electronToolkitUtils from '@electron-toolkit/utils'
 
 import electron from 'electron'
 import { Conf as ElectronConf } from 'electron-conf'
-import fs from 'fs'
 import * as nodeChildProcess from 'node:child_process'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
+import process from 'node:process'
 
-import { type ISettings } from '../renderer/src/common/common'
+import type { ISettings } from '../renderer/src/common/common'
 import { URI_SCHEME } from '../renderer/src/common/constants'
-import { isPackaged, isWindows, isLinux } from '../renderer/src/common/electron'
+import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron'
 
-import { enableDisableMainMenu, enableDisableFileCloseAndCloseAllMenuItems } from './MainMenu'
+import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu'
 import {
   checkForUpdates,
   downloadAndInstallUpdate,

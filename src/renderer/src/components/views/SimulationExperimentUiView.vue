@@ -40,7 +40,7 @@ import * as vue from 'vue'
 import * as locCommon from '../../common/locCommon'
 import * as locApi from '../../libopencor/locApi'
 
-import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
+import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 
 const props = defineProps<{
   file: locApi.File
@@ -59,8 +59,7 @@ const inputValues = vue.ref<number[]>([])
 const showInput = vue.ref<boolean[]>([])
 const idToInfo: Record<string, locCommon.ISimulationDataInfo> = {}
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function evaluateValue(value: string): any {
+function evaluateValue(value: string): mathjs.MathType {
   let index = -1
   const parser = math.parser()
 

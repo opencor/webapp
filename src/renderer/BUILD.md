@@ -33,14 +33,14 @@ npm install -g bun
 
 # Available Scripts
 
-| Script         | Description                                                           |
-| -------------- | --------------------------------------------------------------------- |
-| `build`        | Build OpenCOR's Web app                                               |
-| `build:lib`    | Build OpenCOR's Web app as a library for npm publishing               |
-| `clean`        | Clean OpenCOR's environment                                           |
-| `dev`          | (Build and) start OpenCOR's Web app with hot reload                   |
-| `format`       | Format the code using [Prettier](https://prettier.io/)                |
-| `format:check` | Check code formatting without making changes                          |
-| `lint`         | Lint and automatically fix issues using [ESLint](https://eslint.org/) |
-| `start`        | (Build and) start (the production version of) OpenCOR's Web app       |
-| `version:new`  | Update the version of OpenCOR                                         |
+| Script         | Description                                                     |
+| -------------- | ----------------------------------------------------------------|
+| `build`        | Build OpenCOR's Web app                                         |
+| `build:lib`    | Build OpenCOR's Web app as a library for npm publishing         |
+| `clean`        | Clean OpenCOR's environment                                     |
+| `dev`          | (Build and) start OpenCOR's Web app with hot reload             |
+| `format`       | Format the code using                                           |
+| `format:check` | Check code formatting without making changes                    |
+| `lint`         | Lint and automatically fix issues                               |
+| `start`        | (Build and) start (the production version of) OpenCOR's Web app |
+| `version:new`  | Update the version of OpenCOR                                   |

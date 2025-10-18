@@ -62,9 +62,9 @@ import * as common from '../../common/common'
 import { SHORT_DELAY } from '../../common/constants'
 import * as locCommon from '../../common/locCommon'
 import * as vueCommon from '../../common/vueCommon'
-import * as locApi from '../../libopencor/locApi'
+import type * as locApi from '../../libopencor/locApi'
 
-import { type IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
+import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
 
 const props = defineProps<{
   file: locApi.File

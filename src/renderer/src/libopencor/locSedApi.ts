@@ -4,11 +4,11 @@ import {
   _cppLocApi,
   _wasmLocApi,
   cppVersion,
-  wasmIssuesToIssues,
-  wasmVersion,
   type IIssue,
   type IWasmFile,
-  type IWasmIssues
+  type IWasmIssues,
+  wasmIssuesToIssues,
+  wasmVersion
 } from './locApi.js'
 
 // SED-ML API.

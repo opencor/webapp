@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import * as vue from 'vue'
 
-import * as locApi from '../../libopencor/locApi'
+import type * as locApi from '../../libopencor/locApi'
 
 const value = defineModel<number>({ required: true })
 const emits = defineEmits(['change'])
