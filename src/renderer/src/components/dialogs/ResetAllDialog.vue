@@ -9,5 +9,5 @@
 </template>
 
 <script setup lang="ts">
-defineEmits(['resetAll', 'close'])
+defineEmits(['resetAll', 'close']);
 </script>

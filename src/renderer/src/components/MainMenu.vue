@@ -24,18 +24,18 @@
 </template>
 
 <script setup lang="ts">
-import * as vueusecore from '@vueuse/core'
+import * as vueusecore from '@vueuse/core';
 
-import type Menubar from 'primevue/menubar'
-import * as vue from 'vue'
+import type Menubar from 'primevue/menubar';
+import * as vue from 'vue';
 
-import * as common from '../common/common'
+import * as common from '../common/common';
 
 const props = defineProps<{
-  isActive: boolean
-  uiEnabled: boolean
-  hasFiles: boolean
-}>()
+  isActive: boolean;
+  uiEnabled: boolean;
+  hasFiles: boolean;
+}>();
 
 const emit = defineEmits([
   'about',
@@ -46,9 +46,9 @@ const emit = defineEmits([
   'openSampleLorenz',
   'openSampleInteractiveLorenz',
   'settings'
-])
-const isWindowsOrLinux = common.isWindows() || common.isLinux()
-const isMacOs = common.isMacOs()
+]);
+const isWindowsOrLinux = common.isWindows() || common.isLinux();
+const isMacOs = common.isMacOs();
 
 const items = [
   {
@@ -58,14 +58,14 @@ const items = [
         label: 'Open...',
         shortcut: isWindowsOrLinux ? 'Ctrl+Alt+O' : isMacOs ? '⌘⌥O' : undefined,
         command: () => {
-          emit('open')
+          emit('open');
         }
       },
       {
         label: 'Open Remote...',
         shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+O' : isMacOs ? '⇧⌘⌥O' : undefined,
         command: () => {
-          emit('openRemote')
+          emit('openRemote');
         }
       },
       {
@@ -74,13 +74,13 @@ const items = [
           {
             label: 'Lorenz',
             command: () => {
-              emit('openSampleLorenz')
+              emit('openSampleLorenz');
             }
           },
           {
             label: 'Interactive Lorenz',
             command: () => {
-              emit('openSampleInteractiveLorenz')
+              emit('openSampleInteractiveLorenz');
             }
           }
         ]
@@ -90,14 +90,14 @@ const items = [
         label: 'Close',
         shortcut: isWindowsOrLinux ? 'Ctrl+Alt+W' : isMacOs ? '⌘⌥W' : undefined,
         command: () => {
-          emit('close')
+          emit('close');
         },
         disabled: () => !props.hasFiles
       },
       {
         label: 'Close All',
         command: () => {
-          emit('closeAll')
+          emit('closeAll');
         },
         disabled: () => !props.hasFiles
       }
@@ -123,96 +123,96 @@ const items = [
       {
         label: 'Home Page',
         command: () => {
-          window.open('https://opencor.ws/')
+          window.open('https://opencor.ws/');
         }
       },
       { separator: true },
       {
         label: 'Report Issue',
         command: () => {
-          window.open('https://github.com/opencor/webapp/issues/new')
+          window.open('https://github.com/opencor/webapp/issues/new');
         }
       },
       { separator: true },
       {
         label: 'About OpenCOR',
         command: () => {
-          emit('about')
+          emit('about');
         }
       }
     ]
   }
-]
+];
 
 // A few things that can only be done when the component is mounted.
 
-const menuBar = vue.ref<(vue.ComponentPublicInstance<typeof Menubar> & { hide: () => void }) | null>(null)
+const menuBar = vue.ref<(vue.ComponentPublicInstance<typeof Menubar> & { hide: () => void }) | null>(null);
 
 vue.onMounted(() => {
   if (menuBar.value !== null) {
     // Ensure that the menubar never gets the 'p-menubar-mobile' class, which would turn it into a hamburger menu.
 
-    const menuBarElement = menuBar.value.$el as HTMLElement
+    const menuBarElement = menuBar.value.$el as HTMLElement;
     const mutationObserver = new MutationObserver(() => {
       if (menuBarElement.classList.contains('p-menubar-mobile')) {
-        menuBarElement.classList.remove('p-menubar-mobile')
+        menuBarElement.classList.remove('p-menubar-mobile');
       }
-    })
+    });
 
-    mutationObserver.observe(menuBarElement, { attributes: true, attributeFilter: ['class'] })
+    mutationObserver.observe(menuBarElement, { attributes: true, attributeFilter: ['class'] });
 
     // Close the menu when clicking clicking on the menubar but outside of the main menu items.
 
     function onClick(event: MouseEvent) {
-      const target = event.target as Node
+      const target = event.target as Node;
 
       if (
         menuBarElement.contains(target) &&
         !menuBarElement.querySelector('.p-menubar-root-list')?.contains(target) &&
         !Array.from(document.querySelectorAll('.p-menubar-submenu')).some((submenu) => submenu.contains(target))
       ) {
-        menuBar.value?.hide()
+        menuBar.value?.hide();
       }
     }
 
-    document.addEventListener('click', onClick)
+    document.addEventListener('click', onClick);
 
     // Clean up the mutation observer and event listener when the component is unmounted.
 
     vue.onBeforeUnmount(() => {
-      mutationObserver.disconnect()
+      mutationObserver.disconnect();
 
-      document.removeEventListener('click', onClick)
-    })
+      document.removeEventListener('click', onClick);
+    });
   }
-})
+});
 
 // Keyboard shortcuts.
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
     if (!props.isActive || !props.uiEnabled) {
-      return
+      return;
     }
 
     if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyO') {
-      event.preventDefault()
+      event.preventDefault();
 
-      emit('open')
+      emit('open');
     } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.code === 'KeyO') {
-      event.preventDefault()
+      event.preventDefault();
 
-      emit('openRemote')
+      emit('openRemote');
     } else if (props.hasFiles && common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
-      event.preventDefault()
+      event.preventDefault();
 
-      emit('close')
+      emit('close');
     } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'Comma') {
-      event.preventDefault()
+      event.preventDefault();
 
-      emit('settings')
+      emit('settings');
     }
-  })
+  });
 }
 </script>
 

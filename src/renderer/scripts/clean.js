@@ -1,4 +1,4 @@
-import fs from 'node:fs'
+import fs from 'node:fs';
 
 for (const path of [
   'dist',
@@ -10,6 +10,6 @@ for (const path of [
   'src/renderer/node_modules'
 ]) {
   if (fs.existsSync(path)) {
-    fs.rmSync(path, { recursive: true, force: true })
+    fs.rmSync(path, { recursive: true, force: true });
   }
 }

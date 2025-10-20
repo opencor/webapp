@@ -3,7 +3,7 @@
  *       therefore hard-code colours.
  */
 
-@import '../../renderer/src/assets/base.css';
+@import "../../renderer/src/assets/base.css";
 
 body {
   background-color: #ffffff; /* Light version of --p-content-background. */

@@ -23,31 +23,31 @@
 </template>
 
 <script setup lang="ts">
-import type { DataTableCellEditCompleteEvent } from 'primevue/datatable'
+import type { DataTableCellEditCompleteEvent } from 'primevue/datatable';
 
 const props = withDefaults(
   defineProps<{
-    name: string
-    hasUnits?: boolean
+    name: string;
+    hasUnits?: boolean;
     properties: {
-      property: string
-      value: number
-      unit?: string
-    }[]
+      property: string;
+      value: number;
+      unit?: string;
+    }[];
   }>(),
   {
     hasUnits: true
   }
-)
-const columnWidth = `width: calc(100% / ${props.hasUnits ? '3' : '2'})`
-const emit = defineEmits(['propertyUpdated'])
+);
+const columnWidth = `width: calc(100% / ${props.hasUnits ? '3' : '2'})`;
+const emit = defineEmits(['propertyUpdated']);
 
 function onCellEditComplete(event: DataTableCellEditCompleteEvent): void {
-  const { data, newValue, field } = event
+  const { data, newValue, field } = event;
 
-  data[field] = newValue
+  data[field] = newValue;
 
-  emit('propertyUpdated', event.index, event.newValue)
+  emit('propertyUpdated', event.index, event.newValue);
 }
 </script>
 

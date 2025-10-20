@@ -13,8 +13,7 @@
   },
   "css": {
     "formatter": {
-      "enabled": true,
-      "quoteStyle": "single"
+      "enabled": true
     }
   },
   "html": {
@@ -28,7 +27,6 @@
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
-      "semicolons": "asNeeded",
       "trailingCommas": "none"
     }
   },

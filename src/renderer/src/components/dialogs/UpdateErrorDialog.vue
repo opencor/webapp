@@ -10,9 +10,9 @@
 </template>
 
 <script setup lang="ts">
-defineEmits(['close'])
+defineEmits(['close']);
 defineProps<{
-  title: string
-  issue: string
-}>()
+  title: string;
+  issue: string;
+}>();
 </script>

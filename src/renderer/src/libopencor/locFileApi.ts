@@ -1,4 +1,4 @@
-import * as vue from 'vue'
+import * as vue from 'vue';
 
 import {
   _cppLocApi,
@@ -13,30 +13,30 @@ import {
   type SedInstance,
   type SedSimulationUniformTimeCourse,
   wasmIssuesToIssues
-} from './locApi.js'
+} from './locApi.js';
 
 // FileManager API.
 
 interface IWasmFileManagerInstance {
   files: {
-    size(): number
-    get(index: number): { fileName: string }
-  }
-  unmanage(file: unknown): void
+    size(): number;
+    get(index: number): { fileName: string };
+  };
+  unmanage(file: unknown): void;
 }
 
 export interface IWasmFileManager {
-  instance(): IWasmFileManagerInstance
+  instance(): IWasmFileManagerInstance;
 }
 
 class FileManager {
-  private static _instance: FileManager | undefined = undefined
-  private _fileManager: IWasmFileManagerInstance | undefined = undefined
+  private static _instance: FileManager | undefined = undefined;
+  private _fileManager: IWasmFileManagerInstance | undefined = undefined;
 
   static instance(): FileManager {
-    FileManager._instance ??= new FileManager()
+    FileManager._instance ??= new FileManager();
 
-    return FileManager._instance
+    return FileManager._instance;
   }
 
   private constructor() {
@@ -44,32 +44,32 @@ class FileManager {
   }
 
   private fileManager() {
-    this._fileManager ??= _wasmLocApi.FileManager.instance()
+    this._fileManager ??= _wasmLocApi.FileManager.instance();
 
-    return this._fileManager
+    return this._fileManager;
   }
 
   unmanage(path: string): void {
     if (cppVersion()) {
-      _cppLocApi.fileManagerUnmanage(path)
+      _cppLocApi.fileManagerUnmanage(path);
     } else {
-      const fileManager = this.fileManager()
-      const files = fileManager.files
+      const fileManager = this.fileManager();
+      const files = fileManager.files;
 
       for (let i = 0; i < files.size(); ++i) {
-        const file = files.get(i)
+        const file = files.get(i);
 
         if (file.fileName === path) {
-          fileManager.unmanage(file)
+          fileManager.unmanage(file);
 
-          break
+          break;
         }
       }
     }
   }
 }
 
-export const fileManager = FileManager.instance()
+export const fileManager = FileManager.instance();
 
 // File API.
 
@@ -82,59 +82,59 @@ export enum EFileType {
 }
 
 export interface IWasmFile {
-  type: { value: EFileType }
-  issues: IWasmIssues
-  contents(): Uint8Array
-  setContents(ptr: number, length: number): void
-  childFileFromFileName(fileName: string): File | null
+  type: { value: EFileType };
+  issues: IWasmIssues;
+  contents(): Uint8Array;
+  setContents(ptr: number, length: number): void;
+  childFileFromFileName(fileName: string): File | null;
 }
 
 export class File {
-  private _path: string
-  private _wasmFile: IWasmFile = {} as IWasmFile
-  private _document: SedDocument = {} as SedDocument
-  private _instance: SedInstance = {} as SedInstance
-  private _issues: IIssue[] = []
+  private _path: string;
+  private _wasmFile: IWasmFile = {} as IWasmFile;
+  private _document: SedDocument = {} as SedDocument;
+  private _instance: SedInstance = {} as SedInstance;
+  private _issues: IIssue[] = [];
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
-    this._path = path
+    this._path = path;
 
     if (cppVersion()) {
-      _cppLocApi.fileCreate(path, contents)
+      _cppLocApi.fileCreate(path, contents);
 
-      this._issues = _cppLocApi.fileIssues(path)
+      this._issues = _cppLocApi.fileIssues(path);
     } else if (contents !== undefined) {
-      this._wasmFile = new _wasmLocApi.File(path)
+      this._wasmFile = new _wasmLocApi.File(path);
 
-      const heapContentsPtr = _wasmLocApi._malloc(contents.length)
+      const heapContentsPtr = _wasmLocApi._malloc(contents.length);
 
-      new Uint8Array(_wasmLocApi.HEAPU8.buffer, heapContentsPtr, contents.length).set(contents)
+      new Uint8Array(_wasmLocApi.HEAPU8.buffer, heapContentsPtr, contents.length).set(contents);
 
-      this._wasmFile.setContents(heapContentsPtr, contents.length)
+      this._wasmFile.setContents(heapContentsPtr, contents.length);
 
-      _wasmLocApi._free(heapContentsPtr)
+      _wasmLocApi._free(heapContentsPtr);
 
-      this._issues = wasmIssuesToIssues(this._wasmFile.issues)
+      this._issues = wasmIssuesToIssues(this._wasmFile.issues);
     } else {
       // Note: we should never reach this point since we should always provide some file contents when using the WASM
       //       version of libOpenCOR.
 
-      console.error(`No contents provided for file '${path}'.`)
+      console.error(`No contents provided for file '${path}'.`);
 
-      return
+      return;
     }
 
     if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return
+      return;
     }
 
     // Retrieve the SED-ML file associated with this file.
 
-    this._document = vue.markRaw(new SedDocument(this._path, this._wasmFile))
-    this._issues = this._document.issues()
+    this._document = vue.markRaw(new SedDocument(this._path, this._wasmFile));
+    this._issues = this._document.issues();
 
     if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return
+      return;
     }
 
     //---OPENCOR---
@@ -143,127 +143,127 @@ export class File {
 
     // Make sure that there is only one model.
 
-    const modelCount = this._document.modelCount()
+    const modelCount = this._document.modelCount();
 
     if (modelCount !== 1) {
       this._issues.push({
         type: EIssueType.WARNING,
         description: 'Only SED-ML files with one model are currently supported.'
-      })
+      });
 
-      return
+      return;
     }
 
     // Make sure that the SED-ML file has only one simulation.
 
-    const simulationCount = this._document.simulationCount()
+    const simulationCount = this._document.simulationCount();
 
     if (simulationCount !== 1) {
       this._issues.push({
         type: EIssueType.WARNING,
         description: 'Only SED-ML files with one simulation are currently supported.'
-      })
+      });
 
-      return
+      return;
     }
 
     // Make sure that the simulation is a uniform time course simulation.
 
-    const simulation = this._document.simulation(0) as SedSimulationUniformTimeCourse
+    const simulation = this._document.simulation(0) as SedSimulationUniformTimeCourse;
 
     if (simulation.type() !== ESedSimulationType.UNIFORM_TIME_COURSE) {
       this._issues.push({
         type: EIssueType.WARNING,
         description: 'Only uniform time course simulations are currently supported.'
-      })
+      });
 
-      return
+      return;
     }
 
     // Make sure that the initial time and output start time are the same, that the output start time and output end
     // time are different, and that the number of steps is greater than zero.
 
-    const initialTime = simulation.initialTime()
-    const outputStartTime = simulation.outputStartTime()
-    const outputEndTime = simulation.outputEndTime()
-    const numberOfSteps = simulation.numberOfSteps()
+    const initialTime = simulation.initialTime();
+    const outputStartTime = simulation.outputStartTime();
+    const outputEndTime = simulation.outputEndTime();
+    const numberOfSteps = simulation.numberOfSteps();
 
     if (initialTime !== outputStartTime) {
       this._issues.push({
         type: EIssueType.WARNING,
         description: `Only uniform time course simulations with the same values for 'initialTime' (${String(initialTime)}) and 'outputStartTime' (${String(outputStartTime)}) are currently supported.`
-      })
+      });
     }
 
     if (outputStartTime === outputEndTime) {
       this._issues.push({
         type: EIssueType.ERROR,
         description: `The uniform time course simulation must have different values for 'outputStartTime' (${String(outputStartTime)}) and 'outputEndTime' (${String(outputEndTime)}).`
-      })
+      });
     }
 
     if (numberOfSteps <= 0) {
       this._issues.push({
         type: EIssueType.ERROR,
         description: `The uniform time course simulation must have a positive value for 'numberOfSteps' (${String(numberOfSteps)}).`
-      })
+      });
     }
 
     if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return
+      return;
     }
 
     // Retrieve an instance of the model.
 
-    this._instance = this._document.instantiate()
-    this._issues = this._instance.issues()
+    this._instance = this._document.instantiate();
+    this._issues = this._instance.issues();
   }
 
   type(): EFileType {
-    return cppVersion() ? _cppLocApi.fileType(this._path) : this._wasmFile.type.value
+    return cppVersion() ? _cppLocApi.fileType(this._path) : this._wasmFile.type.value;
   }
 
   path(): string {
-    return this._path
+    return this._path;
   }
 
   issues(): IIssue[] {
-    return this._issues
+    return this._issues;
   }
 
   contents(): Uint8Array {
-    return cppVersion() ? _cppLocApi.fileContents(this._path) : this._wasmFile.contents()
+    return cppVersion() ? _cppLocApi.fileContents(this._path) : this._wasmFile.contents();
   }
 
   document(): SedDocument {
-    return this._document
+    return this._document;
   }
 
   instance(): SedInstance {
-    return this._instance
+    return this._instance;
   }
 
   uiJson(): IUiJson | undefined {
-    let uiJsonContents: Uint8Array | undefined
+    let uiJsonContents: Uint8Array | undefined;
 
     if (cppVersion()) {
-      uiJsonContents = _cppLocApi.fileUiJson(this._path)
+      uiJsonContents = _cppLocApi.fileUiJson(this._path);
 
       if (uiJsonContents === undefined) {
-        return undefined
+        return undefined;
       }
     } else {
-      const uiJson = this._wasmFile.childFileFromFileName('simulation.json')
+      const uiJson = this._wasmFile.childFileFromFileName('simulation.json');
 
       if (uiJson === null) {
-        return undefined
+        return undefined;
       }
 
-      uiJsonContents = uiJson.contents()
+      uiJsonContents = uiJson.contents();
     }
 
-    const decoder = new TextDecoder()
+    const decoder = new TextDecoder();
 
-    return JSON.parse(decoder.decode(uiJsonContents))
+    return JSON.parse(decoder.decode(uiJsonContents));
   }
 }

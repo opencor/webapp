@@ -1,11 +1,11 @@
-import fs from 'node:fs'
-import * as tar from 'tar'
+import fs from 'node:fs';
+import * as tar from 'tar';
 
 if (!fs.existsSync('dist')) {
-  fs.mkdirSync('dist')
+  fs.mkdirSync('dist');
 }
 
-const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version
+const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
 
 tar.c(
   {
@@ -14,4 +14,4 @@ tar.c(
     cwd: 'src/renderer/dist'
   },
   ['.']
-)
+);

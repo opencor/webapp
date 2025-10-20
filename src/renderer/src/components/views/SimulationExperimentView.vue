@@ -54,86 +54,86 @@
 </template>
 
 <script setup lang="ts">
-import * as vueusecore from '@vueuse/core'
+import * as vueusecore from '@vueuse/core';
 
-import * as vue from 'vue'
+import * as vue from 'vue';
 
-import * as common from '../../common/common'
-import { SHORT_DELAY } from '../../common/constants'
-import * as locCommon from '../../common/locCommon'
-import * as vueCommon from '../../common/vueCommon'
-import type * as locApi from '../../libopencor/locApi'
+import * as common from '../../common/common';
+import { SHORT_DELAY } from '../../common/constants';
+import * as locCommon from '../../common/locCommon';
+import * as vueCommon from '../../common/vueCommon';
+import type * as locApi from '../../libopencor/locApi';
 
-import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
+import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue';
 
 const props = defineProps<{
-  file: locApi.File
-  height: number
-  isActive: boolean
-  isActiveFile: boolean
-  simulationOnly?: boolean
-  uiEnabled: boolean
-  width: number
-}>()
+  file: locApi.File;
+  height: number;
+  isActive: boolean;
+  isActiveFile: boolean;
+  simulationOnly?: boolean;
+  uiEnabled: boolean;
+  width: number;
+}>();
 
-const toolbarId = vue.ref('simulationExperimentViewToolbar')
-const editorId = vue.ref('simulationExperimentViewEditor')
-const instance = props.file.instance()
-const instanceTask = instance.task(0)
-const heightMinusToolbar = vue.ref<number>(0)
+const toolbarId = vue.ref('simulationExperimentViewToolbar');
+const editorId = vue.ref('simulationExperimentViewEditor');
+const instance = props.file.instance();
+const instanceTask = instance.task(0);
+const heightMinusToolbar = vue.ref<number>(0);
 
-const parameters = vue.ref<string[]>([])
-const xParameter = vue.ref(instanceTask.voiName())
-const yParameter = vue.ref(instanceTask.stateName(0))
-const plots = vue.ref<IGraphPanelPlot[]>([])
-const consoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`)
+const parameters = vue.ref<string[]>([]);
+const xParameter = vue.ref(instanceTask.voiName());
+const yParameter = vue.ref(instanceTask.stateName(0));
+const plots = vue.ref<IGraphPanelPlot[]>([]);
+const consoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
 function addParameter(param: string): void {
-  parameters.value.push(param)
+  parameters.value.push(param);
 }
 
-addParameter(instanceTask.voiName())
+addParameter(instanceTask.voiName());
 
 for (let i = 0; i < instanceTask.stateCount(); i++) {
-  addParameter(instanceTask.stateName(i))
+  addParameter(instanceTask.stateName(i));
 }
 
 for (let i = 0; i < instanceTask.rateCount(); i++) {
-  addParameter(instanceTask.rateName(i))
+  addParameter(instanceTask.rateName(i));
 }
 
 for (let i = 0; i < instanceTask.constantCount(); i++) {
-  addParameter(instanceTask.constantName(i))
+  addParameter(instanceTask.constantName(i));
 }
 
 for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
-  addParameter(instanceTask.computedConstantName(i))
+  addParameter(instanceTask.computedConstantName(i));
 }
 
 for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-  addParameter(instanceTask.algebraicName(i))
+  addParameter(instanceTask.algebraicName(i));
 }
 
 function onRun(): void {
   // Run the instance, output the simulation time to the console, and update the plot.
 
-  const simulationTime = instance.run()
+  const simulationTime = instance.run();
 
-  consoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`
+  consoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
 
   void vue.nextTick().then(() => {
-    const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0]
+    const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
 
     if (consoleElement !== undefined) {
-      consoleElement.scrollTop = consoleElement.scrollHeight
+      consoleElement.scrollTop = consoleElement.scrollHeight;
     }
-  })
+  });
 
-  updatePlot()
+  updatePlot();
 }
 
-const xInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, xParameter.value))
-const yInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, yParameter.value))
+const xInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, xParameter.value));
+const yInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, yParameter.value));
 
 function updatePlot() {
   plots.value = [
@@ -145,81 +145,81 @@ function updatePlot() {
         data: locCommon.simulationData(instanceTask, yInfo.value)
       }
     }
-  ]
+  ];
 }
 
 // "Initialise" our plot.
 
 vue.onMounted(() => {
-  updatePlot()
-})
+  updatePlot();
+});
 
 // Various things that need to be done once we are mounted.
 
-const crtInstance = vue.getCurrentInstance()
+const crtInstance = vue.getCurrentInstance();
 
 vue.onMounted(() => {
   // Customise our IDs.
 
-  toolbarId.value = `simulationExperimentViewToolbar${String(crtInstance?.uid)}`
-  editorId.value = `simulationExperimentViewEditor${String(crtInstance?.uid)}`
+  toolbarId.value = `simulationExperimentViewToolbar${String(crtInstance?.uid)}`;
+  editorId.value = `simulationExperimentViewEditor${String(crtInstance?.uid)}`;
 
   // Track the height of our toolbar.
 
-  let toolbarResizeObserver: ResizeObserver | undefined
+  let toolbarResizeObserver: ResizeObserver | undefined;
 
   setTimeout(() => {
-    toolbarResizeObserver = vueCommon.trackElementHeight(toolbarId.value)
-  }, SHORT_DELAY)
+    toolbarResizeObserver = vueCommon.trackElementHeight(toolbarId.value);
+  }, SHORT_DELAY);
 
   // Monitor "our" contents size.
 
   function resizeOurselves() {
-    heightMinusToolbar.value = props.height - vueCommon.trackedCssVariableValue(toolbarId.value)
+    heightMinusToolbar.value = props.height - vueCommon.trackedCssVariableValue(toolbarId.value);
   }
 
   vue.watch(
     () => props.height,
     () => {
-      resizeOurselves()
+      resizeOurselves();
     }
-  )
+  );
 
-  let oldToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value)
+  let oldToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value);
 
   const mutationObserver = new MutationObserver(() => {
-    const newToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value)
+    const newToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value);
 
     if (newToolbarHeight !== oldToolbarHeight) {
-      oldToolbarHeight = newToolbarHeight
+      oldToolbarHeight = newToolbarHeight;
 
-      resizeOurselves()
+      resizeOurselves();
     }
-  })
+  });
 
-  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 
   vue.onUnmounted(() => {
-    mutationObserver.disconnect()
+    mutationObserver.disconnect();
 
-    toolbarResizeObserver?.disconnect()
-  })
-})
+    toolbarResizeObserver?.disconnect();
+  });
+});
 
 // Keyboard shortcuts.
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
     if (!props.isActive || !props.uiEnabled) {
-      return
+      return;
     }
 
     if (props.isActiveFile && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.code === 'F9') {
-      event.preventDefault()
+      event.preventDefault();
 
-      onRun()
+      onRun();
     }
-  })
+  });
 }
 </script>
 
