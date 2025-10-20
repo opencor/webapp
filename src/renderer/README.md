@@ -21,11 +21,11 @@ The component comes with the following props:
 - **main.ts:**
 
 ```typescript
-import { createApp } from 'vue'
+import { createApp } from 'vue';
 
-import App from './App.vue'
+import App from './App.vue';
 
-createApp(App).mount('#app')
+createApp(App).mount('#app');
 ```
 
 ### No `omex` prop provided
@@ -40,8 +40,8 @@ When no `omex` prop is provided, the component gives access to all of OpenCOR's 
 </template>
 
 <script setup lang="ts">
-import OpenCOR from '@opencor/opencor'
-import '@opencor/opencor/style.css'
+import OpenCOR from '@opencor/opencor';
+import '@opencor/opencor/style.css';
 </script>
 ```
 
@@ -57,8 +57,8 @@ When an `omex` prop is provided, the component goes straight into OpenCOR's simu
 </template>
 
 <script setup lang="ts">
-import OpenCOR from '@opencor/opencor'
-import '@opencor/opencor/style.css'
+import OpenCOR from '@opencor/opencor';
+import '@opencor/opencor/style.css';
 </script>
 ```
 
