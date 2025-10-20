@@ -4,8 +4,8 @@ import * as systemInformation from 'systeminformation'
 // @ts-expect-error (libOpenCOR.node is a native module)
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
 
-import { type ISettings } from '../renderer/src/common/common'
-import { type ISplashScreenInfo } from '../renderer/src/common/electronApi'
+import type { ISettings } from '../renderer/src/common/common'
+import type { ISplashScreenInfo } from '../renderer/src/common/electronApi'
 
 // Some bridging between our main process and renderer process.
 // Note: this must be in sync with src/electronApi.ts.

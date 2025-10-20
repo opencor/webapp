@@ -1,10 +1,11 @@
 import electron from 'electron'
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater'
-import path from 'path'
+import path from 'node:path'
+import process from 'node:process'
 
-import { type ISettings } from '../renderer/src/common/common'
+import type { ISettings } from '../renderer/src/common/common'
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants'
-import { isDevMode, isPackaged, isWindows, isLinux, isMacOs } from '../renderer/src/common/electron'
+import { isDevMode, isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron'
 
 import icon from './assets/icon.png?asset'
 import { ApplicationWindow } from './ApplicationWindow'

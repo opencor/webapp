@@ -3,7 +3,7 @@ import tailwindcssPlugin from '@tailwindcss/vite'
 import vuePlugin from '@vitejs/plugin-vue'
 
 import * as electronVite from 'electron-vite'
-import path from 'path'
+import path from 'node:path'
 import vitePlugin from 'unplugin-vue-components/vite'
 
 export default electronVite.defineConfig({

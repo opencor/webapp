@@ -4,6 +4,5 @@ export default {
   theme: {
     extend: {}
   },
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef
   plugins: [require('tailwindcss-primeui')]
 }

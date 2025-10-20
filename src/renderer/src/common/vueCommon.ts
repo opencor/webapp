@@ -61,7 +61,7 @@ export function useTheme() {
 // A method to retrieve the name of a tracked CSS variable.
 
 export function trackedCssVariableName(id: string): string {
-  return '--' + (id.split('_')[0] ?? '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + '-height'
+  return `--${(id.split('_')[0] ?? '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}-height`
 }
 
 // A method to track the height of a given element.

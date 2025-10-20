@@ -43,13 +43,13 @@
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
-    "clean": "node scripts/clean.js",
+    "clean": "bun scripts/clean.js",
     "dev": "vite dev",
-    "format": "prettier --log-level silent --write . && clang-format -i src/libopencor/src/*",
-    "format:check": "prettier --check . && clang-format --dry-run -Werror src/libopencor/src/*",
-    "lint": "eslint --fix .",
+    "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/libopencor/src/*",
+    "format:check": "bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/libopencor/src/*",
+    "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none",
     "start": "bun run build && vite preview",
-    "version:new": "node scripts/version.js"
+    "version:new": "bun scripts/version.js"
   },
   "peerDependencies": {
     "mathjs": "^14.9.1",
@@ -69,18 +69,15 @@
     "vue": "3.4.21"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.2.6",
     "@tailwindcss/postcss": "^4.1.14",
     "@tailwindcss/vite": "^4.1.14",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^24.8.1",
     "@types/plotly.js": "3.0.6",
     "@vitejs/plugin-vue": "^6.0.1",
-    "@vue/eslint-config-prettier": "^10.2.0",
-    "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.21",
-    "eslint": "^9.37.0",
-    "prettier": "^3.6.2",
     "tailwindcss": "^4.1.14",
     "tailwindcss-primeui": "^0.6.1",
     "unplugin-vue-components": "^29.1.0",

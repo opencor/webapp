@@ -1,6 +1,6 @@
 import jsCookie from 'js-cookie'
 
-import { type ISettings, type ISettingsGeneral } from './common.js'
+import type { ISettings, ISettingsGeneral } from './common.js'
 import { electronApi } from './electronApi.js'
 
 class Settings {
@@ -20,9 +20,9 @@ class Settings {
   }
 
   static instance(): Settings {
-    this._instance ??= new Settings()
+    Settings._instance ??= new Settings()
 
-    return this._instance
+    return Settings._instance
   }
 
   private emitInitialised(): void {

@@ -387,8 +387,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
         if (!Number.isInteger(range)) {
           res.push({
             type: EIssueType.WARNING,
-            description:
-              'UI JSON: a (default) input step value (1) must be a factor of the range value (' + String(range) + ').'
+            description: `UI JSON: a (default) input step value (1) must be a factor of the range value (${String(range)}).`
           })
         }
       }

@@ -1,7 +1,7 @@
-import { execSync } from 'child_process'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { execSync } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 // Major version.
 
@@ -27,7 +27,7 @@ try {
   const match = gitDescribe.match(/^v?(\d+)\.(\d+)\.(\d+)-(\d+)-g[0-9a-f]+$/)
   const [, , minor, patch] = match
 
-  patchVersion = parseInt(patch)
+  patchVersion = parseInt(patch, 10)
 
   if (minor === minorVersion) {
     ++patchVersion

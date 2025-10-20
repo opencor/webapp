@@ -25,9 +25,7 @@ jobs:
             os: macos-15-intel
           - name: macOS (ARM)
             os: macos-15
-          - name: Code formatting
-            os: ubuntu-22.04
-          - name: Linting
+          - name: Code formatting and linting
             os: ubuntu-22.04
     steps:
       - name: Set the timezone to New Zealand
@@ -54,6 +52,9 @@ jobs:
           unzip -j bun.zip -d $env:USERPROFILE\.bun
           del bun.zip
           echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
+      - name: Install Biome
+        if: ${{ matrix.name == 'Code formatting and linting' }}
+        uses: biomejs/setup-biome@v2
       - name: OpenCOR dependencies
         if: ${{ matrix.name != 'Windows (ARM)' }}
         run: bun install
@@ -61,25 +62,22 @@ jobs:
         if: ${{ matrix.name == 'Windows (ARM)' }}
         run: bun install --cpu=arm64
       - name: Build libOpenCOR
-        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
+        if: ${{ matrix.name != 'Code formatting and linting' }}
         run: bun libopencor
       - name: Build OpenCOR
-        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
+        if: ${{ matrix.name != 'Code formatting and linting' }}
         run: bun run build
       - name: Build OpenCOR's Web app
-        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
+        if: ${{ matrix.name != 'Code formatting and linting' }}
         run: bun build:web
       - name: Build OpenCOR's npm library
-        if: ${{ (matrix.name != 'Code formatting') && (matrix.name != 'Linting') }}
+        if: ${{ matrix.name != 'Code formatting and linting' }}
         run: |
           cd src/renderer
           bun install
           bun build:lib
-      - name: Code formatting
-        if: ${{ matrix.name == 'Code formatting' }}
-        run: bun format:check
-      - name: Linting
-        if: ${{ matrix.name == 'Linting' }}
-        run: bun lint
+      - name: Code formatting and linting
+        if: ${{ matrix.name == 'Code formatting and linting' }}
+        run: biome ci --error-on-warnings
       - name: Clean OpenCOR
         run: bun clean

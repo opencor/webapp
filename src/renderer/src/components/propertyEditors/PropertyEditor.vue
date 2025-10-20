@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { type DataTableCellEditCompleteEvent } from 'primevue/datatable'
+import type { DataTableCellEditCompleteEvent } from 'primevue/datatable'
 
 const props = withDefaults(
   defineProps<{
