@@ -3,16 +3,16 @@
 </template>
 
 <script setup lang="ts">
-import * as vue from 'vue'
+import * as vue from 'vue';
 
-import type * as locApi from '../../libopencor/locApi'
+import type * as locApi from '../../libopencor/locApi';
 
 const props = defineProps<{
-  file: locApi.File
-}>()
+  file: locApi.File;
+}>();
 
-const uniformTimeCourse = props.file.document().simulation(0) as locApi.SedSimulationUniformTimeCourse
-const voiUnit = props.file.instance().task(0).voiUnit()
+const uniformTimeCourse = props.file.document().simulation(0) as locApi.SedSimulationUniformTimeCourse;
+const voiUnit = props.file.instance().task(0).voiUnit();
 
 const properties = vue.ref([
   {
@@ -31,15 +31,15 @@ const properties = vue.ref([
       (uniformTimeCourse.outputEndTime() - uniformTimeCourse.outputStartTime()) / uniformTimeCourse.numberOfSteps(),
     unit: voiUnit
   }
-])
+]);
 
 function onPropertyUpdated(index: number, value: number): void {
   if (index === 0) {
-    uniformTimeCourse.setOutputStartTime(value)
+    uniformTimeCourse.setOutputStartTime(value);
   } else if (index === 1) {
-    uniformTimeCourse.setOutputEndTime(value)
+    uniformTimeCourse.setOutputEndTime(value);
   } else if (index === 2) {
-    uniformTimeCourse.setNumberOfSteps((properties.value[1].value - properties.value[0].value) / value)
+    uniformTimeCourse.setNumberOfSteps((properties.value[1].value - properties.value[0].value) / value);
   }
 }
 </script>

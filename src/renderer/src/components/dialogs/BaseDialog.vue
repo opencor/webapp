@@ -7,52 +7,52 @@
 </template>
 
 <script setup lang="ts">
-import * as vue from 'vue'
+import * as vue from 'vue';
 
-import { enableDisableMainMenu } from '../../common/common'
+import { enableDisableMainMenu } from '../../common/common';
 
-let dialogElement: HTMLElement | null = null
-let containerElement: HTMLElement | null | undefined = null
-let mutationObserver: MutationObserver | null = null
+let dialogElement: HTMLElement | null = null;
+let containerElement: HTMLElement | null | undefined = null;
+let mutationObserver: MutationObserver | null = null;
 
 function checkDialogPosition() {
   if (dialogElement instanceof HTMLElement && containerElement instanceof HTMLElement) {
-    const dialogRect = dialogElement.getBoundingClientRect()
-    const containerRect = containerElement.getBoundingClientRect()
+    const dialogRect = dialogElement.getBoundingClientRect();
+    const containerRect = containerElement.getBoundingClientRect();
 
-    dialogElement.style.top = `${String(Math.max(Math.min(dialogRect.top, containerRect.bottom - dialogRect.height), containerRect.top))}px`
-    dialogElement.style.left = `${String(Math.max(Math.min(dialogRect.left, containerRect.right - dialogRect.width), containerRect.left))}px`
+    dialogElement.style.top = `${String(Math.max(Math.min(dialogRect.top, containerRect.bottom - dialogRect.height), containerRect.top))}px`;
+    dialogElement.style.left = `${String(Math.max(Math.min(dialogRect.left, containerRect.right - dialogRect.width), containerRect.left))}px`;
   }
 }
 
 function onShow() {
-  enableDisableMainMenu(false)
+  enableDisableMainMenu(false);
 
   void vue.nextTick().then(() => {
-    dialogElement = document.querySelector('.p-dialog')
-    containerElement = dialogElement?.closest('[data-pc-section="mask"]')
+    dialogElement = document.querySelector('.p-dialog');
+    containerElement = dialogElement?.closest('[data-pc-section="mask"]');
 
     if (dialogElement !== null && containerElement !== null) {
       mutationObserver = new MutationObserver(() => {
-        checkDialogPosition()
-      })
+        checkDialogPosition();
+      });
 
-      mutationObserver.observe(dialogElement, { attributes: true, attributeFilter: ['style'] })
+      mutationObserver.observe(dialogElement, { attributes: true, attributeFilter: ['style'] });
 
-      checkDialogPosition()
+      checkDialogPosition();
     }
-  })
+  });
 }
 
 function onHide() {
-  enableDisableMainMenu(true)
+  enableDisableMainMenu(true);
 
   void vue.nextTick().then(() => {
     if (mutationObserver !== null) {
-      mutationObserver.disconnect()
+      mutationObserver.disconnect();
 
-      mutationObserver = null
+      mutationObserver = null;
     }
-  })
+  });
 }
 </script>

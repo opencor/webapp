@@ -41,11 +41,11 @@
 </template>
 
 <script setup lang="ts">
-import * as constants from '../../common/constants'
-import { electronApi } from '../../common/electronApi'
-import * as locApi from '../../libopencor/locApi'
+import * as constants from '../../common/constants';
+import { electronApi } from '../../common/electronApi';
+import * as locApi from '../../libopencor/locApi';
 
-defineEmits(['close'])
+defineEmits(['close']);
 
-import { version } from '../../../package.json'
+import { version } from '../../../package.json';
 </script>

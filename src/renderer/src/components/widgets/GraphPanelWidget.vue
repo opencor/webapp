@@ -6,53 +6,53 @@
 </template>
 
 <script setup lang="ts">
-import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.1.1/+esm'
-import * as vue from 'vue'
+import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.1.1/+esm';
+import * as vue from 'vue';
 
-import * as vueCommon from '../../common/vueCommon'
-import { MEDIUM_DELAY } from '../../common/constants'
+import * as vueCommon from '../../common/vueCommon';
+import { MEDIUM_DELAY } from '../../common/constants';
 
-let oldMainDivClientWidth = -1
-let oldMainDivClientHeight = -1
+let oldMainDivClientWidth = -1;
+let oldMainDivClientHeight = -1;
 
 function resizeIfNeeded() {
   if (mainDiv.value !== null) {
     if (mainDiv.value.clientWidth !== oldMainDivClientWidth || mainDiv.value.clientHeight !== oldMainDivClientHeight) {
-      oldMainDivClientWidth = mainDiv.value.clientWidth
-      oldMainDivClientHeight = mainDiv.value.clientHeight
+      oldMainDivClientWidth = mainDiv.value.clientWidth;
+      oldMainDivClientHeight = mainDiv.value.clientHeight;
 
-      Plotly.Plots.resize(mainDiv.value)
+      Plotly.Plots.resize(mainDiv.value);
     }
   }
 
-  setTimeout(resizeIfNeeded, MEDIUM_DELAY)
+  setTimeout(resizeIfNeeded, MEDIUM_DELAY);
 }
 
 vue.onMounted(() => {
-  resizeIfNeeded()
-})
+  resizeIfNeeded();
+});
 
 interface IGraphPanelPlotData {
-  data: number[]
+  data: number[];
 }
 
 export interface IGraphPanelPlot {
-  x: IGraphPanelPlotData
-  y: IGraphPanelPlotData
+  x: IGraphPanelPlotData;
+  y: IGraphPanelPlotData;
 }
 
 const props = withDefaults(
   defineProps<{
-    plots: IGraphPanelPlot[]
-    showMarker?: boolean
+    plots: IGraphPanelPlot[];
+    showMarker?: boolean;
   }>(),
   {
     showMarker: false
   }
-)
+);
 
-const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null)
-const theme = vueCommon.useTheme()
+const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
+const theme = vueCommon.useTheme();
 
 function themeData() {
   // Note: the various keys can be found at https://plotly.com/javascript/reference/.
@@ -64,7 +64,7 @@ function themeData() {
       minor: {
         gridcolor: theme.useLightMode() ? '#f1f5f9' : '#27272a' // --p-surface-100 / --p-surface-800
       }
-    }
+    };
   }
 
   return {
@@ -84,7 +84,7 @@ function themeData() {
     ],
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
-  }
+  };
 }
 
 vue.watch(
@@ -136,7 +136,7 @@ vue.watch(
         scrollZoom: true,
         showTips: false
       }
-    )
+    );
   }
-)
+);
 </script>

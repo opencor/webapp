@@ -1,17 +1,17 @@
-import { electronApi } from '../common/electronApi.js'
+import { electronApi } from '../common/electronApi.js';
 
-import { _cppLocApi, _wasmLocApi } from './locApi.js'
+import { _cppLocApi, _wasmLocApi } from './locApi.js';
 
 // Some general methods.
 
 export function cppVersion(): boolean {
-  return electronApi !== undefined
+  return electronApi !== undefined;
 }
 
 export function wasmVersion(): boolean {
-  return !cppVersion()
+  return !cppVersion();
 }
 
 export function version(): string {
-  return cppVersion() ? _cppLocApi.version() : _wasmLocApi.versionString()
+  return cppVersion() ? _cppLocApi.version() : _wasmLocApi.versionString();
 }

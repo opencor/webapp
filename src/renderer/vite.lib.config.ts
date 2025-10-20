@@ -1,9 +1,9 @@
-import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
-import tailwindcssPlugin from '@tailwindcss/vite'
-import vuePlugin from '@vitejs/plugin-vue'
+import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
+import tailwindcssPlugin from '@tailwindcss/vite';
+import vuePlugin from '@vitejs/plugin-vue';
 
-import vitePlugin from 'unplugin-vue-components/vite'
-import * as vite from 'vite'
+import vitePlugin from 'unplugin-vue-components/vite';
+import * as vite from 'vite';
 
 export default vite.defineConfig({
   build: {
@@ -22,10 +22,10 @@ export default vite.defineConfig({
         },
         assetFileNames: (assetInfo) => {
           if (assetInfo.names.includes('style.css')) {
-            return 'dist/opencor.css'
+            return 'dist/opencor.css';
           }
 
-          return assetInfo.names[0] ?? 'default-name'
+          return assetInfo.names[0] ?? 'default-name';
         }
       }
     },
@@ -45,4 +45,4 @@ export default vite.defineConfig({
       resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     })
   ]
-})
+});

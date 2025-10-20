@@ -14,24 +14,24 @@
 </template>
 
 <script setup lang="ts">
-import * as vue from 'vue'
+import * as vue from 'vue';
 
-const emit = defineEmits(['openRemote', 'close'])
-const url = vue.ref<string>('')
+const emit = defineEmits(['openRemote', 'close']);
+const url = vue.ref<string>('');
 
 function emitOpenRemote(): void {
   if (url.value === '') {
-    return
+    return;
   }
 
-  emit('openRemote', url.value)
+  emit('openRemote', url.value);
 
-  emitClose()
+  emitClose();
 }
 
 function emitClose(): void {
-  url.value = ''
+  url.value = '';
 
-  emit('close')
+  emit('close');
 }
 </script>

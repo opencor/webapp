@@ -1,13 +1,13 @@
-import jsCookie from 'js-cookie'
+import jsCookie from 'js-cookie';
 
-import type { ISettings, ISettingsGeneral } from './common.js'
-import { electronApi } from './electronApi.js'
+import type { ISettings, ISettingsGeneral } from './common.js';
+import { electronApi } from './electronApi.js';
 
 class Settings {
-  private static _instance: Settings | null = null
-  private _settings!: ISettings
-  private _isInitialised = false
-  private _initialisationListeners: (() => void)[] = []
+  private static _instance: Settings | null = null;
+  private _settings!: ISettings;
+  private _isInitialised = false;
+  private _initialisationListeners: (() => void)[] = [];
 
   private constructor() {
     // Start with some default settings and then load them.
@@ -15,63 +15,63 @@ class Settings {
     //       asynchronously, so we need to ensure that our settings are always defined. This is not the case for the
     //       web version of OpenCOR, where we can load our settings directly from the cookies.
 
-    this.reset()
-    this.load()
+    this.reset();
+    this.load();
   }
 
   static instance(): Settings {
-    Settings._instance ??= new Settings()
+    Settings._instance ??= new Settings();
 
-    return Settings._instance
+    return Settings._instance;
   }
 
   private emitInitialised(): void {
-    this._isInitialised = true
+    this._isInitialised = true;
 
     this._initialisationListeners.forEach((callback) => {
-      callback()
-    })
+      callback();
+    });
 
-    this._initialisationListeners = []
+    this._initialisationListeners = [];
   }
 
   onInitialised(callback: () => void): void {
     if (this._isInitialised) {
-      callback()
+      callback();
     } else {
-      this._initialisationListeners.push(callback)
+      this._initialisationListeners.push(callback);
     }
   }
 
   load(): void {
     if (electronApi !== undefined) {
       void electronApi.loadSettings().then((settings: ISettings) => {
-        this._settings = settings
+        this._settings = settings;
 
-        this.emitInitialised()
-      })
+        this.emitInitialised();
+      });
     } else {
-      const cookieData = jsCookie.get('settings')
+      const cookieData = jsCookie.get('settings');
 
       if (cookieData !== undefined) {
         try {
-          this._settings = JSON.parse(cookieData)
+          this._settings = JSON.parse(cookieData);
         } catch (error: unknown) {
-          console.error('Failed to parse settings from cookie, so resetting to defaults:', error)
+          console.error('Failed to parse settings from cookie, so resetting to defaults:', error);
 
-          this.reset()
+          this.reset();
         }
       }
 
-      this.emitInitialised()
+      this.emitInitialised();
     }
   }
 
   save(): void {
     if (electronApi !== undefined) {
-      electronApi.saveSettings(this._settings)
+      electronApi.saveSettings(this._settings);
     } else {
-      jsCookie.set('settings', JSON.stringify(this._settings), { expires: 365 })
+      jsCookie.set('settings', JSON.stringify(this._settings), { expires: 365 });
     }
   }
 
@@ -80,16 +80,16 @@ class Settings {
       general: {
         checkForUpdatesAtStartup: true
       }
-    }
+    };
   }
 
   toString(): string {
-    return JSON.stringify(this._settings, null, 2)
+    return JSON.stringify(this._settings, null, 2);
   }
 
   get general(): ISettingsGeneral {
-    return this._settings.general
+    return this._settings.general;
   }
 }
 
-export const settings = Settings.instance()
+export const settings = Settings.instance();

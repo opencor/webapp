@@ -6,6 +6,6 @@
 
 <script setup lang="ts">
 defineProps<{
-  percent: number
-}>()
+  percent: number;
+}>();
 </script>

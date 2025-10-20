@@ -1,10 +1,10 @@
-import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
-import tailwindcssPlugin from '@tailwindcss/vite'
-import vuePlugin from '@vitejs/plugin-vue'
+import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
+import tailwindcssPlugin from '@tailwindcss/vite';
+import vuePlugin from '@vitejs/plugin-vue';
 
-import * as electronVite from 'electron-vite'
-import path from 'node:path'
-import vitePlugin from 'unplugin-vue-components/vite'
+import * as electronVite from 'electron-vite';
+import path from 'node:path';
+import vitePlugin from 'unplugin-vue-components/vite';
 
 export default electronVite.defineConfig({
   main: {
@@ -44,4 +44,4 @@ export default electronVite.defineConfig({
       }
     }
   }
-})
+});

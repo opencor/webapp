@@ -34,90 +34,90 @@
 </template>
 
 <script setup lang="ts">
-import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@14.9.1/+esm'
-import * as vue from 'vue'
+import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@14.9.1/+esm';
+import * as vue from 'vue';
 
-import * as locCommon from '../../common/locCommon'
-import * as locApi from '../../libopencor/locApi'
+import * as locCommon from '../../common/locCommon';
+import * as locApi from '../../libopencor/locApi';
 
-import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue'
+import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue';
 
 const props = defineProps<{
-  file: locApi.File
-  height: number
-  uiJson: locApi.IUiJson
-  width: number
-}>()
+  file: locApi.File;
+  height: number;
+  uiJson: locApi.IUiJson;
+  width: number;
+}>();
 
-const math = mathjs.create(mathjs.all ?? {}, {})
-const model = props.file.document().model(0)
-const instance = props.file.instance()
-const instanceTask = instance.task(0)
-const plots = vue.ref<IGraphPanelPlot[][]>([])
-const issues = vue.ref(locApi.uiJsonIssues(props.uiJson))
-const inputValues = vue.ref<number[]>([])
-const showInput = vue.ref<boolean[]>([])
-const idToInfo: Record<string, locCommon.ISimulationDataInfo> = {}
+const math = mathjs.create(mathjs.all ?? {}, {});
+const model = props.file.document().model(0);
+const instance = props.file.instance();
+const instanceTask = instance.task(0);
+const plots = vue.ref<IGraphPanelPlot[][]>([]);
+const issues = vue.ref(locApi.uiJsonIssues(props.uiJson));
+const inputValues = vue.ref<number[]>([]);
+const showInput = vue.ref<boolean[]>([]);
+const idToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 
 function evaluateValue(value: string): mathjs.MathType {
-  let index = -1
-  const parser = math.parser()
+  let index = -1;
+  const parser = math.parser();
 
   props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
     if (input.id !== undefined && input.id !== '') {
-      parser.set(input.id, inputValues.value[++index])
+      parser.set(input.id, inputValues.value[++index]);
     }
-  })
+  });
 
-  return parser.evaluate(value)
+  return parser.evaluate(value);
 }
 
 props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
-  inputValues.value.push(input.defaultValue)
-})
+  inputValues.value.push(input.defaultValue);
+});
 
 props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
-  showInput.value.push(evaluateValue(input.visible ?? 'true'))
-})
+  showInput.value.push(evaluateValue(input.visible ?? 'true'));
+});
 
 props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-  idToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name)
-})
+  idToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name);
+});
 
 function updateUiAndSimulation() {
   // Make sure that there are no issues.
 
   if (issues.value.length > 0) {
-    return
+    return;
   }
 
   // Show/hide the input widgets.
 
   props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
-    showInput.value[index] = evaluateValue(input.visible ?? 'true')
-  })
+    showInput.value[index] = evaluateValue(input.visible ?? 'true');
+  });
 
   // Update the SED-ML document.
 
-  model.removeAllChanges()
+  model.removeAllChanges();
 
   props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
-    const componentVariableNames = parameter.name.split('/')
+    const componentVariableNames = parameter.name.split('/');
 
     // @ts-expect-error (we trust that we have a valid component and variable name)
-    model.addChange(componentVariableNames[0], componentVariableNames[1], String(evaluateValue(parameter.value)))
-  })
+    model.addChange(componentVariableNames[0], componentVariableNames[1], String(evaluateValue(parameter.value)));
+  });
 
   // Run the instance and update the plots.
 
-  instance.run()
+  instance.run();
 
-  const parser = math.parser()
+  const parser = math.parser();
 
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     // @ts-expect-error (we trust that we have some valid information)
-    parser.set(data.id, locCommon.simulationData(instanceTask, idToInfo[data.id]))
-  })
+    parser.set(data.id, locCommon.simulationData(instanceTask, idToInfo[data.id]));
+  });
 
   plots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
     return [
@@ -125,11 +125,11 @@ function updateUiAndSimulation() {
         x: { data: parser.evaluate(plot.xValue) },
         y: { data: parser.evaluate(plot.yValue) }
       }
-    ]
-  })
+    ];
+  });
 }
 
 vue.onMounted(() => {
-  updateUiAndSimulation()
-})
+  updateUiAndSimulation();
+});
 </script>

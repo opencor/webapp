@@ -1,10 +1,10 @@
-import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver'
-import tailwindcssPlugin from '@tailwindcss/vite'
-import vuePlugin from '@vitejs/plugin-vue'
+import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
+import tailwindcssPlugin from '@tailwindcss/vite';
+import vuePlugin from '@vitejs/plugin-vue';
 
-import path from 'node:path'
-import vitePlugin from 'unplugin-vue-components/vite'
-import * as vite from 'vite'
+import path from 'node:path';
+import vitePlugin from 'unplugin-vue-components/vite';
+import * as vite from 'vite';
 
 export default vite.defineConfig({
   base: './',
@@ -38,4 +38,4 @@ export default vite.defineConfig({
       allow: [path.join(import.meta.dirname, '../..')]
     }
   }
-})
+});

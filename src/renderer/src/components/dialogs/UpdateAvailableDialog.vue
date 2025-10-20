@@ -9,8 +9,8 @@
 </template>
 
 <script setup lang="ts">
-defineEmits(['downloadAndInstall', 'close'])
+defineEmits(['downloadAndInstall', 'close']);
 defineProps<{
-  version: string
-}>()
+  version: string;
+}>();
 </script>

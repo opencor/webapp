@@ -1,22 +1,22 @@
-import electron from 'electron'
+import electron from 'electron';
 
-import { isMacOs, isPackaged } from '../renderer/src/common/electron'
+import { isMacOs, isPackaged } from '../renderer/src/common/electron';
 
-import { mainWindow } from './index'
-import { clearRecentFiles } from './MainWindow'
+import { mainWindow } from './index';
+import { clearRecentFiles } from './MainWindow';
 
-let enabledMenu: electron.Menu | null = null
-let disabledMenu: electron.Menu | null = null
-let recentFilePaths: string[] = []
-let hasFiles = false
+let enabledMenu: electron.Menu | null = null;
+let disabledMenu: electron.Menu | null = null;
+let recentFilePaths: string[] = [];
+let hasFiles = false;
 
 export function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
 
   if (enable && enabledMenu !== null) {
-    electron.Menu.setApplicationMenu(enabledMenu)
+    electron.Menu.setApplicationMenu(enabledMenu);
   } else if (!enable && disabledMenu !== null) {
-    electron.Menu.setApplicationMenu(disabledMenu)
+    electron.Menu.setApplicationMenu(disabledMenu);
   } else {
     // Some common menu items.
 
@@ -24,160 +24,160 @@ export function enableDisableMainMenu(enable: boolean): void {
       label: 'Settings...',
       accelerator: 'CmdOrCtrl+,',
       click: () => {
-        mainWindow?.webContents.send('settings')
+        mainWindow?.webContents.send('settings');
       }
-    }
+    };
 
-    let checkForUpdatesMenuItem: electron.MenuItemConstructorOptions | null = null
+    let checkForUpdatesMenuItem: electron.MenuItemConstructorOptions | null = null;
 
     if (isPackaged()) {
       checkForUpdatesMenuItem = {
         label: 'Check For Updates...',
         click: () => {
-          mainWindow?.webContents.send('check-for-updates')
+          mainWindow?.webContents.send('check-for-updates');
         }
-      }
+      };
     }
 
     const aboutOpencorMenuItem: electron.MenuItemConstructorOptions = {
       label: 'About OpenCOR',
       click: () => {
-        mainWindow?.webContents.send('about')
+        mainWindow?.webContents.send('about');
       }
-    }
+    };
 
     // App menu.
 
-    const appSubMenu: electron.MenuItemConstructorOptions[] = []
+    const appSubMenu: electron.MenuItemConstructorOptions[] = [];
     const appMenu: electron.MenuItemConstructorOptions = {
       label: electron.app.name,
       submenu: appSubMenu
-    }
+    };
 
     if (isMacOs()) {
       if (enable) {
-        appSubMenu.push(aboutOpencorMenuItem)
+        appSubMenu.push(aboutOpencorMenuItem);
 
         if (checkForUpdatesMenuItem !== null) {
-          appSubMenu.push({ type: 'separator' })
-          appSubMenu.push(checkForUpdatesMenuItem)
+          appSubMenu.push({ type: 'separator' });
+          appSubMenu.push(checkForUpdatesMenuItem);
         }
 
-        appSubMenu.push({ type: 'separator' })
-        appSubMenu.push(settingsMenuItem)
-        appSubMenu.push({ type: 'separator' })
+        appSubMenu.push({ type: 'separator' });
+        appSubMenu.push(settingsMenuItem);
+        appSubMenu.push({ type: 'separator' });
       }
 
-      appSubMenu.push({ role: 'hide' })
-      appSubMenu.push({ role: 'hideOthers' })
-      appSubMenu.push({ role: 'unhide' })
+      appSubMenu.push({ role: 'hide' });
+      appSubMenu.push({ role: 'hideOthers' });
+      appSubMenu.push({ role: 'unhide' });
 
       if (enable) {
-        appSubMenu.push({ type: 'separator' })
-        appSubMenu.push({ role: 'quit' })
+        appSubMenu.push({ type: 'separator' });
+        appSubMenu.push({ role: 'quit' });
       }
     }
 
     // File menu.
 
-    const fileSubMenu: electron.MenuItemConstructorOptions[] = []
+    const fileSubMenu: electron.MenuItemConstructorOptions[] = [];
     const fileMenu: electron.MenuItemConstructorOptions = {
       label: 'File',
       submenu: fileSubMenu
-    }
+    };
 
     fileSubMenu.push({
       label: 'Open...',
       accelerator: 'CmdOrCtrl+O',
       click: () => {
-        mainWindow?.open()
+        mainWindow?.open();
       }
-    })
+    });
     fileSubMenu.push({
       label: 'Open Remote...',
       accelerator: 'CmdOrCtrl+Shift+O',
       click: () => {
-        mainWindow?.webContents.send('open-remote')
+        mainWindow?.webContents.send('open-remote');
       }
-    })
+    });
     fileSubMenu.push({
       label: 'Open Sample',
       submenu: [
         {
           label: 'Lorenz',
           click: () => {
-            mainWindow?.webContents.send('open-sample-lorenz')
+            mainWindow?.webContents.send('open-sample-lorenz');
           }
         },
         {
           label: 'Interactive Lorenz',
           click: () => {
-            mainWindow?.webContents.send('open-sample-interactive-lorenz')
+            mainWindow?.webContents.send('open-sample-interactive-lorenz');
           }
         }
       ]
-    })
+    });
 
-    const fileReopenSubMenu: electron.MenuItemConstructorOptions[] = []
+    const fileReopenSubMenu: electron.MenuItemConstructorOptions[] = [];
 
     fileReopenSubMenu.push({
       label: 'Most Recent',
       accelerator: 'CmdOrCtrl+Shift+T',
       click: () => {
-        mainWindow?.webContents.send('open', recentFilePaths[0])
+        mainWindow?.webContents.send('open', recentFilePaths[0]);
       },
       enabled: recentFilePaths.length > 0
-    })
+    });
 
     if (recentFilePaths.length > 0) {
-      fileReopenSubMenu.push({ type: 'separator' })
+      fileReopenSubMenu.push({ type: 'separator' });
 
       recentFilePaths.forEach((filePath: string) => {
         fileReopenSubMenu.push({
           label: filePath,
           click: () => {
-            mainWindow?.webContents.send('open', filePath)
+            mainWindow?.webContents.send('open', filePath);
           }
-        })
-      })
+        });
+      });
     }
 
-    fileReopenSubMenu.push({ type: 'separator' })
+    fileReopenSubMenu.push({ type: 'separator' });
     fileReopenSubMenu.push({
       label: 'Clear Menu',
       click: () => {
-        clearRecentFiles()
+        clearRecentFiles();
       },
       enabled: recentFilePaths.length > 0
-    })
+    });
 
     fileSubMenu.push({
       id: 'fileReopen',
       label: 'Reopen',
       submenu: fileReopenSubMenu
-    })
-    fileSubMenu.push({ type: 'separator' })
+    });
+    fileSubMenu.push({ type: 'separator' });
     fileSubMenu.push({
       id: 'fileClose',
       label: 'Close',
       accelerator: 'CmdOrCtrl+W',
       click: () => {
-        mainWindow?.webContents.send('close')
+        mainWindow?.webContents.send('close');
       },
       enabled: hasFiles
-    })
+    });
     fileSubMenu.push({
       id: 'fileCloseAll',
       label: 'Close All',
       click: () => {
-        mainWindow?.webContents.send('close-all')
+        mainWindow?.webContents.send('close-all');
       },
       enabled: hasFiles
-    })
+    });
 
     if (!isMacOs()) {
-      fileSubMenu.push({ type: 'separator' })
-      fileSubMenu.push({ role: 'quit' })
+      fileSubMenu.push({ type: 'separator' });
+      fileSubMenu.push({ role: 'quit' });
     }
 
     // Edit menu.
@@ -195,7 +195,7 @@ export function enableDisableMainMenu(enable: boolean): void {
         { type: 'separator' },
         { role: 'selectAll' }
       ]
-    }
+    };
 
     // View menu.
 
@@ -208,111 +208,111 @@ export function enableDisableMainMenu(enable: boolean): void {
         { type: 'separator' },
         { role: 'togglefullscreen' }
       ]
-    }
+    };
 
     // Tools menu.
 
-    const toolsSubMenu: electron.MenuItemConstructorOptions[] = []
+    const toolsSubMenu: electron.MenuItemConstructorOptions[] = [];
     const toolsMenu: electron.MenuItemConstructorOptions = {
       label: 'Tools',
       submenu: toolsSubMenu
-    }
+    };
 
     if (!isMacOs()) {
-      toolsSubMenu.push(settingsMenuItem)
-      toolsSubMenu.push({ type: 'separator' })
+      toolsSubMenu.push(settingsMenuItem);
+      toolsSubMenu.push({ type: 'separator' });
     }
 
     toolsSubMenu.push({
       label: 'Reset All...',
       click: () => {
-        mainWindow?.webContents.send('reset-all')
+        mainWindow?.webContents.send('reset-all');
       }
-    })
+    });
 
     // Help menu.
 
-    const helpSubMenu: electron.MenuItemConstructorOptions[] = []
+    const helpSubMenu: electron.MenuItemConstructorOptions[] = [];
     const helpMenu: electron.MenuItemConstructorOptions = {
       label: 'Help',
       submenu: helpSubMenu
-    }
+    };
 
     helpSubMenu.push({
       label: 'Home Page',
       click: () => {
         electron.shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
-          console.error('Failed to open the home page:', error)
-        })
+          console.error('Failed to open the home page:', error);
+        });
       }
-    })
-    helpSubMenu.push({ type: 'separator' })
+    });
+    helpSubMenu.push({ type: 'separator' });
     helpSubMenu.push({
       label: 'Report Issue',
       click: () => {
         electron.shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
-          console.error('Failed to report an issue:', error)
-        })
+          console.error('Failed to report an issue:', error);
+        });
       }
-    })
+    });
 
     if (!isMacOs()) {
       if (checkForUpdatesMenuItem !== null) {
-        helpSubMenu.push({ type: 'separator' })
-        helpSubMenu.push(checkForUpdatesMenuItem)
+        helpSubMenu.push({ type: 'separator' });
+        helpSubMenu.push(checkForUpdatesMenuItem);
       }
 
-      helpSubMenu.push({ type: 'separator' })
-      helpSubMenu.push(aboutOpencorMenuItem)
+      helpSubMenu.push({ type: 'separator' });
+      helpSubMenu.push(aboutOpencorMenuItem);
     }
 
     // Set our menu.
 
-    const menu: electron.MenuItemConstructorOptions[] = []
+    const menu: electron.MenuItemConstructorOptions[] = [];
 
     if (enable) {
       if (isMacOs()) {
-        menu.push(appMenu)
+        menu.push(appMenu);
       }
 
-      menu.push(fileMenu)
-      menu.push(editMenu)
-      menu.push(viewMenu)
-      menu.push(toolsMenu)
-      menu.push(helpMenu)
+      menu.push(fileMenu);
+      menu.push(editMenu);
+      menu.push(viewMenu);
+      menu.push(toolsMenu);
+      menu.push(helpMenu);
 
-      enabledMenu = electron.Menu.buildFromTemplate(menu)
+      enabledMenu = electron.Menu.buildFromTemplate(menu);
     } else {
       if (isMacOs()) {
-        menu.push(appMenu)
+        menu.push(appMenu);
       }
 
-      menu.push(editMenu)
+      menu.push(editMenu);
 
-      disabledMenu = electron.Menu.buildFromTemplate(menu)
+      disabledMenu = electron.Menu.buildFromTemplate(menu);
     }
 
-    electron.Menu.setApplicationMenu(enable ? enabledMenu : disabledMenu)
+    electron.Menu.setApplicationMenu(enable ? enabledMenu : disabledMenu);
   }
 }
 
 export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
   if (enabledMenu !== null) {
-    hasFiles = enable
+    hasFiles = enable;
 
-    const fileCloseMenu = enabledMenu.getMenuItemById('fileClose')
-    const fileCloseAllMenu = enabledMenu.getMenuItemById('fileCloseAll')
+    const fileCloseMenu = enabledMenu.getMenuItemById('fileClose');
+    const fileCloseAllMenu = enabledMenu.getMenuItemById('fileCloseAll');
 
     if (fileCloseMenu !== null && fileCloseAllMenu !== null) {
-      fileCloseMenu.enabled = hasFiles
-      fileCloseAllMenu.enabled = hasFiles
+      fileCloseMenu.enabled = hasFiles;
+      fileCloseAllMenu.enabled = hasFiles;
     }
   }
 }
 
 export function updateReopenMenu(filePaths: string[]): void {
-  enabledMenu = null
-  recentFilePaths = filePaths
+  enabledMenu = null;
+  recentFilePaths = filePaths;
 
-  enableDisableMainMenu(true)
+  enableDisableMainMenu(true);
 }

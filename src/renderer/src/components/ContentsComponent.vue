@@ -90,208 +90,208 @@
 </template>
 
 <script setup lang="ts">
-import * as vueusecore from '@vueuse/core'
+import * as vueusecore from '@vueuse/core';
 
-import * as vue from 'vue'
+import * as vue from 'vue';
 
-import * as common from '../common/common'
-import { SHORT_DELAY } from '../common/constants'
-import { electronApi } from '../common/electronApi'
-import * as vueCommon from '../common/vueCommon'
-import * as locApi from '../libopencor/locApi'
+import * as common from '../common/common';
+import { SHORT_DELAY } from '../common/constants';
+import { electronApi } from '../common/electronApi';
+import * as vueCommon from '../common/vueCommon';
+import * as locApi from '../libopencor/locApi';
 
 export interface IFileTab {
-  file: locApi.File
-  uiJson?: locApi.IUiJson
+  file: locApi.File;
+  uiJson?: locApi.IUiJson;
 }
 
 const props = defineProps<{
-  width: number
-  height: number
-  isActive: boolean
-  uiEnabled: boolean
-  simulationOnly?: boolean
-}>()
-defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile })
+  width: number;
+  height: number;
+  isActive: boolean;
+  uiEnabled: boolean;
+  simulationOnly?: boolean;
+}>();
+defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile });
 
 export interface IContentsComponent {
-  openFile(file: locApi.File): void
-  closeCurrentFile(): void
-  closeAllFiles(): void
-  hasFile(filePath: string): boolean
-  hasFiles(): boolean
-  selectFile(filePath: string): void
+  openFile(file: locApi.File): void;
+  closeCurrentFile(): void;
+  closeAllFiles(): void;
+  hasFile(filePath: string): boolean;
+  hasFiles(): boolean;
+  selectFile(filePath: string): void;
 }
 
-const fileTablistId = vue.ref('contentsComponentFileTablist')
-const fileTabs = vue.ref<IFileTab[]>([])
-const activeFile = vue.ref<string>('')
-const heightMinusFileTablist = vue.ref<number>(0)
+const fileTablistId = vue.ref('contentsComponentFileTablist');
+const fileTabs = vue.ref<IFileTab[]>([]);
+const activeFile = vue.ref<string>('');
+const heightMinusFileTablist = vue.ref<number>(0);
 
 const filePaths = vue.computed(() => {
-  const res: string[] = []
+  const res: string[] = [];
 
   for (const fileTab of fileTabs.value) {
-    res.push(fileTab.file.path())
+    res.push(fileTab.file.path());
   }
 
-  return res
-})
+  return res;
+});
 
 vue.watch(filePaths, (newFilePaths: string[]) => {
-  electronApi?.filesOpened(newFilePaths)
-})
+  electronApi?.filesOpened(newFilePaths);
+});
 
 vue.watch(activeFile, (newActiveFile: string) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
   //       people know that a file has been selected.
 
-  electronApi?.fileSelected(newActiveFile)
-})
+  electronApi?.fileSelected(newActiveFile);
+});
 
 function openFile(file: locApi.File): void {
-  const filePath = file.path()
-  const prevActiveFile = activeFile.value
+  const filePath = file.path();
+  const prevActiveFile = activeFile.value;
 
-  selectFile(filePath)
+  selectFile(filePath);
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file: file,
     uiJson: file.uiJson()
-  })
+  });
 
-  electronApi?.fileOpened(filePath)
+  electronApi?.fileOpened(filePath);
 }
 
 function hasFile(filePath: string): boolean {
-  return fileTabs.value.find((fileTab) => fileTab.file.path() === filePath) !== undefined
+  return fileTabs.value.find((fileTab) => fileTab.file.path() === filePath) !== undefined;
 }
 
 function hasFiles(): boolean {
-  return fileTabs.value.length > 0
+  return fileTabs.value.length > 0;
 }
 
 function selectFile(filePath: string): void {
-  activeFile.value = filePath
+  activeFile.value = filePath;
 }
 
 function selectNextFile(): void {
-  const crtFileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
-  const nextFileTabIndex = (crtFileTabIndex + 1) % fileTabs.value.length
-  const nextFileTab = fileTabs.value[nextFileTabIndex]
+  const crtFileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
+  const nextFileTabIndex = (crtFileTabIndex + 1) % fileTabs.value.length;
+  const nextFileTab = fileTabs.value[nextFileTabIndex];
 
   if (nextFileTab !== undefined) {
-    selectFile(nextFileTab.file.path())
+    selectFile(nextFileTab.file.path());
   }
 }
 
 function selectPreviousFile(): void {
-  const crtFileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value)
-  const nextFileTabIndex = (crtFileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length
-  const nextFileTab = fileTabs.value[nextFileTabIndex]
+  const crtFileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
+  const nextFileTabIndex = (crtFileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length;
+  const nextFileTab = fileTabs.value[nextFileTabIndex];
 
   if (nextFileTab !== undefined) {
-    selectFile(nextFileTab.file.path())
+    selectFile(nextFileTab.file.path());
   }
 }
 
 function closeFile(filePath: string): void {
-  locApi.fileManager.unmanage(filePath)
+  locApi.fileManager.unmanage(filePath);
 
-  const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath)
+  const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath);
 
-  fileTabs.value.splice(fileTabIndex, 1)
+  fileTabs.value.splice(fileTabIndex, 1);
 
   if (activeFile.value === filePath && fileTabs.value.length > 0) {
-    const nextFileTab = fileTabs.value[Math.min(fileTabIndex, fileTabs.value.length - 1)]
+    const nextFileTab = fileTabs.value[Math.min(fileTabIndex, fileTabs.value.length - 1)];
 
     if (nextFileTab !== undefined) {
-      selectFile(nextFileTab.file.path())
+      selectFile(nextFileTab.file.path());
     }
   }
 
-  electronApi?.fileClosed(filePath)
+  electronApi?.fileClosed(filePath);
 }
 
 function closeCurrentFile(): void {
-  closeFile(activeFile.value)
+  closeFile(activeFile.value);
 }
 
 function closeAllFiles(): void {
   while (fileTabs.value.length > 0) {
-    closeCurrentFile()
+    closeCurrentFile();
   }
 }
 
 // Various things that need to be done once we are mounted.
 
-const crtInstance = vue.getCurrentInstance()
+const crtInstance = vue.getCurrentInstance();
 
 vue.onMounted(() => {
   // Customise our IDs.
 
-  fileTablistId.value = `contentsComponentFileTablist${String(crtInstance?.uid)}`
+  fileTablistId.value = `contentsComponentFileTablist${String(crtInstance?.uid)}`;
 
   // Track the height of our file tablist.
 
-  let fileTablistResizeObserver: ResizeObserver | undefined
+  let fileTablistResizeObserver: ResizeObserver | undefined;
 
   setTimeout(() => {
-    fileTablistResizeObserver = vueCommon.trackElementHeight(fileTablistId.value)
-  }, SHORT_DELAY)
+    fileTablistResizeObserver = vueCommon.trackElementHeight(fileTablistId.value);
+  }, SHORT_DELAY);
 
   // Monitor "our" contents size.
 
   function resizeOurselves() {
-    heightMinusFileTablist.value = props.height - vueCommon.trackedCssVariableValue(fileTablistId.value)
+    heightMinusFileTablist.value = props.height - vueCommon.trackedCssVariableValue(fileTablistId.value);
   }
 
   vue.watch(
     () => props.height,
     () => {
-      resizeOurselves()
+      resizeOurselves();
     }
-  )
+  );
 
-  let oldFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value)
+  let oldFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value);
 
   const mutationObserver = new MutationObserver(() => {
-    const newFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value)
+    const newFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value);
 
     if (newFileTablistHeight !== oldFileTablistHeight) {
-      oldFileTablistHeight = newFileTablistHeight
+      oldFileTablistHeight = newFileTablistHeight;
 
-      resizeOurselves()
+      resizeOurselves();
     }
-  })
+  });
 
-  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 
   vue.onUnmounted(() => {
-    mutationObserver.disconnect()
+    mutationObserver.disconnect();
 
-    fileTablistResizeObserver?.disconnect()
-  })
-})
+    fileTablistResizeObserver?.disconnect();
+  });
+});
 
 // Keyboard shortcuts.
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
     if (!props.isActive || !props.uiEnabled || fileTabs.value.length === 0) {
-      return
+      return;
     }
 
     if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
-      event.preventDefault()
+      event.preventDefault();
 
-      selectNextFile()
+      selectNextFile();
     } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
-      event.preventDefault()
+      event.preventDefault();
 
-      selectPreviousFile()
+      selectPreviousFile();
     }
-  })
+  });
 }
 </script>
 

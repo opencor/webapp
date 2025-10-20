@@ -1,20 +1,20 @@
-import electron from 'electron'
-import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater'
-import path from 'node:path'
-import process from 'node:process'
+import electron from 'electron';
+import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
+import path from 'node:path';
+import process from 'node:process';
 
-import type { ISettings } from '../renderer/src/common/common'
-import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants'
-import { isDevMode, isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron'
+import type { ISettings } from '../renderer/src/common/common';
+import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
+import { isDevMode, isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
 
-import icon from './assets/icon.png?asset'
-import { ApplicationWindow } from './ApplicationWindow'
-import { electronConf, type IElectronConfState } from './index'
-import { enableDisableMainMenu, updateReopenMenu } from './MainMenu'
-import type { SplashScreenWindow } from './SplashScreenWindow'
+import icon from './assets/icon.png?asset';
+import { ApplicationWindow } from './ApplicationWindow';
+import { electronConf, type IElectronConfState } from './index';
+import { enableDisableMainMenu, updateReopenMenu } from './MainMenu';
+import type { SplashScreenWindow } from './SplashScreenWindow';
 
-autoUpdater.autoDownload = false
-autoUpdater.logger = null
+autoUpdater.autoDownload = false;
+autoUpdater.logger = null;
 
 export function checkForUpdates(atStartup: boolean): void {
   // Check for updates, if requested and if OpenCOR is packaged.
@@ -23,127 +23,127 @@ export function checkForUpdates(atStartup: boolean): void {
     autoUpdater
       .checkForUpdates()
       .then((result: UpdateCheckResult | null) => {
-        const updateAvailable = result?.isUpdateAvailable ?? false
+        const updateAvailable = result?.isUpdateAvailable ?? false;
 
         if (updateAvailable) {
-          MainWindow.instance?.webContents.send('update-available', result?.updateInfo.version)
+          MainWindow.instance?.webContents.send('update-available', result?.updateInfo.version);
         } else if (!atStartup) {
-          MainWindow.instance?.webContents.send('update-not-available')
+          MainWindow.instance?.webContents.send('update-not-available');
         }
       })
       .catch((error: unknown) => {
         MainWindow.instance?.webContents.send(
           'update-check-error',
           error instanceof Error ? error.message : String(error)
-        )
-      })
+        );
+      });
   }
 }
 
 autoUpdater.on('download-progress', (info: ProgressInfo) => {
-  MainWindow.instance?.webContents.send('update-download-progress', info.percent)
-})
+  MainWindow.instance?.webContents.send('update-download-progress', info.percent);
+});
 
 export function downloadAndInstallUpdate(): void {
   autoUpdater
     .downloadUpdate()
     .then(() => {
-      MainWindow.instance?.webContents.send('update-downloaded')
+      MainWindow.instance?.webContents.send('update-downloaded');
     })
     .catch((error: unknown) => {
       MainWindow.instance?.webContents.send(
         'update-download-error',
         error instanceof Error ? error.message : String(error)
-      )
-    })
+      );
+    });
 }
 
 export function installUpdateAndRestart(): void {
-  autoUpdater.quitAndInstall(true, true)
+  autoUpdater.quitAndInstall(true, true);
 }
 
 export function loadSettings(): ISettings {
-  return electronConf.get('settings')
+  return electronConf.get('settings');
 }
 
 export function saveSettings(settings: ISettings): void {
-  electronConf.set('settings', settings)
+  electronConf.set('settings', settings);
 }
 
-let _resetAll = false
+let _resetAll = false;
 
 export function resetAll(): void {
-  _resetAll = true
+  _resetAll = true;
 
-  electron.app.relaunch()
-  electron.app.quit()
+  electron.app.relaunch();
+  electron.app.quit();
 }
 
-let recentFilePaths: string[] = []
+let recentFilePaths: string[] = [];
 
 export function clearRecentFiles(): void {
-  recentFilePaths = []
+  recentFilePaths = [];
 
-  updateReopenMenu(recentFilePaths)
+  updateReopenMenu(recentFilePaths);
 }
 
 export function fileClosed(filePath: string): void {
-  recentFilePaths.unshift(filePath)
-  recentFilePaths = recentFilePaths.slice(0, 10)
+  recentFilePaths.unshift(filePath);
+  recentFilePaths = recentFilePaths.slice(0, 10);
 
-  updateReopenMenu(recentFilePaths)
+  updateReopenMenu(recentFilePaths);
 }
 
 export function fileIssue(filePath: string): void {
-  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath)
+  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath);
 
-  updateReopenMenu(recentFilePaths)
+  updateReopenMenu(recentFilePaths);
 }
 
 export function fileOpened(filePath: string): void {
-  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath)
+  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath);
 
-  updateReopenMenu(recentFilePaths)
+  updateReopenMenu(recentFilePaths);
 
   // A file has been opened, but it may have been opened while reopening files during OpenCOR startup, in which case we
   // need to reopen the next file, hence our call to reopenFilePathsAndSelectFilePath(), which will do nothing if there
   // are no more files to reopen.
 
-  MainWindow.instance?.reopenFilePathsAndSelectFilePath()
+  MainWindow.instance?.reopenFilePathsAndSelectFilePath();
 }
 
-let openedFilePaths: string[] = []
+let openedFilePaths: string[] = [];
 
 export function filesOpened(filePaths: string[]): void {
-  openedFilePaths = filePaths
+  openedFilePaths = filePaths;
 
   if (filePaths.length === 0) {
-    selectedFilePath = null
+    selectedFilePath = null;
   }
 }
 
-let selectedFilePath: string | null = null
+let selectedFilePath: string | null = null;
 
 export function fileSelected(filePath: string): void {
-  selectedFilePath = filePath
+  selectedFilePath = filePath;
 }
 
 export class MainWindow extends ApplicationWindow {
   // Properties.
 
-  static instance: MainWindow | null = null
+  static instance: MainWindow | null = null;
 
-  private _splashScreenWindowClosed = false
+  private _splashScreenWindowClosed = false;
 
-  private _openedFilePaths: string[] = []
-  private _selectedFilePath = ''
+  private _openedFilePaths: string[] = [];
+  private _selectedFilePath = '';
 
   // Constructor.
 
   constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow) {
     // Initialise ourselves.
 
-    const state: IElectronConfState = electronConf.get('app.state')
+    const state: IElectronConfState = electronConf.get('app.state');
 
     super({
       x: state.x,
@@ -153,55 +153,55 @@ export class MainWindow extends ApplicationWindow {
       minWidth: 640,
       minHeight: 480,
       ...(isMacOs() ? {} : { icon: icon })
-    })
+    });
 
     // Keep track of the current isntance.
 
-    MainWindow.instance = this
+    MainWindow.instance = this;
 
     // Set our dock icon (macOS only).
 
     if (isMacOs()) {
-      electron.app.dock?.setIcon(icon)
+      electron.app.dock?.setIcon(icon);
     }
 
     // Restore our state, if needed.
 
     if (state.isMaximized) {
-      this.maximize()
+      this.maximize();
     } else if (state.isFullScreen) {
-      this.setFullScreen(true)
+      this.setFullScreen(true);
     }
 
     // Ask for the splash screen window to be closed with a short delay once we are visible and handle our command line
     // (also with a short delay if needed).
 
     this.once('show', () => {
-      let handleCommandLineDelay = SHORT_DELAY
+      let handleCommandLineDelay = SHORT_DELAY;
 
       if (!this._splashScreenWindowClosed) {
-        this._splashScreenWindowClosed = true
+        this._splashScreenWindowClosed = true;
 
-        handleCommandLineDelay = LONG_DELAY
+        handleCommandLineDelay = LONG_DELAY;
 
         setTimeout(() => {
-          splashScreenWindow.close()
-        }, LONG_DELAY)
+          splashScreenWindow.close();
+        }, LONG_DELAY);
       }
 
       setTimeout(() => {
         // Retrieve the recently opened files and our Reopen menu.
 
-        recentFilePaths = electronConf.get('app.files.recent')
+        recentFilePaths = electronConf.get('app.files.recent');
 
-        updateReopenMenu(recentFilePaths)
+        updateReopenMenu(recentFilePaths);
 
         // Reopen previously opened files, if any, and select the previously selected file.
 
-        this._openedFilePaths = electronConf.get('app.files.opened')
-        this._selectedFilePath = electronConf.get('app.files.selected')
+        this._openedFilePaths = electronConf.get('app.files.opened');
+        this._selectedFilePath = electronConf.get('app.files.selected');
 
-        this.reopenFilePathsAndSelectFilePath()
+        this.reopenFilePathsAndSelectFilePath();
 
         // The command line can either be a classical command line or an OpenCOR action (i.e. an opencor:// link). In
         // the former case, we need to remove one or two arguments while, in the latter case, nothing should be removed.
@@ -210,88 +210,88 @@ export class MainWindow extends ApplicationWindow {
           // The first argument is not an action, so remove the first argument and then the second argument, but only
           // if we are not packaged.
 
-          commandLine.shift()
+          commandLine.shift();
 
           if (!isPackaged()) {
-            commandLine.shift()
+            commandLine.shift();
           }
         }
 
         // When auto updating OpenCOR, we may end up with an extra argument that we need to ignore.
 
         if ((isWindows() || isMacOs()) && commandLine[0] === '--updated') {
-          commandLine.shift()
+          commandLine.shift();
         } else if (isLinux() && commandLine[0] === '--no-sandbox') {
-          commandLine.shift()
+          commandLine.shift();
         }
 
-        this.handleArguments(commandLine)
-      }, handleCommandLineDelay)
-    })
+        this.handleArguments(commandLine);
+      }, handleCommandLineDelay);
+    });
 
     // Keep track of our settings unless we are resetting all.
 
     this.on('close', () => {
       if (_resetAll) {
-        electronConf.clear()
+        electronConf.clear();
       } else {
         // Main window state.
 
         if (!this.isMaximized() && !this.isMinimized() && !this.isFullScreen()) {
-          state.x = this.getPosition()[0]
-          state.y = this.getPosition()[1]
-          state.width = this.getContentSize()[0]
-          state.height = this.getContentSize()[1]
+          state.x = this.getPosition()[0];
+          state.y = this.getPosition()[1];
+          state.width = this.getContentSize()[0];
+          state.height = this.getContentSize()[1];
         }
 
-        state.isMaximized = this.isMaximized()
-        state.isFullScreen = this.isFullScreen()
+        state.isMaximized = this.isMaximized();
+        state.isFullScreen = this.isFullScreen();
 
-        electronConf.set('app.state', state)
+        electronConf.set('app.state', state);
 
         // Recent files.
 
-        electronConf.set('app.files.recent', recentFilePaths)
+        electronConf.set('app.files.recent', recentFilePaths);
 
         // Opened files and selected file.
 
-        electronConf.set('app.files.opened', openedFilePaths)
-        electronConf.set('app.files.selected', selectedFilePath)
+        electronConf.set('app.files.opened', openedFilePaths);
+        electronConf.set('app.files.selected', selectedFilePath);
       }
-    })
+    });
 
     // Enable our main menu.
 
-    enableDisableMainMenu(true)
+    enableDisableMainMenu(true);
 
     // Make sure that our menu bar is always visible.
 
-    this.setAutoHideMenuBar(false)
-    this.setMenuBarVisibility(true)
+    this.setAutoHideMenuBar(false);
+    this.setMenuBarVisibility(true);
 
     // Open external links in the default browser.
 
     this.webContents.setWindowOpenHandler((details) => {
       electron.shell.openExternal(details.url).catch((error: unknown) => {
-        console.error('Failed to open external URL:', error)
-      })
+        console.error('Failed to open external URL:', error);
+      });
 
       return {
         action: 'deny'
-      }
-    })
+      };
+    });
 
     // Load the remote URL for development or the local HTML file for production.
 
     if (isDevMode()) {
       // @ts-expect-error (isDevMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
       this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((error: unknown) => {
-        console.error('Failed to load URL:', error)
-      })
+        console.error('Failed to load URL:', error);
+      });
     } else {
       this.loadFile('./out/renderer/index.html').catch((error: unknown) => {
-        console.error('Failed to load file:', error)
-      })
+        console.error('Failed to load file:', error);
+      });
     }
   }
 
@@ -301,64 +301,64 @@ export class MainWindow extends ApplicationWindow {
 
   reopenFilePathsAndSelectFilePath(): void {
     if (this._openedFilePaths.length > 0) {
-      const filePath = this._openedFilePaths[0]
+      const filePath = this._openedFilePaths[0];
 
-      this.webContents.send('open', filePath)
+      this.webContents.send('open', filePath);
 
-      this._openedFilePaths = this._openedFilePaths.slice(1)
+      this._openedFilePaths = this._openedFilePaths.slice(1);
 
       if (this._openedFilePaths.length > 0) {
-        return
+        return;
       }
     }
 
     if (this._selectedFilePath !== '') {
-      this.webContents.send('select', this._selectedFilePath)
+      this.webContents.send('select', this._selectedFilePath);
 
-      this._selectedFilePath = ''
+      this._selectedFilePath = '';
     }
   }
 
   // Handle our command line arguments.
 
   isAction(argument: string): boolean {
-    return argument.startsWith(FULL_URI_SCHEME)
+    return argument.startsWith(FULL_URI_SCHEME);
   }
 
   handleArguments(commandLine: string[]): void {
     if (commandLine.length === 0) {
-      return
+      return;
     }
 
     commandLine.forEach((argument: string) => {
       if (this.isAction(argument)) {
-        this.webContents.send('action', argument.slice(FULL_URI_SCHEME.length))
+        this.webContents.send('action', argument.slice(FULL_URI_SCHEME.length));
       } else if (argument !== '--allow-file-access-from-files' && argument !== '--enable-avfoundation') {
         // The argument is not an action (and not --allow-file-access-from-files or --enable-avfoundation either), so it
         // must be a file to open. But, first, check whether the argument is a relative path and, if so, convert it to
         // an absolute path.
 
         if (!path.isAbsolute(argument)) {
-          argument = path.resolve(argument)
+          argument = path.resolve(argument);
         }
 
-        this.webContents.send('open', argument)
+        this.webContents.send('open', argument);
       }
-    })
+    });
   }
 
   // Enable/disable our UI.
 
   enableDisableUi(enable: boolean): void {
-    enableDisableMainMenu(enable)
+    enableDisableMainMenu(enable);
 
-    this.webContents.send('enable-disable-ui', enable)
+    this.webContents.send('enable-disable-ui', enable);
   }
 
   // Handle our File|Open menu.
 
   open(): void {
-    this.enableDisableUi(false)
+    this.enableDisableUi(false);
 
     electron.dialog
       .showOpenDialog({
@@ -366,15 +366,15 @@ export class MainWindow extends ApplicationWindow {
       })
       .then(({ filePaths }) => {
         for (const filePath of filePaths) {
-          this.webContents.send('open', filePath)
+          this.webContents.send('open', filePath);
         }
 
-        this.enableDisableUi(true)
+        this.enableDisableUi(true);
       })
       .catch((error: unknown) => {
-        console.error('Failed to open file(s):', error)
+        console.error('Failed to open file(s):', error);
 
-        this.enableDisableUi(true)
-      })
+        this.enableDisableUi(true);
+      });
   }
 }

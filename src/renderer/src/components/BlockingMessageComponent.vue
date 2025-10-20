@@ -11,6 +11,6 @@
 
 <script setup lang="ts">
 defineProps<{
-  message: string
-}>()
+  message: string;
+}>();
 </script>

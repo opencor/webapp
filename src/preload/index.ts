@@ -1,38 +1,38 @@
-import electron from 'electron'
-import * as systemInformation from 'systeminformation'
+import electron from 'electron';
+import * as systemInformation from 'systeminformation';
 
 // @ts-expect-error (libOpenCOR.node is a native module)
-import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node'
+import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node';
 
-import type { ISettings } from '../renderer/src/common/common'
-import type { ISplashScreenInfo } from '../renderer/src/common/electronApi'
+import type { ISettings } from '../renderer/src/common/common';
+import type { ISplashScreenInfo } from '../renderer/src/common/electronApi';
 
 // Some bridging between our main process and renderer process.
 // Note: this must be in sync with src/electronApi.ts.
 
-const osInfo = await systemInformation.osInfo()
+const osInfo = await systemInformation.osInfo();
 
 electron.contextBridge.exposeInMainWorld('electronApi', {
   // Some general methods.
 
   operatingSystem: () => {
-    const architecture = osInfo.arch === 'x64' ? 'Intel' : 'ARM'
+    const architecture = osInfo.arch === 'x64' ? 'Intel' : 'ARM';
 
     if (osInfo.platform === 'Windows') {
       // Note: osInfo.distro returns something like "Microsoft Windows 11 Pro", but we want it to return
       //       "Windows 11 Pro", so we remove the "Microsoft " part.
 
-      return `${osInfo.distro.replace('Microsoft ', '')} (${architecture})`
+      return `${osInfo.distro.replace('Microsoft ', '')} (${architecture})`;
     }
 
-    return `${osInfo.distro} ${osInfo.release} (${architecture})`
+    return `${osInfo.distro} ${osInfo.release} (${architecture})`;
   },
 
   // Splash screen window.
 
   onInitSplashScreenWindow: (callback: (info: ISplashScreenInfo) => void) =>
     electron.ipcRenderer.on('init-splash-screen-window', (_event, info: ISplashScreenInfo) => {
-      callback(info)
+      callback(info);
     }),
 
   // Renderer process asking the main process to do something for it.
@@ -57,81 +57,81 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
 
   onAbout: (callback: () => void) =>
     electron.ipcRenderer.on('about', () => {
-      callback()
+      callback();
     }),
   onAction: (callback: (action: string) => void) =>
     electron.ipcRenderer.on('action', (_event, action: string) => {
-      callback(action)
+      callback(action);
     }),
   onCheckForUpdates: (callback: () => void) =>
     electron.ipcRenderer.on('check-for-updates', () => {
-      callback()
+      callback();
     }),
   onEnableDisableUi: (callback: (enable: boolean) => void) =>
     electron.ipcRenderer.on('enable-disable-ui', (_event, enable: boolean) => {
-      callback(enable)
+      callback(enable);
     }),
   onOpen: (callback: (filePath: string) => void) =>
     electron.ipcRenderer.on('open', (_event, filePath: string) => {
-      callback(filePath)
+      callback(filePath);
     }),
   onOpenRemote: (callback: () => void) =>
     electron.ipcRenderer.on('open-remote', () => {
-      callback()
+      callback();
     }),
   onOpenSampleLorenz: (callback: () => void) =>
     electron.ipcRenderer.on('open-sample-lorenz', () => {
-      callback()
+      callback();
     }),
   onOpenSampleInteractiveLorenz: (callback: () => void) =>
     electron.ipcRenderer.on('open-sample-interactive-lorenz', () => {
-      callback()
+      callback();
     }),
   onClose: (callback: () => void) =>
     electron.ipcRenderer.on('close', () => {
-      callback()
+      callback();
     }),
   onCloseAll: (callback: () => void) =>
     electron.ipcRenderer.on('close-all', () => {
-      callback()
+      callback();
     }),
   onResetAll: (callback: () => void) =>
     electron.ipcRenderer.on('reset-all', () => {
-      callback()
+      callback();
     }),
   onSelect: (callback: (filePath: string) => void) =>
     electron.ipcRenderer.on('select', (_event, filePath: string) => {
-      callback(filePath)
+      callback(filePath);
     }),
   onSettings: (callback: () => void) =>
     electron.ipcRenderer.on('settings', () => {
-      callback()
+      callback();
     }),
   onUpdateAvailable: (callback: (version: string) => void) =>
     electron.ipcRenderer.on('update-available', (_event, version: string) => {
-      callback(version)
+      callback(version);
     }),
   onUpdateCheckError: (callback: (issue: string) => void) =>
     electron.ipcRenderer.on('update-check-error', (_event, issue: string) => {
-      callback(issue)
+      callback(issue);
     }),
   onUpdateDownloaded: (callback: () => void) =>
     electron.ipcRenderer.on('update-downloaded', () => {
-      callback()
+      callback();
     }),
   onUpdateDownloadError: (callback: (issue: string) => void) =>
     electron.ipcRenderer.on('update-download-error', (_event, issue: string) => {
-      callback(issue)
+      callback(issue);
     }),
   onUpdateDownloadProgress: (callback: (percent: number) => void) =>
     electron.ipcRenderer.on('update-download-progress', (_event, percent: number) => {
-      callback(percent)
+      callback(percent);
     }),
   onUpdateNotAvailable: (callback: () => void) =>
     electron.ipcRenderer.on('update-not-available', () => {
-      callback()
+      callback();
     })
-})
+});
 
 // Give our renderer process access to the native node module for libOpenCOR.
 // Note: this must be in sync with src/libopencor/src/main.cpp.
@@ -231,4 +231,4 @@ electron.contextBridge.exposeInMainWorld('locApi', {
     loc.sedInstanceTaskAlgebraicUnit(path, index, algebraicIndex),
   sedInstanceTaskAlgebraic: (path: string, index: number, algebraicIndex: number) =>
     loc.sedInstanceTaskAlgebraic(path, index, algebraicIndex)
-})
+});
