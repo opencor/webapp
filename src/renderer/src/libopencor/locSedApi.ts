@@ -276,6 +276,7 @@ export class SedSimulationUniformTimeCourse extends SedSimulation {
 }
 
 interface IWasmSedInstance {
+  hasIssues: boolean;
   issues: IWasmIssues;
   task(index: number): IWasmSedInstanceTask;
   run(): number;
@@ -292,6 +293,10 @@ export class SedInstance extends SedBase {
     } else {
       this._wasmSedInstance = vue.markRaw(wasmSedDocument.instantiate());
     }
+  }
+
+  hasIssues(): boolean {
+    return cppVersion() ? _cppLocApi.sedInstanceHasIssues(this._filePath) : this._wasmSedInstance.hasIssues;
   }
 
   issues(): IIssue[] {

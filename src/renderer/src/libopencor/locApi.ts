@@ -44,6 +44,7 @@ export interface ICppLocApi {
 
   // SedInstance API.
 
+  setInstanceHasIssues: (path: string) => boolean;
   sedInstanceIssues: (path: string) => IIssue[];
   sedInstanceRun: (path: string) => number;
 

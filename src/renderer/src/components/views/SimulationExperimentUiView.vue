@@ -22,7 +22,8 @@
         </ScrollPanel>
       </div>
       <div class="grow">
-        <GraphPanelWidget
+        <IssuesView v-if="instanceIssues.length !== 0" :leftMargin="false" :width="width" :height="height" :issues="instanceIssues" />
+        <GraphPanelWidget v-else
           v-for="(_plot, index) in (uiJson as any).output.plots"
           :key="`plot_${index}`"
           :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
@@ -55,6 +56,7 @@ const instance = props.file.instance();
 const instanceTask = instance.task(0);
 const plots = vue.ref<IGraphPanelPlot[][]>([]);
 const issues = vue.ref(locApi.uiJsonIssues(props.uiJson));
+const instanceIssues = vue.ref<locApi.IIssue[]>([]);
 const inputValues = vue.ref<number[]>([]);
 const showInput = vue.ref<boolean[]>([]);
 const idToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
@@ -111,6 +113,14 @@ function updateUiAndSimulation() {
   // Run the instance and update the plots.
 
   instance.run();
+
+  if (instance.hasIssues()) {
+    instanceIssues.value = instance.issues();
+
+    return;
+  } else {
+    instanceIssues.value = [];
+  }
 
   const parser = math.parser();
 

@@ -1,5 +1,5 @@
 <template>
-  <Fieldset class="ml-4! mr-4!" legend="Issues" :style="`{ width: ${width}px; height: ${fieldsetHeight}; }`">
+  <Fieldset :class="`${leftMargin ? 'ml-4!' : ''} ${rightMargin ? 'mr-4!' : ''}`" legend="Issues" :style="`{ width: ${width}px; height: ${fieldsetHeight}; }`">
     <ScrollPanel :style="`{ width: ${width}px; height: ${scrollPanelHeight}; }`">
       <div v-for="(issue, index) in issues" :key="`issue_${index}`" :class="`select-text ${index > 0 ? 'mt-4!' : ''}`">
         <Message v-if="issue.type === locApi.EIssueType.ERROR" severity="error" icon="pi pi-times-circle">
@@ -19,11 +19,19 @@ import * as vue from 'vue';
 import { SHORT_DELAY } from '../../common/constants';
 import * as locApi from '../../libopencor/locApi';
 
-const props = defineProps<{
-  height: number;
-  issues: locApi.IIssue[];
-  width: number;
-}>();
+const props = withDefaults(
+  defineProps<{
+    leftMargin?: boolean;
+    height: number;
+    issues: locApi.IIssue[];
+    rightMargin?: boolean;
+    width: number;
+  }>(),
+  {
+    leftMargin: true,
+    rightMargin: true
+  }
+);
 
 // Resize our fieldset and scroll panel as needed.
 

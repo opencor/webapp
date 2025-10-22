@@ -23,6 +23,7 @@ void sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(const Napi::Callback
 
 // SedInstance API.
 
+napi_value sedInstanceHasIssues(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceIssues(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceRun(const Napi::CallbackInfo &pInfo);
 
