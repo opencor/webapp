@@ -17,7 +17,7 @@
 import * as vue from 'vue';
 
 import { SHORT_DELAY } from '../../common/constants';
-import type * as locApi from '../../libopencor/locApi';
+import * as locApi from '../../libopencor/locApi';
 
 const props = defineProps<{
   height: number;
