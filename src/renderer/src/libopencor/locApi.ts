@@ -44,6 +44,7 @@ export interface ICppLocApi {
 
   // SedInstance API.
 
+  setInstanceHasIssues: (path: string) => boolean;
   sedInstanceIssues: (path: string) => IIssue[];
   sedInstanceRun: (path: string) => number;
 
@@ -127,7 +128,7 @@ export async function initialiseLocApi() {
     try {
       const libOpenCOR = (
         await import(
-          /* @vite-ignore */ proxyUrl('https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20251002.1.js')
+          /* @vite-ignore */ proxyUrl('https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20251022.0.js')
         )
       ).default;
 
