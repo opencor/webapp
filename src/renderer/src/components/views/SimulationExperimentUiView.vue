@@ -22,8 +22,8 @@
         </ScrollPanel>
       </div>
       <div class="grow">
-        <IssuesView v-if="instanceIssues.length !== 0" :leftMargin="false" :width="width" :height="height" :issues="instanceIssues" />
-        <GraphPanelWidget v-else
+        <IssuesView v-show="instanceIssues.length !== 0" :leftMargin="false" :width="width" :height="height" :issues="instanceIssues" />
+        <GraphPanelWidget v-show="instanceIssues.length === 0"
           v-for="(_plot, index) in (uiJson as any).output.plots"
           :key="`plot_${index}`"
           :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
