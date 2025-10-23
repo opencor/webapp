@@ -54,10 +54,27 @@ const props = withDefaults(
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
 const theme = vueCommon.useTheme();
 
-function themeData() {
+interface IAxisThemeData {
+  zerolinecolor: string;
+  gridcolor: string;
+  minor: {
+    gridcolor: string;
+  };
+}
+
+interface IThemeData {
+  paper_bgcolor: string;
+  plot_bgcolor: string;
+  font: { color: string };
+  colorway: string[];
+  xaxis: IAxisThemeData;
+  yaxis: IAxisThemeData;
+}
+
+function themeData(): IThemeData {
   // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 
-  function axisThemeData() {
+  function axisThemeData(): IAxisThemeData {
     return {
       zerolinecolor: theme.useLightMode() ? '#94a3b8' : '#71717a', // --p-surface-400 / --p-surface-500
       gridcolor: theme.useLightMode() ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700

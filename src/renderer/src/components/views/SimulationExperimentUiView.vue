@@ -7,7 +7,7 @@
           <Fieldset legend="Input parameters">
             <InputWidget
               v-for="(input, index) in (uiJson as any).input"
-              v-model="inputValues[index]"
+              v-model="inputValues[index]!"
               v-show="showInput[index]"
               :key="`input_${index}`"
               :name="input.name"
@@ -22,12 +22,12 @@
         </ScrollPanel>
       </div>
       <div class="grow">
-        <IssuesView v-if="instanceIssues.length !== 0" :leftMargin="false" :width="width" :height="height" :issues="instanceIssues" />
-        <GraphPanelWidget v-else
+        <IssuesView v-show="instanceIssues.length !== 0" :leftMargin="false" :width="width" :height="height" :issues="instanceIssues" />
+        <GraphPanelWidget v-show="instanceIssues.length === 0"
           v-for="(_plot, index) in (uiJson as any).output.plots"
           :key="`plot_${index}`"
           :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
-          :plots="plots.length !== 0 ? plots[index] : []"
+          :plots="plots[index] || []"
         />
       </div>
     </div>
@@ -57,8 +57,8 @@ const instanceTask = instance.task(0);
 const plots = vue.ref<IGraphPanelPlot[][]>([]);
 const issues = vue.ref(locApi.uiJsonIssues(props.uiJson));
 const instanceIssues = vue.ref<locApi.IIssue[]>([]);
-const inputValues = vue.ref<number[]>([]);
-const showInput = vue.ref<boolean[]>([]);
+const inputValues = vue.ref<number[]>(props.uiJson.input.map((input) => input.defaultValue));
+const showInput = vue.ref<string[]>(props.uiJson.input.map((input) => input.visible ?? 'true'));
 const idToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 
 function evaluateValue(value: string): mathjs.MathType {
@@ -73,14 +73,6 @@ function evaluateValue(value: string): mathjs.MathType {
 
   return parser.evaluate(value);
 }
-
-props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
-  inputValues.value.push(input.defaultValue);
-});
-
-props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
-  showInput.value.push(evaluateValue(input.visible ?? 'true'));
-});
 
 props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
   idToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name);
