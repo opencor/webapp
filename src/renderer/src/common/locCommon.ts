@@ -4,7 +4,7 @@ import * as locApi from '../libopencor/locApi.js';
 // Some file-related methods.
 
 export function proxyUrl(url: string): string {
-  return `https://cors-proxy.opencor.workers.dev/?url=${encodeURIComponent(url)}`;
+  return `https://cors-proxy.opencor.workers.dev/?url=${url}`;
 }
 
 export function isRemoteFilePath(filePath: string): boolean {
