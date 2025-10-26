@@ -24,7 +24,7 @@ function emitOpenRemote(): void {
     return;
   }
 
-  emit('openRemote', url.value);
+  emit('openRemote', decodeURI(url.value));
 
   emitClose();
 }
