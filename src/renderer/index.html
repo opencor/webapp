@@ -9,16 +9,16 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; connect-src *; script-src 'unsafe-eval'; script-src-elem 'self' https://cdn.jsdelivr.net https://cors-proxy.opencor.workers.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
     <style scoped>
+    body {
+      background-color: #ffffff; /* Light version of --p-content-background. */
+      color: #334155; /* Light version of --p-content-color. */
+    }
+    @media (prefers-color-scheme: dark) {
       body {
-        background-color: #ffffff; /* Light version of --p-content-background. */
-        color: #334155; /* Light version of --p-content-color. */
+        background-color: #18181b; /* Dark version of --p-content-background. */
+        color: #ffffff; /* Dark version of --p-content-color. */
       }
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #18181b; /* Dark version of --p-content-background. */
-          color: #ffffff; /* Dark version of --p-content-color. */
-        }
-      }
+    }
     </style>
   </head>
   <body>
