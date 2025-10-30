@@ -1,5 +1,3 @@
-import jsCookie from 'js-cookie';
-
 import type { ISettings, ISettingsGeneral } from './common.js';
 import { electronApi } from './electronApi.js';
 
@@ -51,16 +49,16 @@ class Settings {
         this.emitInitialised();
       });
     } else {
-      const cookieData = jsCookie.get('settings');
+      try {
+        const raw = window.localStorage.getItem('settings');
 
-      if (cookieData !== undefined) {
-        try {
-          this._settings = JSON.parse(cookieData);
-        } catch (error: unknown) {
-          console.error('Failed to parse settings from cookie, so resetting to defaults:', error);
-
-          this.reset();
+        if (raw !== null) {
+          this._settings = JSON.parse(raw);
         }
+      } catch (error: unknown) {
+        console.error('Failed to load the settings from the local storage, so resetting to defaults:', error);
+
+        this.reset();
       }
 
       this.emitInitialised();
@@ -71,7 +69,11 @@ class Settings {
     if (electronApi !== undefined) {
       electronApi.saveSettings(this._settings);
     } else {
-      jsCookie.set('settings', JSON.stringify(this._settings), { expires: 365 });
+      try {
+        window.localStorage.setItem('settings', JSON.stringify(this._settings));
+      } catch (error: unknown) {
+        console.error('Failed to save the settings to the local storage:', error);
+      }
     }
   }
 
