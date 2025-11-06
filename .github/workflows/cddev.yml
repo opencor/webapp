@@ -2,7 +2,7 @@ name: CD (Development)
 
 on:
   push:
-    branches: [main]
+    branches: [mvp]
   workflow_dispatch:
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
         run: bun install
       - name: Build OpenCOR's Web app
         run: bun build:web
-      - name: Deploy to https://opencor.ws/appdev/
+      - name: Deploy to https://opencor.ws/mvpdev/
         uses: milanmk/actions-file-deployer@master
         with:
           remote-protocol: sftp
@@ -34,5 +34,5 @@ jobs:
           remote-user: ${{ secrets.REMOTE_USER }}
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
           local-path: ./src/renderer/dist
-          remote-path: /home/www/opencor.ws/appdev
+          remote-path: /home/www/opencor.ws/mvpdev
           sync: full
