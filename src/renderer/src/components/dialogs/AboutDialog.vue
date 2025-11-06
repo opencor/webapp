@@ -2,13 +2,13 @@
   <BaseDialog header=" " style="width: 39rem">
     <div class="space-y-7">
       <div class="text-center">
-        <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
+        <div class="text-3xl font-bold">OpenCOR (MVP) {{ version }}</div>
         <div v-if="electronApi !== undefined" class="text-xl italic font-bold">{{ electronApi.operatingSystem() }}</div>
         <div class="text-sm italic">Copyright {{ constants.COPYRIGHT }}</div>
       </div>
       <div class="space-y-2">
         <div>
-          <a href="https://opencor.ws/" target="_blank" rel="noopener">OpenCOR</a> is a frontend to
+          <a href="https://opencor.ws/" target="_blank" rel="noopener">OpenCOR</a> (MVP) is a frontend to
           <a href="https://opencor.ws/libopencor/" target="_blank" rel="noopener">libOpenCOR</a> {{ locApi.version() }},
           a library that can be used to organise, edit, simulate, and analyse
           <a href="https://cellml.org/" target="_blank" rel="noopener">CellML</a> files.
