@@ -187,8 +187,22 @@ if (props.theme !== undefined) {
 const toast = useToast();
 
 // Asynchronously initialise our libOpenCOR API.
+// Note: we show the "Loading OpenCOR..." message only if window.locApi is not defined, which means that we are running
+//       OpenCOR's Web app.
 
 const locApiInitialised = vue.ref(false);
+const loadingOpencorMessageVisible = vue.ref<boolean>(false);
+
+// @ts-expect-error (window.locApi may or may not be defined which is why we test it)
+if (window.locApi === undefined) {
+  loadingOpencorMessageVisible.value = true;
+
+  vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
+    if (newLocApiInitialised) {
+      loadingOpencorMessageVisible.value = false;
+    }
+  });
+}
 
 void locApi.initialiseLocApi().then(() => {
   locApiInitialised.value = true;
@@ -252,22 +266,6 @@ const hasFiles = vue.computed(() => {
 vue.watch(hasFiles, (newHasFiles: boolean) => {
   electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles);
 });
-
-// Loading OpenCOR.
-// Note: this is only done if window.locApi is not defined, which means that we are running OpenCOR's Web app.
-
-const loadingOpencorMessageVisible = vue.ref<boolean>(false);
-
-// @ts-expect-error (window.locApi may or may not be defined which is why we test it)
-if (window.locApi === undefined) {
-  loadingOpencorMessageVisible.value = true;
-
-  vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
-    if (newLocApiInitialised) {
-      loadingOpencorMessageVisible.value = false;
-    }
-  });
-}
 
 // Loading model.
 
