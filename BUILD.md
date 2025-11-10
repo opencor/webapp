@@ -77,6 +77,7 @@ npm install -g bun
 | `libopencor`          | Build libOpenCOR's native Node.js module                        |
 | `lint`                | Lint and automatically fix issues                               |
 | `release`             | Release OpenCOR for the current platform                        |
+| `release:local`       | Release OpenCOR for the current platform without code signing   |
 | `start`               | (Build and) start (the production version of) OpenCOR           |
 | `start:web`           | (Build and) start (the production version of) OpenCOR's Web app |
 | `version:new`         | Update the version of OpenCOR                                   |
