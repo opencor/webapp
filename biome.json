@@ -7,7 +7,17 @@
     }
   },
   "formatter": {
-    "includes": ["**/*.css", "**/*.html", "**/*.js", "**/*.json", "**/*.ts", "**/*.vue"],
+    "includes": [
+      "**/*.css",
+      "**/*.html",
+      "**/*.js",
+      "**/*.json",
+      "**/*.ts",
+      "**/*.vue",
+      "!**/dist/**",
+      "!**/node_modules/**",
+      "!**/out/**"
+    ],
     "indentStyle": "space",
     "lineWidth": 120
   },

@@ -23,6 +23,7 @@ export class SplashScreenWindow extends ApplicationWindow {
       maxWidth: width,
       maxHeight: height,
       frame: false,
+      show: false,
       alwaysOnTop: true
     });
 
