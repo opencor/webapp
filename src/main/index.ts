@@ -8,7 +8,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import type { ISettings } from '../renderer/src/common/common';
-import { URI_SCHEME } from '../renderer/src/common/constants';
+import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants';
 import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron';
 
 import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu';
@@ -182,58 +182,70 @@ electron.app
 
     electronToolkitUtils.electronApp.setAppUserModelId('ws.opencor.app');
 
-    // Enable the F12 shortcut (to show/hide the developer tools) if we are not packaged.
+    // Wait for the splash screen to be ready before creating the main window.
 
-    if (!isPackaged()) {
-      electron.app.on('browser-window-created', (_event, window) => {
-        electronToolkitUtils.optimizer.watchWindowShortcuts(window);
-      });
-    }
+    splashScreenWindow.once('ready-to-show', () => {
+      // Show the splash screen.
 
-    // Handle some requests from our renderer process.
+      splashScreenWindow.show();
 
-    electron.ipcMain.handle('check-for-updates', (_event, atStartup: boolean) => {
-      checkForUpdates(atStartup);
-    });
-    electron.ipcMain.handle('download-and-install-update', () => {
-      downloadAndInstallUpdate();
-    });
-    electron.ipcMain.handle('enable-disable-main-menu', (_event, enable: boolean) => {
-      enableDisableMainMenu(enable);
-    });
-    electron.ipcMain.handle('enable-disable-file-close-and-close-all-menu-items', (_event, enable: boolean) => {
-      enableDisableFileCloseAndCloseAllMenuItems(enable);
-    });
-    electron.ipcMain.handle('file-closed', (_event, filePath: string) => {
-      fileClosed(filePath);
-    });
-    electron.ipcMain.handle('file-issue', (_event, filePath: string) => {
-      fileIssue(filePath);
-    });
-    electron.ipcMain.handle('file-opened', (_event, filePath: string) => {
-      fileOpened(filePath);
-    });
-    electron.ipcMain.handle('file-selected', (_event, filePath: string) => {
-      fileSelected(filePath);
-    });
-    electron.ipcMain.handle('files-opened', (_event, filePaths: string[]) => {
-      filesOpened(filePaths);
-    });
-    electron.ipcMain.handle('install-update-and-restart', () => {
-      installUpdateAndRestart();
-    });
-    electron.ipcMain.handle('load-settings', (): ISettings => {
-      return loadSettings();
-    });
-    electron.ipcMain.handle('reset-all', resetAll);
-    electron.ipcMain.handle('save-settings', (_event, settings: ISettings) => {
-      saveSettings(settings);
-    });
+      // Give the splash screen a moment to render before creating the main window.
 
-    // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
-    // triggering URL.
+      setTimeout(() => {
+        // Enable the F12 shortcut (to show/hide the developer tools) if we are not packaged.
 
-    mainWindow = new MainWindow(triggeringUrl !== null ? [triggeringUrl] : process.argv, splashScreenWindow);
+        if (!isPackaged()) {
+          electron.app.on('browser-window-created', (_event, window) => {
+            electronToolkitUtils.optimizer.watchWindowShortcuts(window);
+          });
+        }
+
+        // Handle some requests from our renderer process.
+
+        electron.ipcMain.handle('check-for-updates', (_event, atStartup: boolean) => {
+          checkForUpdates(atStartup);
+        });
+        electron.ipcMain.handle('download-and-install-update', () => {
+          downloadAndInstallUpdate();
+        });
+        electron.ipcMain.handle('enable-disable-main-menu', (_event, enable: boolean) => {
+          enableDisableMainMenu(enable);
+        });
+        electron.ipcMain.handle('enable-disable-file-close-and-close-all-menu-items', (_event, enable: boolean) => {
+          enableDisableFileCloseAndCloseAllMenuItems(enable);
+        });
+        electron.ipcMain.handle('file-closed', (_event, filePath: string) => {
+          fileClosed(filePath);
+        });
+        electron.ipcMain.handle('file-issue', (_event, filePath: string) => {
+          fileIssue(filePath);
+        });
+        electron.ipcMain.handle('file-opened', (_event, filePath: string) => {
+          fileOpened(filePath);
+        });
+        electron.ipcMain.handle('file-selected', (_event, filePath: string) => {
+          fileSelected(filePath);
+        });
+        electron.ipcMain.handle('files-opened', (_event, filePaths: string[]) => {
+          filesOpened(filePaths);
+        });
+        electron.ipcMain.handle('install-update-and-restart', () => {
+          installUpdateAndRestart();
+        });
+        electron.ipcMain.handle('load-settings', (): ISettings => {
+          return loadSettings();
+        });
+        electron.ipcMain.handle('reset-all', resetAll);
+        electron.ipcMain.handle('save-settings', (_event, settings: ISettings) => {
+          saveSettings(settings);
+        });
+
+        // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
+        // triggering URL.
+
+        mainWindow = new MainWindow(triggeringUrl !== null ? [triggeringUrl] : process.argv, splashScreenWindow);
+      }, SHORT_DELAY);
+    });
   })
   .catch((error: unknown) => {
     console.error('Failed to create the main window:', error);
