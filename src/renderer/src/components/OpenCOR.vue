@@ -44,6 +44,9 @@
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
       />
+      <div class="absolute top-1 right-1 z-999">
+        <Button icon="pi pi-github" severity="secondary" rounded @click="onGitHubButtonClick" />
+      </div>
       <ContentsComponent
         ref="contents"
         :isActive="compIsActive"
@@ -788,6 +791,12 @@ vue.watch(compUiBlocked, (newCompUiBlocked: boolean) => {
     }, SHORT_DELAY);
   }
 });
+
+// GitHub button.
+
+function onGitHubButtonClick() {
+  console.log('GitHub button clicked!');
+}
 </script>
 
 <style scoped>
