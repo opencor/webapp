@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20251110.0",
+  "version": "0.20251112.0",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -76,7 +76,7 @@
     "@types/plotly.js": "3.0.6",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "^10.4.21",
+    "autoprefixer": "^10.4.22",
     "tailwindcss": "^4.1.17",
     "tailwindcss-primeui": "^0.6.1",
     "unplugin-vue-components": "^29.2.0",

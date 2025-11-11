@@ -5,7 +5,7 @@ import process from 'node:process';
 
 import type { ISettings } from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
-import { isDevMode, isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
+import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
 
 import icon from './assets/icon.png?asset';
 import { ApplicationWindow } from './ApplicationWindow';
@@ -161,7 +161,7 @@ export class MainWindow extends ApplicationWindow {
 
     // Set our dock icon (macOS only).
 
-    if (isMacOs()) {
+    if (!isPackaged() && isMacOs()) {
       electron.app.dock?.setIcon(icon);
     }
 
@@ -281,10 +281,10 @@ export class MainWindow extends ApplicationWindow {
       };
     });
 
-    // Load the remote URL for development or the local HTML file for production.
+    // Load the remote URL when ELECTRON_RENDERER_URL is provided (i.e. if we are not packaged), otherwise load the
+    // local HTML file.
 
-    if (isDevMode()) {
-      // @ts-expect-error (isDevMode() is true which means that process.env.ELECTRON_RENDERER_URL is defined)
+    if (process.env.ELECTRON_RENDERER_URL) {
       this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((error: unknown) => {
         console.error('Failed to load URL:', error);
       });

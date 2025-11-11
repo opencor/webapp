@@ -1,13 +1,7 @@
-import { is } from '@electron-toolkit/utils';
-
 import electron from 'electron';
 
 export function isPackaged(): boolean {
   return electron.app.isPackaged;
-}
-
-export function isDevMode(): boolean {
-  return is.dev && !!process.env.ELECTRON_RENDERER_URL;
 }
 
 export function isWindows(): boolean {
