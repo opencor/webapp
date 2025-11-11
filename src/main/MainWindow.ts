@@ -3,12 +3,11 @@ import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron
 import path from 'node:path';
 import process from 'node:process';
 
-import icon from '../../build/icon.png?asset';
-
 import type { ISettings } from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
 import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
 
+import icon from './assets/icon.png?asset';
 import { ApplicationWindow } from './ApplicationWindow';
 import { electronConf, type IElectronConfState } from './index';
 import { enableDisableMainMenu, updateReopenMenu } from './MainMenu';
