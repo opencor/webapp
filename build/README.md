@@ -1,14 +1,10 @@
-# OpenCOR icon
-
-The different icon files in this directory were created using `../src/renderer/src/assets/logo.svg`, which is based off the original VPH logo.
-
-- `icon.png`: this is a `1024x1024` pixel version of `../src/renderer/src/assets/logo.svg`.
-- `icon.ico`: this is an ICO file containing multiple resolutions of `icon.png`, created using the following command:
+- `icon.png` is a `1024x1024` pixel version of `../src/renderer/src/assets/logo.svg`.
+- `icon.ico` is an ICO file containing multiple resolutions of `../src/main/assets/icon.png`, created using the following command:
 
   ```bash
-  magick icon.png -define icon:auto-resize=16,24,32,40,48,64,128,256 icon.ico
+  magick ../src/main/assets/icon.png -define icon:auto-resize=16,24,32,40,48,64,128,256 icon.ico
   ```
-- `icon.icns`: this is an ICNS file containing multiple resolutions of `icon.png`, created using the following commands:
+- `icon.icns` is an ICNS file containing multiple resolutions of `icon.png`, created using the following commands:
 
   ```bash
   OUT=TEMP-$$.iconset

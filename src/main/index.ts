@@ -94,7 +94,7 @@ if (isLinux()) {
   }
 
   fs.copyFileSync(
-    path.join(import.meta.dirname, '../../build/icon.png'),
+    path.join(import.meta.dirname, '../../src/main/assets/icon.png'),
     path.join(`${localShareOpencorFolder}/icon.png`)
   );
 

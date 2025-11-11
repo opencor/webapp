@@ -1,0 +1,1 @@
+- `logo.svg` is based off the original VPH logo.
