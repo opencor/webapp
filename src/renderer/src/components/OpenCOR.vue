@@ -97,6 +97,7 @@
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
+import firebase from 'firebase/compat/app';
 import 'primeicons/primeicons.css';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
@@ -110,6 +111,7 @@ import '../assets/app.css';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
 import { electronApi } from '../common/electronApi';
+import firebaseConfig, { type FirebaseConfig } from '../common/firebaseConfig';
 import * as locCommon from '../common/locCommon';
 import * as vueCommon from '../common/vueCommon';
 import type IContentsComponent from '../components/ContentsComponent.vue';
@@ -222,6 +224,18 @@ if (window.locApi === undefined) {
 void locApi.initialiseLocApi().then(() => {
   locApiInitialised.value = true;
 });
+
+// Initialise Firebase.
+// Note: we check whether a Firebase app is already initialised to avoid issues when hot-reloading during development
+//       and/or using OpenCOR as a Vue component within another application that also uses Firebase.
+
+const hasFirebaseConfig = vue.computed(() => {
+  return firebaseConfig !== undefined;
+});
+
+if (!firebase.apps.length && hasFirebaseConfig.value) {
+  firebase.initializeApp(firebaseConfig as FirebaseConfig);
+}
 
 // Handle an action.
 
