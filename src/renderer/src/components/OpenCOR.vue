@@ -61,23 +61,35 @@
         @close="openRemoteVisible = false"
       />
       <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
-      <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
+      <YesNoQuestionDialog
+        v-model:visible="resetAllVisible"
+        title="Reset All..."
+        question="You are about to reset all of your settings. Do you want to proceed?"
+        @yes="onResetAll"
+        @no="resetAllVisible = false"
+      />
       <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
     </div>
-    <UpdateErrorDialog
+    <OkMessageDialog
       v-model:visible="updateErrorVisible"
       :title="updateErrorTitle"
-      :issue="updateErrorIssue"
-      @close="onUpdateErrorDialogClose"
+      :message="updateErrorIssue"
+      @ok="onUpdateErrorDialogClose"
     />
-    <UpdateAvailableDialog
+    <YesNoQuestionDialog
       v-model:visible="updateAvailableVisible"
-      :version="updateVersion"
-      @downloadAndInstall="onDownloadAndInstall"
-      @close="updateAvailableVisible = false"
+      title="Check for Updates..."
+      :question="'Version ' + updateVersion + ' is available. Do you want to download it and install it?'"
+      @yes="onDownloadAndInstall"
+      @no="updateAvailableVisible = false"
     />
     <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
-    <UpdateNotAvailableDialog v-model:visible="updateNotAvailableVisible" @close="updateNotAvailableVisible = false" />
+    <OkMessageDialog
+      v-model:visible="updateNotAvailableVisible"
+      title="Check for Updates..."
+      message="No updates are available at this time."
+      @ok="updateNotAvailableVisible = false"
+    />
   </BlockUI>
 </template>
 
