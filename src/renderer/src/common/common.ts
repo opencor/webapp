@@ -77,10 +77,12 @@ export function formatTime(time: number): string {
   return res;
 }
 
-// A method to format an issue, i.e. make sure that it starts with a capital letter and ends with a period.
+// A method to format a message, i.e. make sure that it starts with a capital letter and ends with a period, or not.
 
-export function formatIssue(issue: string): string {
-  issue = issue.charAt(0).toUpperCase() + issue.slice(1);
+export function formatMessage(message: string, format: boolean = true): string {
+  message = format
+    ? message.charAt(0).toUpperCase() + message.slice(1)
+    : message.charAt(0).toLowerCase() + message.slice(1);
 
-  return issue.endsWith('.') ? issue : `${issue}.`;
+  return message.endsWith('.') ? (format ? message : message.slice(0, -1)) : format ? `${message}.` : message;
 }

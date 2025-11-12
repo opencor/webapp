@@ -317,7 +317,7 @@ function onDownloadAndInstall(): void {
 
 electronApi?.onUpdateDownloadError((issue: string) => {
   updateErrorTitle.value = 'Downloading Update...';
-  updateErrorIssue.value = `An error occurred while downloading the update (${issue}).`;
+  updateErrorIssue.value = `An error occurred while downloading the update (${common.formatMessage(issue, false)}).`;
   updateErrorVisible.value = true;
 });
 
@@ -339,7 +339,7 @@ electronApi?.onUpdateNotAvailable(() => {
 
 electronApi?.onUpdateCheckError((issue: string) => {
   updateErrorTitle.value = 'Checking For Updates...';
-  updateErrorIssue.value = `An error occurred while checking for updates (${issue}).`;
+  updateErrorIssue.value = `An error occurred while checking for updates (${common.formatMessage(issue, false)}).`;
   updateErrorVisible.value = true;
 });
 
@@ -447,7 +447,7 @@ function openFile(fileOrFilePath: string | File): void {
         void vue.nextTick().then(() => {
           issues.value.push({
             type: locApi.EIssueType.ERROR,
-            description: common.formatIssue(error instanceof Error ? error.message : String(error))
+            description: common.formatMessage(error instanceof Error ? error.message : String(error))
           });
         });
       } else {
@@ -455,7 +455,7 @@ function openFile(fileOrFilePath: string | File): void {
           severity: 'error',
           group: toastId.value,
           summary: 'Opening a file',
-          detail: `${filePath}\n\n${common.formatIssue(error instanceof Error ? error.message : String(error))}`,
+          detail: `${filePath}\n\n${common.formatMessage(error instanceof Error ? error.message : String(error))}`,
           life: TOAST_LIFE
         });
       }
