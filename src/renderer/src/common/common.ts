@@ -44,6 +44,18 @@ export function enableDisableMainMenu(enable: boolean): void {
   electronApi?.enableDisableMainMenu(enable);
 }
 
+// A method to determine whether a given URL is an HTTP or HTTPS URL.
+
+export function isHttpUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 // A method to format a given number of milliseconds into a string.
 
 export function formatTime(time: number): string {

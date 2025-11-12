@@ -44,8 +44,17 @@
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
       />
-      <div class="absolute top-1 right-1 z-999">
-        <Button icon="pi pi-github" severity="secondary" rounded @click="onGitHubButtonClick" />
+      <div v-if="firebaseConfig !== undefined">
+        <div class="absolute top-1 right-1 z-999">
+          <Button icon="pi pi-github" severity="secondary" :class="octokit !== null ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
+        </div>
+        <YesNoQuestionDialog
+          v-model:visible="disconnectFromGitHubVisible"
+          title="Disconnect from GitHub..."
+          question="You are about to disconnect from GitHub. Do you want to proceed?"
+          @yes="onDisconnectFromGitHub"
+          @no="disconnectFromGitHubVisible = false"
+        />
       </div>
       <ContentsComponent
         ref="contents"
@@ -94,10 +103,13 @@
 </template>
 
 <script setup lang="ts">
+import type * as octokitTypes from '@octokit/types';
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
 import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import { Octokit } from 'octokit';
 import 'primeicons/primeicons.css';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
@@ -111,7 +123,7 @@ import '../assets/app.css';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
 import { electronApi } from '../common/electronApi';
-import firebaseConfig, { type FirebaseConfig } from '../common/firebaseConfig';
+import firebaseConfig, { missingFirebaseKeys, type FirebaseConfig } from '../common/firebaseConfig';
 import * as locCommon from '../common/locCommon';
 import * as vueCommon from '../common/vueCommon';
 import type IContentsComponent from '../components/ContentsComponent.vue';
@@ -126,6 +138,8 @@ const files = vue.ref<HTMLElement | null>(null);
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const activeInstanceUid = vueCommon.activeInstanceUid();
+const connectingToGitHub = vue.ref<boolean>(false);
+const octokit = vue.ref<Octokit | null>(null);
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -140,12 +154,18 @@ const compIsActive = vue.computed(() => {
 // Determine whether the component UI should be blocked/enabled.
 
 const compUiBlocked = vue.computed(() => {
-  return !uiEnabled.value || loadingOpencorMessageVisible.value || loadingModelMessageVisible.value;
+  return (
+    !uiEnabled.value ||
+    loadingOpencorMessageVisible.value ||
+    loadingModelMessageVisible.value ||
+    connectingToGitHub.value
+  );
 });
 
 const compUiEnabled = vue.computed(() => {
   return (
     !compUiBlocked.value &&
+    !disconnectFromGitHubVisible.value &&
     !openRemoteVisible.value &&
     !settingsVisible.value &&
     !resetAllVisible.value &&
@@ -229,13 +249,30 @@ void locApi.initialiseLocApi().then(() => {
 // Note: we check whether a Firebase app is already initialised to avoid issues when hot-reloading during development
 //       and/or using OpenCOR as a Vue component within another application that also uses Firebase.
 
-const hasFirebaseConfig = vue.computed(() => {
-  return firebaseConfig !== undefined;
-});
+if (firebaseConfig !== undefined) {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig as FirebaseConfig);
+  }
+} else if (props.omex === undefined) {
+  const items = missingFirebaseKeys();
+  const formatList = (items: string[]): string => {
+    if (items.length === 1) {
+      return `${items[0]}`;
+    }
 
-if (!firebase.apps.length && hasFirebaseConfig.value) {
-  firebase.initializeApp(firebaseConfig as FirebaseConfig);
+    if (items.length === 2) {
+      return `${items[0]} and ${items[1]}`;
+    }
+
+    return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+  };
+
+  console.error(
+    `The Firebase configuration is missing. Please ensure that the following Firebase keys are set in your .env.local file: ${formatList(items)}.`
+  );
 }
+
+loadGitHubAccessToken();
 
 // Handle an action.
 
@@ -818,14 +855,242 @@ vue.watch(compUiBlocked, (newCompUiBlocked: boolean) => {
   }
 });
 
-// GitHub button.
+// GitHub integration.
 
-function onGitHubButtonClick() {
-  console.log('GitHub button clicked!');
+const disconnectFromGitHubVisible = vue.ref<boolean>(false);
+
+async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
+  if (electronApi === undefined) {
+    return;
+  }
+
+  try {
+    await electronApi.deleteGitHubAccessToken();
+  } catch (error: unknown) {
+    if (silent) {
+      console.warn('Failed to remove the stored GitHub access token:', error);
+    } else {
+      toast.add({
+        severity: 'warn',
+        group: toastId.value,
+        summary: 'Removing GitHub access token',
+        detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+        life: TOAST_LIFE
+      });
+    }
+  }
+}
+
+async function loadGitHubAccessToken(): Promise<void> {
+  if (electronApi === undefined || props.omex !== undefined || firebaseConfig === undefined) {
+    return;
+  }
+
+  let gitHubAccessToken: string | null;
+
+  try {
+    gitHubAccessToken = await electronApi.loadGitHubAccessToken();
+  } catch (error: unknown) {
+    console.warn('Failed to load the GitHub access token:', error);
+
+    return;
+  }
+
+  if (gitHubAccessToken === null) {
+    return;
+  }
+
+  connectingToGitHub.value = true;
+
+  try {
+    await checkGitHubAccessToken(gitHubAccessToken);
+  } catch (error: unknown) {
+    console.warn('Stored GitHub access token is no longer valid. Clearing it.', error);
+
+    await deleteGitHubAccessToken(true);
+  } finally {
+    connectingToGitHub.value = false;
+  }
+}
+
+async function saveGitHubAccessToken(accessToken: string): Promise<void> {
+  if (electronApi === undefined) {
+    return;
+  }
+
+  try {
+    const stored = await electronApi.saveGitHubAccessToken(accessToken);
+
+    if (!stored) {
+      toast.add({
+        severity: 'warn',
+        group: toastId.value,
+        summary: 'Remembering GitHub access token',
+        detail: 'The token could not be stored securely, so you will need to sign in again next time.',
+        life: TOAST_LIFE
+      });
+    }
+  } catch (error: unknown) {
+    toast.add({
+      severity: 'warn',
+      group: toastId.value,
+      summary: 'Remembering GitHub access token',
+      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      life: TOAST_LIFE
+    });
+  }
+}
+
+async function checkGitHubAccessToken(accessToken: string): Promise<void> {
+  const client = new Octokit({ auth: accessToken });
+  const user = await client.rest.users.getAuthenticated();
+
+  octokit.value = client;
+
+  if (electronApi !== undefined) {
+    await saveGitHubAccessToken(accessToken);
+  }
+
+  try {
+    const reposResponse = await client.rest.repos.listForAuthenticatedUser({ affiliation: 'owner' });
+
+    console.log(`Repositories for user ${user.data.login}:`);
+
+    for (const repo of reposResponse.data) {
+      console.log(`- ${repo.name} (${repo.private ? 'private' : 'public'}): ${repo.html_url}`);
+    }
+  } catch (error: unknown) {
+    console.warn(`Failed to retrieve repositories for user ${user.data.login}:`, error);
+  }
+}
+
+async function onDisconnectFromGitHub(): Promise<void> {
+  try {
+    await firebase.auth().signOut();
+
+    octokit.value = null;
+
+    await deleteGitHubAccessToken();
+
+    if (electronApi !== undefined) {
+      await electronApi.clearGitHubCache();
+    }
+  } catch (error: unknown) {
+    toast.add({
+      severity: 'error',
+      group: toastId.value,
+      summary: 'GitHub sign-out',
+      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      life: TOAST_LIFE
+    });
+  } finally {
+    disconnectFromGitHubVisible.value = false;
+  }
+}
+
+async function onGitHubButtonClick(): Promise<void> {
+  if (octokit.value !== null) {
+    disconnectFromGitHubVisible.value = true;
+
+    return;
+  }
+
+  connectingToGitHub.value = true;
+
+  try {
+    // Note: the signing with popup will generate some messages in the console:
+    //         Cross-Origin-Opener-Policy policy would block the window.closed call.
+    //       Apparently, there is no way to avoid these messages (see
+    //       https://reddit.com/r/Firebase/comments/146zcld/crossoriginopenerpolicy_policy_would_block_the/ for
+    //       instance).
+
+    const gitHubAuthProvider = new firebase.auth.GithubAuthProvider();
+
+    gitHubAuthProvider.addScope('repo');
+
+    const result = await firebase.auth().signInWithPopup(gitHubAuthProvider);
+    const credential = result.credential as firebase.auth.OAuthCredential | null;
+
+    if (credential?.accessToken === undefined || credential.accessToken === null) {
+      throw new Error('GitHub OAuth flow did not return an access token.');
+    }
+
+    const accessToken = credential.accessToken;
+
+    await checkGitHubAccessToken(accessToken);
+  } catch (error: unknown) {
+    toast.add({
+      severity: 'error',
+      group: toastId.value,
+      summary: 'GitHub sign-in',
+      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      life: TOAST_LIFE
+    });
+  } finally {
+    connectingToGitHub.value = false;
+  }
 }
 </script>
 
 <style scoped>
+.connected-to-github,
+:deep(.connected-to-github .pi-github) {
+  background-color: var(--p-green-100);
+  border-color: var(--p-green-100);
+  color: var(--p-green-600);
+}
+
+.connected-to-github:hover,
+:deep(.connected-to-github:hover .pi-github) {
+  background-color: var(--p-green-200) !important;
+  border-color: var(--p-green-200) !important;
+  color: var(--p-green-700);
+}
+
+.disconnected-from-github,
+:deep(.disconnected-from-github .pi-github) {
+  background-color: var(--p-red-100);
+  border-color: var(--p-red-100);
+  color: var(--p-red-600);
+}
+
+.disconnected-from-github:hover,
+:deep(.disconnected-from-github:hover .pi-github) {
+  background-color: var(--p-red-200) !important;
+  border-color: var(--p-red-200) !important;
+  color: var(--p-red-700);
+}
+
+@media (prefers-color-scheme: dark) {
+  .connected-to-github,
+  :deep(.connected-to-github .pi-github) {
+    background-color: var(--p-green-800);
+    border-color: var(--p-green-800);
+    color: var(--p-green-300);
+  }
+
+  .connected-to-github:hover,
+  :deep(.connected-to-github:hover .pi-github) {
+    background-color: var(--p-green-700) !important;
+    border-color: var(--p-green-700) !important;
+    color: var(--p-green-200);
+  }
+
+  .disconnected-from-github,
+  :deep(.disconnected-from-github .pi-github) {
+    background-color: var(--p-red-800);
+    border-color: var(--p-red-800);
+    color: var(--p-red-300);
+  }
+
+  .disconnected-from-github:hover,
+  :deep(.disconnected-from-github:hover .pi-github) {
+    background-color: var(--p-red-700) !important;
+    border-color: var(--p-red-700) !important;
+    color: var(--p-red-200);
+  }
+}
+
 .opencor-application {
   height: 100vh;
   height: 100dvh;
