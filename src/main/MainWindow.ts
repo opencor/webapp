@@ -286,11 +286,11 @@ export class MainWindow extends ApplicationWindow {
 
     if (process.env.ELECTRON_RENDERER_URL) {
       this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((error: unknown) => {
-        console.error('Failed to load URL:', error);
+        console.error('Failed to load URL.', error);
       });
     } else {
       this.loadFile('./out/renderer/index.html').catch((error: unknown) => {
-        console.error('Failed to load file:', error);
+        console.error('Failed to load file.', error);
       });
     }
   }

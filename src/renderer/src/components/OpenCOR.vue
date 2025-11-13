@@ -123,7 +123,7 @@ const compIsActive = vue.computed(() => {
   return activeInstanceUid.value === String(crtInstance?.uid);
 });
 
-// Determine if the component UI should be enabled.
+// Determine whether the component UI should be blocked/enabled.
 
 const compUiBlocked = vue.computed(() => {
   return !uiEnabled.value || loadingOpencorMessageVisible.value || loadingModelMessageVisible.value;
