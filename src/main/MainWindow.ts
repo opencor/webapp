@@ -212,7 +212,7 @@ export class MainWindow extends ApplicationWindow {
 
           commandLine.shift();
 
-          if (!isPackaged()) {
+          if (!isPackaged() && commandLine.length > 0) {
             commandLine.shift();
           }
         }
@@ -238,10 +238,18 @@ export class MainWindow extends ApplicationWindow {
         // Main window state.
 
         if (!this.isMaximized() && !this.isMinimized() && !this.isFullScreen()) {
-          state.x = this.getPosition()[0];
-          state.y = this.getPosition()[1];
-          state.width = this.getContentSize()[0];
-          state.height = this.getContentSize()[1];
+          const [stateX, stateY] = this.getPosition();
+          const [stateWidth, stateHeight] = this.getContentSize();
+
+          if (typeof stateX === 'number' && typeof stateY === 'number') {
+            state.x = stateX;
+            state.y = stateY;
+          }
+
+          if (typeof stateWidth === 'number' && typeof stateHeight === 'number') {
+            state.width = stateWidth;
+            state.height = stateHeight;
+          }
         }
 
         state.isMaximized = this.isMaximized();
@@ -321,7 +329,11 @@ export class MainWindow extends ApplicationWindow {
 
   // Handle our command line arguments.
 
-  isAction(argument: string): boolean {
+  isAction(argument: string | undefined): boolean {
+    if (argument === undefined) {
+      return false;
+    }
+
     return argument.startsWith(FULL_URI_SCHEME);
   }
 
