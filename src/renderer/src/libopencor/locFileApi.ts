@@ -30,8 +30,8 @@ export interface IWasmFileManager {
 }
 
 class FileManager {
-  private static _instance: FileManager | undefined = undefined;
-  private _fileManager: IWasmFileManagerInstance | undefined = undefined;
+  private static _instance: FileManager | null = null;
+  private _fileManager: IWasmFileManagerInstance | null = null;
 
   static instance(): FileManager {
     FileManager._instance ??= new FileManager();
