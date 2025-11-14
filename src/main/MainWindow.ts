@@ -1,7 +1,6 @@
 import electron from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
 import path from 'node:path';
-import process from 'node:process';
 
 import { isHttpUrl, type ISettings } from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
@@ -143,7 +142,7 @@ export class MainWindow extends ApplicationWindow {
 
   // Constructor.
 
-  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow) {
+  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow, rendererUrl: string) {
     // Initialise ourselves.
 
     const state: IElectronConfState = electronConf.get('app.state');
@@ -330,18 +329,11 @@ export class MainWindow extends ApplicationWindow {
       };
     });
 
-    // Load the remote URL when ELECTRON_RENDERER_URL is provided (i.e. if we are not packaged), otherwise load the
-    // local HTML file.
+    // Load the renderer URL.
 
-    if (process.env.ELECTRON_RENDERER_URL) {
-      this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((error: unknown) => {
-        console.error('Failed to load URL.', error);
-      });
-    } else {
-      this.loadFile('./out/renderer/index.html').catch((error: unknown) => {
-        console.error('Failed to load file.', error);
-      });
-    }
+    this.loadURL(rendererUrl).catch((error: unknown) => {
+      console.error('Failed to load URL.', error);
+    });
   }
 
   // Reopen previously opened files, if any, and select the previously selected file.

@@ -16,6 +16,7 @@ import {
   loadGitHubAccessToken,
   saveGitHubAccessToken
 } from '../renderer/src/common/gitHubIntegration';
+import { startRendererServer, stopRendererServer } from '../renderer/src/common/rendererServer';
 
 import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu';
 import {
@@ -197,7 +198,7 @@ electron.app
 
       // Give the splash screen a moment to render before creating the main window.
 
-      setTimeout(() => {
+      setTimeout(async () => {
         // Enable the F12 shortcut (to show/hide the developer tools) if we are not packaged.
 
         if (!isPackaged()) {
@@ -261,10 +262,24 @@ electron.app
         // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
         // triggering URL.
 
-        mainWindow = new MainWindow(triggeringUrl !== null ? [triggeringUrl] : process.argv, splashScreenWindow);
+        mainWindow = new MainWindow(
+          triggeringUrl !== null ? [triggeringUrl] : process.argv,
+          splashScreenWindow,
+          process.env.ELECTRON_RENDERER_URL !== undefined
+            ? process.env.ELECTRON_RENDERER_URL
+            : await startRendererServer()
+        );
       }, SHORT_DELAY);
     });
   })
   .catch((error: unknown) => {
     console.error('Failed to create the main window:', error);
   });
+
+// Ensure that the renderer server is stopped when quitting.
+
+electron.app.on('will-quit', () => {
+  stopRendererServer().catch((error: unknown) => {
+    console.error('Failed to stop the renderer server:', error);
+  });
+});
