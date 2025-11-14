@@ -56,6 +56,12 @@ export function isHttpUrl(url: string): boolean {
   }
 }
 
+// A method to get the proxy URL for a given URL.
+
+export function proxyUrl(url: string): string {
+  return `https://cors-proxy.opencor.workers.dev/?url=${url}`;
+}
+
 // A method to format a given number of milliseconds into a string.
 
 export function formatTime(time: number): string {
