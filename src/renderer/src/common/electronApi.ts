@@ -19,6 +19,8 @@ interface IElectronApi {
   // Renderer process asking the main process to do something for it.
 
   checkForUpdates: (atStartup: boolean) => void;
+  clearGitHubCache: () => Promise<void>;
+  deleteGitHubAccessToken: () => Promise<boolean>;
   downloadAndInstallUpdate: () => void;
   enableDisableMainMenu: (enable: boolean) => void;
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) => void;
@@ -29,8 +31,10 @@ interface IElectronApi {
   fileSelected(filePath: string): void;
   filesOpened(filePaths: string[]): void;
   installUpdateAndRestart: () => void;
+  loadGitHubAccessToken: () => Promise<string | null>;
   loadSettings: () => Promise<ISettings>;
   resetAll: () => void;
+  saveGitHubAccessToken: (token: string) => Promise<boolean>;
   saveSettings: (settings: ISettings) => void;
 
   // Renderer process listening to the main process.

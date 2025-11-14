@@ -241,7 +241,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       if (issue !== '') {
         res.push({
           type: EIssueType.WARNING,
-          description: `UI JSON: ${common.formatIssue(issue)}`
+          description: `UI JSON: ${common.formatMessage(issue)}`
         });
       }
     }

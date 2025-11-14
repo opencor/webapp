@@ -24,6 +24,7 @@ export default electronVite.defineConfig({
     build: {
       target: 'esnext'
     },
+    envDir: path.join(import.meta.dirname, 'src/renderer'),
     optimizeDeps: {
       esbuildOptions: {
         target: 'esnext'

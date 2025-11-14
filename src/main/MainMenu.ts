@@ -32,7 +32,7 @@ export function enableDisableMainMenu(enable: boolean): void {
 
     if (isPackaged()) {
       checkForUpdatesMenuItem = {
-        label: 'Check For Updates...',
+        label: 'Check for Updates...',
         click: () => {
           mainWindow?.webContents.send('check-for-updates');
         }

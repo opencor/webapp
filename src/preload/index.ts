@@ -38,6 +38,8 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   // Renderer process asking the main process to do something for it.
 
   checkForUpdates: (atStartup: boolean) => electron.ipcRenderer.invoke('check-for-updates', atStartup),
+  clearGitHubCache: (): Promise<void> => electron.ipcRenderer.invoke('clear-github-cache'),
+  deleteGitHubAccessToken: (): Promise<boolean> => electron.ipcRenderer.invoke('delete-github-access-token'),
   downloadAndInstallUpdate: () => electron.ipcRenderer.invoke('download-and-install-update'),
   enableDisableMainMenu: (enable: boolean) => electron.ipcRenderer.invoke('enable-disable-main-menu', enable),
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
@@ -49,8 +51,11 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   fileSelected: (filePath: string) => electron.ipcRenderer.invoke('file-selected', filePath),
   filesOpened: (filePaths: string[]) => electron.ipcRenderer.invoke('files-opened', filePaths),
   installUpdateAndRestart: () => electron.ipcRenderer.invoke('install-update-and-restart'),
+  loadGitHubAccessToken: (): Promise<string | null> => electron.ipcRenderer.invoke('load-github-access-token'),
   loadSettings: (): Promise<ISettings> => electron.ipcRenderer.invoke('load-settings'),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
+  saveGitHubAccessToken: (token: string): Promise<boolean> =>
+    electron.ipcRenderer.invoke('save-github-access-token', token),
   saveSettings: (settings: ISettings) => electron.ipcRenderer.invoke('save-settings', settings),
 
   // Renderer process listening to the main process.

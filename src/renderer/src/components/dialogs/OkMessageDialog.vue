@@ -1,18 +1,18 @@
 <template>
   <BaseDialog :header="title">
     <div class="mt-2 mb-4">
-      {{ issue }}
+      {{ message }}
     </div>
     <template #footer>
-      <Button autofocus label="OK" @click="$emit('close')" />
+      <Button autofocus label="OK" @click="$emit('ok')" />
     </template>
   </BaseDialog>
 </template>
 
 <script setup lang="ts">
-defineEmits(['close']);
+defineEmits(['ok']);
 defineProps<{
   title: string;
-  issue: string;
+  message: string;
 }>();
 </script>

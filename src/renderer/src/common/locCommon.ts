@@ -1,11 +1,9 @@
-import { electronApi } from './electronApi.js';
+import { proxyUrl } from '../common/common.js';
 import * as locApi from '../libopencor/locApi.js';
 
-// Some file-related methods.
+import { electronApi } from './electronApi.js';
 
-export function proxyUrl(url: string): string {
-  return `https://cors-proxy.opencor.workers.dev/?url=${url}`;
-}
+// Some file-related methods.
 
 export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://');

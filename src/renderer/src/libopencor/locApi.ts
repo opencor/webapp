@@ -1,4 +1,4 @@
-import { proxyUrl } from '../common/locCommon.js';
+import { proxyUrl } from '../common/common.js';
 
 import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.js';
 import type { IIssue } from './locLoggerApi.js';
