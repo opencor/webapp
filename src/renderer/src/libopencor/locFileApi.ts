@@ -30,7 +30,7 @@ export interface IWasmFileManager {
 }
 
 class FileManager {
-  private static _instance: FileManager | null = null;
+  protected static _instance: FileManager | null = null;
   private _fileManager: IWasmFileManagerInstance | null = null;
 
   static instance(): FileManager {
