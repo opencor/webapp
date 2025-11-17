@@ -123,7 +123,7 @@ import '../assets/app.css';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
 import { electronApi } from '../common/electronApi';
-import firebaseConfig, { missingFirebaseKeys, type FirebaseConfig } from '../common/firebaseConfig';
+import firebaseConfig, { missingFirebaseKeys, type IFirebaseConfig } from '../common/firebaseConfig';
 import * as locCommon from '../common/locCommon';
 import * as vueCommon from '../common/vueCommon';
 import type IContentsComponent from '../components/ContentsComponent.vue';
@@ -251,7 +251,7 @@ void locApi.initialiseLocApi().then(() => {
 
 if (firebaseConfig !== undefined) {
   if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig as FirebaseConfig);
+    firebase.initializeApp(firebaseConfig as IFirebaseConfig);
   }
 } else if (props.omex === undefined) {
   const items = missingFirebaseKeys();

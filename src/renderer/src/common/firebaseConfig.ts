@@ -29,7 +29,7 @@ export function missingFirebaseKeys(): string[] {
     .map(([, envName]) => envName);
 }
 
-export interface FirebaseConfig {
+export interface IFirebaseConfig {
   apiKey: string;
   authDomain: string;
   projectId: string;
@@ -39,4 +39,4 @@ export interface FirebaseConfig {
   measurementId: string;
 }
 
-export default missingFirebaseKeys().length === 0 ? (firebaseConfig as FirebaseConfig) : undefined;
+export default missingFirebaseKeys().length === 0 ? (firebaseConfig as IFirebaseConfig) : undefined;
