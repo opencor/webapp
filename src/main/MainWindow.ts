@@ -285,9 +285,13 @@ export class MainWindow extends ApplicationWindow {
     this.webContents.setWindowOpenHandler((details) => {
       function isFirebaseOauthPopup(url: string): boolean {
         try {
-          const { protocol, host } = new URL(url);
+          const parsedUrl = new URL(url);
 
-          return (protocol === 'http:' || protocol === 'https:') && host === 'opencorapp.firebaseapp.com';
+          return (
+            (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') &&
+            parsedUrl.host === 'opencorapp.firebaseapp.com' &&
+            parsedUrl.pathname === '/__/auth/handler'
+          );
         } catch {
           return false;
         }
