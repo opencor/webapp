@@ -44,6 +44,18 @@
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
       />
+      <div v-if="firebaseConfig !== undefined">
+        <div class="absolute top-1 right-1 z-999">
+          <Button icon="pi pi-github" severity="secondary" :class="octokit !== null ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
+        </div>
+        <YesNoQuestionDialog
+          v-model:visible="disconnectFromGitHubVisible"
+          title="Disconnect from GitHub..."
+          question="You are about to disconnect from GitHub. Do you want to proceed?"
+          @yes="onDisconnectFromGitHub"
+          @no="disconnectFromGitHubVisible = false"
+        />
+      </div>
       <ContentsComponent
         ref="contents"
         :isActive="compIsActive"
@@ -58,30 +70,46 @@
         @close="openRemoteVisible = false"
       />
       <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
-      <ResetAllDialog v-model:visible="resetAllVisible" @resetAll="onResetAll" @close="resetAllVisible = false" />
+      <YesNoQuestionDialog
+        v-model:visible="resetAllVisible"
+        title="Reset All..."
+        question="You are about to reset all of your settings. Do you want to proceed?"
+        @yes="onResetAll"
+        @no="resetAllVisible = false"
+      />
       <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
     </div>
-    <UpdateErrorDialog
+    <OkMessageDialog
       v-model:visible="updateErrorVisible"
       :title="updateErrorTitle"
-      :issue="updateErrorIssue"
-      @close="onUpdateErrorDialogClose"
+      :message="updateErrorIssue"
+      @ok="onUpdateErrorDialogClose"
     />
-    <UpdateAvailableDialog
+    <YesNoQuestionDialog
       v-model:visible="updateAvailableVisible"
-      :version="updateVersion"
-      @downloadAndInstall="onDownloadAndInstall"
-      @close="updateAvailableVisible = false"
+      title="Check for Updates..."
+      :question="'Version ' + updateVersion + ' is available. Do you want to download it and install it?'"
+      @yes="onDownloadAndInstall"
+      @no="updateAvailableVisible = false"
     />
     <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
-    <UpdateNotAvailableDialog v-model:visible="updateNotAvailableVisible" @close="updateNotAvailableVisible = false" />
+    <OkMessageDialog
+      v-model:visible="updateNotAvailableVisible"
+      title="Check for Updates..."
+      message="No updates are available at this time."
+      @ok="updateNotAvailableVisible = false"
+    />
   </BlockUI>
 </template>
 
 <script setup lang="ts">
+import type * as octokitTypes from '@octokit/types';
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import { Octokit } from 'octokit';
 import 'primeicons/primeicons.css';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
@@ -95,6 +123,7 @@ import '../assets/app.css';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
 import { electronApi } from '../common/electronApi';
+import firebaseConfig, { missingFirebaseKeys, type IFirebaseConfig } from '../common/firebaseConfig';
 import * as locCommon from '../common/locCommon';
 import * as vueCommon from '../common/vueCommon';
 import type IContentsComponent from '../components/ContentsComponent.vue';
@@ -109,6 +138,8 @@ const files = vue.ref<HTMLElement | null>(null);
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const activeInstanceUid = vueCommon.activeInstanceUid();
+const connectingToGitHub = vue.ref<boolean>(false);
+const octokit = vue.ref<Octokit | null>(null);
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -120,15 +151,21 @@ const compIsActive = vue.computed(() => {
   return activeInstanceUid.value === String(crtInstance?.uid);
 });
 
-// Determine if the component UI should be enabled.
+// Determine whether the component UI should be blocked/enabled.
 
 const compUiBlocked = vue.computed(() => {
-  return !uiEnabled.value || loadingOpencorMessageVisible.value || loadingModelMessageVisible.value;
+  return (
+    !uiEnabled.value ||
+    loadingOpencorMessageVisible.value ||
+    loadingModelMessageVisible.value ||
+    connectingToGitHub.value
+  );
 });
 
 const compUiEnabled = vue.computed(() => {
   return (
     !compUiBlocked.value &&
+    !disconnectFromGitHubVisible.value &&
     !openRemoteVisible.value &&
     !settingsVisible.value &&
     !resetAllVisible.value &&
@@ -187,12 +224,55 @@ if (props.theme !== undefined) {
 const toast = useToast();
 
 // Asynchronously initialise our libOpenCOR API.
+// Note: we show the "Loading OpenCOR..." message only if window.locApi is not defined, which means that we are running
+//       OpenCOR's Web app.
 
 const locApiInitialised = vue.ref(false);
+const loadingOpencorMessageVisible = vue.ref<boolean>(false);
+
+// @ts-expect-error (window.locApi may or may not be defined which is why we test it)
+if (window.locApi === undefined) {
+  loadingOpencorMessageVisible.value = true;
+
+  vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
+    if (newLocApiInitialised) {
+      loadingOpencorMessageVisible.value = false;
+    }
+  });
+}
 
 void locApi.initialiseLocApi().then(() => {
   locApiInitialised.value = true;
 });
+
+// Initialise Firebase.
+// Note: we check whether a Firebase app is already initialised to avoid issues when hot-reloading during development
+//       and/or using OpenCOR as a Vue component within another application that also uses Firebase.
+
+if (firebaseConfig !== undefined) {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig as IFirebaseConfig);
+  }
+} else if (props.omex === undefined) {
+  const items = missingFirebaseKeys();
+  const formatList = (items: string[]): string => {
+    if (items.length === 1) {
+      return `${items[0]}`;
+    }
+
+    if (items.length === 2) {
+      return `${items[0]} and ${items[1]}`;
+    }
+
+    return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+  };
+
+  console.error(
+    `The Firebase configuration is missing. Please ensure that the following Firebase keys are set in your .env.local file: ${formatList(items)}.`
+  );
+}
+
+loadGitHubAccessToken();
 
 // Handle an action.
 
@@ -253,22 +333,6 @@ vue.watch(hasFiles, (newHasFiles: boolean) => {
   electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles);
 });
 
-// Loading OpenCOR.
-// Note: this is only done if window.locApi is not defined, which means that we are running OpenCOR's Web app.
-
-const loadingOpencorMessageVisible = vue.ref<boolean>(false);
-
-// @ts-expect-error (window.locApi may or may not be defined which is why we test it)
-if (window.locApi === undefined) {
-  loadingOpencorMessageVisible.value = true;
-
-  vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
-    if (newLocApiInitialised) {
-      loadingOpencorMessageVisible.value = false;
-    }
-  });
-}
-
 // Loading model.
 
 const loadingModelMessageVisible = vue.ref<boolean>(false);
@@ -316,7 +380,7 @@ function onDownloadAndInstall(): void {
 
 electronApi?.onUpdateDownloadError((issue: string) => {
   updateErrorTitle.value = 'Downloading Update...';
-  updateErrorIssue.value = `An error occurred while downloading the update (${issue}).`;
+  updateErrorIssue.value = `An error occurred while downloading the update (${common.formatMessage(issue, false)}).`;
   updateErrorVisible.value = true;
 });
 
@@ -338,7 +402,7 @@ electronApi?.onUpdateNotAvailable(() => {
 
 electronApi?.onUpdateCheckError((issue: string) => {
   updateErrorTitle.value = 'Checking For Updates...';
-  updateErrorIssue.value = `An error occurred while checking for updates (${issue}).`;
+  updateErrorIssue.value = `An error occurred while checking for updates (${common.formatMessage(issue, false)}).`;
   updateErrorVisible.value = true;
 });
 
@@ -446,7 +510,7 @@ function openFile(fileOrFilePath: string | File): void {
         void vue.nextTick().then(() => {
           issues.value.push({
             type: locApi.EIssueType.ERROR,
-            description: common.formatIssue(error instanceof Error ? error.message : String(error))
+            description: common.formatMessage(error instanceof Error ? error.message : String(error))
           });
         });
       } else {
@@ -454,7 +518,7 @@ function openFile(fileOrFilePath: string | File): void {
           severity: 'error',
           group: toastId.value,
           summary: 'Opening a file',
-          detail: `${filePath}\n\n${common.formatIssue(error instanceof Error ? error.message : String(error))}`,
+          detail: `${filePath}\n\n${common.formatMessage(error instanceof Error ? error.message : String(error))}`,
           life: TOAST_LIFE
         });
       }
@@ -790,9 +854,243 @@ vue.watch(compUiBlocked, (newCompUiBlocked: boolean) => {
     }, SHORT_DELAY);
   }
 });
+
+// GitHub integration.
+
+const disconnectFromGitHubVisible = vue.ref<boolean>(false);
+
+async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
+  if (electronApi === undefined) {
+    return;
+  }
+
+  try {
+    await electronApi.deleteGitHubAccessToken();
+  } catch (error: unknown) {
+    if (silent) {
+      console.warn('Failed to remove the stored GitHub access token:', error);
+    } else {
+      toast.add({
+        severity: 'warn',
+        group: toastId.value,
+        summary: 'Removing GitHub access token',
+        detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+        life: TOAST_LIFE
+      });
+    }
+  }
+}
+
+async function loadGitHubAccessToken(): Promise<void> {
+  if (electronApi === undefined || props.omex !== undefined || firebaseConfig === undefined) {
+    return;
+  }
+
+  let gitHubAccessToken: string | null;
+
+  try {
+    gitHubAccessToken = await electronApi.loadGitHubAccessToken();
+  } catch (error: unknown) {
+    console.warn('Failed to load the GitHub access token:', error);
+
+    return;
+  }
+
+  if (gitHubAccessToken === null) {
+    return;
+  }
+
+  connectingToGitHub.value = true;
+
+  try {
+    await checkGitHubAccessToken(gitHubAccessToken);
+  } catch (error: unknown) {
+    console.warn('Stored GitHub access token is no longer valid. Clearing it.', error);
+
+    await deleteGitHubAccessToken(true);
+  } finally {
+    connectingToGitHub.value = false;
+  }
+}
+
+async function saveGitHubAccessToken(accessToken: string): Promise<void> {
+  if (electronApi === undefined) {
+    return;
+  }
+
+  try {
+    const stored = await electronApi.saveGitHubAccessToken(accessToken);
+
+    if (!stored) {
+      toast.add({
+        severity: 'warn',
+        group: toastId.value,
+        summary: 'Remembering GitHub access token',
+        detail: 'The token could not be stored securely, so you will need to sign in again next time.',
+        life: TOAST_LIFE
+      });
+    }
+  } catch (error: unknown) {
+    toast.add({
+      severity: 'warn',
+      group: toastId.value,
+      summary: 'Remembering GitHub access token',
+      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      life: TOAST_LIFE
+    });
+  }
+}
+
+async function checkGitHubAccessToken(accessToken: string): Promise<void> {
+  const client = new Octokit({ auth: accessToken });
+  const user = await client.rest.users.getAuthenticated();
+
+  octokit.value = client;
+
+  if (electronApi !== undefined) {
+    await saveGitHubAccessToken(accessToken);
+  }
+
+  try {
+    const reposResponse = await client.rest.repos.listForAuthenticatedUser({ affiliation: 'owner' });
+
+    console.log(`Repositories for user ${user.data.login}:`);
+
+    for (const repo of reposResponse.data) {
+      console.log(`- ${repo.name} (${repo.private ? 'private' : 'public'}): ${repo.html_url}`);
+    }
+  } catch (error: unknown) {
+    console.warn(`Failed to retrieve repositories for user ${user.data.login}:`, error);
+  }
+}
+
+async function onDisconnectFromGitHub(): Promise<void> {
+  try {
+    await firebase.auth().signOut();
+
+    octokit.value = null;
+
+    await deleteGitHubAccessToken();
+
+    if (electronApi !== undefined) {
+      await electronApi.clearGitHubCache();
+    }
+  } catch (error: unknown) {
+    toast.add({
+      severity: 'error',
+      group: toastId.value,
+      summary: 'GitHub sign-out',
+      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      life: TOAST_LIFE
+    });
+  } finally {
+    disconnectFromGitHubVisible.value = false;
+  }
+}
+
+async function onGitHubButtonClick(): Promise<void> {
+  if (octokit.value !== null) {
+    disconnectFromGitHubVisible.value = true;
+
+    return;
+  }
+
+  connectingToGitHub.value = true;
+
+  try {
+    // Note: the signing with popup will generate some messages in the console:
+    //         Cross-Origin-Opener-Policy policy would block the window.closed call.
+    //       Apparently, there is no way to avoid these messages (see
+    //       https://reddit.com/r/Firebase/comments/146zcld/crossoriginopenerpolicy_policy_would_block_the/ for
+    //       instance).
+
+    const gitHubAuthProvider = new firebase.auth.GithubAuthProvider();
+
+    gitHubAuthProvider.addScope('repo');
+
+    const result = await firebase.auth().signInWithPopup(gitHubAuthProvider);
+    const credential = result.credential as firebase.auth.OAuthCredential | null;
+
+    if (credential?.accessToken === undefined || credential.accessToken === null) {
+      throw new Error('GitHub OAuth flow did not return an access token.');
+    }
+
+    const accessToken = credential.accessToken;
+
+    await checkGitHubAccessToken(accessToken);
+  } catch (error: unknown) {
+    toast.add({
+      severity: 'error',
+      group: toastId.value,
+      summary: 'GitHub sign-in',
+      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      life: TOAST_LIFE
+    });
+  } finally {
+    connectingToGitHub.value = false;
+  }
+}
 </script>
 
 <style scoped>
+.connected-to-github,
+:deep(.connected-to-github .pi-github) {
+  background-color: var(--p-green-100);
+  border-color: var(--p-green-100);
+  color: var(--p-green-600);
+}
+
+.connected-to-github:hover,
+:deep(.connected-to-github:hover .pi-github) {
+  background-color: var(--p-green-200) !important;
+  border-color: var(--p-green-200) !important;
+  color: var(--p-green-700);
+}
+
+.disconnected-from-github,
+:deep(.disconnected-from-github .pi-github) {
+  background-color: var(--p-red-100);
+  border-color: var(--p-red-100);
+  color: var(--p-red-600);
+}
+
+.disconnected-from-github:hover,
+:deep(.disconnected-from-github:hover .pi-github) {
+  background-color: var(--p-red-200) !important;
+  border-color: var(--p-red-200) !important;
+  color: var(--p-red-700);
+}
+
+@media (prefers-color-scheme: dark) {
+  .connected-to-github,
+  :deep(.connected-to-github .pi-github) {
+    background-color: var(--p-green-800);
+    border-color: var(--p-green-800);
+    color: var(--p-green-300);
+  }
+
+  .connected-to-github:hover,
+  :deep(.connected-to-github:hover .pi-github) {
+    background-color: var(--p-green-700) !important;
+    border-color: var(--p-green-700) !important;
+    color: var(--p-green-200);
+  }
+
+  .disconnected-from-github,
+  :deep(.disconnected-from-github .pi-github) {
+    background-color: var(--p-red-800);
+    border-color: var(--p-red-800);
+    color: var(--p-red-300);
+  }
+
+  .disconnected-from-github:hover,
+  :deep(.disconnected-from-github:hover .pi-github) {
+    background-color: var(--p-red-700) !important;
+    border-color: var(--p-red-700) !important;
+    color: var(--p-red-200);
+  }
+}
+
 .opencor-application {
   height: 100vh;
   height: 100dvh;
