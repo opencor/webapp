@@ -5,6 +5,15 @@ on:
     branches: [mvp]
   workflow_dispatch:
 
+env:
+  VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+  VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+  VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+  VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+  VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+  VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+  VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+
 jobs:
   ci:
     name: ${{ matrix.name }}
@@ -25,7 +34,9 @@ jobs:
             os: macos-15-intel
           - name: macOS (ARM)
             os: macos-15
-          - name: Code formatting and linting
+          - name: Code formatting
+            os: ubuntu-22.04
+          - name: Linting
             os: ubuntu-22.04
     steps:
       - name: Set the timezone to New Zealand
@@ -52,9 +63,6 @@ jobs:
           unzip -j bun.zip -d $env:USERPROFILE\.bun
           del bun.zip
           echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
-      - name: Install Biome
-        if: ${{ matrix.name == 'Code formatting and linting' }}
-        uses: biomejs/setup-biome@v2
       - name: OpenCOR dependencies
         if: ${{ matrix.name != 'Windows (ARM)' }}
         run: bun install
@@ -62,22 +70,25 @@ jobs:
         if: ${{ matrix.name == 'Windows (ARM)' }}
         run: bun install --cpu=arm64
       - name: Build libOpenCOR
-        if: ${{ matrix.name != 'Code formatting and linting' }}
+        if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
         run: bun libopencor
       - name: Build OpenCOR
-        if: ${{ matrix.name != 'Code formatting and linting' }}
+        if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
         run: bun run build
       - name: Build OpenCOR's Web app
-        if: ${{ matrix.name != 'Code formatting and linting' }}
+        if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
         run: bun build:web
       - name: Build OpenCOR's npm library
-        if: ${{ matrix.name != 'Code formatting and linting' }}
+        if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
         run: |
           cd src/renderer
           bun install
           bun build:lib
-      - name: Code formatting and linting
-        if: ${{ matrix.name == 'Code formatting and linting' }}
-        run: biome ci --error-on-warnings
+      - name: Code formatting
+        if: ${{ matrix.name == 'Code formatting' }}
+        run: bun format
+      - name: Linting
+        if: ${{ matrix.name == 'Linting' }}
+        run: bun lint
       - name: Clean OpenCOR
         run: bun clean
