@@ -71,7 +71,7 @@
     "@tailwindcss/vite": "^4.1.17",
     "@types/node": "^24.10.1",
     "@types/plotly.js": "3.0.3",
-    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitejs/plugin-vue": "^6.0.2",
     "@vue/tsconfig": "^0.8.1",
     "@wasm-fmt/clang-format": "^21.1.5",
     "autoprefixer": "^10.4.22",
