@@ -16,7 +16,7 @@
 - From https://console.firebase.google.com/project/opencorapp/authentication/settings, ensure that "Authorised domains" includes both:
   - `opencor.ws`; and
   - `localhost` (so that the desktop version of OpenCOR, which serves the UI from `http://localhost:<port>`, can complete GitHub OAuth flows).
-- A `.env.local` file should be created in `src/renderer` with the following contents:
+- Either export the following environment variables in your development environment or create a `.env.local` file in `src/renderer` with the following contents:
   ```
   VITE_FIREBASE_API_KEY=<API_KEY>
   VITE_FIREBASE_AUTH_DOMAIN=<AUTH_DOMAIN>
