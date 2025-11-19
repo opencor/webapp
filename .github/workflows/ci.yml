@@ -68,6 +68,11 @@ jobs:
         run: bun run build
       - name: Build OpenCOR's Web app
         if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
         run: bun build:web
       - name: Build OpenCOR's npm library
         if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
