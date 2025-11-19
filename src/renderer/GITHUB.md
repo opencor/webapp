@@ -19,10 +19,8 @@
 - Either export the following environment variables in your development environment or create a `.env.local` file in `src/renderer` with the following contents:
   ```
   VITE_FIREBASE_API_KEY=<API_KEY>
-  VITE_FIREBASE_AUTH_DOMAIN=<AUTH_DOMAIN>
-  VITE_FIREBASE_PROJECT_ID=<PROJECT_ID>
-  VITE_FIREBASE_STORAGE_BUCKET=<STORAGE_BUCKET>
   VITE_FIREBASE_MESSAGING_SENDER_ID=<MESSAGING_SENDER_ID>
   VITE_FIREBASE_APP_ID=<APP_ID>
   VITE_FIREBASE_MEASUREMENT_ID=<MEASUREMENT_ID>
   ```
+  **Note:** technically speaking, we do not need to hide these values as they are all public-facing by design. Still, it's good practice not to hard-code them in the codebase.
