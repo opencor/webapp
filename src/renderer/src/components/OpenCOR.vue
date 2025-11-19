@@ -123,7 +123,7 @@ import '../assets/app.css';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
 import { electronApi } from '../common/electronApi';
-import firebaseConfig, { missingFirebaseKeys, type IFirebaseConfig } from '../common/firebaseConfig';
+import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 import * as locCommon from '../common/locCommon';
 import * as vueCommon from '../common/vueCommon';
 import type IContentsComponent from '../components/ContentsComponent.vue';
@@ -251,7 +251,7 @@ void locApi.initialiseLocApi().then(() => {
 
 if (firebaseConfig !== undefined) {
   if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig as IFirebaseConfig);
+    firebase.initializeApp(firebaseConfig);
   }
 } else if (props.omex === undefined) {
   const items = missingFirebaseKeys();
@@ -268,7 +268,7 @@ if (firebaseConfig !== undefined) {
   };
 
   console.error(
-    `The Firebase configuration is missing. Please ensure that the following Firebase keys are set in your .env.local file: ${formatList(items)}.`
+    `The Firebase configuration is missing. Please ensure that the following environment variables are set: ${formatList(items)}.`
   );
 }
 

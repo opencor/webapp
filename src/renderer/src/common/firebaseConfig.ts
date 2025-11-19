@@ -29,7 +29,7 @@ export function missingFirebaseKeys(): string[] {
     .map(([, envName]) => envName);
 }
 
-export interface IFirebaseConfig {
+interface IFirebaseConfig {
   apiKey: string;
   authDomain: string;
   projectId: string;
