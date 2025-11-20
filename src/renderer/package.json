@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20251120.0",
+  "version": "0.20251121.0",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -61,7 +61,6 @@
     "@primevue/auto-import-resolver": "4.2.5",
     "@vueuse/core": "12.8.2",
     "firebase": "^12.6.0",
-    "firebaseui": "^6.1.0",
     "jsonschema": "^1.5.0",
     "octokit": "^5.0.5",
     "primeicons": "^7.0.0",
@@ -82,6 +81,6 @@
     "tailwindcss": "^4.1.17",
     "tailwindcss-primeui": "^0.6.1",
     "unplugin-vue-components": "^29.2.0",
-    "vite": "^7.2.2"
+    "vite": "^7.2.4"
   }
 }
