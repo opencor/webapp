@@ -7,7 +7,7 @@
   - **App nickname:** `OpenCOR Web app`
 - From https://console.firebase.google.com/project/opencorapp/authentication/providers:
   - Enable the GitHub authentication provider; and
-  - Provide the **Client ID** and **Client secret** by creating a new OAuth app from https://github.com/settings/developers:
+  - Provide the **Client ID** and **Client secret** by creating a new OAuth app from https://github.com/organizations/opencor/settings/applications:
     - **Application name:** OpenCOR
     - **Homepage URL:** https://opencor.ws/
     - **Authorization callback URL:** https://opencorapp.firebaseapp.com/__/auth/handler
