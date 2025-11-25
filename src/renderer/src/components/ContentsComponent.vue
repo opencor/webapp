@@ -8,21 +8,15 @@
         :issues="fileTab.file.issues()"
       />
       <SimulationExperimentView
-        v-else-if="fileTab.uiJson === undefined"
+        v-else
         :width="width"
         :height="height"
         :isActive="isActive"
         :uiEnabled="uiEnabled"
-        :file="fileTabs[index]?.file"
+        :file="fileTab.file"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="simulationOnly"
-      />
-      <SimulationExperimentUiView
-        v-else
-        :width="width"
-        :height="height"
-        :file="fileTabs[index]?.file"
-        :uiJson="fileTabs[index]?.uiJson"
+        :uiJson="fileTab.uiJson"
       />
     </div>
   </div>
@@ -68,20 +62,14 @@
             :issues="fileTab.file.issues()"
           />
           <SimulationExperimentView
-            v-else-if="fileTab.uiJson === undefined"
+            v-else
             :width="width"
             :height="heightMinusFileTablist"
             :isActive="isActive"
             :uiEnabled="uiEnabled"
-            :file="fileTabs[index]?.file"
+            :file="fileTab.file"
             :isActiveFile="fileTab.file.path() === activeFile"
-          />
-          <SimulationExperimentUiView
-            v-else
-            :width="width"
-            :height="heightMinusFileTablist"
-            :file="fileTabs[index]?.file"
-            :uiJson="fileTabs[index]?.uiJson"
+            :uiJson="fileTab.uiJson"
           />
         </TabPanel>
       </TabPanels>
