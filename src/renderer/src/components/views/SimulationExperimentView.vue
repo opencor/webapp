@@ -201,10 +201,16 @@ const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = props.file.document().model(0);
 const interactivePlots = vue.ref<IGraphPanelPlot[][]>([]);
-const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []);
+const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
+  interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
+);
 const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
-const interactiveInputValues = vue.ref<number[]>(interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []);
-const interactiveShowInput = vue.ref<string[]>(interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []);
+const interactiveInputValues = vue.ref<number[]>(
+  interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []
+);
+const interactiveShowInput = vue.ref<string[]>(
+  interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []
+);
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 
 if (interactiveModeAvailable.value) {
@@ -246,8 +252,12 @@ function updateInteractiveSimulation() {
   props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/');
 
-    // @ts-expect-error (we trust that we have a valid component and variable name)
-    interactiveModel.addChange(componentVariableNames[0], componentVariableNames[1], String(evaluateValue(parameter.value)));
+    interactiveModel.addChange(
+      // @ts-expect-error (we trust that we have a valid component and variable name)
+      componentVariableNames[0],
+      componentVariableNames[1],
+      String(evaluateValue(parameter.value))
+    );
   });
 
   // Run the instance and update the plots.
