@@ -120,17 +120,17 @@ const props = defineProps<{
 
 const toolbarId = vue.ref('simulationExperimentViewToolbar');
 const editorId = vue.ref('simulationExperimentViewEditor');
-const instance = props.file.instance();
-const instanceTask = instance.task(0);
 const heightMinusToolbar = vue.ref<number>(0);
 const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
 const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
 
 // Standard mode.
 
+const standardInstance = props.file.instance();
+const standardInstanceTask = standardInstance.task(0);
 const standardParameters = vue.ref<string[]>([]);
-const standardXParameter = vue.ref(instanceTask.voiName());
-const standardYParameter = vue.ref(instanceTask.stateName(0));
+const standardXParameter = vue.ref(standardInstanceTask.voiName());
+const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
 const standardPlots = vue.ref<IGraphPanelPlot[]>([]);
 const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
@@ -138,32 +138,32 @@ function addParameter(param: string): void {
   standardParameters.value.push(param);
 }
 
-addParameter(instanceTask.voiName());
+addParameter(standardInstanceTask.voiName());
 
-for (let i = 0; i < instanceTask.stateCount(); i++) {
-  addParameter(instanceTask.stateName(i));
+for (let i = 0; i < standardInstanceTask.stateCount(); i++) {
+  addParameter(standardInstanceTask.stateName(i));
 }
 
-for (let i = 0; i < instanceTask.rateCount(); i++) {
-  addParameter(instanceTask.rateName(i));
+for (let i = 0; i < standardInstanceTask.rateCount(); i++) {
+  addParameter(standardInstanceTask.rateName(i));
 }
 
-for (let i = 0; i < instanceTask.constantCount(); i++) {
-  addParameter(instanceTask.constantName(i));
+for (let i = 0; i < standardInstanceTask.constantCount(); i++) {
+  addParameter(standardInstanceTask.constantName(i));
 }
 
-for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
-  addParameter(instanceTask.computedConstantName(i));
+for (let i = 0; i < standardInstanceTask.computedConstantCount(); i++) {
+  addParameter(standardInstanceTask.computedConstantName(i));
 }
 
-for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-  addParameter(instanceTask.algebraicName(i));
+for (let i = 0; i < standardInstanceTask.algebraicCount(); i++) {
+  addParameter(standardInstanceTask.algebraicName(i));
 }
 
 function onRun(): void {
   // Run the instance, output the simulation time to the console, and update the plot.
 
-  const simulationTime = instance.run();
+  const simulationTime = standardInstance.run();
 
   standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
 
@@ -178,17 +178,17 @@ function onRun(): void {
   updatePlot();
 }
 
-const xInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, standardXParameter.value));
-const yInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, standardYParameter.value));
+const xInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value));
+const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value));
 
 function updatePlot() {
   standardPlots.value = [
     {
       x: {
-        data: locCommon.simulationData(instanceTask, xInfo.value)
+        data: locCommon.simulationData(standardInstanceTask, xInfo.value)
       },
       y: {
-        data: locCommon.simulationData(instanceTask, yInfo.value)
+        data: locCommon.simulationData(standardInstanceTask, yInfo.value)
       }
     }
   ];
@@ -196,6 +196,8 @@ function updatePlot() {
 
 // Interactive mode.
 
+const interactiveInstance = props.file.instance();
+const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = props.file.document().model(0);
 const interactivePlots = vue.ref<IGraphPanelPlot[][]>([]);
@@ -207,7 +209,7 @@ const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 
 if (interactiveModeAvailable.value) {
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-    interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name);
+    interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
   });
 }
 
@@ -250,10 +252,10 @@ function updateInteractiveSimulation() {
 
   // Run the instance and update the plots.
 
-  instance.run();
+  interactiveInstance.run();
 
-  if (instance.hasIssues()) {
-    interactiveInstanceIssues.value = instance.issues();
+  if (interactiveInstance.hasIssues()) {
+    interactiveInstanceIssues.value = interactiveInstance.issues();
 
     return;
   } else {
@@ -264,7 +266,7 @@ function updateInteractiveSimulation() {
 
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     // @ts-expect-error (we trust that we have some valid information)
-    parser.set(data.id, locCommon.simulationData(instanceTask, interactiveIdToInfo[data.id]));
+    parser.set(data.id, locCommon.simulationData(interactiveInstanceTask, interactiveIdToInfo[data.id]));
   });
 
   interactivePlots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
