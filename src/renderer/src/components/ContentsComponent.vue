@@ -29,7 +29,7 @@
       :scrollable="true"
       :selectOnFocus="true"
     >
-      <TabList :id="fileTablistId" class="border-b border-b-(--p-primary-color)">
+      <TabList :id="fileTablistId" class="border-b border-b-primary">
         <Tab
           v-for="fileTab in fileTabs"
           :id="`tab_${fileTab.file.path()}`"

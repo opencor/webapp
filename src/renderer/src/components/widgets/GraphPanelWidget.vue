@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-row h-full">
-    <div v-if="showMarker" class="w-[3px] bg-(--p-primary-color)" />
+    <div v-if="showMarker" class="w-[3px] bg-primary" />
     <div ref="mainDiv" class="grow h-full" />
   </div>
 </template>
