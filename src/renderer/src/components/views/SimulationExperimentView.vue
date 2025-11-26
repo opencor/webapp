@@ -1,12 +1,18 @@
 <template>
-  <div v-if="uiJson === undefined"  :style="{ width: width + 'px', height: height + 'px' }">
-    <Toolbar :id="toolbarId" class="p-1!">
-      <template #start>
-        <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
-        <Button class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
-      </template>
-    </Toolbar>
-    <Splitter class="border-none! h-full m-0" layout="vertical" :style="{ height: heightMinusToolbar + 'px' }">
+  <Toolbar :id="toolbarId" class="p-1!">
+    <template #start v-if="!interactiveModeEnabled">
+      <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
+      <Button class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
+    </template>
+    <template #center>
+      <div v-if="interactiveModeAvailable" class="flex items-center gap-2">
+        <label for="mode-toggle" class="text-sm">Interactive</label>
+        <ToggleSwitch inputId="mode-toggle" v-model="interactiveModeEnabled" />
+      </div>
+    </template>
+  </Toolbar>
+  <div v-if="!interactiveModeEnabled"  :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
+    <Splitter class="border-none! h-full m-0" layout="vertical">
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
@@ -51,8 +57,8 @@
       </SplitterPanel>
     </Splitter>
   </div>
-  <div v-else class="flex" :style="{ width: width + 'px', height: height + 'px' }">
-    <IssuesView v-if="uiJsonIssues.length !== 0" class="grow" :width="width" :height="height" :issues="uiJsonIssues" />
+  <div v-else class="flex" :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
+    <IssuesView v-if="uiJsonIssues.length !== 0" class="grow" :width="width" :height="heightMinusToolbar" :issues="uiJsonIssues" />
     <div v-else class="flex grow">
       <div class="ml-4 mr-4 mb-4">
         <ScrollPanel class="h-full">
@@ -74,7 +80,7 @@
         </ScrollPanel>
       </div>
       <div class="grow">
-        <IssuesView v-show="uiInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="height" :issues="uiInstanceIssues" />
+        <IssuesView v-show="uiInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="uiInstanceIssues" />
         <GraphPanelWidget v-show="uiInstanceIssues.length === 0"
           v-for="(_plot, index) in (uiJson as any).output.plots"
           :key="`plot_${index}`"
@@ -117,6 +123,8 @@ const editorId = vue.ref('simulationExperimentViewEditor');
 const instance = props.file.instance();
 const instanceTask = instance.task(0);
 const heightMinusToolbar = vue.ref<number>(0);
+const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
+const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
 
 // Legacy mode.
 
@@ -130,28 +138,26 @@ function addParameter(param: string): void {
   legacyParameters.value.push(param);
 }
 
-if (props.uiJson === undefined) {
-  addParameter(instanceTask.voiName());
+addParameter(instanceTask.voiName());
 
-  for (let i = 0; i < instanceTask.stateCount(); i++) {
-    addParameter(instanceTask.stateName(i));
-  }
+for (let i = 0; i < instanceTask.stateCount(); i++) {
+  addParameter(instanceTask.stateName(i));
+}
 
-  for (let i = 0; i < instanceTask.rateCount(); i++) {
-    addParameter(instanceTask.rateName(i));
-  }
+for (let i = 0; i < instanceTask.rateCount(); i++) {
+  addParameter(instanceTask.rateName(i));
+}
 
-  for (let i = 0; i < instanceTask.constantCount(); i++) {
-    addParameter(instanceTask.constantName(i));
-  }
+for (let i = 0; i < instanceTask.constantCount(); i++) {
+  addParameter(instanceTask.constantName(i));
+}
 
-  for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
-    addParameter(instanceTask.computedConstantName(i));
-  }
+for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+  addParameter(instanceTask.computedConstantName(i));
+}
 
-  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-    addParameter(instanceTask.algebraicName(i));
-  }
+for (let i = 0; i < instanceTask.algebraicCount(); i++) {
+  addParameter(instanceTask.algebraicName(i));
 }
 
 function onRun(): void {
@@ -193,13 +199,13 @@ function updatePlot() {
 const uiMath = mathjs.create(mathjs.all ?? {}, {});
 const uiModel = props.file.document().model(0);
 const uiPlots = vue.ref<IGraphPanelPlot[][]>([]);
-const uiJsonIssues = vue.ref<locApi.IIssue[]>(props.uiJson ? locApi.uiJsonIssues(props.uiJson) : []);
+const uiJsonIssues = vue.ref<locApi.IIssue[]>(interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []);
 const uiInstanceIssues = vue.ref<locApi.IIssue[]>([]);
-const uiInputValues = vue.ref<number[]>((props.uiJson !== undefined) ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []);
-const uiShowInput = vue.ref<string[]>((props.uiJson !== undefined) ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []);
+const uiInputValues = vue.ref<number[]>(interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []);
+const uiShowInput = vue.ref<string[]>(interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []);
 const uiIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 
-if (props.uiJson !== undefined) {
+if (interactiveModeAvailable.value) {
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     uiIdToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name);
   });
@@ -238,6 +244,7 @@ function updateUiAndSimulation() {
   props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/');
 
+    // @ts-expect-error (we trust that we have a valid component and variable name)
     uiModel.addChange(componentVariableNames[0], componentVariableNames[1], String(evaluateValue(parameter.value)));
   });
 
@@ -270,82 +277,82 @@ function updateUiAndSimulation() {
   });
 }
 
-// "Initialise" our standard or UI mode.
+// "Initialise" our standard and/or UI mode.
 
 vue.onMounted(() => {
-  if (props.uiJson === undefined) {
-    updatePlot();
-  } else {
+  updatePlot();
+
+  if (interactiveModeAvailable.value) {
     updateUiAndSimulation();
   }
 });
 
-// Various things that need to be done once our standard mode is mounted.
+// Various things that need to be done once we are is mounted.
 
-if (props.uiJson === undefined) {
-  const crtInstance = vue.getCurrentInstance();
+const crtInstance = vue.getCurrentInstance();
 
-  vue.onMounted(() => {
-    // Customise our IDs.
+vue.onMounted(() => {
+  // Customise our IDs.
 
-    toolbarId.value = `simulationExperimentViewToolbar${String(crtInstance?.uid)}`;
-    editorId.value = `simulationExperimentViewEditor${String(crtInstance?.uid)}`;
+  toolbarId.value = `simulationExperimentViewToolbar${String(crtInstance?.uid)}`;
+  editorId.value = `simulationExperimentViewEditor${String(crtInstance?.uid)}`;
 
-    // Track the height of our toolbar.
+  // Track the height of our toolbar.
 
-    let toolbarResizeObserver: ResizeObserver | undefined;
+  let toolbarResizeObserver: ResizeObserver | undefined;
 
-    setTimeout(() => {
-      toolbarResizeObserver = vueCommon.trackElementHeight(toolbarId.value);
-    }, SHORT_DELAY);
+  setTimeout(() => {
+    toolbarResizeObserver = vueCommon.trackElementHeight(toolbarId.value);
+  }, SHORT_DELAY);
 
-    // Monitor "our" contents size.
+  // Monitor "our" contents size.
 
-    function resizeOurselves() {
-      heightMinusToolbar.value = props.height - vueCommon.trackedCssVariableValue(toolbarId.value);
+  function resizeOurselves() {
+    heightMinusToolbar.value = props.height - vueCommon.trackedCssVariableValue(toolbarId.value);
+  }
+
+  vue.watch(
+    () => props.height,
+    () => {
+      resizeOurselves();
     }
+  );
 
-    vue.watch(
-      () => props.height,
-      () => {
-        resizeOurselves();
-      }
-    );
+  let oldToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value);
 
-    let oldToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value);
+  const mutationObserver = new MutationObserver(() => {
+    const newToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value);
 
-    const mutationObserver = new MutationObserver(() => {
-      const newToolbarHeight = vueCommon.trackedCssVariableValue(toolbarId.value);
+    if (newToolbarHeight !== oldToolbarHeight) {
+      oldToolbarHeight = newToolbarHeight;
 
-      if (newToolbarHeight !== oldToolbarHeight) {
-        oldToolbarHeight = newToolbarHeight;
-
-        resizeOurselves();
-      }
-    });
-
-    mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
-
-    vue.onUnmounted(() => {
-      mutationObserver.disconnect();
-
-      toolbarResizeObserver?.disconnect();
-    });
+      resizeOurselves();
+    }
   });
-}
+
+  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+  vue.onUnmounted(() => {
+    mutationObserver.disconnect();
+
+    toolbarResizeObserver?.disconnect();
+  });
+});
 
 // Keyboard shortcuts.
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled || props.uiJson !== undefined) {
+    if (!props.isActive || !props.uiEnabled) {
       return;
     }
 
     if (props.isActiveFile && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.code === 'F9') {
-      event.preventDefault();
+      if (!interactiveModeEnabled.value) {
+        event.preventDefault();
 
-      onRun();
+        onRun();
+      }
     }
   });
 }
