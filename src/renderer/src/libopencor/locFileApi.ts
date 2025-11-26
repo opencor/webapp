@@ -92,7 +92,6 @@ export interface IWasmFile {
 export class File {
   private _path: string;
   private _wasmFile: IWasmFile = {} as IWasmFile;
-  private _document: SedDocument = {} as SedDocument;
   private _issues: IIssue[] = [];
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
@@ -103,7 +102,7 @@ export class File {
 
       this._issues = _cppLocApi.fileIssues(path);
     } else if (contents !== undefined) {
-      this._wasmFile = new _wasmLocApi.File(path);
+      this._wasmFile = vue.markRaw(new _wasmLocApi.File(path));
 
       const heapContentsPtr = _wasmLocApi._malloc(contents.length);
 
@@ -122,15 +121,6 @@ export class File {
 
       return;
     }
-
-    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return;
-    }
-
-    // Retrieve the SED-ML file associated with this file.
-
-    this._document = vue.markRaw(new SedDocument(this._path, this._wasmFile));
-    this._issues = this._document.issues();
   }
 
   type(): EFileType {
@@ -150,7 +140,7 @@ export class File {
   }
 
   document(): SedDocument {
-    return this._document;
+    return vue.markRaw(new SedDocument(this._path, this._wasmFile));
   }
 
   uiJson(): IUiJson | undefined {
