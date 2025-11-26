@@ -6,8 +6,7 @@
     </template>
     <template #center>
       <div v-show="interactiveModeAvailable" class="flex items-center gap-2">
-        <label for="mode-toggle" class="text-sm">Interactive</label>
-        <ToggleSwitch inputId="mode-toggle" v-model="interactiveModeEnabled" />
+        <ToggleButton size="small" v-model="interactiveModeEnabled" onLabel="Interactive mode" offLabel="Standard mode" />
       </div>
     </template>
   </Toolbar>
@@ -394,6 +393,13 @@ if (common.isDesktop()) {
 
 :deep(.p-editor-toolbar) {
   display: none;
+}
+
+:deep(.p-togglebutton) {
+  background-color: var(--p-primary-color) !important;
+  color: var(--p-primary-contrast-color) !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
 }
 
 .p-toolbar {
