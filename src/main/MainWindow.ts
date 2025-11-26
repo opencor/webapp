@@ -193,8 +193,10 @@ export class MainWindow extends ApplicationWindow {
 
       setTimeout(() => {
         // Retrieve the recently opened files and our Reopen menu.
+        // Note: for some reasons, recentFilePAths may, in some cases, end up having only one null entry, so just in
+        //       case we filter out all null entries.
 
-        recentFilePaths = electronConf.get('app.files.recent');
+        recentFilePaths = (electronConf.get('app.files.recent') as string[]).filter((filePath: string | null) => filePath !== null);
 
         updateReopenMenu(recentFilePaths);
 
