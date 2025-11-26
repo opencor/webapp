@@ -93,7 +93,6 @@ export class File {
   private _path: string;
   private _wasmFile: IWasmFile = {} as IWasmFile;
   private _document: SedDocument = {} as SedDocument;
-  private _instance: SedInstance = {} as SedInstance;
   private _issues: IIssue[] = [];
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
@@ -212,11 +211,6 @@ export class File {
     if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
       return;
     }
-
-    // Retrieve an instance of the model.
-
-    this._instance = this._document.instantiate();
-    this._issues = this._instance.issues();
   }
 
   type(): EFileType {
@@ -239,8 +233,8 @@ export class File {
     return this._document;
   }
 
-  instance(): SedInstance {
-    return this._instance;
+  instantiate(): SedInstance {
+    return this._document.instantiate();
   }
 
   uiJson(): IUiJson | undefined {

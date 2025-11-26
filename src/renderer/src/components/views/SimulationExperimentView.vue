@@ -17,7 +17,7 @@
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
             <ScrollPanel class="h-full">
-              <SimulationPropertyEditor :file="file" />
+              <SimulationPropertyEditor :uniformTimeCourse="standardUniformTimeCourse" :instanceTask="standardInstanceTask" />
               <!--
                   <SolversPropertyEditor />
                   <GraphsPropertyEditor />
@@ -126,7 +126,8 @@ const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
 
 // Standard mode.
 
-const standardInstance = props.file.instance();
+const standardUniformTimeCourse = props.file.document().simulation(0) as locApi.SedSimulationUniformTimeCourse;
+const standardInstance = props.file.instantiate();
 const standardInstanceTask = standardInstance.task(0);
 const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask.voiName());
@@ -196,7 +197,7 @@ function updatePlot() {
 
 // Interactive mode.
 
-const interactiveInstance = props.file.instance();
+const interactiveInstance = props.file.instantiate();
 const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = props.file.document().model(0);
