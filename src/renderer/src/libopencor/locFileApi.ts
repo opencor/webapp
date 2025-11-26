@@ -4,14 +4,10 @@ import {
   _cppLocApi,
   _wasmLocApi,
   cppVersion,
-  EIssueType,
-  ESedSimulationType,
   type IIssue,
   type IUiJson,
   type IWasmIssues,
   SedDocument,
-  type SedInstance,
-  type SedSimulationUniformTimeCourse,
   wasmIssuesToIssues
 } from './locApi.js';
 
