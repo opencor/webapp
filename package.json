@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20251126.1",
+  "version": "0.20251127.0",
   "scripts": {
     "archive:web": "bun src/renderer/scripts/archive.web.js",
     "build": "electron-vite build",
@@ -75,7 +75,7 @@
     "@wasm-fmt/clang-format": "^21.1.6",
     "autoprefixer": "^10.4.22",
     "cmake-js": "^7.4.0",
-    "electron": "^38.7.1",
+    "electron": "^38.7.2",
     "electron-builder": "^26.0.12",
     "electron-conf": "^1.3.0",
     "electron-updater": "^6.6.2",

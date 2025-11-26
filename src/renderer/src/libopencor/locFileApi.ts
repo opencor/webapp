@@ -136,7 +136,7 @@ export class File {
   }
 
   document(): SedDocument {
-    return vue.markRaw(new SedDocument(this._path, this._wasmFile));
+    return new SedDocument(this._path, this._wasmFile);
   }
 
   uiJson(): IUiJson | undefined {

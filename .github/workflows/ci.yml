@@ -82,7 +82,7 @@ jobs:
           bun build:lib
       - name: Code formatting
         if: ${{ matrix.name == 'Code formatting' }}
-        run: bun format
+        run: bun format:check
       - name: Linting
         if: ${{ matrix.name == 'Linting' }}
         run: bun lint
