@@ -207,10 +207,6 @@ export class File {
         description: `The uniform time course simulation must have a positive value for 'numberOfSteps' (${String(numberOfSteps)}).`
       });
     }
-
-    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return;
-    }
   }
 
   type(): EFileType {
