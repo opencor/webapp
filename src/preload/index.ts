@@ -172,9 +172,11 @@ electron.contextBridge.exposeInMainWorld('locApi', {
     variableName: string,
     newValue: string
   ) => loc.sedDocumentModelAddChange(documentId, index, componentName, variableName, newValue),
-  sedDocumentModelRemoveAllChanges: (documentId: number, index: number) => loc.sedDocumentModelRemoveAllChanges(documentId, index),
+  sedDocumentModelRemoveAllChanges: (documentId: number, index: number) =>
+    loc.sedDocumentModelRemoveAllChanges(documentId, index),
   sedDocumentSimulationType: (documentId: number, index: number) => loc.sedDocumentSimulationType(documentId, index),
-  sedDocumentSimulationOneStepStep: (documentId: number, index: number) => loc.sedDocumentSimulationOneStepStep(documentId, index),
+  sedDocumentSimulationOneStepStep: (documentId: number, index: number) =>
+    loc.sedDocumentSimulationOneStepStep(documentId, index),
   sedDocumentSimulationUniformTimeCourseInitialTime: (documentId: number, index: number) =>
     loc.sedDocumentSimulationUniformTimeCourseInitialTime(documentId, index),
   sedDocumentSimulationUniformTimeCourseOutputStartTime: (documentId: number, index: number) =>
@@ -215,7 +217,8 @@ electron.contextBridge.exposeInMainWorld('locApi', {
     loc.sedInstanceTaskRateUnit(instanceId, index, rateIndex),
   sedInstanceTaskRate: (instanceId: number, index: number, rateIndex: number) =>
     loc.sedInstanceTaskRate(instanceId, index, rateIndex),
-  sedInstanceTaskConstantCount: (instanceId: number, index: number) => loc.sedInstanceTaskConstantCount(instanceId, index),
+  sedInstanceTaskConstantCount: (instanceId: number, index: number) =>
+    loc.sedInstanceTaskConstantCount(instanceId, index),
   sedInstanceTaskConstantName: (instanceId: number, index: number, constantIndex: number) =>
     loc.sedInstanceTaskConstantName(instanceId, index, constantIndex),
   sedInstanceTaskConstantUnit: (instanceId: number, index: number, constantIndex: number) =>
@@ -230,7 +233,8 @@ electron.contextBridge.exposeInMainWorld('locApi', {
     loc.sedInstanceTaskComputedConstantUnit(instanceId, index, computedConstantIndex),
   sedInstanceTaskComputedConstant: (instanceId: number, index: number, computedConstantIndex: number) =>
     loc.sedInstanceTaskComputedConstant(instanceId, index, computedConstantIndex),
-  sedInstanceTaskAlgebraicCount: (instanceId: number, index: number) => loc.sedInstanceTaskAlgebraicCount(instanceId, index),
+  sedInstanceTaskAlgebraicCount: (instanceId: number, index: number) =>
+    loc.sedInstanceTaskAlgebraicCount(instanceId, index),
   sedInstanceTaskAlgebraicName: (instanceId: number, index: number, algebraicIndex: number) =>
     loc.sedInstanceTaskAlgebraicName(instanceId, index, algebraicIndex),
   sedInstanceTaskAlgebraicUnit: (instanceId: number, index: number, algebraicIndex: number) =>

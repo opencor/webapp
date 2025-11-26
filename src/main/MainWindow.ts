@@ -196,7 +196,9 @@ export class MainWindow extends ApplicationWindow {
         // Note: for some reasons, recentFilePAths may, in some cases, end up having only one null entry, so just in
         //       case we filter out all null entries.
 
-        recentFilePaths = (electronConf.get('app.files.recent') as string[]).filter((filePath: string | null) => filePath !== null);
+        recentFilePaths = (electronConf.get('app.files.recent') as string[]).filter(
+          (filePath: string | null) => filePath !== null
+        );
 
         updateReopenMenu(recentFilePaths);
 

@@ -20,7 +20,6 @@ napi_value sedDocumentCreate(const Napi::CallbackInfo &pInfo)
 
 napi_value sedDocumentInstantiate(const Napi::CallbackInfo &pInfo)
 {
-
     static size_t instanceId {std::numeric_limits<std::size_t>::max()};
 
     auto id = ++instanceId;

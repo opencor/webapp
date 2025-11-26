@@ -145,7 +145,9 @@ export class SedDocument extends SedBase {
   }
 
   simulationCount(): number {
-    return cppVersion() ? _cppLocApi.sedDocumentSimulationCount(this._cppDocumentId) : this._wasmSedDocument.simulationCount;
+    return cppVersion()
+      ? _cppLocApi.sedDocumentSimulationCount(this._cppDocumentId)
+      : this._wasmSedDocument.simulationCount;
   }
 
   simulation(index: number): SedSimulation {
@@ -249,7 +251,13 @@ export class SedSimulation extends SedBaseIndex {
   protected _cppDocumentId: number;
   private _type: ESedSimulationType;
 
-  constructor(filePath: string, cppDocumentId: number, _wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
+  constructor(
+    filePath: string,
+    cppDocumentId: number,
+    _wasmSedDocument: IWasmSedDocument,
+    index: number,
+    type: ESedSimulationType
+  ) {
     super(filePath, index);
 
     this._cppDocumentId = cppDocumentId;
@@ -272,7 +280,13 @@ interface IWasmSedSimulationOneStep extends IWasmSedSimulation {
 export class SedSimulationOneStep extends SedSimulation {
   private _wasmSedSimulationOneStep: IWasmSedSimulationOneStep = {} as IWasmSedSimulationOneStep;
 
-  constructor(filePath: string, cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
+  constructor(
+    filePath: string,
+    cppDocumentId: number,
+    wasmSedDocument: IWasmSedDocument,
+    index: number,
+    type: ESedSimulationType
+  ) {
     super(filePath, cppDocumentId, wasmSedDocument, index, type);
 
     if (wasmVersion()) {
@@ -298,7 +312,13 @@ export class SedSimulationUniformTimeCourse extends SedSimulation {
   private _wasmSedSimulationUniformTimeCourse: IWasmSedSimulationUniformTimeCourse =
     {} as IWasmSedSimulationUniformTimeCourse;
 
-  constructor(filePath: string, cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
+  constructor(
+    filePath: string,
+    cppDocumentId: number,
+    wasmSedDocument: IWasmSedDocument,
+    index: number,
+    type: ESedSimulationType
+  ) {
     super(filePath, cppDocumentId, wasmSedDocument, index, type);
 
     if (wasmVersion()) {
