@@ -1,17 +1,17 @@
 <template>
   <Toolbar :id="toolbarId" class="p-1!">
-    <template #start v-if="!interactiveModeEnabled">
+    <template #start v-show="!interactiveModeEnabled">
       <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
       <Button class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
     </template>
     <template #center>
-      <div v-if="interactiveModeAvailable" class="flex items-center gap-2">
+      <div v-show="interactiveModeAvailable" class="flex items-center gap-2">
         <label for="mode-toggle" class="text-sm">Interactive</label>
         <ToggleSwitch inputId="mode-toggle" v-model="interactiveModeEnabled" />
       </div>
     </template>
   </Toolbar>
-  <div v-if="!interactiveModeEnabled"  :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
+  <div v-show="!interactiveModeEnabled"  :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
     <Splitter class="border-none! h-full m-0" layout="vertical">
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
@@ -57,36 +57,38 @@
       </SplitterPanel>
     </Splitter>
   </div>
-  <div v-else class="flex" :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
-    <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="heightMinusToolbar" :issues="interactiveUiJsonIssues" />
-    <div v-else class="flex grow">
-      <div class="ml-4 mr-4 mb-4">
-        <ScrollPanel class="h-full">
-          <Fieldset legend="Input parameters">
-            <InputWidget
-              v-for="(input, index) in (uiJson as any).input"
-              v-model="interactiveInputValues[index]!"
-              v-show="interactiveShowInput[index]"
-              :key="`input_${index}`"
-              :name="input.name"
-              :maximumValue="input.maximumValue"
-              :minimumValue="input.minimumValue"
-              :possibleValues="input.possibleValues"
-              :stepValue="input.stepValue"
-              :class="index !== 0 ? 'mt-6' : ''"
-              @change="updateInteractiveSimulation"
-            />
-          </Fieldset>
-        </ScrollPanel>
-      </div>
-      <div class="grow">
-        <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="interactiveInstanceIssues" />
-        <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
-          v-for="(_plot, index) in (uiJson as any).output.plots"
-          :key="`plot_${index}`"
-          :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
-          :plots="interactivePlots[index] || []"
-        />
+  <div v-if="interactiveModeAvailable">
+    <div v-show="interactiveModeEnabled" class="flex" :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
+      <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="heightMinusToolbar" :issues="interactiveUiJsonIssues" />
+      <div v-else class="flex grow">
+        <div class="ml-4 mr-4 mb-4">
+          <ScrollPanel class="h-full">
+            <Fieldset legend="Input parameters">
+              <InputWidget
+                v-for="(input, index) in (uiJson as any).input"
+                v-model="interactiveInputValues[index]!"
+                v-show="interactiveShowInput[index]"
+                :key="`input_${index}`"
+                :name="input.name"
+                :maximumValue="input.maximumValue"
+                :minimumValue="input.minimumValue"
+                :possibleValues="input.possibleValues"
+                :stepValue="input.stepValue"
+                :class="index !== 0 ? 'mt-6' : ''"
+                @change="updateInteractiveSimulation"
+              />
+            </Fieldset>
+          </ScrollPanel>
+        </div>
+        <div class="grow">
+          <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="interactiveInstanceIssues" />
+          <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
+            v-for="(_plot, index) in (uiJson as any).output.plots"
+            :key="`plot_${index}`"
+            :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
+            :plots="interactivePlots[index] || []"
+          />
+        </div>
       </div>
     </div>
   </div>
