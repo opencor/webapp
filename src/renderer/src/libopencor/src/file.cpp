@@ -7,12 +7,11 @@
 
 void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
 {
-    auto files = fileManager.files();
-    auto path = pInfo[0].ToString().Utf8Value();
+    auto filePath = pInfo[0].ToString().Utf8Value();
 
-    for (auto file : files) {
-        if (file->path() == path) {
-            managedFiles.erase(path);
+    for (auto file : fileManager.files()) {
+        if (file->path() == filePath) {
+            files.erase(filePath);
 
             fileManager.unmanage(file);
 
@@ -42,7 +41,7 @@ void fileCreate(const Napi::CallbackInfo &pInfo)
 
     // Keep track of the file so that it doesn't get garbage collected.
 
-    managedFiles[file->path()] = file;
+    files[file->path()] = file;
 }
 
 napi_value fileIssues(const Napi::CallbackInfo &pInfo)

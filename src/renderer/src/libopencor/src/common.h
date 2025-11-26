@@ -5,7 +5,7 @@
 #include <napi.h>
 
 extern libOpenCOR::FileManager fileManager;
-extern std::map<std::string, libOpenCOR::FilePtr> managedFiles;
+extern std::map<std::string, libOpenCOR::FilePtr> files;
 extern std::map<size_t, libOpenCOR::SedDocumentPtr> sedDocuments;
 extern std::map<size_t, libOpenCOR::SedInstancePtr> sedInstances;
 

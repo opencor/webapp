@@ -1,7 +1,7 @@
 #include "common.h"
 
 libOpenCOR::FileManager fileManager = libOpenCOR::FileManager::instance();
-std::map<std::string, libOpenCOR::FilePtr> managedFiles;
+std::map<std::string, libOpenCOR::FilePtr> files;
 std::map<size_t, libOpenCOR::SedDocumentPtr> sedDocuments;
 std::map<size_t, libOpenCOR::SedInstancePtr> sedInstances;
 
