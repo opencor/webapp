@@ -4,6 +4,7 @@ import {
   _cppLocApi,
   _wasmLocApi,
   cppVersion,
+  EIssueType,
   type IIssue,
   type IWasmFile,
   type IWasmIssues,
@@ -42,21 +43,96 @@ export interface IWasmSedDocument {
 
 export class SedDocument extends SedBase {
   private _wasmSedDocument: IWasmSedDocument = {} as IWasmSedDocument;
+  private _issues: IIssue[] = [];
 
   constructor(filePath: string, wasmFile: IWasmFile) {
     super(filePath);
+
+    // Create the SED-ML document.
 
     if (cppVersion()) {
       _cppLocApi.sedDocumentCreate(this._filePath);
     } else {
       this._wasmSedDocument = new _wasmLocApi.SedDocument(wasmFile);
     }
+
+    // Retrieve the issues.
+
+    this._issues = cppVersion()
+      ? _cppLocApi.sedDocumentIssues(this._filePath)
+      : wasmIssuesToIssues(this._wasmSedDocument.issues);
+
+    //---OPENCOR---
+    // We only support a limited subset of SED-ML for now, so we need to check a few more things. Might wnat to check
+    // https://github.com/opencor/opencor/blob/master/src/plugins/support/SEDMLSupport/src/sedmlfile.cpp#L579-L1492.
+
+    // Make sure that there is only one model.
+
+    if (this.modelCount() !== 1) {
+      this._issues.push({
+        type: EIssueType.WARNING,
+        description: 'Only SED-ML files with one model are currently supported.'
+      });
+
+      return;
+    }
+
+    // Make sure that the SED-ML file has only one simulation.
+
+    if (this.simulationCount() !== 1) {
+      this._issues.push({
+        type: EIssueType.WARNING,
+        description: 'Only SED-ML files with one simulation are currently supported.'
+      });
+
+      return;
+    }
+
+    // Make sure that the simulation is a uniform time course simulation.
+
+    const simulation = this.simulation(0) as SedSimulationUniformTimeCourse;
+
+    if (simulation.type() !== ESedSimulationType.UNIFORM_TIME_COURSE) {
+      this._issues.push({
+        type: EIssueType.WARNING,
+        description: 'Only uniform time course simulations are currently supported.'
+      });
+
+      return;
+    }
+
+    // Make sure that the initial time and output start time are the same, that the output start time and output end
+    // time are different, and that the number of steps is greater than zero.
+
+    const initialTime = simulation.initialTime();
+    const outputStartTime = simulation.outputStartTime();
+    const outputEndTime = simulation.outputEndTime();
+    const numberOfSteps = simulation.numberOfSteps();
+
+    if (initialTime !== outputStartTime) {
+      this._issues.push({
+        type: EIssueType.WARNING,
+        description: `Only uniform time course simulations with the same values for 'initialTime' (${String(initialTime)}) and 'outputStartTime' (${String(outputStartTime)}) are currently supported.`
+      });
+    }
+
+    if (outputStartTime === outputEndTime) {
+      this._issues.push({
+        type: EIssueType.ERROR,
+        description: `The uniform time course simulation must have different values for 'outputStartTime' (${String(outputStartTime)}) and 'outputEndTime' (${String(outputEndTime)}).`
+      });
+    }
+
+    if (numberOfSteps <= 0) {
+      this._issues.push({
+        type: EIssueType.ERROR,
+        description: `The uniform time course simulation must have a positive value for 'numberOfSteps' (${String(numberOfSteps)}).`
+      });
+    }
   }
 
   issues(): IIssue[] {
-    return cppVersion()
-      ? _cppLocApi.sedDocumentIssues(this._filePath)
-      : wasmIssuesToIssues(this._wasmSedDocument.issues);
+    return this._issues;
   }
 
   modelCount(): number {

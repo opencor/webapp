@@ -33,7 +33,7 @@
         :id="mainMenuId"
         v-if="electronApi === undefined && omex === undefined"
         :isActive="compIsActive"
-        :uiEnabled="compUiEnabled"
+        :interactiveEnabled="compInteractiveEnabled"
         :hasFiles="hasFiles"
         @about="onAboutMenu"
         @open="onOpenMenu"
@@ -59,7 +59,7 @@
       <ContentsComponent
         ref="contents"
         :isActive="compIsActive"
-        :uiEnabled="compUiEnabled"
+        :interactiveEnabled="compInteractiveEnabled"
         :simulationOnly="omex !== undefined"
         :width="width"
         :height="heightMinusMainMenu"
@@ -162,7 +162,7 @@ const compUiBlocked = vue.computed(() => {
   );
 });
 
-const compUiEnabled = vue.computed(() => {
+const compInteractiveEnabled = vue.computed(() => {
   return (
     !compUiBlocked.value &&
     !disconnectFromGitHubVisible.value &&

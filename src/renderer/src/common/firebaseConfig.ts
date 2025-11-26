@@ -1,9 +1,9 @@
 const importMetaEnv = (import.meta as unknown as { env: Record<string, string | undefined> }).env;
 const firebaseConfig = {
   apiKey: importMetaEnv.VITE_FIREBASE_API_KEY,
-  authDomain: "opencorapp.firebaseapp.com",
-  projectId: "opencorapp",
-  storageBucket: "opencorapp.appspot.com",
+  authDomain: 'opencorapp.firebaseapp.com',
+  projectId: 'opencorapp',
+  storageBucket: 'opencorapp.appspot.com',
   messagingSenderId: importMetaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: importMetaEnv.VITE_FIREBASE_APP_ID,
   measurementId: importMetaEnv.VITE_FIREBASE_MEASUREMENT_ID
