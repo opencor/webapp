@@ -131,10 +131,6 @@ export class File {
 
     this._document = vue.markRaw(new SedDocument(this._path, this._wasmFile));
     this._issues = this._document.issues();
-
-    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return;
-    }
   }
 
   type(): EFileType {
