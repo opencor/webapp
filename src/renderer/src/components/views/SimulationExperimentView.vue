@@ -58,15 +58,15 @@
     </Splitter>
   </div>
   <div v-else class="flex" :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
-    <IssuesView v-if="uiJsonIssues.length !== 0" class="grow" :width="width" :height="heightMinusToolbar" :issues="uiJsonIssues" />
+    <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="heightMinusToolbar" :issues="interactiveUiJsonIssues" />
     <div v-else class="flex grow">
       <div class="ml-4 mr-4 mb-4">
         <ScrollPanel class="h-full">
           <Fieldset legend="Input parameters">
             <InputWidget
               v-for="(input, index) in (uiJson as any).input"
-              v-model="uiInputValues[index]!"
-              v-show="uiShowInput[index]"
+              v-model="interactiveInputValues[index]!"
+              v-show="interactiveShowInput[index]"
               :key="`input_${index}`"
               :name="input.name"
               :maximumValue="input.maximumValue"
@@ -74,18 +74,18 @@
               :possibleValues="input.possibleValues"
               :stepValue="input.stepValue"
               :class="index !== 0 ? 'mt-6' : ''"
-              @change="updateUiAndSimulation"
+              @change="updateInteractiveSimulation"
             />
           </Fieldset>
         </ScrollPanel>
       </div>
       <div class="grow">
-        <IssuesView v-show="uiInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="uiInstanceIssues" />
-        <GraphPanelWidget v-show="uiInstanceIssues.length === 0"
+        <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="interactiveInstanceIssues" />
+        <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
           v-for="(_plot, index) in (uiJson as any).output.plots"
           :key="`plot_${index}`"
           :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
-          :plots="uiPlots[index] || []"
+          :plots="interactivePlots[index] || []"
         />
       </div>
     </div>
@@ -113,7 +113,7 @@ const props = defineProps<{
   isActive: boolean;
   isActiveFile: boolean;
   simulationOnly?: boolean;
-  uiEnabled: boolean;
+  interactiveEnabled: boolean;
   uiJson: locApi.IUiJson;
   width: number;
 }>();
@@ -194,58 +194,58 @@ function updatePlot() {
   ];
 }
 
-// UI mode.
+// Interactive mode.
 
-const uiMath = mathjs.create(mathjs.all ?? {}, {});
-const uiModel = props.file.document().model(0);
-const uiPlots = vue.ref<IGraphPanelPlot[][]>([]);
-const uiJsonIssues = vue.ref<locApi.IIssue[]>(interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []);
-const uiInstanceIssues = vue.ref<locApi.IIssue[]>([]);
-const uiInputValues = vue.ref<number[]>(interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []);
-const uiShowInput = vue.ref<string[]>(interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []);
-const uiIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
+const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
+const interactiveModel = props.file.document().model(0);
+const interactivePlots = vue.ref<IGraphPanelPlot[][]>([]);
+const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []);
+const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
+const interactiveInputValues = vue.ref<number[]>(interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []);
+const interactiveShowInput = vue.ref<string[]>(interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []);
+const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 
 if (interactiveModeAvailable.value) {
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-    uiIdToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name);
+    interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name);
   });
 }
 
 function evaluateValue(value: string): mathjs.MathType {
   let index = -1;
-  const parser = uiMath.parser();
+  const parser = interactiveMath.parser();
 
   props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
     if (input.id !== undefined && input.id !== '') {
-      parser.set(input.id, uiInputValues.value[++index]);
+      parser.set(input.id, interactiveInputValues.value[++index]);
     }
   });
 
   return parser.evaluate(value);
 }
 
-function updateUiAndSimulation() {
+function updateInteractiveSimulation() {
   // Make sure that there are no issues.
 
-  if (uiJsonIssues.value.length > 0) {
+  if (interactiveUiJsonIssues.value.length > 0) {
     return;
   }
 
   // Show/hide the input widgets.
 
   props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
-    uiShowInput.value[index] = evaluateValue(input.visible ?? 'true');
+    interactiveShowInput.value[index] = evaluateValue(input.visible ?? 'true');
   });
 
   // Update the SED-ML document.
 
-  uiModel.removeAllChanges();
+  interactiveModel.removeAllChanges();
 
   props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/');
 
     // @ts-expect-error (we trust that we have a valid component and variable name)
-    uiModel.addChange(componentVariableNames[0], componentVariableNames[1], String(evaluateValue(parameter.value)));
+    interactiveModel.addChange(componentVariableNames[0], componentVariableNames[1], String(evaluateValue(parameter.value)));
   });
 
   // Run the instance and update the plots.
@@ -253,21 +253,21 @@ function updateUiAndSimulation() {
   instance.run();
 
   if (instance.hasIssues()) {
-    uiInstanceIssues.value = instance.issues();
+    interactiveInstanceIssues.value = instance.issues();
 
     return;
   } else {
-    uiInstanceIssues.value = [];
+    interactiveInstanceIssues.value = [];
   }
 
-  const parser = uiMath.parser();
+  const parser = interactiveMath.parser();
 
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     // @ts-expect-error (we trust that we have some valid information)
-    parser.set(data.id, locCommon.simulationData(instanceTask, uiIdToInfo[data.id]));
+    parser.set(data.id, locCommon.simulationData(instanceTask, interactiveIdToInfo[data.id]));
   });
 
-  uiPlots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
+  interactivePlots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
     return [
       {
         x: { data: parser.evaluate(plot.xValue) },
@@ -277,13 +277,13 @@ function updateUiAndSimulation() {
   });
 }
 
-// "Initialise" our standard and/or UI mode.
+// "Initialise" our standard and/or interactive modes.
 
 vue.onMounted(() => {
   updatePlot();
 
   if (interactiveModeAvailable.value) {
-    updateUiAndSimulation();
+    updateInteractiveSimulation();
   }
 });
 
@@ -343,7 +343,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled) {
+    if (!props.isActive || !props.interactiveEnabled) {
       return;
     }
 

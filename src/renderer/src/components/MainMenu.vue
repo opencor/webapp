@@ -33,7 +33,7 @@ import * as common from '../common/common';
 
 const props = defineProps<{
   isActive: boolean;
-  uiEnabled: boolean;
+  interactiveEnabled: boolean;
   hasFiles: boolean;
 }>();
 
@@ -191,7 +191,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled) {
+    if (!props.isActive || !props.interactiveEnabled) {
       return;
     }
 
