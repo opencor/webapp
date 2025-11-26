@@ -12,7 +12,7 @@ void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
 
     for (auto file : files) {
         if (file->path() == path) {
-            untrackFileData(file);
+            managedFiles.erase(path);
 
             fileManager.unmanage(file);
 
@@ -25,7 +25,7 @@ void fileManagerUnmanage(const Napi::CallbackInfo &pInfo)
 
 napi_value fileContents(const Napi::CallbackInfo &pInfo)
 {
-    auto file = valueToFile(pInfo[0]);
+    auto file = toFile(pInfo[0]);
     auto res = file->contents();
 
     return Napi::Buffer<unsigned char>::Copy(pInfo.Env(), res.data(), res.size());
@@ -42,24 +42,24 @@ void fileCreate(const Napi::CallbackInfo &pInfo)
 
     // Keep track of the file so that it doesn't get garbage collected.
 
-    fileData[file] = {};
+    managedFiles[file->path()] = file;
 }
 
 napi_value fileIssues(const Napi::CallbackInfo &pInfo)
 {
-    return issues(pInfo, valueToFile(pInfo[0])->issues());
+    return issues(pInfo, toFile(pInfo[0])->issues());
 }
 
 napi_value fileType(const Napi::CallbackInfo &pInfo)
 {
-    auto file = valueToFile(pInfo[0]);
+    auto file = toFile(pInfo[0]);
 
     return Napi::Number::New(pInfo.Env(), static_cast<int>(file->type()));
 }
 
 napi_value fileUiJson(const Napi::CallbackInfo &pInfo)
 {
-    auto file = valueToFile(pInfo[0]);
+    auto file = toFile(pInfo[0]);
     auto uiJson = file->childFile("simulation.json");
 
     if (uiJson == nullptr) {
