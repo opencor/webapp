@@ -129,7 +129,7 @@ const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
 // Standard mode.
 
 const standardUniformTimeCourse = props.file.document().simulation(0) as locApi.SedSimulationUniformTimeCourse;
-const standardInstance = props.file.instantiate();
+const standardInstance = props.file.document().instantiate();
 const standardInstanceTask = standardInstance.task(0);
 const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask.voiName());
@@ -199,7 +199,7 @@ function updatePlot() {
 
 // Interactive mode.
 
-const interactiveInstance = props.file.instantiate();
+const interactiveInstance = props.file.document().instantiate();
 const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = props.file.document().model(0);

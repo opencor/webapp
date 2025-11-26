@@ -153,10 +153,6 @@ export class File {
     return this._document;
   }
 
-  instantiate(): SedInstance {
-    return this._document.instantiate();
-  }
-
   uiJson(): IUiJson | undefined {
     let uiJsonContents: Uint8Array | undefined;
 
