@@ -25,10 +25,10 @@
                   -->
               <Fieldset legend="X-axis">
                 <Select
-                  v-model="legacyXParameter"
+                  v-model="standardXParameter"
                   filter
                   filterMode="lenient"
-                  :options="legacyParameters"
+                  :options="standardParameters"
                   size="small"
                   class="w-full"
                   @change="updatePlot()"
@@ -36,10 +36,10 @@
               </Fieldset>
               <Fieldset legend="Y-axis">
                 <Select
-                  v-model="legacyYParameter"
+                  v-model="standardYParameter"
                   filter
                   filterMode="lenient"
-                  :options="legacyParameters"
+                  :options="standardParameters"
                   size="small"
                   class="w-full"
                   @change="updatePlot()"
@@ -48,12 +48,12 @@
             </ScrollPanel>
           </SplitterPanel>
           <SplitterPanel :size="75">
-            <GraphPanelWidget :plots="legacyPlots" />
+            <GraphPanelWidget :plots="standardPlots" />
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
       <SplitterPanel v-if="!simulationOnly" :size="11">
-        <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="legacyConsoleContents" />
+        <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="standardConsoleContents" />
       </SplitterPanel>
     </Splitter>
   </div>
@@ -126,16 +126,16 @@ const heightMinusToolbar = vue.ref<number>(0);
 const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
 const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
 
-// Legacy mode.
+// Standard mode.
 
-const legacyParameters = vue.ref<string[]>([]);
-const legacyXParameter = vue.ref(instanceTask.voiName());
-const legacyYParameter = vue.ref(instanceTask.stateName(0));
-const legacyPlots = vue.ref<IGraphPanelPlot[]>([]);
-const legacyConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
+const standardParameters = vue.ref<string[]>([]);
+const standardXParameter = vue.ref(instanceTask.voiName());
+const standardYParameter = vue.ref(instanceTask.stateName(0));
+const standardPlots = vue.ref<IGraphPanelPlot[]>([]);
+const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
 function addParameter(param: string): void {
-  legacyParameters.value.push(param);
+  standardParameters.value.push(param);
 }
 
 addParameter(instanceTask.voiName());
@@ -165,7 +165,7 @@ function onRun(): void {
 
   const simulationTime = instance.run();
 
-  legacyConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
+  standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
 
   void vue.nextTick().then(() => {
     const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
@@ -178,11 +178,11 @@ function onRun(): void {
   updatePlot();
 }
 
-const xInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, legacyXParameter.value));
-const yInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, legacyYParameter.value));
+const xInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, standardXParameter.value));
+const yInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, standardYParameter.value));
 
 function updatePlot() {
-  legacyPlots.value = [
+  standardPlots.value = [
     {
       x: {
         data: locCommon.simulationData(instanceTask, xInfo.value)
