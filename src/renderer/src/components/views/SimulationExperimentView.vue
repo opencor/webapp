@@ -22,7 +22,7 @@
                   <GraphsPropertyEditor />
                   <ParametersPropertyEditor />
                   -->
-              <Fieldset legend="X-axis">
+              <Fieldset legend="X Axis">
                 <Select
                   v-model="standardXParameter"
                   filter
@@ -33,7 +33,7 @@
                   @change="updatePlot()"
                 />
               </Fieldset>
-              <Fieldset legend="Y-axis">
+              <Fieldset legend="Y Axis">
                 <Select
                   v-model="standardYParameter"
                   filter
