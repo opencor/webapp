@@ -25,6 +25,7 @@
               <Fieldset legend="X Axis">
                 <Select
                   v-model="standardXParameter"
+                  editable
                   filter
                   filterMode="lenient"
                   :options="standardParameters"
@@ -36,6 +37,7 @@
               <Fieldset legend="Y Axis">
                 <Select
                   v-model="standardYParameter"
+                  editable
                   filter
                   filterMode="lenient"
                   :options="standardParameters"
