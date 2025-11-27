@@ -14,20 +14,10 @@ import {
 
 // SED-ML API.
 
-class SedBase {
-  protected _filePath: string;
-
-  constructor(filePath: string) {
-    this._filePath = filePath;
-  }
-}
-
-class SedBaseIndex extends SedBase {
+class SedIndex {
   protected _index: number;
 
-  constructor(filePath: string, index: number) {
-    super(filePath);
-
+  constructor(index: number) {
     this._index = index;
   }
 }
@@ -41,18 +31,16 @@ export interface IWasmSedDocument {
   instantiate(): IWasmSedInstance;
 }
 
-export class SedDocument extends SedBase {
+export class SedDocument {
   private _cppDocumentId: number = -1;
   private _wasmSedDocument: IWasmSedDocument = {} as IWasmSedDocument;
   private _issues: IIssue[] = [];
 
   constructor(filePath: string, wasmFile: IWasmFile) {
-    super(filePath);
-
     // Create the SED-ML document.
 
     if (cppVersion()) {
-      this._cppDocumentId = _cppLocApi.sedDocumentCreate(this._filePath);
+      this._cppDocumentId = _cppLocApi.sedDocumentCreate(filePath);
     } else {
       this._wasmSedDocument = new _wasmLocApi.SedDocument(wasmFile);
     }
@@ -141,7 +129,7 @@ export class SedDocument extends SedBase {
   }
 
   model(index: number): SedModel {
-    return new SedModel(this._filePath, this._cppDocumentId, this._wasmSedDocument, index);
+    return new SedModel(this._cppDocumentId, this._wasmSedDocument, index);
   }
 
   simulationCount(): number {
@@ -175,22 +163,22 @@ export class SedDocument extends SedBase {
     }
 
     if (type === ESedSimulationType.ANALYSIS) {
-      return new SedSimulationAnalysis(this._filePath, this._cppDocumentId, this._wasmSedDocument, index, type);
+      return new SedSimulationAnalysis(this._cppDocumentId, this._wasmSedDocument, index, type);
     }
 
     if (type === ESedSimulationType.STEADY_STATE) {
-      return new SedSimulationSteadyState(this._filePath, this._cppDocumentId, this._wasmSedDocument, index, type);
+      return new SedSimulationSteadyState(this._cppDocumentId, this._wasmSedDocument, index, type);
     }
 
     if (type === ESedSimulationType.ONE_STEP) {
-      return new SedSimulationOneStep(this._filePath, this._cppDocumentId, this._wasmSedDocument, index, type);
+      return new SedSimulationOneStep(this._cppDocumentId, this._wasmSedDocument, index, type);
     }
 
-    return new SedSimulationUniformTimeCourse(this._filePath, this._cppDocumentId, this._wasmSedDocument, index, type);
+    return new SedSimulationUniformTimeCourse(this._cppDocumentId, this._wasmSedDocument, index, type);
   }
 
   instantiate(): SedInstance {
-    return new SedInstance(this._filePath, this._cppDocumentId, this._wasmSedDocument);
+    return new SedInstance(this._cppDocumentId, this._wasmSedDocument);
   }
 }
 
@@ -205,12 +193,12 @@ interface IWasmSedModel {
   removeAllChanges(): void;
 }
 
-export class SedModel extends SedBaseIndex {
+export class SedModel extends SedIndex {
   private _cppDocumentId: number;
   private _wasmSedModel: IWasmSedModel = {} as IWasmSedModel;
 
-  constructor(filePath: string, cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number) {
-    super(filePath, index);
+  constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number) {
+    super(index);
 
     this._cppDocumentId = cppDocumentId;
 
@@ -247,18 +235,12 @@ interface IWasmSedSimulation {
   type: ESedSimulationType;
 }
 
-export class SedSimulation extends SedBaseIndex {
+export class SedSimulation extends SedIndex {
   protected _cppDocumentId: number;
   private _type: ESedSimulationType;
 
-  constructor(
-    filePath: string,
-    cppDocumentId: number,
-    _wasmSedDocument: IWasmSedDocument,
-    index: number,
-    type: ESedSimulationType
-  ) {
-    super(filePath, index);
+  constructor(cppDocumentId: number, _wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
+    super(index);
 
     this._cppDocumentId = cppDocumentId;
     this._type = type;
@@ -280,14 +262,8 @@ interface IWasmSedSimulationOneStep extends IWasmSedSimulation {
 export class SedSimulationOneStep extends SedSimulation {
   private _wasmSedSimulationOneStep: IWasmSedSimulationOneStep = {} as IWasmSedSimulationOneStep;
 
-  constructor(
-    filePath: string,
-    cppDocumentId: number,
-    wasmSedDocument: IWasmSedDocument,
-    index: number,
-    type: ESedSimulationType
-  ) {
-    super(filePath, cppDocumentId, wasmSedDocument, index, type);
+  constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
+    super(cppDocumentId, wasmSedDocument, index, type);
 
     if (wasmVersion()) {
       this._wasmSedSimulationOneStep = wasmSedDocument.simulation(index) as IWasmSedSimulationOneStep;
@@ -312,14 +288,8 @@ export class SedSimulationUniformTimeCourse extends SedSimulation {
   private _wasmSedSimulationUniformTimeCourse: IWasmSedSimulationUniformTimeCourse =
     {} as IWasmSedSimulationUniformTimeCourse;
 
-  constructor(
-    filePath: string,
-    cppDocumentId: number,
-    wasmSedDocument: IWasmSedDocument,
-    index: number,
-    type: ESedSimulationType
-  ) {
-    super(filePath, cppDocumentId, wasmSedDocument, index, type);
+  constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
+    super(cppDocumentId, wasmSedDocument, index, type);
 
     if (wasmVersion()) {
       this._wasmSedSimulationUniformTimeCourse = wasmSedDocument.simulation(
@@ -384,13 +354,11 @@ interface IWasmSedInstance {
   run(): number;
 }
 
-export class SedInstance extends SedBase {
+export class SedInstance {
   private _cppInstanceId: number = -1;
   private _wasmSedInstance: IWasmSedInstance = {} as IWasmSedInstance;
 
-  constructor(filePath: string, cppDocumentId: number, wasmSedDocument: IWasmSedDocument) {
-    super(filePath);
-
+  constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument) {
     if (cppVersion()) {
       this._cppInstanceId = _cppLocApi.sedDocumentInstantiate(cppDocumentId);
     } else {
@@ -409,7 +377,7 @@ export class SedInstance extends SedBase {
   }
 
   task(index: number): SedInstanceTask {
-    return new SedInstanceTask(this._filePath, this._cppInstanceId, index, this._wasmSedInstance);
+    return new SedInstanceTask(this._cppInstanceId, index, this._wasmSedInstance);
   }
 
   run(): number {
@@ -443,12 +411,12 @@ interface IWasmSedInstanceTask {
   algebraicAsArray(index: number): number[];
 }
 
-export class SedInstanceTask extends SedBaseIndex {
+export class SedInstanceTask extends SedIndex {
   private _cppInstanceId: number;
   private _wasmSedInstanceTask: IWasmSedInstanceTask = {} as IWasmSedInstanceTask;
 
-  constructor(filePath: string, cppInstanceId: number, index: number, wasmSedInstance: IWasmSedInstance) {
-    super(filePath, index);
+  constructor(cppInstanceId: number, index: number, wasmSedInstance: IWasmSedInstance) {
+    super(index);
 
     this._cppInstanceId = cppInstanceId;
 
