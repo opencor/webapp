@@ -1,5 +1,5 @@
 <template>
-  <Fieldset :class="`${leftMargin ? 'ml-4!' : ''} ${rightMargin ? 'mr-4!' : ''}`" legend="Issues" :style="`{ width: ${width}px; height: ${fieldsetHeight}; }`">
+  <Fieldset :class="`${leftMargin ? 'ml-4!' : ''} ${rightMargin ? 'mr-4!' : ''}`" legend="Issues" :style="`{ width: ${fieldsetWidth}; height: ${fieldsetHeight}; }`">
     <ScrollPanel :style="`{ width: ${width}px; height: ${scrollPanelHeight}; }`">
       <div v-for="(issue, index) in issues" :key="`issue_${index}`" :class="`select-text ${index > 0 ? 'mt-4!' : ''}`">
         <Message v-if="issue.type === locApi.EIssueType.ERROR" severity="error" icon="pi pi-times-circle">
@@ -21,26 +21,30 @@ import * as locApi from '../../libopencor/locApi';
 
 const props = withDefaults(
   defineProps<{
-    leftMargin?: boolean;
-    height: number;
+    height?: number;
     issues: locApi.IIssue[];
+    leftMargin?: boolean;
     rightMargin?: boolean;
-    width: number;
+    width?: number;
   }>(),
   {
+    height: 0,
     leftMargin: true,
-    rightMargin: true
+    rightMargin: true,
+    width: 0
   }
 );
 
 // Resize our fieldset and scroll panel as needed.
 
-const fieldsetHeight = vue.ref<string>('0px');
-const scrollPanelHeight = vue.ref<string>('0px');
+const fieldsetWidth = vue.ref<string>('');
+const fieldsetHeight = vue.ref<string>('');
+const scrollPanelHeight = vue.ref<string>('');
 
 function resizeElements() {
-  fieldsetHeight.value = `calc(${String(props.height)}px - 1rem)`;
-  scrollPanelHeight.value = `calc(${String(props.height)}px - 4.75rem)`;
+  fieldsetWidth.value = (props.width === 0) ? '100%' : `${String(props.width)}px`;
+  fieldsetHeight.value = (props.height === 0) ? '100%' : `calc(${String(props.height)}px - 1rem)`;
+  scrollPanelHeight.value = (props.height === 0) ? '100%' : `calc(${String(props.height)}px - 4.75rem)`;
 }
 
 vue.onMounted(() => {
