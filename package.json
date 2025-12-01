@@ -43,8 +43,6 @@
     "version:new": "bun src/renderer/scripts/version.js"
   },
   "peerDependencies": {
-    "mathjs": "^14.9.1",
-    "plotly.js-gl2d-dist-min": "^3.2.0",
     "vue": "3.4.21"
   },
   "dependencies": {
