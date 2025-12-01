@@ -7,17 +7,7 @@
     }
   },
   "formatter": {
-    "includes": [
-      "**/*.css",
-      "**/*.html",
-      "**/*.js",
-      "**/*.json",
-      "**/*.ts",
-      "**/*.vue",
-      "!**/dist/**",
-      "!**/node_modules/**",
-      "!**/out/**"
-    ],
+    "includes": ["**"],
     "indentStyle": "space",
     "lineWidth": 120
   },
@@ -41,7 +31,7 @@
     }
   },
   "linter": {
-    "includes": ["**/*.css", "**/*.js", "**/*.ts", "**/*.vue", "!**/components.d.ts"]
+    "includes": ["**", "!**/components.d.ts"]
   },
   "overrides": [
     {
@@ -69,5 +59,10 @@
         }
       }
     }
-  ]
+  ],
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  }
 }
