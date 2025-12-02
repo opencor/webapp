@@ -1,105 +1,9 @@
 name: CD
 
 on:
-  release:
-    types: [created]
   workflow_dispatch:
 
-permissions:
-  contents: write
-  id-token: write
-
 jobs:
-  releases:
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Windows (Intel)
-            os: windows-2022
-          - name: Windows (ARM)
-            os: windows-11-arm
-          - name: Linux (Intel)
-            os: ubuntu-22.04
-          - name: Linux (ARM)
-            os: ubuntu-22.04-arm
-          - name: macOS (Intel)
-            os: macos-15-intel
-          - name: macOS (ARM)
-            os: macos-15
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      WINDOWS_CSC_LINK: EVCertificate.pfx
-      WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.EV_CERTIFICATE_PASSWORD }}
-      EV_CERTIFICATE_BASE64: ${{ secrets.EV_CERTIFICATE_BASE64 }}
-      MACOS_CSC_LINK: DeveloperIDApplicationCertificate.p12
-      MACOS_CSC_KEY_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD }}
-      DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 }}
-    steps:
-      - name: Set the timezone to New Zealand
-        uses: szenius/set-timezone@v2.0
-        with:
-          timezoneWindows: 'New Zealand Standard Time'
-          timezoneLinux: 'Pacific/Auckland'
-          timezoneMacos: 'Pacific/Auckland'
-      - name: Check out OpenCOR
-        uses: actions/checkout@v4
-      - name: Retrieve the EV certificate (Windows only)
-        if: ${{ runner.os == 'Windows' }}
-        shell: bash
-        run: |
-          echo "CSC_LINK=$(echo $WINDOWS_CSC_LINK)" >> $GITHUB_ENV
-          echo "CSC_KEY_PASSWORD=$(echo $WINDOWS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
-          echo -n $EV_CERTIFICATE_BASE64 | base64 -d > $WINDOWS_CSC_LINK
-      - name: Retrieve the Developer ID Application certificates (macOS only)
-        if: ${{ runner.os == 'macOS' }}
-        run: |
-          echo "CSC_LINK=$(echo $MACOS_CSC_LINK)" >> $GITHUB_ENV
-          echo "CSC_KEY_PASSWORD=$(echo $MACOS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
-          echo -n $DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 | base64 -d > $MACOS_CSC_LINK
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
-      - name: Install bun
-        if: ${{ matrix.name != 'Windows (ARM)' }}
-        uses: oven-sh/setup-bun@v2
-      - name: Install bun (Windows ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: |
-          curl -L https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64-baseline.zip -o bun.zip
-          unzip -j bun.zip -d $env:USERPROFILE\.bun
-          del bun.zip
-          echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
-      - name: Make sure that we can sign OpenCOR (Windows ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: |
-          curl -L https://npmmirror.com/mirrors/electron-builder-binaries/winCodeSign-2.6.0/winCodeSign-2.6.0.7z -o winCodeSign.7z
-          7z x winCodeSign.7z -oC:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0
-          cd C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0\windows-10
-          mv x64 arm64
-      - name: Install libopenjp2-tools (Linux ARM only)
-        if: ${{ matrix.name == 'Linux (ARM)' }}
-        run: |
-          sudo apt update
-          sudo apt install libopenjp2-tools
-      - name: OpenCOR dependencies
-        if: ${{ matrix.name != 'Windows (ARM)' }}
-        run: bun install
-      - name: OpenCOR dependencies (Windows ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: bun install --cpu=arm64
-      - name: Build libOpenCOR
-        run: bun libopencor
-      - name: Build OpenCOR
-        run: bun run build
-      - name: Release OpenCOR
-        run: bun release
   web_app:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
@@ -120,8 +24,13 @@ jobs:
       - name: OpenCOR dependencies
         run: bun install
       - name: Build OpenCOR's Web app
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
         run: bun build:web
-      - name: Deploy to https://opencor.ws/app/
+      - name: Deploy to https://opencor.ws/mvp/
         uses: milanmk/actions-file-deployer@master
         with:
           remote-protocol: sftp
@@ -129,49 +38,5 @@ jobs:
           remote-user: ${{ secrets.REMOTE_USER }}
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
           local-path: ./src/renderer/dist
-          remote-path: /home/www/opencor.ws/app
+          remote-path: /home/www/opencor.ws/mvp
           sync: full
-      - name: Archive OpenCOR's Web app
-        run: bun archive:web
-      - name: Release OpenCOR's Web app
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/OpenCOR-*-WebApp.tar.gz
-  npm:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Set the timezone to New Zealand
-        uses: szenius/set-timezone@v2.0
-        with:
-          timezoneLinux: 'Pacific/Auckland'
-      - name: Check out OpenCOR
-        uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
-          registry-url: 'https://registry.npmjs.org'
-      - name: Update npm
-        # Install the latest version of npm since we need npm 11.5.1 or later to publish to npm using OIDC (see
-        # https://docs.npmjs.com/trusted-publishers).
-        run: npm install -g npm@latest
-      - name: Install bun
-        run: npm install -g bun
-      - name: OpenCOR dependencies
-        run: |
-          cd src/renderer
-          bun install
-      - name: Build OpenCOR as a component
-        run: |
-          cd src/renderer
-          bun build:lib
-      - name: Publish OpenCOR
-        # bun cannot currently be used to publish to npm using OIDC (see https://github.com/oven-sh/bun/issues/22423 and
-        # https://github.com/oven-sh/bun/issues/15601), so we use npm instead. To publish using OIDC implies automatic
-        # provenance generation, so no need to specify --provenance (see https://docs.npmjs.com/trusted-publishers).
-        # Provenance requires "repository.url" in package.json to match the repository from which we are publishing. In
-        # our case, it means that we can only publish to npm from the "opencor/webapp" repository. (Provenance can be
-        # disabled, but we prefer to be open.)
-        run: |
-          cd src/renderer
-          npm publish --access public --no-git-checks

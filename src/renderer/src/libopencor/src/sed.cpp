@@ -5,60 +5,70 @@
 
 // SedDocument API.
 
-void sedDocumentCreate(const Napi::CallbackInfo &pInfo)
+napi_value sedDocumentCreate(const Napi::CallbackInfo &pInfo)
 {
-    auto file = valueToFile(pInfo[0]);
+    static size_t documentId {std::numeric_limits<std::size_t>::max()};
+
+    auto id = ++documentId;
+    auto file = toFile(pInfo[0]);
     auto sedDocument = libOpenCOR::SedDocument::create(file);
 
-    fileData[file].sedDocument = sedDocument;
+    sedDocuments[id] = sedDocument;
+
+    return Napi::Number::New(pInfo.Env(), static_cast<double>(id));
 }
 
-void sedDocumentInstantiate(const Napi::CallbackInfo &pInfo)
+napi_value sedDocumentInstantiate(const Napi::CallbackInfo &pInfo)
 {
-    auto file = valueToFile(pInfo[0]);
-    auto sedDocument = valueToSedDocument(pInfo[0]);
+    static size_t instanceId {std::numeric_limits<std::size_t>::max()};
 
-    fileData[file].sedInstance = sedDocument->instantiate();
+    auto id = ++instanceId;
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto sedInstance = sedDocument->instantiate();
+
+    sedInstances[id] = sedInstance;
+
+    return Napi::Number::New(pInfo.Env(), static_cast<double>(id));
 }
 
 napi_value sedDocumentIssues(const Napi::CallbackInfo &pInfo)
 {
-    return issues(pInfo, valueToSedDocument(pInfo[0])->issues());
+    return issues(pInfo, toSedDocument(toSizeT(pInfo[0]))->issues());
 }
 
 napi_value sedDocumentModelCount(const Napi::CallbackInfo &pInfo)
 {
-    return Napi::Number::New(pInfo.Env(), valueToSedDocument(pInfo[0])->modelCount());
+    return Napi::Number::New(pInfo.Env(), toSedDocument(toSizeT(pInfo[0]))->modelCount());
 }
 
 void sedDocumentModelAddChange(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto model = sedDocument->model(valueToInt32(pInfo[1]));
-    auto changeAttribute = libOpenCOR::SedChangeAttribute::create(valueToString(pInfo[2]),
-                                                                  valueToString(pInfo[3]),
-                                                                  valueToString(pInfo[4]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto model = sedDocument->model(toInt32(pInfo[1]));
+    auto changeAttribute = libOpenCOR::SedChangeAttribute::create(toString(pInfo[2]),
+                                                                  toString(pInfo[3]),
+                                                                  toString(pInfo[4]));
 
     model->addChange(changeAttribute);
 }
 
 void sedDocumentModelRemoveAllChanges(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto model = sedDocument->model(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto model = sedDocument->model(toInt32(pInfo[1]));
 
     model->removeAllChanges();
 }
 
 napi_value sedDocumentSimulationCount(const Napi::CallbackInfo &pInfo)
 {
-    return Napi::Number::New(pInfo.Env(), valueToSedDocument(pInfo[0])->simulationCount());
+    return Napi::Number::New(pInfo.Env(), toSedDocument(toSizeT(pInfo[0]))->simulationCount());
 }
 
 napi_value sedDocumentSimulationType(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
 
     if (std::dynamic_pointer_cast<libOpenCOR::SedAnalysis>(simulation) != nullptr) {
         return Napi::Number::New(pInfo.Env(), 0);
@@ -77,8 +87,8 @@ napi_value sedDocumentSimulationType(const Napi::CallbackInfo &pInfo)
 
 napi_value sedDocumentSimulationOneStepStep(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto oneStep = std::dynamic_pointer_cast<libOpenCOR::SedOneStep>(simulation);
 
     return Napi::Number::New(pInfo.Env(), oneStep->step());
@@ -86,8 +96,8 @@ napi_value sedDocumentSimulationOneStepStep(const Napi::CallbackInfo &pInfo)
 
 napi_value sedDocumentSimulationUniformTimeCourseInitialTime(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->initialTime());
@@ -95,8 +105,8 @@ napi_value sedDocumentSimulationUniformTimeCourseInitialTime(const Napi::Callbac
 
 napi_value sedDocumentSimulationUniformTimeCourseOutputStartTime(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->outputStartTime());
@@ -104,17 +114,17 @@ napi_value sedDocumentSimulationUniformTimeCourseOutputStartTime(const Napi::Cal
 
 void sedDocumentSimulationUniformTimeCourseSetOutputStartTime(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
-    uniformTimeCourse->setOutputStartTime(valueToDouble(pInfo[2]));
+    uniformTimeCourse->setOutputStartTime(toDouble(pInfo[2]));
 }
 
 napi_value sedDocumentSimulationUniformTimeCourseOutputEndTime(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->outputEndTime());
@@ -122,17 +132,17 @@ napi_value sedDocumentSimulationUniformTimeCourseOutputEndTime(const Napi::Callb
 
 void sedDocumentSimulationUniformTimeCourseSetOutputEndTime(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
-    uniformTimeCourse->setOutputEndTime(valueToDouble(pInfo[2]));
+    uniformTimeCourse->setOutputEndTime(toDouble(pInfo[2]));
 }
 
 napi_value sedDocumentSimulationUniformTimeCourseNumberOfSteps(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->numberOfSteps());
@@ -140,32 +150,32 @@ napi_value sedDocumentSimulationUniformTimeCourseNumberOfSteps(const Napi::Callb
 
 void sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(const Napi::CallbackInfo &pInfo)
 {
-    auto sedDocument = valueToSedDocument(pInfo[0]);
-    auto simulation = sedDocument->simulation(valueToInt32(pInfo[1]));
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
-    uniformTimeCourse->setNumberOfSteps(valueToInt32(pInfo[2]));
+    uniformTimeCourse->setNumberOfSteps(toInt32(pInfo[2]));
 }
 
 // SedInstance API.
 
 napi_value sedInstanceHasIssues(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
 
     return Napi::Boolean::New(pInfo.Env(), sedInstance->hasIssues());
 }
 
 napi_value sedInstanceIssues(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
 
     return issues(pInfo, sedInstance->issues());
 }
 
 napi_value sedInstanceRun(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
 
     return Napi::Number::New(pInfo.Env(), sedInstance->run());
 }
@@ -174,184 +184,184 @@ napi_value sedInstanceRun(const Napi::CallbackInfo &pInfo)
 
 napi_value sedInstanceTaskVoiName(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
     return Napi::String::New(pInfo.Env(), task->voiName());
 }
 
 napi_value sedInstanceTaskVoiUnit(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
     return Napi::String::New(pInfo.Env(), task->voiUnit());
 }
 
 napi_value sedInstanceTaskVoi(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
     return doublesToNapiArray(pInfo.Env(), task->voi());
 }
 
 napi_value sedInstanceTaskStateCount(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
     return Napi::Number::New(pInfo.Env(), task->stateCount());
 }
 
 napi_value sedInstanceTaskStateName(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->stateName(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->stateName(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskStateUnit(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->stateUnit(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->stateUnit(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskState(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->state(valueToInt32(pInfo[2])));
+    return doublesToNapiArray(pInfo.Env(), task->state(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskRateCount(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
     return Napi::Number::New(pInfo.Env(), task->rateCount());
 }
 
 napi_value sedInstanceTaskRateName(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->rateName(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->rateName(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskRateUnit(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->rateUnit(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->rateUnit(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskRate(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->rate(valueToInt32(pInfo[2])));
+    return doublesToNapiArray(pInfo.Env(), task->rate(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskConstantCount(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
     return Napi::Number::New(pInfo.Env(), task->constantCount());
 }
 
 napi_value sedInstanceTaskConstantName(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->constantName(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->constantName(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskConstantUnit(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->constantUnit(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->constantUnit(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskConstant(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->constant(valueToInt32(pInfo[2])));
+    return doublesToNapiArray(pInfo.Env(), task->constant(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskComputedConstantCount(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
     return Napi::Number::New(pInfo.Env(), task->computedConstantCount());
 }
 
 napi_value sedInstanceTaskComputedConstantName(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->computedConstantName(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->computedConstantName(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskComputedConstantUnit(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->computedConstantUnit(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->computedConstantUnit(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskComputedConstant(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->computedConstant(valueToInt32(pInfo[2])));
+    return doublesToNapiArray(pInfo.Env(), task->computedConstant(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskAlgebraicCount(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
     return Napi::Number::New(pInfo.Env(), task->algebraicCount());
 }
 
 napi_value sedInstanceTaskAlgebraicName(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->algebraicName(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->algebraicName(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskAlgebraicUnit(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->algebraicUnit(valueToInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->algebraicUnit(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskAlgebraic(const Napi::CallbackInfo &pInfo)
 {
-    auto sedInstance = valueToSedInstance(pInfo[0]);
-    auto task = sedInstance->task(valueToInt32(pInfo[1]));
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+    auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->algebraic(valueToInt32(pInfo[2])));
+    return doublesToNapiArray(pInfo.Env(), task->algebraic(toInt32(pInfo[2])));
 }

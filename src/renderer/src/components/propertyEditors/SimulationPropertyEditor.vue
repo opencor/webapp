@@ -8,38 +8,40 @@ import * as vue from 'vue';
 import type * as locApi from '../../libopencor/locApi';
 
 const props = defineProps<{
-  file: locApi.File;
+  uniformTimeCourse: locApi.SedSimulationUniformTimeCourse;
+  instanceTask: locApi.SedInstanceTask;
 }>();
 
-const uniformTimeCourse = props.file.document().simulation(0) as locApi.SedSimulationUniformTimeCourse;
-const voiUnit = props.file.instance().task(0).voiUnit();
+const voiUnit = props.instanceTask.voiUnit();
 
 const properties = vue.ref([
   {
     property: 'Starting point',
-    value: uniformTimeCourse.outputStartTime(),
+    value: props.uniformTimeCourse.outputStartTime(),
     unit: voiUnit
   },
   {
     property: 'Ending point',
-    value: uniformTimeCourse.outputEndTime(),
+    value: props.uniformTimeCourse.outputEndTime(),
     unit: voiUnit
   },
   {
     property: 'Point interval',
     value:
-      (uniformTimeCourse.outputEndTime() - uniformTimeCourse.outputStartTime()) / uniformTimeCourse.numberOfSteps(),
+      (props.uniformTimeCourse.outputEndTime() - props.uniformTimeCourse.outputStartTime()) /
+      props.uniformTimeCourse.numberOfSteps(),
     unit: voiUnit
   }
 ]);
 
 function onPropertyUpdated(index: number, value: number): void {
   if (index === 0) {
-    uniformTimeCourse.setOutputStartTime(value);
+    props.uniformTimeCourse.setOutputStartTime(value);
   } else if (index === 1) {
-    uniformTimeCourse.setOutputEndTime(value);
+    props.uniformTimeCourse.setOutputEndTime(value);
   } else if (index === 2) {
-    uniformTimeCourse.setNumberOfSteps((properties.value[1].value - properties.value[0].value) / value);
+    // @ts-expect-error (we trust that we have valid properties)
+    props.uniformTimeCourse.setNumberOfSteps((properties.value[1].value - properties.value[0].value) / value);
   }
 }
 </script>

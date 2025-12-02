@@ -1,4 +1,4 @@
-import { proxyUrl } from '../common/locCommon.js';
+import { proxyUrl } from '../common/common.js';
 
 import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.js';
 import type { IIssue } from './locLoggerApi.js';
@@ -19,60 +19,60 @@ export interface ICppLocApi {
 
   // SedDocument API.
 
-  sedDocumentCreate: (path: string) => void;
-  sedDocumentInstantiate: (path: string) => void;
-  sedDocumentIssues: (path: string) => IIssue[];
-  sedDocumentModelCount: (path: string) => number;
+  sedDocumentCreate: (path: string) => number;
+  sedDocumentInstantiate: (documentId: number) => number;
+  sedDocumentIssues: (documentId: number) => IIssue[];
+  sedDocumentModelCount: (documentId: number) => number;
   sedDocumentModelAddChange: (
-    path: string,
+    documentId: number,
     index: number,
     componentName: string,
     variableName: string,
     newValue: string
   ) => void;
-  sedDocumentModelRemoveAllChanges: (path: string, index: number) => void;
-  sedDocumentSimulationCount: (path: string) => number;
-  sedDocumentSimulationType: (path: string, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseInitialTime: (path: string, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseOutputStartTime: (path: string, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseSetOutputStartTime: (path: string, index: number, value: number) => void;
-  sedDocumentSimulationUniformTimeCourseOutputEndTime: (path: string, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseSetOutputEndTime: (path: string, index: number, value: number) => void;
-  sedDocumentSimulationUniformTimeCourseNumberOfSteps: (path: string, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseSetNumberOfSteps: (path: string, index: number, value: number) => void;
-  sedDocumentSimulationOneStepStep: (path: string, index: number) => number;
+  sedDocumentModelRemoveAllChanges: (documentId: number, index: number) => void;
+  sedDocumentSimulationCount: (documentId: number) => number;
+  sedDocumentSimulationType: (documentId: number, index: number) => number;
+  sedDocumentSimulationUniformTimeCourseInitialTime: (documentId: number, index: number) => number;
+  sedDocumentSimulationUniformTimeCourseOutputStartTime: (documentId: number, index: number) => number;
+  sedDocumentSimulationUniformTimeCourseSetOutputStartTime: (documentId: number, index: number, value: number) => void;
+  sedDocumentSimulationUniformTimeCourseOutputEndTime: (documentId: number, index: number) => number;
+  sedDocumentSimulationUniformTimeCourseSetOutputEndTime: (documentId: number, index: number, value: number) => void;
+  sedDocumentSimulationUniformTimeCourseNumberOfSteps: (documentId: number, index: number) => number;
+  sedDocumentSimulationUniformTimeCourseSetNumberOfSteps: (documentId: number, index: number, value: number) => void;
+  sedDocumentSimulationOneStepStep: (documentId: number, index: number) => number;
 
   // SedInstance API.
 
-  sedInstanceHasIssues: (path: string) => boolean;
-  sedInstanceIssues: (path: string) => IIssue[];
-  sedInstanceRun: (path: string) => number;
+  sedInstanceHasIssues: (instanceId: number) => boolean;
+  sedInstanceIssues: (instanceId: number) => IIssue[];
+  sedInstanceRun: (instanceId: number) => number;
 
   // SedInstanceTask API.
 
-  sedInstanceTaskVoiName: (path: string, index: number) => string;
-  sedInstanceTaskVoiUnit: (path: string, index: number) => string;
-  sedInstanceTaskVoi: (path: string, index: number) => number[];
-  sedInstanceTaskStateCount: (path: string, index: number) => number;
-  sedInstanceTaskStateName: (path: string, index: number, stateIndex: number) => string;
-  sedInstanceTaskStateUnit: (path: string, index: number, stateIndex: number) => string;
-  sedInstanceTaskState: (path: string, index: number, stateIndex: number) => number[];
-  sedInstanceTaskRateCount: (path: string, index: number) => number;
-  sedInstanceTaskRateName: (path: string, index: number, rateIndex: number) => string;
-  sedInstanceTaskRateUnit: (path: string, index: number, rateIndex: number) => string;
-  sedInstanceTaskRate: (path: string, index: number, rateIndex: number) => number[];
-  sedInstanceTaskConstantCount: (path: string, index: number) => number;
-  sedInstanceTaskConstantName: (path: string, index: number, constantIndex: number) => string;
-  sedInstanceTaskConstantUnit: (path: string, index: number, constantIndex: number) => string;
-  sedInstanceTaskConstant: (path: string, index: number, constantIndex: number) => number[];
-  sedInstanceTaskComputedConstantCount: (path: string, index: number) => number;
-  sedInstanceTaskComputedConstantName: (path: string, index: number, computedConstantIndex: number) => string;
-  sedInstanceTaskComputedConstantUnit: (path: string, index: number, computedConstantIndex: number) => string;
-  sedInstanceTaskComputedConstant: (path: string, index: number, computedConstantIndex: number) => number[];
-  sedInstanceTaskAlgebraicCount: (path: string, index: number) => number;
-  sedInstanceTaskAlgebraicName: (path: string, index: number, algebraicIndex: number) => string;
-  sedInstanceTaskAlgebraicUnit: (path: string, index: number, algebraicIndex: number) => string;
-  sedInstanceTaskAlgebraic: (path: string, index: number, algebraicIndex: number) => number[];
+  sedInstanceTaskVoiName: (instanceId: number, index: number) => string;
+  sedInstanceTaskVoiUnit: (instanceId: number, index: number) => string;
+  sedInstanceTaskVoi: (instanceId: number, index: number) => number[];
+  sedInstanceTaskStateCount: (instanceId: number, index: number) => number;
+  sedInstanceTaskStateName: (instanceId: number, index: number, stateIndex: number) => string;
+  sedInstanceTaskStateUnit: (instanceId: number, index: number, stateIndex: number) => string;
+  sedInstanceTaskState: (instanceId: number, index: number, stateIndex: number) => number[];
+  sedInstanceTaskRateCount: (instanceId: number, index: number) => number;
+  sedInstanceTaskRateName: (instanceId: number, index: number, rateIndex: number) => string;
+  sedInstanceTaskRateUnit: (instanceId: number, index: number, rateIndex: number) => string;
+  sedInstanceTaskRate: (instanceId: number, index: number, rateIndex: number) => number[];
+  sedInstanceTaskConstantCount: (instanceId: number, index: number) => number;
+  sedInstanceTaskConstantName: (instanceId: number, index: number, constantIndex: number) => string;
+  sedInstanceTaskConstantUnit: (instanceId: number, index: number, constantIndex: number) => string;
+  sedInstanceTaskConstant: (instanceId: number, index: number, constantIndex: number) => number[];
+  sedInstanceTaskComputedConstantCount: (instanceId: number, index: number) => number;
+  sedInstanceTaskComputedConstantName: (instanceId: number, index: number, computedConstantIndex: number) => string;
+  sedInstanceTaskComputedConstantUnit: (instanceId: number, index: number, computedConstantIndex: number) => string;
+  sedInstanceTaskComputedConstant: (instanceId: number, index: number, computedConstantIndex: number) => number[];
+  sedInstanceTaskAlgebraicCount: (instanceId: number, index: number) => number;
+  sedInstanceTaskAlgebraicName: (instanceId: number, index: number, algebraicIndex: number) => string;
+  sedInstanceTaskAlgebraicUnit: (instanceId: number, index: number, algebraicIndex: number) => string;
+  sedInstanceTaskAlgebraic: (instanceId: number, index: number, algebraicIndex: number) => number[];
 
   // Version API.
 

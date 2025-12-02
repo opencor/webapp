@@ -2,7 +2,7 @@ import type { ISettings, ISettingsGeneral } from './common.js';
 import { electronApi } from './electronApi.js';
 
 class Settings {
-  private static _instance: Settings | null = null;
+  protected static _instance: Settings | null = null;
   private _settings!: ISettings;
   private _isInitialised = false;
   private _initialisationListeners: (() => void)[] = [];

@@ -1,11 +1,11 @@
 import electron from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
 import path from 'node:path';
-import process from 'node:process';
 
-import type { ISettings } from '../renderer/src/common/common';
+import { isHttpUrl, type ISettings } from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
 import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
+import { deleteGitHubAccessToken } from '../renderer/src/common/gitHubIntegration';
 
 import icon from './assets/icon.png?asset';
 import { ApplicationWindow } from './ApplicationWindow';
@@ -75,6 +75,8 @@ let _resetAll = false;
 export function resetAll(): void {
   _resetAll = true;
 
+  deleteGitHubAccessToken();
+
   electron.app.relaunch();
   electron.app.quit();
 }
@@ -140,7 +142,7 @@ export class MainWindow extends ApplicationWindow {
 
   // Constructor.
 
-  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow) {
+  constructor(commandLine: string[], splashScreenWindow: SplashScreenWindow, rendererUrl: string) {
     // Initialise ourselves.
 
     const state: IElectronConfState = electronConf.get('app.state');
@@ -191,8 +193,12 @@ export class MainWindow extends ApplicationWindow {
 
       setTimeout(() => {
         // Retrieve the recently opened files and our Reopen menu.
+        // Note: for some reasons, recentFilePAths may, in some cases, end up having only one null entry, so just in
+        //       case we filter out all null entries.
 
-        recentFilePaths = electronConf.get('app.files.recent');
+        recentFilePaths = (electronConf.get('app.files.recent') as string[]).filter(
+          (filePath: string | null) => filePath !== null
+        );
 
         updateReopenMenu(recentFilePaths);
 
@@ -212,7 +218,7 @@ export class MainWindow extends ApplicationWindow {
 
           commandLine.shift();
 
-          if (!isPackaged()) {
+          if (!isPackaged() && commandLine.length > 0) {
             commandLine.shift();
           }
         }
@@ -238,10 +244,18 @@ export class MainWindow extends ApplicationWindow {
         // Main window state.
 
         if (!this.isMaximized() && !this.isMinimized() && !this.isFullScreen()) {
-          state.x = this.getPosition()[0];
-          state.y = this.getPosition()[1];
-          state.width = this.getContentSize()[0];
-          state.height = this.getContentSize()[1];
+          const [stateX, stateY] = this.getPosition();
+          const [stateWidth, stateHeight] = this.getContentSize();
+
+          if (typeof stateX === 'number' && typeof stateY === 'number') {
+            state.x = stateX;
+            state.y = stateY;
+          }
+
+          if (typeof stateWidth === 'number' && typeof stateHeight === 'number') {
+            state.width = stateWidth;
+            state.height = stateHeight;
+          }
         }
 
         state.isMaximized = this.isMaximized();
@@ -269,30 +283,64 @@ export class MainWindow extends ApplicationWindow {
     this.setAutoHideMenuBar(false);
     this.setMenuBarVisibility(true);
 
-    // Open external links in the default browser.
+    // Open links in the default browser, unless it is a Firebase OAuth popup in which case we open it in a new window
+    // so that the OAuth flow can proceed.
 
     this.webContents.setWindowOpenHandler((details) => {
-      electron.shell.openExternal(details.url).catch((error: unknown) => {
-        console.error('Failed to open external URL:', error);
-      });
+      function isFirebaseOauthPopup(url: string): boolean {
+        try {
+          const parsedUrl = new URL(url);
+
+          return (
+            (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') &&
+            parsedUrl.host === 'opencorapp.firebaseapp.com' &&
+            parsedUrl.pathname === '/__/auth/handler'
+          );
+        } catch {
+          return false;
+        }
+      }
+
+      if (isFirebaseOauthPopup(details.url)) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            parent: this,
+            modal: false,
+            autoHideMenuBar: true,
+            width: 600,
+            height: 700,
+            backgroundColor: electron.nativeTheme.shouldUseDarkColors ? '#18181b' : '#ffffff',
+            // Note: use the same colours as the ones used by --p-content-background in PrimeVue, i.e. what we are using
+            //       as a background for our app (see src/renderer/src/assets/app.css).
+            webPreferences: {
+              preload: undefined,
+              sandbox: true,
+              contextIsolation: true,
+              nodeIntegration: false
+            }
+          }
+        };
+      }
+
+      if (isHttpUrl(details.url)) {
+        electron.shell.openExternal(details.url).catch((error: unknown) => {
+          console.error(`Failed to open external URL (${details.url}):`, error);
+        });
+      } else {
+        console.warn(`Blocked attempt to open unsupported URL (${details.url}).`);
+      }
 
       return {
         action: 'deny'
       };
     });
 
-    // Load the remote URL when ELECTRON_RENDERER_URL is provided (i.e. if we are not packaged), otherwise load the
-    // local HTML file.
+    // Load the renderer URL.
 
-    if (process.env.ELECTRON_RENDERER_URL) {
-      this.loadURL(process.env.ELECTRON_RENDERER_URL).catch((error: unknown) => {
-        console.error('Failed to load URL:', error);
-      });
-    } else {
-      this.loadFile('./out/renderer/index.html').catch((error: unknown) => {
-        console.error('Failed to load file:', error);
-      });
-    }
+    this.loadURL(rendererUrl).catch((error: unknown) => {
+      console.error(`Failed to load URL (${rendererUrl}):`, error);
+    });
   }
 
   // Reopen previously opened files, if any, and select the previously selected file.
@@ -321,7 +369,11 @@ export class MainWindow extends ApplicationWindow {
 
   // Handle our command line arguments.
 
-  isAction(argument: string): boolean {
+  isAction(argument: string | undefined): boolean {
+    if (argument === undefined) {
+      return false;
+    }
+
     return argument.startsWith(FULL_URI_SCHEME);
   }
 

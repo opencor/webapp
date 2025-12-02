@@ -1,39 +1,46 @@
 <template>
-  <div :style="{ width: width + 'px', height: height + 'px' }">
-    <Toolbar :id="toolbarId" class="p-1!">
-      <template #start>
-        <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
-        <Button class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
-      </template>
-    </Toolbar>
-    <Splitter class="border-none! h-full m-0" layout="vertical" :style="{ height: heightMinusToolbar + 'px' }">
+  <Toolbar :id="toolbarId" class="p-1!">
+    <template #start>
+      <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
+      <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
+    </template>
+    <template #center>
+      <div v-show="interactiveModeAvailable">
+        <ToggleButton size="small" v-model="interactiveModeEnabled" onLabel="Interactive mode" offLabel="Standard mode" />
+      </div>
+    </template>
+  </Toolbar>
+  <div v-show="!interactiveModeEnabled"  :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
+    <Splitter class="border-none! h-full m-0" layout="vertical">
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
           <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
             <ScrollPanel class="h-full">
-              <SimulationPropertyEditor :file="file" />
+              <SimulationPropertyEditor :uniformTimeCourse="standardUniformTimeCourse" :instanceTask="standardInstanceTask" />
               <!--
                   <SolversPropertyEditor />
                   <GraphsPropertyEditor />
                   <ParametersPropertyEditor />
                   -->
-              <Fieldset legend="X-axis">
+              <Fieldset legend="X Axis">
                 <Select
-                  v-model="xParameter"
+                  v-model="standardXParameter"
+                  editable
                   filter
                   filterMode="lenient"
-                  :options="parameters"
+                  :options="standardParameters"
                   size="small"
                   class="w-full"
                   @change="updatePlot()"
                 />
               </Fieldset>
-              <Fieldset legend="Y-axis">
+              <Fieldset legend="Y Axis">
                 <Select
-                  v-model="yParameter"
+                  v-model="standardYParameter"
+                  editable
                   filter
                   filterMode="lenient"
-                  :options="parameters"
+                  :options="standardParameters"
                   size="small"
                   class="w-full"
                   @change="updatePlot()"
@@ -42,18 +49,55 @@
             </ScrollPanel>
           </SplitterPanel>
           <SplitterPanel :size="75">
-            <GraphPanelWidget :plots="plots" />
+            <GraphPanelWidget :plots="standardPlots" />
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
       <SplitterPanel v-if="!simulationOnly" :size="11">
-        <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="consoleContents" />
+        <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="standardConsoleContents" />
       </SplitterPanel>
     </Splitter>
+  </div>
+  <div v-if="interactiveModeAvailable">
+    <div v-show="interactiveModeEnabled" class="flex" :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
+      <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="heightMinusToolbar" :issues="interactiveUiJsonIssues" />
+      <div v-else class="flex grow">
+        <div class="ml-4 mr-4 mb-4">
+          <ScrollPanel class="h-full">
+            <Fieldset legend="Input parameters">
+              <InputWidget
+                v-for="(input, index) in (uiJson as any).input"
+                v-model="interactiveInputValues[index]!"
+                v-show="interactiveShowInput[index]"
+                :key="`input_${index}`"
+                :name="input.name"
+                :maximumValue="input.maximumValue"
+                :minimumValue="input.minimumValue"
+                :possibleValues="input.possibleValues"
+                :stepValue="input.stepValue"
+                :class="index !== 0 ? 'mt-6' : ''"
+                @change="updateInteractiveSimulation"
+              />
+            </Fieldset>
+          </ScrollPanel>
+        </div>
+        <div class="grow">
+          <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="interactiveInstanceIssues" />
+          <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
+            v-for="(_plot, index) in (uiJson as any).output.plots"
+            :key="`plot_${index}`"
+            :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
+            :plots="interactivePlots[index] || []"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@14.9.1/+esm';
+
 import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
@@ -62,7 +106,8 @@ import * as common from '../../common/common';
 import { SHORT_DELAY } from '../../common/constants';
 import * as locCommon from '../../common/locCommon';
 import * as vueCommon from '../../common/vueCommon';
-import type * as locApi from '../../libopencor/locApi';
+import * as locApi from '../../libopencor/locApi';
+import * as locSedApi from '../../libopencor/locSedApi';
 
 import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue';
 
@@ -72,54 +117,65 @@ const props = defineProps<{
   isActive: boolean;
   isActiveFile: boolean;
   simulationOnly?: boolean;
-  uiEnabled: boolean;
+  interactiveEnabled: boolean;
+  uiJson: locApi.IUiJson;
   width: number;
 }>();
 
 const toolbarId = vue.ref('simulationExperimentViewToolbar');
 const editorId = vue.ref('simulationExperimentViewEditor');
-const instance = props.file.instance();
-const instanceTask = instance.task(0);
 const heightMinusToolbar = vue.ref<number>(0);
+const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
+const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
 
-const parameters = vue.ref<string[]>([]);
-const xParameter = vue.ref(instanceTask.voiName());
-const yParameter = vue.ref(instanceTask.stateName(0));
-const plots = vue.ref<IGraphPanelPlot[]>([]);
-const consoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
+function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedApi.SedInstanceTask): void {
+  function addParameter(param: string): void {
+    parameters.value.push(param);
+  }
 
-function addParameter(param: string): void {
-  parameters.value.push(param);
+  addParameter(instanceTask.voiName());
+
+  for (let i = 0; i < instanceTask.stateCount(); i++) {
+    addParameter(instanceTask.stateName(i));
+  }
+
+  for (let i = 0; i < instanceTask.rateCount(); i++) {
+    addParameter(instanceTask.rateName(i));
+  }
+
+  for (let i = 0; i < instanceTask.constantCount(); i++) {
+    addParameter(instanceTask.constantName(i));
+  }
+
+  for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+    addParameter(instanceTask.computedConstantName(i));
+  }
+
+  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
+    addParameter(instanceTask.algebraicName(i));
+  }
 }
 
-addParameter(instanceTask.voiName());
+// Standard mode.
 
-for (let i = 0; i < instanceTask.stateCount(); i++) {
-  addParameter(instanceTask.stateName(i));
-}
+const standardDocument = props.file.document();
+const standardUniformTimeCourse = standardDocument.simulation(0) as locApi.SedSimulationUniformTimeCourse;
+const standardInstance = standardDocument.instantiate();
+const standardInstanceTask = standardInstance.task(0);
+const standardParameters = vue.ref<string[]>([]);
+const standardXParameter = vue.ref(standardInstanceTask.voiName());
+const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
+const standardPlots = vue.ref<IGraphPanelPlot[]>([]);
+const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
-for (let i = 0; i < instanceTask.rateCount(); i++) {
-  addParameter(instanceTask.rateName(i));
-}
-
-for (let i = 0; i < instanceTask.constantCount(); i++) {
-  addParameter(instanceTask.constantName(i));
-}
-
-for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
-  addParameter(instanceTask.computedConstantName(i));
-}
-
-for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-  addParameter(instanceTask.algebraicName(i));
-}
+populateParameters(standardParameters, standardInstanceTask);
 
 function onRun(): void {
   // Run the instance, output the simulation time to the console, and update the plot.
 
-  const simulationTime = instance.run();
+  const simulationTime = standardInstance.run();
 
-  consoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
+  standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
 
   void vue.nextTick().then(() => {
     const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
@@ -132,29 +188,162 @@ function onRun(): void {
   updatePlot();
 }
 
-const xInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, xParameter.value));
-const yInfo = vue.computed(() => locCommon.simulationDataInfo(instanceTask, yParameter.value));
+const xInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value));
+const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value));
 
 function updatePlot() {
-  plots.value = [
+  standardPlots.value = [
     {
       x: {
-        data: locCommon.simulationData(instanceTask, xInfo.value)
+        data: locCommon.simulationData(standardInstanceTask, xInfo.value)
       },
       y: {
-        data: locCommon.simulationData(instanceTask, yInfo.value)
+        data: locCommon.simulationData(standardInstanceTask, yInfo.value)
       }
     }
   ];
 }
 
-// "Initialise" our plot.
+// Interactive mode.
+
+const interactiveDocument = props.file.document();
+const interactiveInstance = interactiveDocument.instantiate();
+const interactiveInstanceTask = interactiveInstance.task(0);
+const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
+const interactiveModel = interactiveDocument.model(0);
+const interactivePlots = vue.ref<IGraphPanelPlot[][]>([]);
+const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
+  interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
+);
+const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
+const interactiveInputValues = vue.ref<number[]>(
+  interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []
+);
+const interactiveShowInput = vue.ref<string[]>(
+  interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []
+);
+const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
+
+if (interactiveModeAvailable.value) {
+  props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+    interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
+  });
+}
+
+interactiveMath.import(
+  {
+    // Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
+
+    // Arithmetic operators.
+
+    pow: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number) => v ** y),
+    sqrt: (x: mathjs.MathType) => x.map((v: number) => Math.sqrt(v)),
+    abs: (x: mathjs.MathType) => x.map((v: number) => Math.abs(v)),
+    exp: (x: mathjs.MathType) => x.map((v: number) => Math.exp(v)),
+    log: (x: mathjs.MathType) => x.map((v: number) => Math.log(v)),
+    log10: (x: mathjs.MathType) => x.map((v: number) => Math.log10(v)),
+    ceil: (x: mathjs.MathType) => x.map((v: number) => Math.ceil(v)),
+    floor: (x: mathjs.MathType) => x.map((v: number) => Math.floor(v)),
+    min: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number, index: number) => Math.min(v, y[index])),
+    max: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number, index: number) => Math.max(v, y[index])),
+    mod: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number) => v % y),
+
+    // // Trigonometric operators.
+
+    sin: (x: mathjs.MathType) => x.map((v: number) => Math.sin(v)),
+    cos: (x: mathjs.MathType) => x.map((v: number) => Math.cos(v)),
+    tan: (x: mathjs.MathType) => x.map((v: number) => Math.tan(v)),
+    sinh: (x: mathjs.MathType) => x.map((v: number) => Math.sinh(v)),
+    cosh: (x: mathjs.MathType) => x.map((v: number) => Math.cosh(v)),
+    tanh: (x: mathjs.MathType) => x.map((v: number) => Math.tanh(v)),
+    asin: (x: mathjs.MathType) => x.map((v: number) => Math.asin(v)),
+    acos: (x: mathjs.MathType) => x.map((v: number) => Math.acos(v)),
+    atan: (x: mathjs.MathType) => x.map((v: number) => Math.atan(v)),
+    asinh: (x: mathjs.MathType) => x.map((v: number) => Math.asinh(v)),
+    acosh: (x: mathjs.MathType) => x.map((v: number) => Math.acosh(v)),
+    atanh: (x: mathjs.MathType) => x.map((v: number) => Math.atanh(v))
+  },
+  { override: true }
+);
+function evaluateValue(value: string): mathjs.MathType {
+  const parser = interactiveMath.parser();
+  let index = -1;
+
+  props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
+    parser.set(input.id, interactiveInputValues.value[++index]);
+  });
+
+  return parser.evaluate(value);
+}
+
+function updateInteractiveSimulation() {
+  // Make sure that there are no issues.
+
+  if (interactiveUiJsonIssues.value.length > 0) {
+    return;
+  }
+
+  // Show/hide the input widgets.
+
+  props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
+    interactiveShowInput.value[index] = evaluateValue(input.visible ?? 'true');
+  });
+
+  // Update the SED-ML document.
+
+  interactiveModel.removeAllChanges();
+
+  props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
+    const componentVariableNames = parameter.name.split('/');
+
+    interactiveModel.addChange(
+      // @ts-expect-error (we trust that we have a valid component and variable name)
+      componentVariableNames[0],
+      componentVariableNames[1],
+      String(evaluateValue(parameter.value))
+    );
+  });
+
+  // Run the instance and update the plots.
+
+  interactiveInstance.run();
+
+  if (interactiveInstance.hasIssues()) {
+    interactiveInstanceIssues.value = interactiveInstance.issues();
+
+    return;
+  } else {
+    interactiveInstanceIssues.value = [];
+  }
+
+  const parser = interactiveMath.parser();
+
+  props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+    // @ts-expect-error (we trust that we have some valid information)
+    parser.set(data.id, locCommon.simulationData(interactiveInstanceTask, interactiveIdToInfo[data.id]));
+  });
+
+  interactivePlots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
+    return [
+      {
+        x: { data: parser.evaluate(plot.xValue) },
+        y: { data: parser.evaluate(plot.yValue) }
+      }
+    ];
+  });
+}
+
+// "Initialise" our standard and/or interactive modes.
 
 vue.onMounted(() => {
   updatePlot();
+
+  if (interactiveModeAvailable.value) {
+    updateInteractiveSimulation();
+  }
 });
 
-// Various things that need to be done once we are mounted.
+// Various things that need to be done once we are is mounted.
 
 const crtInstance = vue.getCurrentInstance();
 
@@ -210,14 +399,16 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled) {
+    if (!props.isActive || !props.interactiveEnabled) {
       return;
     }
 
     if (props.isActiveFile && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.code === 'F9') {
-      event.preventDefault();
+      if (!interactiveModeEnabled.value) {
+        event.preventDefault();
 
-      onRun();
+        onRun();
+      }
     }
   });
 }
@@ -244,6 +435,13 @@ if (common.isDesktop()) {
   display: none;
 }
 
+:deep(.p-togglebutton) {
+  background-color: var(--p-primary-color) !important;
+  color: var(--p-primary-contrast-color) !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+}
+
 .p-toolbar {
   border: none;
   border-radius: 0;
@@ -256,5 +454,9 @@ if (common.isDesktop()) {
 
 :deep(.ql-editor > *) {
   cursor: default;
+}
+
+.invisible {
+  visibility: hidden;
 }
 </style>
