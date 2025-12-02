@@ -42,9 +42,9 @@ const fieldsetHeight = vue.ref<string>('');
 const scrollPanelHeight = vue.ref<string>('');
 
 function resizeElements() {
-  fieldsetWidth.value = (props.width === 0) ? '100%' : `${String(props.width)}px`;
-  fieldsetHeight.value = (props.height === 0) ? '100%' : `calc(${String(props.height)}px - 1rem)`;
-  scrollPanelHeight.value = (props.height === 0) ? '100%' : `calc(${String(props.height)}px - 4.75rem)`;
+  fieldsetWidth.value = props.width === 0 ? '100%' : `${String(props.width)}px`;
+  fieldsetHeight.value = props.height === 0 ? '100%' : `calc(${String(props.height)}px - 1rem)`;
+  scrollPanelHeight.value = props.height === 0 ? '100%' : `calc(${String(props.height)}px - 4.75rem)`;
 }
 
 vue.onMounted(() => {
