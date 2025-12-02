@@ -1,11 +1,11 @@
 <template>
   <Toolbar :id="toolbarId" class="p-1!">
-    <template #start v-show="!interactiveModeEnabled">
-      <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
-      <Button class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
+    <template #start>
+      <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
+      <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
     </template>
     <template #center>
-      <div v-show="interactiveModeAvailable" class="flex items-center gap-2">
+      <div v-show="interactiveModeAvailable">
         <ToggleButton size="small" v-model="interactiveModeEnabled" onLabel="Interactive mode" offLabel="Standard mode" />
       </div>
     </template>
@@ -22,9 +22,10 @@
                   <GraphsPropertyEditor />
                   <ParametersPropertyEditor />
                   -->
-              <Fieldset legend="X-axis">
+              <Fieldset legend="X Axis">
                 <Select
                   v-model="standardXParameter"
+                  editable
                   filter
                   filterMode="lenient"
                   :options="standardParameters"
@@ -33,9 +34,10 @@
                   @change="updatePlot()"
                 />
               </Fieldset>
-              <Fieldset legend="Y-axis">
+              <Fieldset legend="Y Axis">
                 <Select
                   v-model="standardYParameter"
+                  editable
                   filter
                   filterMode="lenient"
                   :options="standardParameters"
@@ -105,6 +107,7 @@ import { SHORT_DELAY } from '../../common/constants';
 import * as locCommon from '../../common/locCommon';
 import * as vueCommon from '../../common/vueCommon';
 import * as locApi from '../../libopencor/locApi';
+import * as locSedApi from '../../libopencor/locSedApi';
 
 import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue';
 
@@ -125,6 +128,34 @@ const heightMinusToolbar = vue.ref<number>(0);
 const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
 const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
 
+function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedApi.SedInstanceTask): void {
+  function addParameter(param: string): void {
+    parameters.value.push(param);
+  }
+
+  addParameter(instanceTask.voiName());
+
+  for (let i = 0; i < instanceTask.stateCount(); i++) {
+    addParameter(instanceTask.stateName(i));
+  }
+
+  for (let i = 0; i < instanceTask.rateCount(); i++) {
+    addParameter(instanceTask.rateName(i));
+  }
+
+  for (let i = 0; i < instanceTask.constantCount(); i++) {
+    addParameter(instanceTask.constantName(i));
+  }
+
+  for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+    addParameter(instanceTask.computedConstantName(i));
+  }
+
+  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
+    addParameter(instanceTask.algebraicName(i));
+  }
+}
+
 // Standard mode.
 
 const standardDocument = props.file.document();
@@ -137,31 +168,7 @@ const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
 const standardPlots = vue.ref<IGraphPanelPlot[]>([]);
 const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
-function addParameter(param: string): void {
-  standardParameters.value.push(param);
-}
-
-addParameter(standardInstanceTask.voiName());
-
-for (let i = 0; i < standardInstanceTask.stateCount(); i++) {
-  addParameter(standardInstanceTask.stateName(i));
-}
-
-for (let i = 0; i < standardInstanceTask.rateCount(); i++) {
-  addParameter(standardInstanceTask.rateName(i));
-}
-
-for (let i = 0; i < standardInstanceTask.constantCount(); i++) {
-  addParameter(standardInstanceTask.constantName(i));
-}
-
-for (let i = 0; i < standardInstanceTask.computedConstantCount(); i++) {
-  addParameter(standardInstanceTask.computedConstantName(i));
-}
-
-for (let i = 0; i < standardInstanceTask.algebraicCount(); i++) {
-  addParameter(standardInstanceTask.algebraicName(i));
-}
+populateParameters(standardParameters, standardInstanceTask);
 
 function onRun(): void {
   // Run the instance, output the simulation time to the console, and update the plot.
@@ -223,14 +230,47 @@ if (interactiveModeAvailable.value) {
   });
 }
 
+interactiveMath.import(
+  {
+    // Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
+
+    // Arithmetic operators.
+
+    pow: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number) => v ** y),
+    sqrt: (x: mathjs.MathType) => x.map((v: number) => Math.sqrt(v)),
+    abs: (x: mathjs.MathType) => x.map((v: number) => Math.abs(v)),
+    exp: (x: mathjs.MathType) => x.map((v: number) => Math.exp(v)),
+    log: (x: mathjs.MathType) => x.map((v: number) => Math.log(v)),
+    log10: (x: mathjs.MathType) => x.map((v: number) => Math.log10(v)),
+    ceil: (x: mathjs.MathType) => x.map((v: number) => Math.ceil(v)),
+    floor: (x: mathjs.MathType) => x.map((v: number) => Math.floor(v)),
+    min: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number, index: number) => Math.min(v, y[index])),
+    max: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number, index: number) => Math.max(v, y[index])),
+    mod: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number) => v % y),
+
+    // // Trigonometric operators.
+
+    sin: (x: mathjs.MathType) => x.map((v: number) => Math.sin(v)),
+    cos: (x: mathjs.MathType) => x.map((v: number) => Math.cos(v)),
+    tan: (x: mathjs.MathType) => x.map((v: number) => Math.tan(v)),
+    sinh: (x: mathjs.MathType) => x.map((v: number) => Math.sinh(v)),
+    cosh: (x: mathjs.MathType) => x.map((v: number) => Math.cosh(v)),
+    tanh: (x: mathjs.MathType) => x.map((v: number) => Math.tanh(v)),
+    asin: (x: mathjs.MathType) => x.map((v: number) => Math.asin(v)),
+    acos: (x: mathjs.MathType) => x.map((v: number) => Math.acos(v)),
+    atan: (x: mathjs.MathType) => x.map((v: number) => Math.atan(v)),
+    asinh: (x: mathjs.MathType) => x.map((v: number) => Math.asinh(v)),
+    acosh: (x: mathjs.MathType) => x.map((v: number) => Math.acosh(v)),
+    atanh: (x: mathjs.MathType) => x.map((v: number) => Math.atanh(v))
+  },
+  { override: true }
+);
 function evaluateValue(value: string): mathjs.MathType {
-  let index = -1;
   const parser = interactiveMath.parser();
+  let index = -1;
 
   props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
-    if (input.id !== undefined && input.id !== '') {
-      parser.set(input.id, interactiveInputValues.value[++index]);
-    }
+    parser.set(input.id, interactiveInputValues.value[++index]);
   });
 
   return parser.evaluate(value);
@@ -414,5 +454,9 @@ if (common.isDesktop()) {
 
 :deep(.ql-editor > *) {
   cursor: default;
+}
+
+.invisible {
+  visibility: hidden;
 }
 </style>
