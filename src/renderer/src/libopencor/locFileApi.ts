@@ -4,14 +4,10 @@ import {
   _cppLocApi,
   _wasmLocApi,
   cppVersion,
-  EIssueType,
-  ESedSimulationType,
   type IIssue,
   type IUiJson,
   type IWasmIssues,
   SedDocument,
-  type SedInstance,
-  type SedSimulationUniformTimeCourse,
   wasmIssuesToIssues
 } from './locApi.js';
 
@@ -30,8 +26,8 @@ export interface IWasmFileManager {
 }
 
 class FileManager {
-  private static _instance: FileManager | undefined = undefined;
-  private _fileManager: IWasmFileManagerInstance | undefined = undefined;
+  protected static _instance: FileManager | null = null;
+  private _fileManager: IWasmFileManagerInstance | null = null;
 
   static instance(): FileManager {
     FileManager._instance ??= new FileManager();
@@ -92,8 +88,6 @@ export interface IWasmFile {
 export class File {
   private _path: string;
   private _wasmFile: IWasmFile = {} as IWasmFile;
-  private _document: SedDocument = {} as SedDocument;
-  private _instance: SedInstance = {} as SedInstance;
   private _issues: IIssue[] = [];
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
@@ -104,7 +98,7 @@ export class File {
 
       this._issues = _cppLocApi.fileIssues(path);
     } else if (contents !== undefined) {
-      this._wasmFile = new _wasmLocApi.File(path);
+      this._wasmFile = vue.markRaw(new _wasmLocApi.File(path));
 
       const heapContentsPtr = _wasmLocApi._malloc(contents.length);
 
@@ -123,100 +117,6 @@ export class File {
 
       return;
     }
-
-    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return;
-    }
-
-    // Retrieve the SED-ML file associated with this file.
-
-    this._document = vue.markRaw(new SedDocument(this._path, this._wasmFile));
-    this._issues = this._document.issues();
-
-    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return;
-    }
-
-    //---OPENCOR---
-    // We only support a limited subset of SED-ML for now, so we need to check a few more things. Might wnat to check
-    // https://github.com/opencor/opencor/blob/master/src/plugins/support/SEDMLSupport/src/sedmlfile.cpp#L579-L1492.
-
-    // Make sure that there is only one model.
-
-    const modelCount = this._document.modelCount();
-
-    if (modelCount !== 1) {
-      this._issues.push({
-        type: EIssueType.WARNING,
-        description: 'Only SED-ML files with one model are currently supported.'
-      });
-
-      return;
-    }
-
-    // Make sure that the SED-ML file has only one simulation.
-
-    const simulationCount = this._document.simulationCount();
-
-    if (simulationCount !== 1) {
-      this._issues.push({
-        type: EIssueType.WARNING,
-        description: 'Only SED-ML files with one simulation are currently supported.'
-      });
-
-      return;
-    }
-
-    // Make sure that the simulation is a uniform time course simulation.
-
-    const simulation = this._document.simulation(0) as SedSimulationUniformTimeCourse;
-
-    if (simulation.type() !== ESedSimulationType.UNIFORM_TIME_COURSE) {
-      this._issues.push({
-        type: EIssueType.WARNING,
-        description: 'Only uniform time course simulations are currently supported.'
-      });
-
-      return;
-    }
-
-    // Make sure that the initial time and output start time are the same, that the output start time and output end
-    // time are different, and that the number of steps is greater than zero.
-
-    const initialTime = simulation.initialTime();
-    const outputStartTime = simulation.outputStartTime();
-    const outputEndTime = simulation.outputEndTime();
-    const numberOfSteps = simulation.numberOfSteps();
-
-    if (initialTime !== outputStartTime) {
-      this._issues.push({
-        type: EIssueType.WARNING,
-        description: `Only uniform time course simulations with the same values for 'initialTime' (${String(initialTime)}) and 'outputStartTime' (${String(outputStartTime)}) are currently supported.`
-      });
-    }
-
-    if (outputStartTime === outputEndTime) {
-      this._issues.push({
-        type: EIssueType.ERROR,
-        description: `The uniform time course simulation must have different values for 'outputStartTime' (${String(outputStartTime)}) and 'outputEndTime' (${String(outputEndTime)}).`
-      });
-    }
-
-    if (numberOfSteps <= 0) {
-      this._issues.push({
-        type: EIssueType.ERROR,
-        description: `The uniform time course simulation must have a positive value for 'numberOfSteps' (${String(numberOfSteps)}).`
-      });
-    }
-
-    if (this._issues.some((issue) => issue.type === EIssueType.ERROR)) {
-      return;
-    }
-
-    // Retrieve an instance of the model.
-
-    this._instance = this._document.instantiate();
-    this._issues = this._instance.issues();
   }
 
   type(): EFileType {
@@ -236,11 +136,7 @@ export class File {
   }
 
   document(): SedDocument {
-    return this._document;
-  }
-
-  instance(): SedInstance {
-    return this._instance;
+    return new SedDocument(this._path, this._wasmFile);
   }
 
   uiJson(): IUiJson | undefined {

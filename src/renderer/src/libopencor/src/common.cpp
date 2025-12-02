@@ -1,41 +1,43 @@
 #include "common.h"
 
 libOpenCOR::FileManager fileManager = libOpenCOR::FileManager::instance();
-std::map<libOpenCOR::FilePtr, FileData> fileData;
+std::map<std::string, libOpenCOR::FilePtr> files;
+std::map<size_t, libOpenCOR::SedDocumentPtr> sedDocuments;
+std::map<size_t, libOpenCOR::SedInstancePtr> sedInstances;
 
-libOpenCOR::FilePtr valueToFile(const Napi::Value &pValue)
+libOpenCOR::FilePtr toFile(const Napi::Value &pValue)
 {
     return fileManager.file(pValue.ToString().Utf8Value());
 }
 
-libOpenCOR::SedDocumentPtr valueToSedDocument(const Napi::Value &pValue)
+libOpenCOR::SedDocumentPtr toSedDocument(size_t pId)
 {
-    return fileData[valueToFile(pValue)].sedDocument;
+    return sedDocuments[pId];
 }
 
-libOpenCOR::SedInstancePtr valueToSedInstance(const Napi::Value &pValue)
+libOpenCOR::SedInstancePtr toSedInstance(size_t pId)
 {
-    return fileData[valueToFile(pValue)].sedInstance;
+    return sedInstances[pId];
 }
 
-int32_t valueToInt32(const Napi::Value &pValue)
+size_t toSizeT(const Napi::Value &pValue)
+{
+    return static_cast<size_t>(pValue.As<Napi::Number>().Uint32Value());
+}
+
+int32_t toInt32(const Napi::Value &pValue)
 {
     return pValue.As<Napi::Number>().Int32Value();
 }
 
-double valueToDouble(const Napi::Value &pValue)
+double toDouble(const Napi::Value &pValue)
 {
     return pValue.As<Napi::Number>().DoubleValue();
 }
 
-std::string valueToString(const Napi::Value &pValue)
+std::string toString(const Napi::Value &pValue)
 {
     return pValue.As<Napi::String>().Utf8Value();
-}
-
-void untrackFileData(libOpenCOR::FilePtr pFile)
-{
-    fileData.erase(pFile);
 }
 
 napi_value issues(const Napi::CallbackInfo &pInfo, libOpenCOR::IssuePtrs pIssues)

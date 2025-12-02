@@ -10,6 +10,13 @@ import process from 'node:process';
 import type { ISettings } from '../renderer/src/common/common';
 import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants';
 import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron';
+import {
+  clearGitHubCache,
+  deleteGitHubAccessToken,
+  loadGitHubAccessToken,
+  saveGitHubAccessToken
+} from '../renderer/src/common/gitHubIntegration';
+import { startRendererServer, stopRendererServer } from '../renderer/src/common/rendererServer';
 
 import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu';
 import {
@@ -191,7 +198,7 @@ electron.app
 
       // Give the splash screen a moment to render before creating the main window.
 
-      setTimeout(() => {
+      setTimeout(async () => {
         // Enable the F12 shortcut (to show/hide the developer tools) if we are not packaged.
 
         if (!isPackaged()) {
@@ -204,6 +211,12 @@ electron.app
 
         electron.ipcMain.handle('check-for-updates', (_event, atStartup: boolean) => {
           checkForUpdates(atStartup);
+        });
+        electron.ipcMain.handle('clear-github-cache', async (): Promise<void> => {
+          await clearGitHubCache();
+        });
+        electron.ipcMain.handle('delete-github-access-token', async (): Promise<boolean> => {
+          return deleteGitHubAccessToken();
         });
         electron.ipcMain.handle('download-and-install-update', () => {
           downloadAndInstallUpdate();
@@ -232,10 +245,16 @@ electron.app
         electron.ipcMain.handle('install-update-and-restart', () => {
           installUpdateAndRestart();
         });
+        electron.ipcMain.handle('load-github-access-token', async (): Promise<string | null> => {
+          return loadGitHubAccessToken();
+        });
         electron.ipcMain.handle('load-settings', (): ISettings => {
           return loadSettings();
         });
         electron.ipcMain.handle('reset-all', resetAll);
+        electron.ipcMain.handle('save-github-access-token', async (_event, token: string): Promise<boolean> => {
+          return saveGitHubAccessToken(token);
+        });
         electron.ipcMain.handle('save-settings', (_event, settings: ISettings) => {
           saveSettings(settings);
         });
@@ -243,10 +262,24 @@ electron.app
         // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
         // triggering URL.
 
-        mainWindow = new MainWindow(triggeringUrl !== null ? [triggeringUrl] : process.argv, splashScreenWindow);
+        mainWindow = new MainWindow(
+          triggeringUrl !== null ? [triggeringUrl] : process.argv,
+          splashScreenWindow,
+          process.env.ELECTRON_RENDERER_URL !== undefined
+            ? process.env.ELECTRON_RENDERER_URL
+            : await startRendererServer()
+        );
       }, SHORT_DELAY);
     });
   })
   .catch((error: unknown) => {
     console.error('Failed to create the main window:', error);
   });
+
+// Ensure that the renderer server is stopped when quitting.
+
+electron.app.on('will-quit', () => {
+  stopRendererServer().catch((error: unknown) => {
+    console.error('Failed to stop the renderer server:', error);
+  });
+});
