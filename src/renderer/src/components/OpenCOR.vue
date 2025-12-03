@@ -105,7 +105,6 @@
 </template>
 
 <script setup lang="ts">
-import type * as octokitTypes from '@octokit/types';
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
