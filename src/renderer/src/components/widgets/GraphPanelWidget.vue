@@ -12,7 +12,7 @@ import * as vue from 'vue';
 import * as vueCommon from '../../common/vueCommon';
 
 interface IGraphPanelPlotData {
-  axisTitle: string;
+  axisTitle?: string;
   data: number[];
 }
 
@@ -157,11 +157,19 @@ vue.watch(
         }
       )
         .then(() => {
+          if (isVisible.value) {
+            return;
+          }
+
           // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
 
           return Plotly.Plots.resize(mainDiv.value);
         })
         .then(() => {
+          if (isVisible.value) {
+            return;
+          }
+
           // Show the component now that the plot has been properly sized.
 
           vue.nextTick(() => {
@@ -169,6 +177,7 @@ vue.watch(
           });
         });
     });
-  }
+  },
+  { immediate: true }
 );
 </script>

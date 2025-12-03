@@ -44,6 +44,7 @@
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
       />
+      <!-- ---OPENCOR--- Enable once our GitHub integration is fully ready.
       <div v-if="firebaseConfig !== undefined && omex === undefined">
         <div class="absolute top-1 right-1 z-999">
           <Button icon="pi pi-github" severity="secondary" :class="octokit !== null ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
@@ -56,6 +57,7 @@
           @no="disconnectFromGitHubVisible = false"
         />
       </div>
+      -->
       <ContentsComponent
         ref="contents"
         :isActive="compIsActive"
