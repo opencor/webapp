@@ -61,7 +61,7 @@ const scalarValueString = vue.ref<string>(String(value.value));
 // Some methods to handle a scalar value using an input text and a slider.
 
 function emitChange(newValue: number) {
-  void vue.nextTick().then(() => {
+  void vue.nextTick(() => {
     value.value = newValue;
 
     if (props.possibleValues === undefined) {

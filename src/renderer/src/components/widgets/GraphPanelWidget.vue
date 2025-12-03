@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-row h-full">
+  <div class="flex flex-row h-full" :class="isVisible ? 'visible' : 'invisible'">
     <div v-if="showMarker" class="w-[3px] bg-primary" />
     <div ref="mainDiv" class="grow h-full" />
   </div>
@@ -10,27 +10,6 @@ import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.1.1/+
 import * as vue from 'vue';
 
 import * as vueCommon from '../../common/vueCommon';
-import { MEDIUM_DELAY } from '../../common/constants';
-
-let oldMainDivClientWidth = -1;
-let oldMainDivClientHeight = -1;
-
-function resizeIfNeeded() {
-  if (mainDiv.value !== null) {
-    if (mainDiv.value.clientWidth !== oldMainDivClientWidth || mainDiv.value.clientHeight !== oldMainDivClientHeight) {
-      oldMainDivClientWidth = mainDiv.value.clientWidth;
-      oldMainDivClientHeight = mainDiv.value.clientHeight;
-
-      Plotly.Plots.resize(mainDiv.value);
-    }
-  }
-
-  setTimeout(resizeIfNeeded, MEDIUM_DELAY);
-}
-
-vue.onMounted(() => {
-  resizeIfNeeded();
-});
 
 interface IGraphPanelPlotData {
   axisTitle: string;
@@ -53,6 +32,7 @@ const props = withDefaults(
 );
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
+const isVisible = vue.ref(false);
 const theme = vueCommon.useTheme();
 
 interface IAxisThemeData {
@@ -108,71 +88,87 @@ function themeData(): IThemeData {
 vue.watch(
   () => [props.plots, theme.useLightMode()],
   () => {
-    // Retrieve the axes titles if there is only one plot.
+    // Wait for the DOM to update before proceeding.
 
-    const xAxisTitle = props.plots.length === 1 ? props.plots[0]?.x.axisTitle : '';
-    const yAxisTitle = props.plots.length === 1 ? props.plots[0]?.y.axisTitle : '';
+    vue.nextTick(() => {
+      // Retrieve the axes titles if there is only one plot.
 
-    // Update the plots.
+      const xAxisTitle = props.plots.length === 1 ? props.plots[0]?.x.axisTitle : '';
+      const yAxisTitle = props.plots.length === 1 ? props.plots[0]?.y.axisTitle : '';
 
-    Plotly.react(
-      mainDiv.value,
-      props.plots.map((plot) => ({
-        x: plot.x.data,
-        y: plot.y.data
-        // type: 'scattergl'
-        //---OPENCOR---
-        // Ideally, we would render using WebGL, but... Web browsers impose a limit on the number of active WebGL
-        // contexts that can be used (8 to 16, apparently). So, depending on how the OpenCOR component is used, we may
-        // reach that limit and get the following warning as a result:
-        //   Too many active WebGL contexts. Oldest context will be lost.
-        // and nothing gets rendered. Apparently, plotly.js added support for virtual-webgl in version 2.28.0 (see
-        // https://github.com/plotly/plotly.js/releases/tag/v2.28.0), but to do what they say in
-        // https://github.com/plotly/plotly.js/pull/6784#issue-1991790973 still results in the same behaviour as above.
-        // So, it looks like we have no choice but to disable WebGL rendering. The downside is that 1) it doesn't look
-        // as good and 2) it is not as fast to render when there are a lot of data points. However, to use a virtual
-        // WebGL would mean that all WebGL-based components would also be using virtual WebGL, which might not be
-        // desirable.
-      })),
-      {
-        // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+      // Update the plots.
 
-        ...themeData(),
-        margin: {
-          t: 0,
-          l: 0,
-          b: 0,
-          r: 0,
-          pad: 0
-        },
-        showlegend: false,
-        xaxis: {
-          tickangle: 0,
-          automargin: true,
-          title: {
-            text: xAxisTitle,
-            standoff: 8
+      Plotly.react(
+        mainDiv.value,
+        props.plots.map((plot) => ({
+          x: plot.x.data,
+          y: plot.y.data
+          // type: 'scattergl'
+          //---OPENCOR---
+          // Ideally, we would render using WebGL, but... Web browsers impose a limit on the number of active WebGL
+          // contexts that can be used (8 to 16, apparently). So, depending on how the OpenCOR component is used, we may
+          // reach that limit and get the following warning as a result:
+          //   Too many active WebGL contexts. Oldest context will be lost.
+          // and nothing gets rendered. Apparently, plotly.js added support for virtual-webgl in version 2.28.0 (see
+          // https://github.com/plotly/plotly.js/releases/tag/v2.28.0), but to do what they say in
+          // https://github.com/plotly/plotly.js/pull/6784#issue-1991790973 still results in the same behaviour as
+          // above. So, it looks like we have no choice but to disable WebGL rendering. The downside is that 1) it
+          // doesn't look as good and 2) it is not as fast to render when there are a lot of data points. However, to
+          // use a virtual WebGL would mean that all WebGL-based components would also be using virtual WebGL, which
+          // might not be desirable.
+        })),
+        {
+          // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+
+          ...themeData(),
+          margin: {
+            t: 0,
+            l: 0,
+            b: 0,
+            r: 0,
+            pad: 0
+          },
+          showlegend: false,
+          xaxis: {
+            tickangle: 0,
+            automargin: true,
+            title: {
+              text: xAxisTitle,
+              standoff: 8
+            }
+          },
+          yaxis: {
+            tickangle: 0,
+            automargin: true,
+            title: {
+              text: yAxisTitle,
+              standoff: 8
+            }
           }
         },
-        yaxis: {
-          tickangle: 0,
-          automargin: true,
-          title: {
-            text: yAxisTitle,
-            standoff: 8
-          }
+        {
+          // Note: the various keys can be found at https://plotly.com/javascript/configuration-options/.
+
+          responsive: true,
+          displayModeBar: false,
+          doubleClickDelay: 1000,
+          scrollZoom: true,
+          showTips: false
         }
-      },
-      {
-        // Note: the various keys can be found at https://plotly.com/javascript/configuration-options/.
+      )
+        .then(() => {
+          // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
 
-        responsive: true,
-        displayModeBar: false,
-        doubleClickDelay: 1000,
-        scrollZoom: true,
-        showTips: false
-      }
-    );
+          return Plotly.Plots.resize(mainDiv.value);
+        })
+        .then(() => {
+          // Show the component now that the plot has been properly sized.
+
+          vue.nextTick(() => {
+            isVisible.value = true;
+          });
+        });
+    });
   }
 );
 </script>

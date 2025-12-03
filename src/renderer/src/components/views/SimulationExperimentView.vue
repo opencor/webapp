@@ -82,11 +82,12 @@
           </ScrollPanel>
         </div>
         <div class="flex flex-col grow gap-4">
+          <!-- Note: gap-4 corresponds to a gap of 1rem, hence we subtract (number of gaps * 1rem) from 100% before dividing. -->
           <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="interactiveInstanceIssues" />
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
-            :style="{ height: `calc(100% / ${(uiJson as any).output.plots.length})` }"
+            :style="{ height: `calc((100% - ${(uiJson as any).output.plots.length - 1}rem) / ${(uiJson as any).output.plots.length})` }"
             :plots="interactivePlots[index] || []"
           />
         </div>
@@ -177,7 +178,7 @@ function onRun(): void {
 
   standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
 
-  void vue.nextTick().then(() => {
+  void vue.nextTick(() => {
     const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
 
     if (consoleElement !== undefined) {

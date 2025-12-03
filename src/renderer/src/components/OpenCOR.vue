@@ -44,7 +44,7 @@
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
       />
-      <div v-if="firebaseConfig !== undefined">
+      <div v-if="firebaseConfig !== undefined && omex === undefined">
         <div class="absolute top-1 right-1 z-999">
           <Button icon="pi pi-github" severity="secondary" :class="octokit !== null ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
         </div>
@@ -453,7 +453,7 @@ function openFile(fileOrFilePath: string | File): void {
         (props.omex !== undefined && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
       ) {
         if (props.omex !== undefined) {
-          void vue.nextTick().then(() => {
+          void vue.nextTick(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
               description:
@@ -492,7 +492,7 @@ function openFile(fileOrFilePath: string | File): void {
       }
 
       if (props.omex !== undefined) {
-        void vue.nextTick().then(() => {
+        void vue.nextTick(() => {
           issues.value.push({
             type: locApi.EIssueType.ERROR,
             description: common.formatMessage(error instanceof Error ? error.message : String(error))

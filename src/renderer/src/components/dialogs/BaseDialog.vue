@@ -28,7 +28,7 @@ function checkDialogPosition() {
 function onShow() {
   enableDisableMainMenu(false);
 
-  void vue.nextTick().then(() => {
+  void vue.nextTick(() => {
     dialogElement = document.querySelector('.p-dialog');
     containerElement = dialogElement?.closest('[data-pc-section="mask"]');
 
@@ -47,7 +47,7 @@ function onShow() {
 function onHide() {
   enableDisableMainMenu(true);
 
-  void vue.nextTick().then(() => {
+  void vue.nextTick(() => {
     if (mutationObserver !== null) {
       mutationObserver.disconnect();
 
