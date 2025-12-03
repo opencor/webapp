@@ -1,4 +1,4 @@
-import { proxyUrl } from '../common/common.js';
+import { corsProxyUrl } from '../common/common.js';
 import * as locApi from '../libopencor/locApi.js';
 
 import { electronApi } from './electronApi.js';
@@ -35,19 +35,19 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
           })
           .catch((error: unknown) => {
             // A network/CORS error is an instance of TypeError in fetch. So, if this is the case then we can try
-            // fetching the file through OpenCOR's proxy otherwise we re-throw the error.
+            // fetching the file through OpenCOR's CORS proxy otherwise we re-throw the error.
 
             if (!(error instanceof TypeError)) {
               throw error instanceof Error ? error : new Error(String(error));
             }
 
-            return fetch(proxyUrl(fileOrFilePath)).then((response) => {
+            return fetch(corsProxyUrl(fileOrFilePath)).then((response) => {
               if (response.ok) {
                 return response.arrayBuffer();
               }
 
               throw new Error(
-                `Failed to fetch the file through OpenCOR's proxy. The server responded with a status of ${String(response.status)}.`
+                `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${String(response.status)}.`
               );
             });
           })

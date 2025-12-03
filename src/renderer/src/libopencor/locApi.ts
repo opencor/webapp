@@ -1,4 +1,4 @@
-import { proxyUrl } from '../common/common.js';
+import { corsProxyUrl } from '../common/common.js';
 
 import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.js';
 import type { IIssue } from './locLoggerApi.js';
@@ -128,7 +128,7 @@ export async function initialiseLocApi() {
     try {
       const libOpenCOR = (
         await import(
-          /* @vite-ignore */ proxyUrl('https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20251027.0.js')
+          /* @vite-ignore */ corsProxyUrl('https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20251027.0.js')
         )
       ).default;
 
