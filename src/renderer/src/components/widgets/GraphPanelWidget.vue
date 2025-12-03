@@ -33,6 +33,7 @@ vue.onMounted(() => {
 });
 
 interface IGraphPanelPlotData {
+  axisTitle: string;
   data: number[];
 }
 
@@ -107,6 +108,13 @@ function themeData(): IThemeData {
 vue.watch(
   () => [props.plots, theme.useLightMode()],
   () => {
+    // Retrieve the axes titles if there is only one plot.
+
+    const xAxisTitle = props.plots.length === 1 ? props.plots[0]?.x.axisTitle : '';
+    const yAxisTitle = props.plots.length === 1 ? props.plots[0]?.y.axisTitle : '';
+
+    // Update the plots.
+
     Plotly.react(
       mainDiv.value,
       props.plots.map((plot) => ({
@@ -131,17 +139,28 @@ vue.watch(
 
         ...themeData(),
         margin: {
-          t: 5,
-          l: 30,
-          b: 20,
-          r: 5
+          t: 0,
+          l: 0,
+          b: 0,
+          r: 0,
+          pad: 0
         },
         showlegend: false,
         xaxis: {
-          tickangle: 0
+          tickangle: 0,
+          automargin: true,
+          title: {
+            text: xAxisTitle,
+            standoff: 8
+          }
         },
         yaxis: {
-          tickangle: 0
+          tickangle: 0,
+          automargin: true,
+          title: {
+            text: yAxisTitle,
+            standoff: 8
+          }
         }
       },
       {

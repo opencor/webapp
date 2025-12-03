@@ -81,7 +81,7 @@
             </Fieldset>
           </ScrollPanel>
         </div>
-        <div class="grow">
+        <div class="flex flex-col grow gap-4">
           <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="interactiveInstanceIssues" />
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
             v-for="(_plot, index) in (uiJson as any).output.plots"
@@ -326,8 +326,14 @@ function updateInteractiveSimulation() {
   interactivePlots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
     return [
       {
-        x: { data: parser.evaluate(plot.xValue) },
-        y: { data: parser.evaluate(plot.yValue) }
+        x: {
+          data: parser.evaluate(plot.xValue),
+          axisTitle: plot.xAxisTitle
+        },
+        y: {
+          data: parser.evaluate(plot.yValue),
+          axisTitle: plot.yAxisTitle
+        }
       }
     ];
   });
