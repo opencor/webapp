@@ -21,13 +21,35 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
   if (typeof fileOrFilePath === 'string') {
     if (isRemoteFilePath(fileOrFilePath)) {
       return new Promise((resolve, reject) => {
-        fetch(proxyUrl(fileOrFilePath))
+        // First try fetching the URL directly.
+
+        fetch(fileOrFilePath)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer();
             }
 
-            throw new Error(`The server responded with a status of ${String(response.status)}.`);
+            throw new Error(
+              `Failed to fetch the file directly. The server responded with a status of ${String(response.status)}.`
+            );
+          })
+          .catch((error: unknown) => {
+            // A network/CORS error is an instance of TypeError in fetch. So, if this is the case then we can try
+            // fetching the file through OpenCOR's proxy otherwise we re-throw the error.
+
+            if (!(error instanceof TypeError)) {
+              throw error instanceof Error ? error : new Error(String(error));
+            }
+
+            return fetch(proxyUrl(fileOrFilePath)).then((response) => {
+              if (response.ok) {
+                return response.arrayBuffer();
+              }
+
+              throw new Error(
+                `Failed to fetch the file through OpenCOR's proxy. The server responded with a status of ${String(response.status)}.`
+              );
+            });
           })
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer);
