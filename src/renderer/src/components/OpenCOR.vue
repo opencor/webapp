@@ -185,25 +185,12 @@ if (crtInstance !== null) {
   const app = crtInstance.appContext.app;
 
   if (app.config.globalProperties.$primevue === undefined) {
-    let options = {};
-
-    if (props.theme === 'light') {
-      options = {
-        darkModeSelector: false
-      };
-    } else if (props.theme === 'dark') {
-      document.documentElement.classList.add('opencor-dark-mode');
-      document.body.classList.add('opencor-dark-mode');
-
-      options = {
-        darkModeSelector: '.opencor-dark-mode'
-      };
-    }
-
     app.use(primeVueConfig as unknown as vue.Plugin, {
       theme: {
         preset: primeVueAuraTheme,
-        options: options
+        options: {
+          darkModeSelector: '.opencor-dark-mode'
+        }
       }
     });
   }
@@ -217,9 +204,7 @@ if (crtInstance !== null) {
   }
 }
 
-if (props.theme !== undefined) {
-  vueCommon.useTheme().setTheme(props.theme);
-}
+vueCommon.useTheme().setTheme(props.theme);
 
 const toast = useToast();
 

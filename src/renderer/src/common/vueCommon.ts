@@ -8,39 +8,48 @@ import type { Theme } from '../../index.js';
 
 export const activeInstanceUid = vueusecore.createGlobalState(() => vue.ref<string | null>(null));
 
-// Theme composable to know whether OpenCOR uses light mode or dark mode.
+// Theme composable to know whether OpenCOR uses light mode, dark mode, or system mode.
 
-export function useTheme() {
+export const useTheme = vueusecore.createGlobalState(() => {
   const prefersColorScheme = window.matchMedia('(prefers-color-scheme: light)');
   const isLightMode = vue.ref(prefersColorScheme.matches);
   const isDarkMode = vue.ref(!prefersColorScheme.matches);
-  let theme: Theme = 'system';
+  const _theme = vue.ref<Theme>('system');
 
-  function onChange(event) {
-    if (theme === 'system') {
-      isLightMode.value = event.matches;
-      isDarkMode.value = !event.matches;
-    }
+  function updateLightAndDarkModes(prefersColorScheme: MediaQueryList | MediaQueryListEvent) {
+    isLightMode.value = prefersColorScheme.matches;
+    isDarkMode.value = !prefersColorScheme.matches;
   }
 
-  vue.onMounted(() => {
-    prefersColorScheme.addEventListener('change', onChange);
+  function updateDocumentClasses() {
+    document.documentElement.classList.toggle('opencor-dark-mode', isDarkMode.value);
+  }
+
+  prefersColorScheme.addEventListener('change', (event) => {
+    if (_theme.value === 'system') {
+      updateLightAndDarkModes(event);
+      updateDocumentClasses();
+    }
   });
 
-  vue.onUnmounted(() => {
-    prefersColorScheme.removeEventListener('change', onChange);
-  });
+  function theme(): Theme {
+    return _theme.value;
+  }
 
-  function setTheme(newTheme: Theme) {
-    theme = newTheme;
+  function setTheme(newTheme: Theme | undefined) {
+    _theme.value = newTheme === undefined ? 'system' : newTheme;
 
-    if (theme === 'light') {
+    if (_theme.value === 'light') {
       isLightMode.value = true;
       isDarkMode.value = false;
-    } else if (theme === 'dark') {
+    } else if (_theme.value === 'dark') {
       isLightMode.value = false;
       isDarkMode.value = true;
+    } else {
+      updateLightAndDarkModes(prefersColorScheme);
     }
+
+    updateDocumentClasses();
   }
 
   function useLightMode(): boolean {
@@ -52,11 +61,12 @@ export function useTheme() {
   }
 
   return {
+    theme,
     setTheme,
     useLightMode,
     useDarkMode
   };
-}
+});
 
 // A method to retrieve the name of a tracked CSS variable.
 
