@@ -56,9 +56,9 @@ export function isHttpUrl(url: string): boolean {
   }
 }
 
-// A method to get the proxy URL for a given URL.
+// A method to get the CORS proxy URL for a given URL.
 
-export function proxyUrl(url: string): string {
+export function corsProxyUrl(url: string): string {
   return `https://cors-proxy.opencor.workers.dev/?url=${url}`;
 }
 
