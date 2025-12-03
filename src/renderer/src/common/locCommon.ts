@@ -1,4 +1,4 @@
-import { corsProxyUrl, sha256 } from '../common/common.js';
+import { corsProxyUrl, sha1 } from '../common/common.js';
 import * as locApi from '../libopencor/locApi.js';
 
 import { electronApi } from './electronApi.js';
@@ -16,7 +16,7 @@ export function filePath(fileFilePathOrFileContents: string | Uint8Array | File)
       : fileFilePathOrFileContents.name
     : typeof fileFilePathOrFileContents === 'string'
       ? fileFilePathOrFileContents
-      : sha256(fileFilePathOrFileContents);
+      : sha1(fileFilePathOrFileContents);
 }
 
 export function file(fileFilePathOrFileContents: string | Uint8Array | File): Promise<locApi.File> {
