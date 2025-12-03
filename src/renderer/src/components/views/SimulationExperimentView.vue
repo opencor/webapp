@@ -88,7 +88,7 @@
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
             :style="{ height: `calc((100% - ${(uiJson as any).output.plots.length - 1}rem) / ${(uiJson as any).output.plots.length})` }"
-            :plots="interactivePlots[index] || []"
+            :plots="interactivePlots[index] || [{ x: { data: [] }, y: { data: [] } }]"
           />
         </div>
       </div>
@@ -217,11 +217,13 @@ const interactiveInstance = interactiveDocument.instantiate();
 const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = interactiveDocument.model(0);
-const interactivePlots = vue.ref<IGraphPanelPlot[]>([
-  {
-    x: { data: [] },
-    y: { data: [] }
-  }
+const interactivePlots = vue.ref<IGraphPanelPlot[][]>([
+  [
+    {
+      x: { data: [] },
+      y: { data: [] }
+    }
+  ]
 ]);
 const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
   interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []

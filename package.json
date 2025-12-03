@@ -50,6 +50,7 @@
     "@primeuix/themes": "^1.2.5",
     "@primevue/auto-import-resolver": "4.2.5",
     "@vueuse/core": "12.8.2",
+    "crypto-js": "^4.2.0",
     "firebase": "^12.6.0",
     "jsonschema": "^1.5.0",
     "octokit": "^5.0.5",

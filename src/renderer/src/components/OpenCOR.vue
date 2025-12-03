@@ -426,10 +426,10 @@ function onSettingsMenu(): void {
 
 // Open a file.
 
-function openFile(fileOrFilePath: string | File): void {
+function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void {
   // Check whether the file is already open and if so then select it.
 
-  const filePath = locCommon.filePath(fileOrFilePath);
+  const filePath = locCommon.filePath(fileFilePathOrFileContents);
 
   if (contents.value?.hasFile(filePath) ?? false) {
     contents.value?.selectFile(filePath);
@@ -444,7 +444,7 @@ function openFile(fileOrFilePath: string | File): void {
   }
 
   locCommon
-    .file(fileOrFilePath)
+    .file(fileFilePathOrFileContents)
     .then((file) => {
       const fileType = file.type();
 
@@ -779,7 +779,7 @@ vue.onMounted(() => {
 });
 
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
-// carry as normal (i.e. the whole OpenCOR UI will be shown).
+// carry on as normal (i.e. the whole OpenCOR UI will be shown).
 
 if (props.omex !== undefined) {
   vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {

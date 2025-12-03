@@ -1,3 +1,4 @@
+import SHA256 from 'crypto-js/sha256';
 import { UAParser } from 'ua-parser-js';
 
 import { electronApi } from './electronApi.js';
@@ -60,6 +61,12 @@ export function isHttpUrl(url: string): boolean {
 
 export function corsProxyUrl(url: string): string {
   return `https://cors-proxy.opencor.workers.dev/?url=${url}`;
+}
+
+// A method to return the SHA-256 hash of some data.
+
+export function sha256(data: string | Uint8Array): string {
+  return SHA256(data).toString();
 }
 
 // A method to format a given number of milliseconds into a string.
