@@ -3,7 +3,7 @@ import OpenCOR from './src/components/OpenCOR.vue';
 export type Theme = 'light' | 'dark' | 'system';
 
 export interface IOpenCORProps {
-  omex?: string;
+  omex?: string | Uint8Array;
   theme?: Theme;
 }
 

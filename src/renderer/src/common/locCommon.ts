@@ -1,4 +1,4 @@
-import { corsProxyUrl } from '../common/common.js';
+import { corsProxyUrl, sha256 } from '../common/common.js';
 import * as locApi from '../libopencor/locApi.js';
 
 import { electronApi } from './electronApi.js';
@@ -9,21 +9,23 @@ export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://');
 }
 
-export function filePath(fileOrFilePath: string | File): string {
-  return fileOrFilePath instanceof File
+export function filePath(fileFilePathOrFileContents: string | Uint8Array | File): string {
+  return fileFilePathOrFileContents instanceof File
     ? electronApi !== undefined
-      ? electronApi.filePath(fileOrFilePath)
-      : fileOrFilePath.name
-    : fileOrFilePath;
+      ? electronApi.filePath(fileFilePathOrFileContents)
+      : fileFilePathOrFileContents.name
+    : typeof fileFilePathOrFileContents === 'string'
+      ? fileFilePathOrFileContents
+      : sha256(fileFilePathOrFileContents);
 }
 
-export function file(fileOrFilePath: string | File): Promise<locApi.File> {
-  if (typeof fileOrFilePath === 'string') {
-    if (isRemoteFilePath(fileOrFilePath)) {
+export function file(fileFilePathOrFileContents: string | Uint8Array | File): Promise<locApi.File> {
+  if (typeof fileFilePathOrFileContents === 'string') {
+    if (isRemoteFilePath(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
         // First try fetching the URL through OpenCOR's CORS proxy.
 
-        fetch(corsProxyUrl(fileOrFilePath))
+        fetch(corsProxyUrl(fileFilePathOrFileContents))
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer();
@@ -41,7 +43,7 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
               throw error instanceof Error ? error : new Error(String(error));
             }
 
-            return fetch(fileOrFilePath).then((response) => {
+            return fetch(fileFilePathOrFileContents).then((response) => {
               if (response.ok) {
                 return response.arrayBuffer();
               }
@@ -54,7 +56,7 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer);
 
-            resolve(new locApi.File(filePath(fileOrFilePath), fileContents));
+            resolve(new locApi.File(filePath(fileFilePathOrFileContents), fileContents));
           })
           .catch((error: unknown) => {
             reject(error instanceof Error ? error : new Error(String(error)));
@@ -64,20 +66,26 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
 
     return new Promise((resolve, reject) => {
       if (electronApi !== undefined) {
-        resolve(new locApi.File(filePath(fileOrFilePath)));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents)));
       } else {
         reject(new Error('Local files cannot be opened.'));
       }
     });
   }
 
+  if (fileFilePathOrFileContents instanceof Uint8Array) {
+    return new Promise((resolve) => {
+      resolve(new locApi.File(filePath(fileFilePathOrFileContents), fileFilePathOrFileContents));
+    });
+  }
+
   return new Promise((resolve, reject) => {
-    fileOrFilePath
+    fileFilePathOrFileContents
       .arrayBuffer()
       .then((arrayBuffer) => {
         const fileContents = new Uint8Array(arrayBuffer);
 
-        resolve(new locApi.File(filePath(fileOrFilePath), fileContents));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents), fileContents));
       })
       .catch((error: unknown) => {
         reject(error instanceof Error ? error : new Error(String(error)));
