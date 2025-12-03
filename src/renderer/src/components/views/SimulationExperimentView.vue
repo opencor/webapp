@@ -1,5 +1,5 @@
 <template>
-  <Toolbar :id="toolbarId" class="p-1!">
+  <Toolbar v-if="toolbarNeeded" :id="toolbarId" class="p-1!">
     <template #start>
       <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
       <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
@@ -10,7 +10,7 @@
       </div>
     </template>
   </Toolbar>
-  <div v-show="!interactiveModeEnabled"  :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
+  <div v-show="!interactiveModeEnabled"  :style="{ width: width + 'px', height: actualHeight + 'px' }">
     <Splitter class="border-none! h-full m-0" layout="vertical">
       <SplitterPanel :size="simulationOnly ? 100 : 89">
         <Splitter>
@@ -59,8 +59,8 @@
     </Splitter>
   </div>
   <div v-if="interactiveModeAvailable">
-    <div v-show="interactiveModeEnabled" class="flex" :style="{ width: width + 'px', height: heightMinusToolbar + 'px' }">
-      <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="heightMinusToolbar" :issues="interactiveUiJsonIssues" />
+    <div v-show="interactiveModeEnabled" class="flex" :style="{ width: width + 'px', height: actualHeight + 'px' }">
+      <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="actualHeight" :issues="interactiveUiJsonIssues" />
       <div v-else class="flex grow">
         <div class="ml-4 mr-4 mb-4">
           <ScrollPanel class="h-full">
@@ -83,7 +83,7 @@
         </div>
         <div class="flex flex-col grow gap-4">
           <!-- Note: gap-4 corresponds to a gap of 1rem, hence we subtract (number of gaps * 1rem) from 100% before dividing. -->
-          <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="heightMinusToolbar" :issues="interactiveInstanceIssues" />
+          <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="actualHeight" :issues="interactiveInstanceIssues" />
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
@@ -123,9 +123,13 @@ const props = defineProps<{
   width: number;
 }>();
 
+const toolbarNeeded = vue.computed(() => {
+  return (props.simulationOnly && props.uiJson === undefined) || !props.simulationOnly;
+});
+
 const toolbarId = vue.ref('simulationExperimentViewToolbar');
 const editorId = vue.ref('simulationExperimentViewEditor');
-const heightMinusToolbar = vue.ref<number>(0);
+const actualHeight = vue.ref<number>(0);
 const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
 const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
 
@@ -383,8 +387,12 @@ vue.onMounted(() => {
   // Monitor "our" contents size.
 
   function resizeOurselves() {
-    heightMinusToolbar.value = props.height - vueCommon.trackedCssVariableValue(toolbarId.value);
+    actualHeight.value = props.height - (toolbarNeeded.value ? vueCommon.trackedCssVariableValue(toolbarId.value) : 0);
   }
+
+  vue.nextTick(() => {
+    resizeOurselves();
+  });
 
   vue.watch(
     () => props.height,
