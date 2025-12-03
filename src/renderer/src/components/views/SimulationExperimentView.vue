@@ -49,7 +49,7 @@
             </ScrollPanel>
           </SplitterPanel>
           <SplitterPanel :size="75">
-            <GraphPanelWidget :plots="standardPlots" />
+            <GraphPanelWidget :key="interactiveModeEnabled ? 'hidden-graph-panel' : 'visible-graph-panel'" :plots="standardPlots" />
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
@@ -166,7 +166,12 @@ const standardInstanceTask = standardInstance.task(0);
 const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask.voiName());
 const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
-const standardPlots = vue.ref<IGraphPanelPlot[]>([]);
+const standardPlots = vue.ref<IGraphPanelPlot[]>([
+  {
+    x: { data: [] },
+    y: { data: [] }
+  }
+]);
 const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
 populateParameters(standardParameters, standardInstanceTask);
@@ -212,7 +217,12 @@ const interactiveInstance = interactiveDocument.instantiate();
 const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = interactiveDocument.model(0);
-const interactivePlots = vue.ref<IGraphPanelPlot[][]>([]);
+const interactivePlots = vue.ref<IGraphPanelPlot[]>([
+  {
+    x: { data: [] },
+    y: { data: [] }
+  }
+]);
 const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
   interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
 );

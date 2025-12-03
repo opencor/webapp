@@ -177,6 +177,7 @@ vue.watch(
           });
         });
     });
-  }
+  },
+  { immediate: true }
 );
 </script>
