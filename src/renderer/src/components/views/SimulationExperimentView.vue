@@ -177,7 +177,7 @@ function onRun(): void {
 
   standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
 
-  void vue.nextTick().then(() => {
+  void vue.nextTick(() => {
     const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
 
     if (consoleElement !== undefined) {

@@ -453,7 +453,7 @@ function openFile(fileOrFilePath: string | File): void {
         (props.omex !== undefined && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
       ) {
         if (props.omex !== undefined) {
-          void vue.nextTick().then(() => {
+          void vue.nextTick(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
               description:
@@ -492,7 +492,7 @@ function openFile(fileOrFilePath: string | File): void {
       }
 
       if (props.omex !== undefined) {
-        void vue.nextTick().then(() => {
+        void vue.nextTick(() => {
           issues.value.push({
             type: locApi.EIssueType.ERROR,
             description: common.formatMessage(error instanceof Error ? error.message : String(error))
