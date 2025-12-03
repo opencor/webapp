@@ -12,7 +12,7 @@ import * as vue from 'vue';
 import * as vueCommon from '../../common/vueCommon';
 
 interface IGraphPanelPlotData {
-  axisTitle: string;
+  axisTitle?: string;
   data: number[];
 }
 
