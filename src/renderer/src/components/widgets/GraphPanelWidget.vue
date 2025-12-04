@@ -98,6 +98,8 @@ vue.watch(
 
       // Update the plots.
 
+      const axisTitleFontSize = 10;
+
       Plotly.react(
         mainDiv.value,
         props.plots.map((plot) => ({
@@ -124,7 +126,7 @@ vue.watch(
           margin: {
             t: 0,
             l: 0,
-            b: 0,
+            b: 35,
             r: 0,
             pad: 0
           },
@@ -133,6 +135,9 @@ vue.watch(
             tickangle: 0,
             automargin: true,
             title: {
+              font: {
+                size: axisTitleFontSize
+              },
               text: xAxisTitle,
               standoff: 8
             }
@@ -141,6 +146,9 @@ vue.watch(
             tickangle: 0,
             automargin: true,
             title: {
+              font: {
+                size: axisTitleFontSize
+              },
               text: yAxisTitle,
               standoff: 8
             }

@@ -233,12 +233,12 @@ electron.contextBridge.exposeInMainWorld('locApi', {
     loc.sedInstanceTaskComputedConstantUnit(instanceId, index, computedConstantIndex),
   sedInstanceTaskComputedConstant: (instanceId: number, index: number, computedConstantIndex: number) =>
     loc.sedInstanceTaskComputedConstant(instanceId, index, computedConstantIndex),
-  sedInstanceTaskAlgebraicCount: (instanceId: number, index: number) =>
-    loc.sedInstanceTaskAlgebraicCount(instanceId, index),
-  sedInstanceTaskAlgebraicName: (instanceId: number, index: number, algebraicIndex: number) =>
-    loc.sedInstanceTaskAlgebraicName(instanceId, index, algebraicIndex),
-  sedInstanceTaskAlgebraicUnit: (instanceId: number, index: number, algebraicIndex: number) =>
-    loc.sedInstanceTaskAlgebraicUnit(instanceId, index, algebraicIndex),
-  sedInstanceTaskAlgebraic: (instanceId: number, index: number, algebraicIndex: number) =>
-    loc.sedInstanceTaskAlgebraic(instanceId, index, algebraicIndex)
+  sedInstanceTaskAlgebraicVariableCount: (instanceId: number, index: number) =>
+    loc.sedInstanceTaskAlgebraicVariableCount(instanceId, index),
+  sedInstanceTaskAlgebraicVariableName: (instanceId: number, index: number, algebraicVariableIndex: number) =>
+    loc.sedInstanceTaskAlgebraicVariableName(instanceId, index, algebraicVariableIndex),
+  sedInstanceTaskAlgebraicVariableUnit: (instanceId: number, index: number, algebraicVariableIndex: number) =>
+    loc.sedInstanceTaskAlgebraicVariableUnit(instanceId, index, algebraicVariableIndex),
+  sedInstanceTaskAlgebraicVariable: (instanceId: number, index: number, algebraicVariableIndex: number) =>
+    loc.sedInstanceTaskAlgebraicVariable(instanceId, index, algebraicVariableIndex)
 });

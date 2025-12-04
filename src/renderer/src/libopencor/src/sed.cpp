@@ -334,34 +334,34 @@ napi_value sedInstanceTaskComputedConstant(const Napi::CallbackInfo &pInfo)
     return doublesToNapiArray(pInfo.Env(), task->computedConstant(toInt32(pInfo[2])));
 }
 
-napi_value sedInstanceTaskAlgebraicCount(const Napi::CallbackInfo &pInfo)
+napi_value sedInstanceTaskAlgebraicVariableCount(const Napi::CallbackInfo &pInfo)
 {
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::Number::New(pInfo.Env(), task->algebraicCount());
+    return Napi::Number::New(pInfo.Env(), task->algebraicVariableCount());
 }
 
-napi_value sedInstanceTaskAlgebraicName(const Napi::CallbackInfo &pInfo)
+napi_value sedInstanceTaskAlgebraicVariableName(const Napi::CallbackInfo &pInfo)
 {
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->algebraicName(toInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->algebraicVariableName(toInt32(pInfo[2])));
 }
 
-napi_value sedInstanceTaskAlgebraicUnit(const Napi::CallbackInfo &pInfo)
+napi_value sedInstanceTaskAlgebraicVariableUnit(const Napi::CallbackInfo &pInfo)
 {
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return Napi::String::New(pInfo.Env(), task->algebraicUnit(toInt32(pInfo[2])));
+    return Napi::String::New(pInfo.Env(), task->algebraicVariableUnit(toInt32(pInfo[2])));
 }
 
-napi_value sedInstanceTaskAlgebraic(const Napi::CallbackInfo &pInfo)
+napi_value sedInstanceTaskAlgebraicVariable(const Napi::CallbackInfo &pInfo)
 {
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->algebraic(toInt32(pInfo[2])));
+    return doublesToNapiArray(pInfo.Env(), task->algebraicVariable(toInt32(pInfo[2])));
 }

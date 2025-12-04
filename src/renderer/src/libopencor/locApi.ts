@@ -69,10 +69,10 @@ export interface ICppLocApi {
   sedInstanceTaskComputedConstantName: (instanceId: number, index: number, computedConstantIndex: number) => string;
   sedInstanceTaskComputedConstantUnit: (instanceId: number, index: number, computedConstantIndex: number) => string;
   sedInstanceTaskComputedConstant: (instanceId: number, index: number, computedConstantIndex: number) => number[];
-  sedInstanceTaskAlgebraicCount: (instanceId: number, index: number) => number;
-  sedInstanceTaskAlgebraicName: (instanceId: number, index: number, algebraicIndex: number) => string;
-  sedInstanceTaskAlgebraicUnit: (instanceId: number, index: number, algebraicIndex: number) => string;
-  sedInstanceTaskAlgebraic: (instanceId: number, index: number, algebraicIndex: number) => number[];
+  sedInstanceTaskAlgebraicVariableCount: (instanceId: number, index: number) => number;
+  sedInstanceTaskAlgebraicVariableName: (instanceId: number, index: number, algebraicVariableIndex: number) => string;
+  sedInstanceTaskAlgebraicVariableUnit: (instanceId: number, index: number, algebraicVariableIndex: number) => string;
+  sedInstanceTaskAlgebraicVariable: (instanceId: number, index: number, algebraicVariableIndex: number) => number[];
 
   // Version API.
 

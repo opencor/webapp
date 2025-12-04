@@ -81,13 +81,13 @@
             </Fieldset>
           </ScrollPanel>
         </div>
-        <div class="flex flex-col grow gap-4">
-          <!-- Note: gap-4 corresponds to a gap of 1rem, hence we subtract (number of gaps * 1rem) from 100% before dividing. -->
+        <div class="flex flex-col grow gap-2">
+          <!-- Note: gap-2 corresponds to a gap of 0.5rem, hence we subtract 0.5 * (number of gaps - 1)rem from 100% before dividing. -->
           <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="actualHeight" :issues="interactiveInstanceIssues" />
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
-            :style="{ height: `calc((100% - ${(uiJson as any).output.plots.length - 1}rem) / ${(uiJson as any).output.plots.length})` }"
+            :style="{ height: `calc((100% - 0.5 * ${(uiJson as any).output.plots.length - 1}rem) / ${(uiJson as any).output.plots.length})` }"
             :plots="interactivePlots[index] || [{ x: { data: [] }, y: { data: [] } }]"
           />
         </div>
@@ -156,8 +156,8 @@ function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedA
     addParameter(instanceTask.computedConstantName(i));
   }
 
-  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-    addParameter(instanceTask.algebraicName(i));
+  for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
+    addParameter(instanceTask.algebraicVariableName(i));
   }
 }
 

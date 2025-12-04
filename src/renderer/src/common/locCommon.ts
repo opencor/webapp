@@ -161,8 +161,8 @@ export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: s
     }
   }
 
-  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-    if (name === instanceTask.algebraicName(i)) {
+  for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
+    if (name === instanceTask.algebraicVariableName(i)) {
       return {
         type: ESimulationDataInfoType.ALGEBRAIC,
         index: i
@@ -191,7 +191,7 @@ export function simulationData(instanceTask: locApi.SedInstanceTask, info: ISimu
     case ESimulationDataInfoType.COMPUTED_CONSTANT:
       return instanceTask.computedConstant(info.index);
     case ESimulationDataInfoType.ALGEBRAIC:
-      return instanceTask.algebraic(info.index);
+      return instanceTask.algebraicVariable(info.index);
     default:
       return [];
   }
