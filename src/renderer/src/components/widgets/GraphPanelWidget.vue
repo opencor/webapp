@@ -126,7 +126,7 @@ vue.watch(
           margin: {
             t: 0,
             l: 0,
-            b: 0,
+            b: 35,
             r: 0,
             pad: 0
           },
