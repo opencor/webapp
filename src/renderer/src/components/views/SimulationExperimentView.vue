@@ -156,8 +156,8 @@ function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedA
     addParameter(instanceTask.computedConstantName(i));
   }
 
-  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-    addParameter(instanceTask.algebraicName(i));
+  for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
+    addParameter(instanceTask.algebraicVariableName(i));
   }
 }
 
