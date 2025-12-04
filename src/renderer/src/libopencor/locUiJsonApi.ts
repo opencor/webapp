@@ -57,6 +57,12 @@ export interface IUiJsonParameter {
   value: string;
 }
 
+function isDivisible(a: number, b: number): boolean {
+  const res = a / b;
+
+  return Math.abs(res - Math.round(res)) < 1e-9;
+}
+
 export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   // Make sure that we have some UI JSON.
 
@@ -374,7 +380,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
           });
         }
 
-        if (!Number.isInteger(range / input.stepValue)) {
+        if (!isDivisible(range, input.stepValue)) {
           res.push({
             type: EIssueType.WARNING,
             description:
@@ -386,7 +392,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
           });
         }
       } else {
-        if (!Number.isInteger(range)) {
+        if (!isDivisible(range, 1)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: a (default) input step value (1) must be a factor of the range value (${String(range)}).`
