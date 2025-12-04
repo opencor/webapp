@@ -34,9 +34,10 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      WINDOWS_CSC_LINK: EVCertificate.pfx
-      WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.EV_CERTIFICATE_PASSWORD }}
-      EV_CERTIFICATE_BASE64: ${{ secrets.EV_CERTIFICATE_BASE64 }}
+      #---GRY--- Temporarily disable code signing since our EV certificate has expired and we are waiting for a new one.
+      # WINDOWS_CSC_LINK: EVCertificate.pfx
+      # WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.EV_CERTIFICATE_PASSWORD }}
+      # EV_CERTIFICATE_BASE64: ${{ secrets.EV_CERTIFICATE_BASE64 }}
       MACOS_CSC_LINK: DeveloperIDApplicationCertificate.p12
       MACOS_CSC_KEY_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD }}
       DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 }}
@@ -49,13 +50,14 @@ jobs:
           timezoneMacos: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
-      - name: Retrieve the EV certificate (Windows only)
-        if: ${{ runner.os == 'Windows' }}
-        shell: bash
-        run: |
-          echo "CSC_LINK=$(echo $WINDOWS_CSC_LINK)" >> $GITHUB_ENV
-          echo "CSC_KEY_PASSWORD=$(echo $WINDOWS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
-          echo -n $EV_CERTIFICATE_BASE64 | base64 -d > $WINDOWS_CSC_LINK
+      #---GRY--- Temporarily disable code signing since our EV certificate has expired and we are waiting for a new one.
+      # - name: Retrieve the EV certificate (Windows only)
+      #   if: ${{ runner.os == 'Windows' }}
+      #   shell: bash
+      #   run: |
+      #     echo "CSC_LINK=$(echo $WINDOWS_CSC_LINK)" >> $GITHUB_ENV
+      #     echo "CSC_KEY_PASSWORD=$(echo $WINDOWS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
+      #     echo -n $EV_CERTIFICATE_BASE64 | base64 -d > $WINDOWS_CSC_LINK
       - name: Retrieve the Developer ID Application certificates (macOS only)
         if: ${{ runner.os == 'macOS' }}
         run: |
@@ -76,13 +78,14 @@ jobs:
           unzip -j bun.zip -d $env:USERPROFILE\.bun
           del bun.zip
           echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
-      - name: Make sure that we can sign OpenCOR (Windows ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: |
-          curl -L https://npmmirror.com/mirrors/electron-builder-binaries/winCodeSign-2.6.0/winCodeSign-2.6.0.7z -o winCodeSign.7z
-          7z x winCodeSign.7z -oC:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0
-          cd C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0\windows-10
-          mv x64 arm64
+      #---GRY--- Temporarily disable code signing since our EV certificate has expired and we are waiting for a new one.
+      # - name: Make sure that we can sign OpenCOR (Windows ARM only)
+      #   if: ${{ matrix.name == 'Windows (ARM)' }}
+      #   run: |
+      #     curl -L https://npmmirror.com/mirrors/electron-builder-binaries/winCodeSign-2.6.0/winCodeSign-2.6.0.7z -o winCodeSign.7z
+      #     7z x winCodeSign.7z -oC:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0
+      #     cd C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0\windows-10
+      #     mv x64 arm64
       - name: Install libopenjp2-tools (Linux ARM only)
         if: ${{ matrix.name == 'Linux (ARM)' }}
         run: |
