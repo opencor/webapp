@@ -288,11 +288,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       });
     }
 
-    function isDiscreteInput(input: IUiJsonInput): input is IUiJsonDiscreteInput {
-      return 'possibleValues' in input;
-    }
-
-    if (isDiscreteInput(input)) {
+    if ('possibleValues' in input) {
       for (const possibleValue of input.possibleValues) {
         if (possibleValue.name === '') {
           res.push({
@@ -391,23 +387,19 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
               ').'
           });
         }
-      } else {
-        if (!isDivisible(range, 1)) {
-          res.push({
-            type: EIssueType.WARNING,
-            description: `UI JSON: a (default) input step value (1) must be a factor of the range value (${String(range)}).`
-          });
-        }
+      } else if (!isDivisible(range, 1)) {
+        res.push({
+          type: EIssueType.WARNING,
+          description: `UI JSON: a (default) input step value (1) must be a factor of the range value (${String(range)}).`
+        });
       }
     }
 
-    if (input.visible !== undefined) {
-      if (input.visible === '') {
-        res.push({
-          type: EIssueType.WARNING,
-          description: 'UI JSON: an input visible must not be empty.'
-        });
-      }
+    if (input.visible !== undefined && input.visible === '') {
+      res.push({
+        type: EIssueType.WARNING,
+        description: 'UI JSON: an input visible must not be empty.'
+      });
     }
   }
 
