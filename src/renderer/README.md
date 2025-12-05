@@ -7,7 +7,12 @@ There are two versions of OpenCOR:
 1. **OpenCOR:** a desktop application that can be run on [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors)-based and [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family)-based [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows), [Linux](https://en.wikipedia.org/wiki/Linux), and [macOS](https://en.wikipedia.org/wiki/MacOS) machines; and
 2. **OpenCOR's Web app:** a [Web app](https://en.wikipedia.org/wiki/Web_application) that can be run on a Web browser.
 
-This package is a [Vue 3](https://vuejs.org/) component for OpenCOR, built with the [Composition API](https://vuejs.org/guide/extras/composition-api-faq).
+Some characteristics of this package are that:
+- It is built as a [Vue 3](https://vuejs.org/) component using the [Composition API](https://vuejs.org/guide/extras/composition-api-faq).
+- It uses [PrimeVue](https://www.primefaces.org/primevue/) as its UI framework.
+- It uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+- It can be used as a standalone Web app or embedded in a Vue 3 application.
+- It uses [CSS containment](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Containment) to prevent CSS leakage when embedded in an application that uses a different UI framework.
 
 ## Usage
 
@@ -36,7 +41,9 @@ When no `omex` prop is provided, the component gives access to all of OpenCOR's 
 
 ```vue
 <template>
-  <OpenCOR />
+  <div style="height: 100vh; height: 100dvh;">
+    <OpenCOR />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -53,7 +60,9 @@ When an `omex` prop is provided, the component goes straight into OpenCOR's simu
 
 ```vue
 <template>
-  <OpenCOR omex="https://raw.githubusercontent.com/opencor/webapp/refs/heads/main/tests/models/ui/lorenz.omex" />
+  <div style="height: 100vh; height: 100dvh;">
+    <OpenCOR omex="https://raw.githubusercontent.com/opencor/webapp/refs/heads/main/tests/models/ui/lorenz.omex" />
+  </div>
 </template>
 
 <script setup lang="ts">
