@@ -1,107 +1,109 @@
 <template>
-  <BlockUI
-    ref="blockUi"
-    :blocked="compUiBlocked"
-    :class="['overflow-hidden', blockUiClass]"
-    @click="activateInstance"
-    @focus="activateInstance"
-    @focusin="activateInstance"
-    @keydown="activateInstance"
-    @mousedown="activateInstance"
-  >
-    <Toast
-      :id="toastId"
-      :group="toastId"
-      :pt:root:style="{ position: 'absolute' }"
-      :class="compIsActive ? 'visible' : 'invisible'"
-    />
-    <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
-    <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
-    <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
-    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :width="width" :height="height" />
-    <div
-      v-else
-      @dragenter="onDragEnter"
-      class="h-full"
-      @dragover.prevent
-      @drop.prevent="onDrop"
-      @dragleave="onDragLeave"
+  <div class="opencor-scoped-styles h-full">
+    <BlockUI
+      ref="blockUi"
+      :blocked="compUiBlocked"
+      class="overflow-hidden h-full"
+      @click="activateInstance"
+      @focus="activateInstance"
+      @focusin="activateInstance"
+      @keydown="activateInstance"
+      @mousedown="activateInstance"
     >
-      <input ref="files" type="file" multiple style="display: none" @change="onChange" />
-      <DragNDropComponent v-show="dragAndDropCounter > 0" />
-      <MainMenu
-        :id="mainMenuId"
-        v-if="electronApi === undefined && omex === undefined"
-        :isActive="compIsActive"
-        :interactiveEnabled="compInteractiveEnabled"
-        :hasFiles="hasFiles"
-        @about="onAboutMenu"
-        @open="onOpenMenu"
-        @openRemote="onOpenRemoteMenu"
-        @openSampleLorenz="onOpenSampleLorenzMenu"
-        @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenzMenu"
-        @close="onCloseMenu"
-        @closeAll="onCloseAllMenu"
-        @settings="onSettingsMenu"
+      <Toast
+        :id="toastId"
+        :group="toastId"
+        :pt:root:style="{ position: 'absolute' }"
+        :class="compIsActive ? 'visible' : 'invisible'"
       />
-      <!-- ---OPENCOR--- Enable once our GitHub integration is fully ready.
-      <div v-if="firebaseConfig !== undefined && omex === undefined">
-        <div class="absolute top-1 right-1 z-999">
-          <Button icon="pi pi-github" severity="secondary" :class="octokit !== null ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
-        </div>
-        <YesNoQuestionDialog
-          v-model:visible="disconnectFromGitHubVisible"
-          title="Disconnect from GitHub..."
-          question="You are about to disconnect from GitHub. Do you want to proceed?"
-          @yes="onDisconnectFromGitHub"
-          @no="disconnectFromGitHubVisible = false"
+      <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
+      <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
+      <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
+      <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :width="width" :height="height" />
+      <div
+        v-else
+        @dragenter="onDragEnter"
+        class="h-full"
+        @dragover.prevent
+        @drop.prevent="onDrop"
+        @dragleave="onDragLeave"
+      >
+        <input ref="files" type="file" multiple style="display: none" @change="onChange" />
+        <DragNDropComponent v-show="dragAndDropCounter > 0" />
+        <MainMenu
+          :id="mainMenuId"
+          v-if="electronApi === undefined && omex === undefined"
+          :isActive="compIsActive"
+          :interactiveEnabled="compInteractiveEnabled"
+          :hasFiles="hasFiles"
+          @about="onAboutMenu"
+          @open="onOpenMenu"
+          @openRemote="onOpenRemoteMenu"
+          @openSampleLorenz="onOpenSampleLorenzMenu"
+          @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenzMenu"
+          @close="onCloseMenu"
+          @closeAll="onCloseAllMenu"
+          @settings="onSettingsMenu"
         />
+        <!-- ---OPENCOR--- Enable once our GitHub integration is fully ready.
+        <div v-if="firebaseConfig !== undefined && omex === undefined">
+          <div class="absolute top-1 right-1 z-999">
+            <Button icon="pi pi-github" severity="secondary" :class="octokit !== null ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
+          </div>
+          <YesNoQuestionDialog
+            v-model:visible="disconnectFromGitHubVisible"
+            title="Disconnect from GitHub..."
+            question="You are about to disconnect from GitHub. Do you want to proceed?"
+            @yes="onDisconnectFromGitHub"
+            @no="disconnectFromGitHubVisible = false"
+          />
+        </div>
+        -->
+        <ContentsComponent
+          ref="contents"
+          :isActive="compIsActive"
+          :interactiveEnabled="compInteractiveEnabled"
+          :simulationOnly="omex !== undefined"
+          :width="width"
+          :height="heightMinusMainMenu"
+        />
+        <OpenRemoteDialog
+          v-model:visible="openRemoteVisible"
+          @openRemote="onOpenRemote"
+          @close="openRemoteVisible = false"
+        />
+        <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
+        <YesNoQuestionDialog
+          v-model:visible="resetAllVisible"
+          title="Reset All..."
+          question="You are about to reset all of your settings. Do you want to proceed?"
+          @yes="onResetAll"
+          @no="resetAllVisible = false"
+        />
+        <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
       </div>
-      -->
-      <ContentsComponent
-        ref="contents"
-        :isActive="compIsActive"
-        :interactiveEnabled="compInteractiveEnabled"
-        :simulationOnly="omex !== undefined"
-        :width="width"
-        :height="heightMinusMainMenu"
+      <OkMessageDialog
+        v-model:visible="updateErrorVisible"
+        :title="updateErrorTitle"
+        :message="updateErrorIssue"
+        @ok="onUpdateErrorDialogClose"
       />
-      <OpenRemoteDialog
-        v-model:visible="openRemoteVisible"
-        @openRemote="onOpenRemote"
-        @close="openRemoteVisible = false"
-      />
-      <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
       <YesNoQuestionDialog
-        v-model:visible="resetAllVisible"
-        title="Reset All..."
-        question="You are about to reset all of your settings. Do you want to proceed?"
-        @yes="onResetAll"
-        @no="resetAllVisible = false"
+        v-model:visible="updateAvailableVisible"
+        title="Check for Updates..."
+        :question="'Version ' + updateVersion + ' is available. Do you want to download it and install it?'"
+        @yes="onDownloadAndInstall"
+        @no="updateAvailableVisible = false"
       />
-      <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
-    </div>
-    <OkMessageDialog
-      v-model:visible="updateErrorVisible"
-      :title="updateErrorTitle"
-      :message="updateErrorIssue"
-      @ok="onUpdateErrorDialogClose"
-    />
-    <YesNoQuestionDialog
-      v-model:visible="updateAvailableVisible"
-      title="Check for Updates..."
-      :question="'Version ' + updateVersion + ' is available. Do you want to download it and install it?'"
-      @yes="onDownloadAndInstall"
-      @no="updateAvailableVisible = false"
-    />
-    <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
-    <OkMessageDialog
-      v-model:visible="updateNotAvailableVisible"
-      title="Check for Updates..."
-      message="No updates are available at this time."
-      @ok="updateNotAvailableVisible = false"
-    />
-  </BlockUI>
+      <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
+      <OkMessageDialog
+        v-model:visible="updateNotAvailableVisible"
+        title="Check for Updates..."
+        message="No updates are available at this time."
+        @ok="updateNotAvailableVisible = false"
+      />
+    </BlockUI>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -682,7 +684,6 @@ electronApi?.onSelect((filePath: string) => {
 
 // A few things that can only be done when the component is mounted.
 
-const blockUiClass = vue.ref('');
 const width = vue.ref<number>(0);
 const height = vue.ref<number>(0);
 const heightMinusMainMenu = vue.ref<number>(0);
@@ -696,15 +697,6 @@ vue.onMounted(() => {
   const grandParentElement = parentElement?.parentElement;
   const greatGrandParentElement = grandParentElement?.parentElement;
   const greatGreatGrandParentElement = greatGrandParentElement?.parentElement;
-
-  blockUiClass.value =
-    parentElement?.tagName === 'DIV' &&
-    parentElement.id === 'app' &&
-    grandParentElement?.tagName === 'BODY' &&
-    greatGrandParentElement?.tagName === 'HTML' &&
-    greatGreatGrandParentElement === null
-      ? 'opencor-application'
-      : 'opencor-component';
 
   // Customise our IDs.
 
@@ -1085,12 +1077,12 @@ async function onGitHubButtonClick(): Promise<void> {
   }
 }
 
-.opencor-application {
-  height: 100vh;
-  height: 100dvh;
+.opencor-scoped-styles {
+  container-type: inline-size;
 }
 
-.opencor-component {
-  height: 100%;
+.opencor-scoped-styles :deep(.p-) {
+  all: initial;
+  all: revert;
 }
 </style>
