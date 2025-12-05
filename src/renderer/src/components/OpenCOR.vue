@@ -1084,7 +1084,7 @@ async function onGitHubButtonClick(): Promise<void> {
   container-type: inline-size;
 }
 
-.opencor-scoped-styles :deep([class^="p-"]) {
+.opencor-scoped-styles :deep(.p-) {
   all: initial;
   all: revert;
 }
