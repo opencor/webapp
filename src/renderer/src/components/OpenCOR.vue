@@ -541,7 +541,7 @@ function onChange(event: Event): void {
 const dragAndDropCounter = vue.ref<number>(0);
 
 function onDragEnter(): void {
-  if (!electronUiEnabled.value || props.omex !== undefined) {
+  if (!compUiEnabled.value || props.omex !== undefined) {
     return;
   }
 
