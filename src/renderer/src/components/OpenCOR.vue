@@ -108,9 +108,11 @@
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { Octokit } from 'octokit';
+*/
 import 'primeicons/primeicons.css';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
@@ -140,7 +142,9 @@ const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const activeInstanceUid = vueCommon.activeInstanceUid();
 const connectingToGitHub = vue.ref<boolean>(false);
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 const octokit = vue.ref<Octokit | null>(null);
+*/
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -231,6 +235,7 @@ void locApi.initialiseLocApi().then(() => {
   locApiInitialised.value = true;
 });
 
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 // Initialise Firebase.
 // Note: we check whether a Firebase app is already initialised to avoid issues when hot-reloading during development
 //       and/or using OpenCOR as a Vue component within another application that also uses Firebase.
@@ -259,6 +264,7 @@ if (firebaseConfig !== undefined) {
 }
 
 loadGitHubAccessToken();
+*/
 
 // Handle an action.
 
@@ -867,6 +873,7 @@ async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
   }
 }
 
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 async function loadGitHubAccessToken(): Promise<void> {
   if (electronApi === undefined || props.omex !== undefined || firebaseConfig === undefined) {
     return;
@@ -1016,6 +1023,7 @@ async function onGitHubButtonClick(): Promise<void> {
     connectingToGitHub.value = false;
   }
 }
+*/
 </script>
 
 <style scoped>

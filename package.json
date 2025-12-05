@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20251205.0",
+  "version": "0.20251205.1",
   "scripts": {
     "archive:web": "bun src/renderer/scripts/archive.web.js",
     "build": "electron-vite build",
@@ -46,14 +46,11 @@
     "vue": "3.4.21"
   },
   "dependencies": {
-    "@napi-rs/keyring": "^1.2.0",
     "@primeuix/themes": "^1.2.5",
     "@primevue/auto-import-resolver": "4.2.5",
     "@vueuse/core": "12.8.2",
     "crypto-js": "^4.2.0",
-    "firebase": "^12.6.0",
     "jsonschema": "^1.5.0",
-    "octokit": "^5.0.5",
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
     "quill": "^2.0.3",
