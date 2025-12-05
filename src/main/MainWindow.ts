@@ -5,7 +5,9 @@ import path from 'node:path';
 import { isHttpUrl, type ISettings } from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
 import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import { deleteGitHubAccessToken } from '../renderer/src/common/gitHubIntegration';
+*/
 
 import icon from './assets/icon.png?asset';
 import { ApplicationWindow } from './ApplicationWindow';
@@ -75,7 +77,9 @@ let _resetAll = false;
 export function resetAll(): void {
   _resetAll = true;
 
+  /*---OPENCOR--- Enable once our GitHub integration is fully ready.
   deleteGitHubAccessToken();
+*/
 
   electron.app.relaunch();
   electron.app.quit();
