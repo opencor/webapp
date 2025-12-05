@@ -2,7 +2,7 @@
   <div class="opencor-scoped-styles h-full">
     <BlockUI
       ref="blockUi"
-      :blocked="compUiBlocked"
+      :blocked="compBlockUiEnabled"
       class="overflow-hidden h-full"
       @click="activateInstance"
       @focus="activateInstance"
@@ -34,7 +34,7 @@
           :id="mainMenuId"
           v-if="electronApi === undefined && omex === undefined"
           :isActive="compIsActive"
-          :interactiveEnabled="compInteractiveEnabled"
+          :uiEnabled="compUiEnabled"
           :hasFiles="hasFiles"
           @about="onAboutMenu"
           @open="onOpenMenu"
@@ -62,7 +62,7 @@
         <ContentsComponent
           ref="contents"
           :isActive="compIsActive"
-          :interactiveEnabled="compInteractiveEnabled"
+          :uiEnabled="compUiEnabled"
           :simulationOnly="omex !== undefined"
           :width="width"
           :height="heightMinusMainMenu"
@@ -159,19 +159,22 @@ const compIsActive = vue.computed(() => {
 });
 
 // Determine whether the component UI should be blocked/enabled.
+// Note: compBlockUiEnabled is used to determine whether PrimeVue's BlockUI component should be enabled, whereas
+//       compUiEnabled is used to determine whether the UI should be enabled (it checks whether various dialogs are
+//       visible since those dialogs block the UI).
 
-const compUiBlocked = vue.computed(() => {
+const compBlockUiEnabled = vue.computed(() => {
   return (
-    !uiEnabled.value ||
+    !electronUiEnabled.value ||
     loadingOpencorMessageVisible.value ||
     loadingModelMessageVisible.value ||
     connectingToGitHub.value
   );
 });
 
-const compInteractiveEnabled = vue.computed(() => {
+const compUiEnabled = vue.computed(() => {
   return (
-    !compUiBlocked.value &&
+    !compBlockUiEnabled.value &&
     !disconnectFromGitHubVisible.value &&
     !openRemoteVisible.value &&
     !settingsVisible.value &&
@@ -309,12 +312,12 @@ function handleAction(action: string): void {
   }
 }
 
-// Enable/disable the UI.
+// Enable/disable the UI from Electron.
 
-const uiEnabled = vue.ref<boolean>(true);
+const electronUiEnabled = vue.ref<boolean>(true);
 
 electronApi?.onEnableDisableUi((enable: boolean) => {
-  uiEnabled.value = enable;
+  electronUiEnabled.value = enable;
 });
 
 // Enable/disable some menu items.
@@ -538,7 +541,7 @@ function onChange(event: Event): void {
 const dragAndDropCounter = vue.ref<number>(0);
 
 function onDragEnter(): void {
-  if (!uiEnabled.value || props.omex !== undefined) {
+  if (!electronUiEnabled.value || props.omex !== undefined) {
     return;
   }
 
@@ -826,8 +829,8 @@ if (props.omex !== undefined) {
 // Ensure that our BlockUI mask is removed when the UI is enabled.
 // Note: this is a workaround for a PrimeVue BlockUI issue when handling an action passed to our Web app.
 
-vue.watch(compUiBlocked, (newCompUiBlocked: boolean) => {
-  if (!newCompUiBlocked) {
+vue.watch(compBlockUiEnabled, (newCompBlockUiEnabled: boolean) => {
+  if (!newCompBlockUiEnabled) {
     setTimeout(() => {
       const blockUiElement = blockUi.value?.$el as HTMLElement;
       const maskElement = blockUiElement.querySelector('.p-blockui-mask');
