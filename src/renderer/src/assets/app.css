@@ -1,8 +1,26 @@
-@import "./base.css";
+@import "tailwindcss";
+@import "tailwindcss-primeui";
+@import "primeicons/primeicons.css";
+
+:root {
+  --border-color: var(--p-content-border-color);
+}
 
 body {
   background-color: var(--p-content-background);
   color: var(--p-content-color);
+  margin: 0;
+  font-family:
+    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans",
+    "Helvetica Neue", sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+.p-component {
+  transition: none !important;
 }
 
 a {
