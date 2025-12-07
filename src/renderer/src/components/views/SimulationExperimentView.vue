@@ -118,7 +118,7 @@ const props = defineProps<{
   isActive: boolean;
   isActiveFile: boolean;
   simulationOnly?: boolean;
-  uiEnabled: boolean;
+  interactiveEnabled: boolean;
   uiJson: locApi.IUiJson;
   width: number;
 }>();
@@ -159,10 +159,6 @@ function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedA
   for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
     addParameter(instanceTask.algebraicVariableName(i));
   }
-
-  // Sort the parameters alphabetically.
-
-  parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
 }
 
 // Standard mode.
@@ -430,7 +426,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled) {
+    if (!props.isActive || !props.interactiveEnabled) {
       return;
     }
 

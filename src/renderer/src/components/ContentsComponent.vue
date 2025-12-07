@@ -12,7 +12,7 @@
         :width="width"
         :height="height"
         :isActive="isActive"
-        :uiEnabled="uiEnabled"
+        :interactiveEnabled="interactiveEnabled"
         :file="fileTab.file"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="simulationOnly"
@@ -66,7 +66,7 @@
             :width="width"
             :height="heightMinusFileTablist"
             :isActive="isActive"
-            :uiEnabled="uiEnabled"
+            :interactiveEnabled="interactiveEnabled"
             :file="fileTab.file"
             :isActiveFile="fileTab.file.path() === activeFile"
             :uiJson="fileTab.uiJson"
@@ -97,8 +97,8 @@ const props = defineProps<{
   width: number;
   height: number;
   isActive: boolean;
+  interactiveEnabled: boolean;
   simulationOnly?: boolean;
-  uiEnabled: boolean;
 }>();
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile });
 
@@ -266,7 +266,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled || fileTabs.value.length === 0) {
+    if (!props.isActive || !props.interactiveEnabled || fileTabs.value.length === 0) {
       return;
     }
 

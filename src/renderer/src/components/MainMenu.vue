@@ -33,8 +33,8 @@ import * as common from '../common/common';
 
 const props = defineProps<{
   isActive: boolean;
+  interactiveEnabled: boolean;
   hasFiles: boolean;
-  uiEnabled: boolean;
 }>();
 
 const emit = defineEmits([
@@ -191,7 +191,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled) {
+    if (!props.isActive || !props.interactiveEnabled) {
       return;
     }
 
@@ -222,12 +222,6 @@ if (common.isDesktop()) {
   border: none;
   border-radius: 0;
   border-bottom: 1px solid var(--border-color);
-}
-
-.p-menubar a,
-.p-menubar-item-link,
-:deep(.p-menubar-item-link) {
-  color: var(--p-text-color);
 }
 
 .p-menubar
