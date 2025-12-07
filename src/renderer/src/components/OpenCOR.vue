@@ -113,7 +113,6 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { Octokit } from 'octokit';
 */
-import 'primeicons/primeicons.css';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
