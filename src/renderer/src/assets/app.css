@@ -1,14 +1,37 @@
-@import "./base.css";
+/**
+ * Scoped styles to prevent CSS leakage when OpenCOR is used as a Vue 3 component in an application that uses a
+ * different UI framework (e.g., Bootstrap, Element Plus, Vuetify).
+ * Note: the order of imports is important to ensure that Tailwind CSS does not override PrimeVue styles.
+ */
 
-body {
+@import "tailwindcss";
+@import "tailwindcss-primeui";
+@import "primeicons/primeicons.css";
+
+.opencor-scoped-styles {
+  container-type: inline-size;
+  --border-color: var(--p-content-border-color);
+
+  font-family:
+    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans",
+    "Helvetica Neue", sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+
   background-color: var(--p-content-background);
   color: var(--p-content-color);
 }
 
-a {
+.opencor-scoped-styles .p-component {
+  transition: none !important;
+}
+
+.opencor-scoped-styles a {
   color: var(--p-button-link-color);
 }
 
-:focus {
+.opencor-scoped-styles :focus {
   outline: none !important;
 }
