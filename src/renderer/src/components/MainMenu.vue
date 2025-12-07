@@ -224,12 +224,6 @@ if (common.isDesktop()) {
   border-bottom: 1px solid var(--border-color);
 }
 
-.p-menubar a,
-.p-menubar-item-link,
-:deep(.p-menubar-item-link) {
-  color: var(--p-text-color);
-}
-
 .p-menubar
   > .p-menubar-root-list
   > .p-menubar-item
