@@ -118,7 +118,7 @@ const props = defineProps<{
   isActive: boolean;
   isActiveFile: boolean;
   simulationOnly?: boolean;
-  interactiveEnabled: boolean;
+  uiEnabled: boolean;
   uiJson: locApi.IUiJson;
   width: number;
 }>();
@@ -426,7 +426,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.interactiveEnabled) {
+    if (!props.isActive || !props.uiEnabled) {
       return;
     }
 
