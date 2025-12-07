@@ -115,7 +115,6 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { Octokit } from 'octokit';
 */
-import 'primeicons/primeicons.css';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
@@ -128,7 +127,9 @@ import '../assets/app.css';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
 import { electronApi } from '../common/electronApi';
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
+*/
 import * as locCommon from '../common/locCommon';
 import * as vueCommon from '../common/vueCommon';
 import type IContentsComponent from '../components/ContentsComponent.vue';
