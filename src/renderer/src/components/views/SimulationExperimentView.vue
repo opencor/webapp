@@ -159,6 +159,10 @@ function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedA
   for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
     addParameter(instanceTask.algebraicVariableName(i));
   }
+
+  // Sort the parameters alphabetically.
+
+  parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
 }
 
 // Standard mode.
