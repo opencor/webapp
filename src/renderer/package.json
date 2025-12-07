@@ -47,7 +47,7 @@
     "dev": "vite dev",
     "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/libopencor/src/*",
     "format:check": "bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/libopencor/src/*",
-    "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none",
+    "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
     "version:new": "bun scripts/version.js"
   },
@@ -75,6 +75,8 @@
     "@vitejs/plugin-vue": "^6.0.2",
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.22",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1",
     "tailwindcss": "^4.1.17",
     "tailwindcss-primeui": "^0.6.1",
     "typescript": "^5.9.3",
