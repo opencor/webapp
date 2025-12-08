@@ -2,7 +2,7 @@
   <BlockUI
     ref="blockUi"
     :blocked="compBlockUiEnabled"
-    :class="['overflow-hidden', blockUiClass]"
+    class="overflow-hidden h-full"
     @click="activateInstance"
     @focus="activateInstance"
     @focusin="activateInstance"
@@ -686,7 +686,6 @@ electronApi?.onSelect((filePath: string) => {
 
 // A few things that can only be done when the component is mounted.
 
-const blockUiClass = vue.ref('');
 const width = vue.ref<number>(0);
 const height = vue.ref<number>(0);
 const heightMinusMainMenu = vue.ref<number>(0);
@@ -700,15 +699,6 @@ vue.onMounted(() => {
   const grandParentElement = parentElement?.parentElement;
   const greatGrandParentElement = grandParentElement?.parentElement;
   const greatGreatGrandParentElement = greatGrandParentElement?.parentElement;
-
-  blockUiClass.value =
-    parentElement?.tagName === 'DIV' &&
-    parentElement.id === 'app' &&
-    grandParentElement?.tagName === 'BODY' &&
-    greatGrandParentElement?.tagName === 'HTML' &&
-    greatGreatGrandParentElement === null
-      ? 'opencor-application'
-      : 'opencor-component';
 
   // Customise our IDs.
 
@@ -1087,14 +1077,5 @@ async function onGitHubButtonClick(): Promise<void> {
     border-color: var(--p-red-700) !important;
     color: var(--p-red-200);
   }
-}
-
-.opencor-application {
-  height: 100vh;
-  height: 100dvh;
-}
-
-.opencor-component {
-  height: 100%;
 }
 </style>
