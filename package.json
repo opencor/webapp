@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20251208.0",
+  "version": "0.20251208.1",
   "scripts": {
     "archive:web": "bun src/renderer/scripts/archive.web.js",
     "build": "electron-vite build",
@@ -35,7 +35,7 @@
     "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/renderer/src/libopencor/src/*",
     "format:check": "bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/renderer/src/libopencor/src/*",
     "libopencor": "cmake-js build -B Release -O ./dist/libOpenCOR",
-    "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none",
+    "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "release": "electron-builder",
     "release:local": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --publish=never",
     "start": "electron-vite preview",
@@ -77,6 +77,8 @@
     "electron-updater": "^6.6.2",
     "electron-vite": "^4.0.1",
     "node-addon-api": "^8.5.0",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1",
     "tailwindcss": "^4.1.17",
     "tailwindcss-primeui": "^0.6.1",
     "tar": "^7.5.2",

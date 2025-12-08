@@ -151,6 +151,7 @@ export function enableDisableMainMenu(enable: boolean): void {
       enabled: recentFilePaths.length > 0
     });
 
+    fileSubMenu.push({ type: 'separator' });
     fileSubMenu.push({
       id: 'fileReopen',
       label: 'Reopen',
