@@ -1,32 +1,35 @@
-@import "tailwindcss";
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
 @import "tailwindcss-primeui";
 @import "primeicons/primeicons.css";
 
-:root {
-  --border-color: var(--p-content-border-color);
-}
-
 body {
-  background-color: var(--p-content-background);
-  color: var(--p-content-color);
-  margin: 0;
-  font-family:
-    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans",
-    "Helvetica Neue", sans-serif;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  user-select: none;
-}
+  .opencor {
+    --border-color: var(--p-content-border-color);
 
-.p-component {
-  transition: none !important;
-}
+    background-color: var(--p-content-background);
+    color: var(--p-content-color);
+    margin: 0;
+    font-family:
+      Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans",
+      "Helvetica Neue", sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
 
-a {
-  color: var(--p-button-link-color);
-}
+    .p-component {
+      transition: none !important;
+    }
 
-:focus {
-  outline: none !important;
+    a {
+      color: var(--p-button-link-color);
+    }
+
+    :focus {
+      outline: none !important;
+    }
+  }
 }
