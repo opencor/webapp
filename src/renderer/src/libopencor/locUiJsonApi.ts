@@ -207,7 +207,6 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
               },
               type: 'object'
             },
-            maxItems: 9,
             minItems: 1,
             required: true,
             type: 'array'
