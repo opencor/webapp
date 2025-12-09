@@ -46,9 +46,9 @@ export interface IUiJsonOutputData {
 }
 
 export interface IUiJsonOutputPlot {
-  xAxisTitle: string;
+  xAxisTitle?: string;
   xValue: string;
-  yAxisTitle: string;
+  yAxisTitle?: string;
   yValue: string;
 }
 
@@ -189,7 +189,6 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
               additionalProperties: false,
               properties: {
                 xAxisTitle: {
-                  required: true,
                   type: 'string'
                 },
                 xValue: {
@@ -197,7 +196,6 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
                   type: 'string'
                 },
                 yAxisTitle: {
-                  required: true,
                   type: 'string'
                 },
                 yValue: {
