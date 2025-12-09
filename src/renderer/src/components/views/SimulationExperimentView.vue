@@ -345,7 +345,9 @@ function updateInteractiveSimulation() {
   });
 
   interactivePlots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
-    return [
+    // Default trace.
+
+    let res = [
       {
         x: {
           data: parser.evaluate(plot.xValue),
@@ -357,6 +359,23 @@ function updateInteractiveSimulation() {
         }
       }
     ];
+
+    // Additional traces.
+
+    plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
+      res.push({
+        x: {
+          data: parser.evaluate(additionalTrace.xValue),
+          axisTitle: plot.xAxisTitle
+        },
+        y: {
+          data: parser.evaluate(additionalTrace.yValue),
+          axisTitle: plot.yAxisTitle
+        }
+      });
+    });
+
+    return res;
   });
 }
 

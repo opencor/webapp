@@ -45,11 +45,17 @@ export interface IUiJsonOutputData {
   name: string;
 }
 
+export interface IUiJsonOutputPlotAdditionalTrace {
+  xValue: string;
+  yValue: string;
+}
+
 export interface IUiJsonOutputPlot {
   xAxisTitle?: string;
   xValue: string;
   yAxisTitle?: string;
   yValue: string;
+  additionalTraces?: IUiJsonOutputPlotAdditionalTrace[];
 }
 
 export interface IUiJsonParameter {
@@ -201,6 +207,23 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
                 yValue: {
                   required: true,
                   type: 'string'
+                },
+                additionalTraces: {
+                  items: {
+                    additionalProperties: false,
+                    properties: {
+                      xValue: {
+                        required: true,
+                        type: 'string'
+                      },
+                      yValue: {
+                        required: true,
+                        type: 'string'
+                      }
+                    },
+                    type: 'object'
+                  },
+                  type: 'array'
                 }
               },
               type: 'object'

@@ -166,6 +166,7 @@ export {
   type IUiJsonOutput,
   type IUiJsonOutputData,
   type IUiJsonOutputPlot,
+  type IUiJsonOutputPlotAdditionalTrace,
   type IUiJsonParameter,
   uiJsonIssues
 } from './locUiJsonApi.js';
