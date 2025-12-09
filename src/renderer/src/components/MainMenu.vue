@@ -251,6 +251,7 @@ if (common.isDesktop()) {
 
 .p-menubar-item-link {
   padding: 0.25rem 0.5rem !important;
+  color: var(--p-menubar-item-color);
 }
 
 :deep(.p-menubar-root-list) {
