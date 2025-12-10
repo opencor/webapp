@@ -12,16 +12,19 @@ import * as vue from 'vue';
 import * as vueCommon from '../../common/vueCommon';
 
 interface IPlotlyTrace {
+  name: string;
   x: number[];
   y: number[];
 }
 
 export interface IGraphPanelPlotAdditionalTrace {
+  name: string;
   xValues: number[];
   yValues: number[];
 }
 
 export interface IGraphPanelData {
+  name: string;
   xAxisTitle?: string;
   xValues: number[];
   yAxisTitle?: string;
@@ -107,10 +110,20 @@ vue.watch(
 
       // Retrieve all the traces, i.e. the default trace and any additional traces.
 
-      let traces: IPlotlyTrace[] = [{ x: props.data.xValues, y: props.data.yValues }];
+      let traces: IPlotlyTrace[] = [
+        {
+          name: props.data.name,
+          x: props.data.xValues,
+          y: props.data.yValues
+        }
+      ];
 
       for (const additionalTrace of props.data.additionalTraces || []) {
-        traces.push({ x: additionalTrace.xValues, y: additionalTrace.yValues });
+        traces.push({
+          name: additionalTrace.name,
+          x: additionalTrace.xValues,
+          y: additionalTrace.yValues
+        });
       }
 
       // Update the plots.
@@ -131,7 +144,7 @@ vue.watch(
             r: rightMargin.value,
             pad: 0
           },
-          showlegend: false,
+          showlegend: true,
           xaxis: {
             tickangle: 0,
             automargin: true,

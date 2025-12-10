@@ -88,7 +88,7 @@
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
             :style="{ height: `calc((100% - 0.5 * ${(uiJson as any).output.plots.length - 1}rem) / ${(uiJson as any).output.plots.length})` }"
-            :data="interactiveData[index] || { xValues: [], yValues: [] }"
+            :data="interactiveData[index] || { name: '',xValues: [], yValues: [] }"
           />
         </div>
       </div>
@@ -175,12 +175,17 @@ const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask.voiName());
 const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
 const standardData = vue.ref<IGraphPanelData>({
+  name: '',
   xValues: [],
   yValues: []
 });
 const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
 populateParameters(standardParameters, standardInstanceTask);
+
+function traceName(xValue: string, yValue: string): string {
+  return `${yValue} <i>vs.</i> ${xValue}`;
+}
 
 function onRun(): void {
   // Run the instance, output the simulation time to the console, and update the plot.
@@ -205,6 +210,7 @@ const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTa
 
 function updatePlot() {
   standardData.value = {
+    name: traceName(standardXParameter.value, standardYParameter.value),
     xValues: locCommon.simulationData(standardInstanceTask, xInfo.value),
     yValues: locCommon.simulationData(standardInstanceTask, yInfo.value)
   };
@@ -350,12 +356,14 @@ function updateInteractiveSimulation(_name: string, _newValue: number) {
 
     plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
       additionalTraces.push({
+        name: traceName(additionalTrace.xValue, additionalTrace.yValue),
         xValues: parser.evaluate(additionalTrace.xValue),
         yValues: parser.evaluate(additionalTrace.yValue)
       });
     });
 
     return {
+      name: traceName(plot.xValue, plot.yValue),
       xAxisTitle: plot.xAxisTitle,
       xValues: parser.evaluate(plot.xValue),
       yAxisTitle: plot.yAxisTitle,
