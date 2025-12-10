@@ -45,11 +45,17 @@ export interface IUiJsonOutputData {
   name: string;
 }
 
-export interface IUiJsonOutputPlot {
-  xAxisTitle: string;
+export interface IUiJsonOutputPlotAdditionalTrace {
   xValue: string;
-  yAxisTitle: string;
   yValue: string;
+}
+
+export interface IUiJsonOutputPlot {
+  xAxisTitle?: string;
+  xValue: string;
+  yAxisTitle?: string;
+  yValue: string;
+  additionalTraces?: IUiJsonOutputPlotAdditionalTrace[];
 }
 
 export interface IUiJsonParameter {
@@ -189,7 +195,6 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
               additionalProperties: false,
               properties: {
                 xAxisTitle: {
-                  required: true,
                   type: 'string'
                 },
                 xValue: {
@@ -197,17 +202,32 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
                   type: 'string'
                 },
                 yAxisTitle: {
-                  required: true,
                   type: 'string'
                 },
                 yValue: {
                   required: true,
                   type: 'string'
+                },
+                additionalTraces: {
+                  items: {
+                    additionalProperties: false,
+                    properties: {
+                      xValue: {
+                        required: true,
+                        type: 'string'
+                      },
+                      yValue: {
+                        required: true,
+                        type: 'string'
+                      }
+                    },
+                    type: 'object'
+                  },
+                  type: 'array'
                 }
               },
               type: 'object'
             },
-            maxItems: 9,
             minItems: 1,
             required: true,
             type: 'array'
