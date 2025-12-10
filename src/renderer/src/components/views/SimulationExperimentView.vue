@@ -271,6 +271,7 @@ interactiveMath.import(
   },
   { override: true }
 );
+
 function evaluateValue(value: string): mathjs.MathType {
   const parser = interactiveMath.parser();
   let index = -1;
