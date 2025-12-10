@@ -480,6 +480,24 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
         description: 'UI JSON: an output plot Y value must not be empty.'
       });
     }
+
+    if (outputPlot.additionalTraces !== undefined) {
+      for (const additionalTrace of outputPlot.additionalTraces) {
+        if (additionalTrace.xValue === '') {
+          res.push({
+            type: EIssueType.WARNING,
+            description: 'UI JSON: an output plot additional trace X value must not be empty.'
+          });
+        }
+
+        if (additionalTrace.yValue === '') {
+          res.push({
+            type: EIssueType.WARNING,
+            description: 'UI JSON: an output plot additional trace Y value must not be empty.'
+          });
+        }
+      }
+    }
   }
 
   // Make sure that the parameters information makes sense.
