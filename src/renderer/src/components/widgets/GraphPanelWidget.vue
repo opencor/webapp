@@ -41,6 +41,7 @@ const props = withDefaults(
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
 const isVisible = vue.ref(false);
+const rightMargin = vue.ref(-1);
 const theme = vueCommon.useTheme();
 
 interface IAxisThemeData {
@@ -127,7 +128,7 @@ vue.watch(
             t: 0,
             l: 0,
             b: 35,
-            r: 0,
+            r: rightMargin.value,
             pad: 0
           },
           showlegend: false,
@@ -164,6 +165,22 @@ vue.watch(
           showTips: false
         }
       )
+        .then(() => {
+          // If needed, determine and set the right margin to accommodate the last X-axis tick label.
+
+          if (rightMargin.value === -1) {
+            const xAxisElements = mainDiv.value?.querySelectorAll('.xtick');
+
+            if (xAxisElements !== undefined && xAxisElements.length > 0) {
+              rightMargin.value =
+                5 + 0.5 * (xAxisElements[xAxisElements.length - 1]?.getBoundingClientRect()?.width || 0);
+
+              Plotly.relayout(mainDiv.value, {
+                'margin.r': rightMargin.value
+              });
+            }
+          }
+        })
         .then(() => {
           if (isVisible.value) {
             return;
