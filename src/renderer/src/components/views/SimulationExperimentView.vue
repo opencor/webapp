@@ -227,6 +227,8 @@ const interactiveInputValues = vue.ref<number[]>(
     ? props.uiJson.input.map((input: locApi.IUiJsonInput) => {
         // If the input has some possible values then we want to return the index of the possible value that matches the
         // default value otherwise we just return the default value.
+        // Note: if the input has some possible values then we will always be able to return a valid index since the default value
+        //       must be one of the possible values (see uiJsonIssues()).
 
         if (input.possibleValues !== undefined) {
           for (let i = 0; i < input.possibleValues.length; ++i) {
