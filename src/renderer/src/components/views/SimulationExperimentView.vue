@@ -318,7 +318,6 @@ function updateInteractiveSimulation() {
     const componentVariableNames = parameter.name.split('/');
 
     interactiveModel.addChange(
-      // @ts-expect-error (we trust that we have a valid component and variable name)
       componentVariableNames[0],
       componentVariableNames[1],
       String(evaluateValue(parameter.value))
@@ -340,7 +339,6 @@ function updateInteractiveSimulation() {
   const parser = interactiveMath.parser();
 
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-    // @ts-expect-error (we trust that we have some valid information)
     parser.set(data.id, locCommon.simulationData(interactiveInstanceTask, interactiveIdToInfo[data.id]));
   });
 
