@@ -2,7 +2,7 @@
   <BlockUI
     ref="blockUi"
     :blocked="compBlockUiEnabled"
-    class="overflow-hidden h-full"
+    class="opencor overflow-hidden h-full"
     @click="activateInstance"
     @focus="activateInstance"
     @focusin="activateInstance"
