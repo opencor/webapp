@@ -49,7 +49,7 @@
             </ScrollPanel>
           </SplitterPanel>
           <SplitterPanel :size="75">
-            <GraphPanelWidget :key="interactiveModeEnabled ? 'hidden-graph-panel' : 'visible-graph-panel'" :plots="standardPlots" />
+            <GraphPanelWidget :key="interactiveModeEnabled ? 'hidden-graph-panel' : 'visible-graph-panel'" :data="standardData" />
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
@@ -88,7 +88,7 @@
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
             :style="{ height: `calc((100% - 0.5 * ${(uiJson as any).output.plots.length - 1}rem) / ${(uiJson as any).output.plots.length})` }"
-            :plots="interactivePlots[index] || [{ x: { data: [] }, y: { data: [] } }]"
+            :data="interactiveData[index] || { xValues: [], yValues: [] }"
           />
         </div>
       </div>
@@ -110,7 +110,7 @@ import * as vueCommon from '../../common/vueCommon';
 import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
 
-import type { IGraphPanelPlot } from '../widgets/GraphPanelWidget.vue';
+import type { IGraphPanelData, IGraphPanelPlotAdditionalTrace } from '../widgets/GraphPanelWidget.vue';
 
 const props = defineProps<{
   file: locApi.File;
@@ -174,12 +174,10 @@ const standardInstanceTask = standardInstance.task(0);
 const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask.voiName());
 const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
-const standardPlots = vue.ref<IGraphPanelPlot[]>([
-  {
-    x: { data: [] },
-    y: { data: [] }
-  }
-]);
+const standardData = vue.ref<IGraphPanelData>({
+  xValues: [],
+  yValues: []
+});
 const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
 populateParameters(standardParameters, standardInstanceTask);
@@ -206,16 +204,10 @@ const xInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTa
 const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value));
 
 function updatePlot() {
-  standardPlots.value = [
-    {
-      x: {
-        data: locCommon.simulationData(standardInstanceTask, xInfo.value)
-      },
-      y: {
-        data: locCommon.simulationData(standardInstanceTask, yInfo.value)
-      }
-    }
-  ];
+  standardData.value = {
+    xValues: locCommon.simulationData(standardInstanceTask, xInfo.value),
+    yValues: locCommon.simulationData(standardInstanceTask, yInfo.value)
+  };
 }
 
 // Interactive mode.
@@ -225,14 +217,7 @@ const interactiveInstance = interactiveDocument.instantiate();
 const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = interactiveDocument.model(0);
-const interactivePlots = vue.ref<IGraphPanelPlot[][]>([
-  [
-    {
-      x: { data: [] },
-      y: { data: [] }
-    }
-  ]
-]);
+const interactiveData = vue.ref<IGraphPanelData[]>([]);
 const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
   interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
 );
@@ -342,38 +327,23 @@ function updateInteractiveSimulation() {
     parser.set(data.id, locCommon.simulationData(interactiveInstanceTask, interactiveIdToInfo[data.id]));
   });
 
-  interactivePlots.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
-    // Default trace.
-
-    let res = [
-      {
-        x: {
-          data: parser.evaluate(plot.xValue),
-          axisTitle: plot.xAxisTitle
-        },
-        y: {
-          data: parser.evaluate(plot.yValue),
-          axisTitle: plot.yAxisTitle
-        }
-      }
-    ];
-
-    // Additional traces.
+  interactiveData.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
+    let additionalTraces: IGraphPanelPlotAdditionalTrace[] = [];
 
     plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
-      res.push({
-        x: {
-          data: parser.evaluate(additionalTrace.xValue),
-          axisTitle: plot.xAxisTitle
-        },
-        y: {
-          data: parser.evaluate(additionalTrace.yValue),
-          axisTitle: plot.yAxisTitle
-        }
+      additionalTraces.push({
+        xValues: parser.evaluate(additionalTrace.xValue),
+        yValues: parser.evaluate(additionalTrace.yValue)
       });
     });
 
-    return res;
+    return {
+      xAxisTitle: plot.xAxisTitle,
+      xValues: parser.evaluate(plot.xValue),
+      yAxisTitle: plot.yAxisTitle,
+      yValues: parser.evaluate(plot.yValue),
+      additionalTraces: additionalTraces
+    };
   });
 }
 
