@@ -11,19 +11,27 @@ import * as vue from 'vue';
 
 import * as vueCommon from '../../common/vueCommon';
 
-interface IGraphPanelPlotData {
-  axisTitle?: string;
-  data: number[];
+interface IPlotlyTrace {
+  x: number[];
+  y: number[];
 }
 
-export interface IGraphPanelPlot {
-  x: IGraphPanelPlotData;
-  y: IGraphPanelPlotData;
+export interface IGraphPanelPlotAdditionalTrace {
+  xValues: number[];
+  yValues: number[];
+}
+
+export interface IGraphPanelData {
+  xAxisTitle?: string;
+  xValues: number[];
+  yAxisTitle?: string;
+  yValues: number[];
+  additionalTraces?: IGraphPanelPlotAdditionalTrace[];
 }
 
 const props = withDefaults(
   defineProps<{
-    plots: IGraphPanelPlot[];
+    data: IGraphPanelData;
     showMarker?: boolean;
   }>(),
   {
@@ -33,6 +41,7 @@ const props = withDefaults(
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
 const isVisible = vue.ref(false);
+const rightMargin = vue.ref(-1);
 const theme = vueCommon.useTheme();
 
 interface IAxisThemeData {
@@ -86,15 +95,23 @@ function themeData(): IThemeData {
 }
 
 vue.watch(
-  () => [props.plots, theme.useLightMode()],
+  () => [props.data, theme.useLightMode()],
   () => {
     // Wait for the DOM to update before proceeding.
 
     vue.nextTick(() => {
-      // Retrieve the axes titles if there is only one plot.
+      // Retrieve the axes' titles.
 
-      const xAxisTitle = props.plots.length === 1 ? props.plots[0]?.x.axisTitle : '';
-      const yAxisTitle = props.plots.length === 1 ? props.plots[0]?.y.axisTitle : '';
+      const xAxisTitle = props.data.xAxisTitle;
+      const yAxisTitle = props.data.yAxisTitle;
+
+      // Retrieve all the traces, i.e. the default trace and any additional traces.
+
+      let traces: IPlotlyTrace[] = [{ x: props.data.xValues, y: props.data.yValues }];
+
+      for (const additionalTrace of props.data.additionalTraces || []) {
+        traces.push({ x: additionalTrace.xValues, y: additionalTrace.yValues });
+      }
 
       // Update the plots.
 
@@ -102,23 +119,7 @@ vue.watch(
 
       Plotly.react(
         mainDiv.value,
-        props.plots.map((plot) => ({
-          x: plot.x.data,
-          y: plot.y.data
-          // type: 'scattergl'
-          //---OPENCOR---
-          // Ideally, we would render using WebGL, but... Web browsers impose a limit on the number of active WebGL
-          // contexts that can be used (8 to 16, apparently). So, depending on how the OpenCOR component is used, we may
-          // reach that limit and get the following warning as a result:
-          //   Too many active WebGL contexts. Oldest context will be lost.
-          // and nothing gets rendered. Apparently, plotly.js added support for virtual-webgl in version 2.28.0 (see
-          // https://github.com/plotly/plotly.js/releases/tag/v2.28.0), but to do what they say in
-          // https://github.com/plotly/plotly.js/pull/6784#issue-1991790973 still results in the same behaviour as
-          // above. So, it looks like we have no choice but to disable WebGL rendering. The downside is that 1) it
-          // doesn't look as good and 2) it is not as fast to render when there are a lot of data points. However, to
-          // use a virtual WebGL would mean that all WebGL-based components would also be using virtual WebGL, which
-          // might not be desirable.
-        })),
+        traces,
         {
           // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 
@@ -127,7 +128,7 @@ vue.watch(
             t: 0,
             l: 0,
             b: 35,
-            r: 0,
+            r: rightMargin.value,
             pad: 0
           },
           showlegend: false,
@@ -164,6 +165,22 @@ vue.watch(
           showTips: false
         }
       )
+        .then(() => {
+          // If needed, determine and set the right margin to accommodate the last X-axis tick label.
+
+          if (rightMargin.value === -1) {
+            const xAxisElements = mainDiv.value?.querySelectorAll('.xtick');
+
+            if (xAxisElements !== undefined && xAxisElements.length > 0) {
+              rightMargin.value =
+                5 + 0.5 * (xAxisElements[xAxisElements.length - 1]?.getBoundingClientRect()?.width || 0);
+
+              Plotly.relayout(mainDiv.value, {
+                'margin.r': rightMargin.value
+              });
+            }
+          }
+        })
         .then(() => {
           if (isVisible.value) {
             return;
