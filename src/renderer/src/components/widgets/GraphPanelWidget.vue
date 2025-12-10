@@ -182,24 +182,21 @@ vue.watch(
           }
         })
         .then(() => {
-          if (isVisible.value) {
-            return;
+          if (!isVisible.value) {
+            // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct
+            // dimensions.
+
+            return Plotly.Plots.resize(mainDiv.value);
           }
-
-          // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
-
-          return Plotly.Plots.resize(mainDiv.value);
         })
         .then(() => {
-          if (isVisible.value) {
-            return;
+          if (!isVisible.value) {
+            // Show the component now that the plot has been properly sized.
+
+            vue.nextTick(() => {
+              isVisible.value = true;
+            });
           }
-
-          // Show the component now that the plot has been properly sized.
-
-          vue.nextTick(() => {
-            isVisible.value = true;
-          });
         });
     });
   },
