@@ -223,7 +223,22 @@ const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
 );
 const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
 const interactiveInputValues = vue.ref<number[]>(
-  interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []
+  interactiveModeAvailable.value
+    ? props.uiJson.input.map((input: locApi.IUiJsonInput) => {
+        // If the input has some possible values then we want to return the index of the possible value that matches the
+        // default value otherwise we just return the default value.
+
+        if (input.possibleValues !== undefined) {
+          for (let i = 0; i < input.possibleValues.length; ++i) {
+            if (input.possibleValues[i].value === input.defaultValue) {
+              return i;
+            }
+          }
+        }
+
+        return input.defaultValue;
+      })
+    : []
 );
 const interactiveShowInput = vue.ref<string[]>(
   interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []
@@ -271,6 +286,7 @@ interactiveMath.import(
   },
   { override: true }
 );
+
 function evaluateValue(value: string): mathjs.MathType {
   const parser = interactiveMath.parser();
   let index = -1;
