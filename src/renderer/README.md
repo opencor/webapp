@@ -12,6 +12,7 @@ Some characteristics of this package are that:
 - It uses [PrimeVue](https://www.primefaces.org/primevue/) as its UI framework.
 - It uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 - It can be used as a standalone Web app or embedded in a Vue 3 application.
+- It uses [CSS containment](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Containment) to prevent CSS leakage when OpenCOR is embedded in an application that doesn't use [PrimeVue](https://www.primefaces.org/primevue/) as its UI framework.
 
 ## Usage
 
