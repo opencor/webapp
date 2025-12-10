@@ -6,8 +6,20 @@
 @import "primeicons/primeicons.css";
 
 body {
+  *,
+  ::before,
+  ::after {
+    box-sizing: initial;
+  }
+
   .opencor {
     --border-color: var(--p-content-border-color);
+
+    *,
+    ::before,
+    ::after {
+      box-sizing: border-box;
+    }
 
     background-color: var(--p-content-background);
     color: var(--p-content-color);
