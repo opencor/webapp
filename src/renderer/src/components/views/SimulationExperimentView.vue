@@ -49,7 +49,11 @@
             </ScrollPanel>
           </SplitterPanel>
           <SplitterPanel :size="75">
-            <GraphPanelWidget :key="interactiveModeEnabled ? 'hidden-graph-panel' : 'visible-graph-panel'" :data="standardData" />
+            <GraphPanelWidget
+              :key="interactiveModeEnabled ? 'hidden-graph-panel' : 'visible-graph-panel'"
+              :data="standardData"
+              :showLegend="false"
+            />
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
@@ -87,7 +91,10 @@
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
             class="flex-1 w-full min-h-0"
-            :data="interactiveData[index] || { name: '',xValues: [], yValues: [] }"
+            :margins="interactiveCompMargins"
+            :data="interactiveData[index] || { name: '', xValues: [], yValues: [] }"
+            @marginsUpdated="(newMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
+            @resetMargins="() => onResetMargins()"
           />
         </div>
       </div>
@@ -109,7 +116,11 @@ import * as vueCommon from '../../common/vueCommon';
 import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
 
-import type { IGraphPanelData, IGraphPanelPlotAdditionalTrace } from '../widgets/GraphPanelWidget.vue';
+import type {
+  IGraphPanelData,
+  IGraphPanelPlotAdditionalTrace,
+  IGraphPanelMargins
+} from '../widgets/GraphPanelWidget.vue';
 
 const props = defineProps<{
   file: locApi.File;
@@ -223,6 +234,8 @@ const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = interactiveDocument.model(0);
 const interactiveData = vue.ref<IGraphPanelData[]>([]);
+let interactiveMargins: Record<string, IGraphPanelMargins> = {};
+const interactiveCompMargins = vue.ref<IGraphPanelMargins>();
 const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
   interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
 );
@@ -305,7 +318,7 @@ function evaluateValue(value: string): mathjs.MathType {
   return parser.evaluate(value);
 }
 
-function updateInteractiveSimulation(_name: string, _newValue: number) {
+function updateInteractiveSimulation(): void {
   // Make sure that there are no issues.
 
   if (interactiveUiJsonIssues.value.length > 0) {
@@ -331,6 +344,10 @@ function updateInteractiveSimulation(_name: string, _newValue: number) {
       String(evaluateValue(parameter.value))
     );
   });
+
+  // Reset our interactive margins.
+
+  onResetMargins();
 
   // Run the instance and update the plots.
 
@@ -370,6 +387,28 @@ function updateInteractiveSimulation(_name: string, _newValue: number) {
       additionalTraces: additionalTraces
     };
   });
+}
+
+function onMarginsUpdated(plotId: string, newMargins: IGraphPanelMargins): void {
+  interactiveMargins[plotId] = newMargins;
+
+  const margins = Object.values(interactiveMargins);
+
+  if (margins.length !== props.uiJson.output.plots.length) {
+    interactiveCompMargins.value = undefined;
+
+    return;
+  }
+
+  interactiveCompMargins.value = {
+    left: Math.max(...margins.map((margin) => margin.left)),
+    right: Math.max(...margins.map((margin) => margin.right))
+  };
+}
+
+function onResetMargins() {
+  interactiveMargins = {};
+  interactiveCompMargins.value = undefined;
 }
 
 // "Initialise" our standard and/or interactive modes.
