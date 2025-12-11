@@ -61,7 +61,7 @@
   <div v-if="interactiveModeAvailable">
     <div v-show="interactiveModeEnabled" class="flex" :style="{ width: width + 'px', height: actualHeight + 'px' }">
       <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="actualHeight" :issues="interactiveUiJsonIssues" />
-      <div v-else class="flex grow">
+      <div v-else class="flex grow min-h-0">
         <div class="ml-4 mr-4 mb-4">
           <ScrollPanel class="h-full">
             <Fieldset legend="Input parameters">
@@ -81,13 +81,12 @@
             </Fieldset>
           </ScrollPanel>
         </div>
-        <div class="flex flex-col grow gap-2">
-          <!-- Note: gap-2 corresponds to a gap of 0.5rem, hence we subtract 0.5 * (number of gaps - 1)rem from 100% before dividing. -->
+        <div class="flex flex-col grow gap-2 h-full min-h-0">
           <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="actualHeight" :issues="interactiveInstanceIssues" />
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
-            :style="{ height: `calc((100% - 0.5 * ${(uiJson as any).output.plots.length - 1}rem) / ${(uiJson as any).output.plots.length})` }"
+            class="flex-1 w-full min-h-0"
             :data="interactiveData[index] || { name: '',xValues: [], yValues: [] }"
           />
         </div>
