@@ -312,7 +312,11 @@ function evaluateValue(value: string): mathjs.MathType {
   let index = -1;
 
   props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
-    parser.set(input.id, interactiveInputValues.value[++index]);
+    if (input.possibleValues !== undefined) {
+      parser.set(input.id, input.possibleValues[interactiveInputValues.value[++index] as number].value);
+    } else {
+      parser.set(input.id, interactiveInputValues.value[++index]);
+    }
   });
 
   return parser.evaluate(value);
