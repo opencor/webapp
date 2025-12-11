@@ -34,14 +34,14 @@ const properties = vue.ref([
   }
 ]);
 
-function onPropertyUpdated(index: number, value: number): void {
+function onPropertyUpdated(index: number, newValue: number): void {
   if (index === 0) {
-    props.uniformTimeCourse.setOutputStartTime(value);
+    props.uniformTimeCourse.setOutputStartTime(newValue);
   } else if (index === 1) {
-    props.uniformTimeCourse.setOutputEndTime(value);
+    props.uniformTimeCourse.setOutputEndTime(newValue);
   } else if (index === 2) {
     // @ts-expect-error (we trust that we have valid properties)
-    props.uniformTimeCourse.setNumberOfSteps((properties.value[1].value - properties.value[0].value) / value);
+    props.uniformTimeCourse.setNumberOfSteps((properties.value[1].value - properties.value[0].value) / newValue);
   }
 }
 </script>

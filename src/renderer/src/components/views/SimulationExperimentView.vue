@@ -49,7 +49,11 @@
             </ScrollPanel>
           </SplitterPanel>
           <SplitterPanel :size="75">
-            <GraphPanelWidget :key="interactiveModeEnabled ? 'hidden-graph-panel' : 'visible-graph-panel'" :data="standardData" />
+            <GraphPanelWidget
+              :key="interactiveModeEnabled ? 'hidden-graph-panel' : 'visible-graph-panel'"
+              :data="standardData"
+              :showLegend="false"
+            />
           </SplitterPanel>
         </Splitter>
       </SplitterPanel>
@@ -61,7 +65,7 @@
   <div v-if="interactiveModeAvailable">
     <div v-show="interactiveModeEnabled" class="flex" :style="{ width: width + 'px', height: actualHeight + 'px' }">
       <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="actualHeight" :issues="interactiveUiJsonIssues" />
-      <div v-else class="flex grow">
+      <div v-else class="flex grow min-h-0">
         <div class="ml-4 mr-4 mb-4">
           <ScrollPanel class="h-full">
             <Fieldset legend="Input parameters">
@@ -81,14 +85,16 @@
             </Fieldset>
           </ScrollPanel>
         </div>
-        <div class="flex flex-col grow gap-2">
-          <!-- Note: gap-2 corresponds to a gap of 0.5rem, hence we subtract 0.5 * (number of gaps - 1)rem from 100% before dividing. -->
+        <div class="flex flex-col grow gap-2 h-full min-h-0">
           <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="actualHeight" :issues="interactiveInstanceIssues" />
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
             v-for="(_plot, index) in (uiJson as any).output.plots"
             :key="`plot_${index}`"
-            :style="{ height: `calc((100% - 0.5 * ${(uiJson as any).output.plots.length - 1}rem) / ${(uiJson as any).output.plots.length})` }"
-            :data="interactiveData[index] || { xValues: [], yValues: [] }"
+            class="flex-1 w-full min-h-0"
+            :margins="interactiveCompMargins"
+            :data="interactiveData[index] || { name: '', xValues: [], yValues: [] }"
+            @marginsUpdated="(newMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
+            @resetMargins="() => onResetMargins()"
           />
         </div>
       </div>
@@ -110,7 +116,11 @@ import * as vueCommon from '../../common/vueCommon';
 import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
 
-import type { IGraphPanelData, IGraphPanelPlotAdditionalTrace } from '../widgets/GraphPanelWidget.vue';
+import type {
+  IGraphPanelData,
+  IGraphPanelPlotAdditionalTrace,
+  IGraphPanelMargins
+} from '../widgets/GraphPanelWidget.vue';
 
 const props = defineProps<{
   file: locApi.File;
@@ -175,12 +185,17 @@ const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask.voiName());
 const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
 const standardData = vue.ref<IGraphPanelData>({
+  name: '',
   xValues: [],
   yValues: []
 });
 const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
 populateParameters(standardParameters, standardInstanceTask);
+
+function traceName(xValue: string, yValue: string): string {
+  return `${yValue} <i>vs.</i> ${xValue}`;
+}
 
 function onRun(): void {
   // Run the instance, output the simulation time to the console, and update the plot.
@@ -205,6 +220,7 @@ const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTa
 
 function updatePlot() {
   standardData.value = {
+    name: traceName(standardXParameter.value, standardYParameter.value),
     xValues: locCommon.simulationData(standardInstanceTask, xInfo.value),
     yValues: locCommon.simulationData(standardInstanceTask, yInfo.value)
   };
@@ -218,6 +234,8 @@ const interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = interactiveDocument.model(0);
 const interactiveData = vue.ref<IGraphPanelData[]>([]);
+let interactiveMargins: Record<string, IGraphPanelMargins> = {};
+const interactiveCompMargins = vue.ref<IGraphPanelMargins>();
 const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
   interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
 );
@@ -300,7 +318,7 @@ function evaluateValue(value: string): mathjs.MathType {
   return parser.evaluate(value);
 }
 
-function updateInteractiveSimulation() {
+function updateInteractiveSimulation(): void {
   // Make sure that there are no issues.
 
   if (interactiveUiJsonIssues.value.length > 0) {
@@ -327,6 +345,10 @@ function updateInteractiveSimulation() {
     );
   });
 
+  // Reset our interactive margins.
+
+  onResetMargins();
+
   // Run the instance and update the plots.
 
   interactiveInstance.run();
@@ -350,12 +372,14 @@ function updateInteractiveSimulation() {
 
     plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
       additionalTraces.push({
+        name: traceName(additionalTrace.xValue, additionalTrace.yValue),
         xValues: parser.evaluate(additionalTrace.xValue),
         yValues: parser.evaluate(additionalTrace.yValue)
       });
     });
 
     return {
+      name: traceName(plot.xValue, plot.yValue),
       xAxisTitle: plot.xAxisTitle,
       xValues: parser.evaluate(plot.xValue),
       yAxisTitle: plot.yAxisTitle,
@@ -363,6 +387,28 @@ function updateInteractiveSimulation() {
       additionalTraces: additionalTraces
     };
   });
+}
+
+function onMarginsUpdated(plotId: string, newMargins: IGraphPanelMargins): void {
+  interactiveMargins[plotId] = newMargins;
+
+  const margins = Object.values(interactiveMargins);
+
+  if (margins.length !== props.uiJson.output.plots.length) {
+    interactiveCompMargins.value = undefined;
+
+    return;
+  }
+
+  interactiveCompMargins.value = {
+    left: Math.max(...margins.map((margin) => margin.left)),
+    right: Math.max(...margins.map((margin) => margin.right))
+  };
+}
+
+function onResetMargins() {
+  interactiveMargins = {};
+  interactiveCompMargins.value = undefined;
 }
 
 // "Initialise" our standard and/or interactive modes.

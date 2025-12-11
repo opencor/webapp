@@ -45,7 +45,7 @@ import * as constants from '../../common/constants';
 import { electronApi } from '../../common/electronApi';
 import * as locApi from '../../libopencor/locApi';
 
-defineEmits(['close']);
+defineEmits<(event: 'close') => void>();
 
 import { version } from '../../../package.json';
 </script>
