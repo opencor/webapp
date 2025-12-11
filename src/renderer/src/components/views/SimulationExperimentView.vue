@@ -300,7 +300,7 @@ function evaluateValue(value: string): mathjs.MathType {
   return parser.evaluate(value);
 }
 
-function updateInteractiveSimulation() {
+function updateInteractiveSimulation(_name: string, _newValue: number) {
   // Make sure that there are no issues.
 
   if (interactiveUiJsonIssues.value.length > 0) {

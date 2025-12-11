@@ -37,16 +37,16 @@ const props = defineProps<{
   uiEnabled: boolean;
 }>();
 
-const emit = defineEmits([
-  'about',
-  'close',
-  'closeAll',
-  'open',
-  'openRemote',
-  'openSampleLorenz',
-  'openSampleInteractiveLorenz',
-  'settings'
-]);
+const emit = defineEmits<{
+  (event: 'about'): void;
+  (event: 'close'): void;
+  (event: 'closeAll'): void;
+  (event: 'open'): void;
+  (event: 'openRemote'): void;
+  (event: 'openSampleLorenz'): void;
+  (event: 'openSampleInteractiveLorenz'): void;
+  (event: 'settings'): void;
+}>();
 const isWindowsOrLinux = common.isWindows() || common.isLinux();
 const isMacOs = common.isMacOs();
 
