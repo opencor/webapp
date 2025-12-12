@@ -53,7 +53,7 @@ const props = defineProps<{
 
 let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
-  props.possibleValues ? props.possibleValues[value.value] : undefined
+  props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
 const scalarValue = vue.ref<number>(value.value);
 const scalarValueString = vue.ref<string>(String(value.value));

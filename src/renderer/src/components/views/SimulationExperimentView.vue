@@ -93,7 +93,7 @@
             class="flex-1 w-full min-h-0"
             :margins="interactiveCompMargins"
             :data="interactiveData[index] || { name: '', xValues: [], yValues: [] }"
-            @marginsUpdated="(newMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
+            @marginsUpdated="(newMargins: IGraphPanelMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
             @resetMargins="() => onResetMargins()"
           />
         </div>
@@ -243,19 +243,6 @@ const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
 const interactiveInputValues = vue.ref<number[]>(
   interactiveModeAvailable.value
     ? props.uiJson.input.map((input: locApi.IUiJsonInput) => {
-        // If the input has some possible values then we want to return the index of the possible value that matches the
-        // default value otherwise we just return the default value.
-        // Note: if the input has some possible values then we will always be able to return a valid index since the default value
-        //       must be one of the possible values (see uiJsonIssues()).
-
-        if (input.possibleValues !== undefined) {
-          for (let i = 0; i < input.possibleValues.length; ++i) {
-            if (input.possibleValues[i].value === input.defaultValue) {
-              return i;
-            }
-          }
-        }
-
         return input.defaultValue;
       })
     : []
@@ -312,11 +299,7 @@ function evaluateValue(value: string): mathjs.MathType {
   let index = -1;
 
   props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
-    if (input.possibleValues !== undefined) {
-      parser.set(input.id, input.possibleValues[interactiveInputValues.value[++index] as number].value);
-    } else {
-      parser.set(input.id, interactiveInputValues.value[++index]);
-    }
+    parser.set(input.id, interactiveInputValues.value[++index]);
   });
 
   return parser.evaluate(value);
