@@ -93,7 +93,7 @@
             class="flex-1 w-full min-h-0"
             :margins="interactiveCompMargins"
             :data="interactiveData[index] || { name: '', xValues: [], yValues: [] }"
-            @marginsUpdated="(newMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
+            @marginsUpdated="(newMargins: IGraphPanelMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
             @resetMargins="() => onResetMargins()"
           />
         </div>
@@ -313,7 +313,7 @@ function evaluateValue(value: string): mathjs.MathType {
 
   props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
     if (input.possibleValues !== undefined) {
-      parser.set(input.id, input.possibleValues[interactiveInputValues.value[++index] as number].value);
+      parser.set(input.id, input.possibleValues[interactiveInputValues.value[++index]].value);
     } else {
       parser.set(input.id, interactiveInputValues.value[++index]);
     }
