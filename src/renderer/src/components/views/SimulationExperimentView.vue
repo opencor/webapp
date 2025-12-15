@@ -193,8 +193,8 @@ const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
 populateParameters(standardParameters, standardInstanceTask);
 
-function traceName(xValue: string, yValue: string): string {
-  return `${yValue} <i>vs.</i> ${xValue}`;
+function traceName(name: string | undefined, xValue: string, yValue: string): string {
+  return name !== undefined ? name : `${yValue} <i>vs.</i> ${xValue}`;
 }
 
 function onRun(): void {
@@ -220,7 +220,7 @@ const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTa
 
 function updatePlot() {
   standardData.value = {
-    name: traceName(standardXParameter.value, standardYParameter.value),
+    name: traceName(undefined, standardXParameter.value, standardYParameter.value),
     xValues: locCommon.simulationData(standardInstanceTask, xInfo.value),
     yValues: locCommon.simulationData(standardInstanceTask, yInfo.value)
   };
@@ -359,14 +359,14 @@ function updateInteractiveSimulation(): void {
 
     plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
       additionalTraces.push({
-        name: traceName(additionalTrace.xValue, additionalTrace.yValue),
+        name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
         xValues: parser.evaluate(additionalTrace.xValue),
         yValues: parser.evaluate(additionalTrace.yValue)
       });
     });
 
     return {
-      name: traceName(plot.xValue, plot.yValue),
+      name: traceName(plot.name, plot.xValue, plot.yValue),
       xAxisTitle: plot.xAxisTitle,
       xValues: parser.evaluate(plot.xValue),
       yAxisTitle: plot.yAxisTitle,

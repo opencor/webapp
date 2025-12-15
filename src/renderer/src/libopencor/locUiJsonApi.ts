@@ -48,6 +48,7 @@ export interface IUiJsonOutputData {
 export interface IUiJsonOutputPlotAdditionalTrace {
   xValue: string;
   yValue: string;
+  name?: string;
 }
 
 export interface IUiJsonOutputPlot {
@@ -55,6 +56,7 @@ export interface IUiJsonOutputPlot {
   xValue: string;
   yAxisTitle?: string;
   yValue: string;
+  name?: string;
   additionalTraces?: IUiJsonOutputPlotAdditionalTrace[];
 }
 
@@ -208,6 +210,9 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
                   required: true,
                   type: 'string'
                 },
+                name: {
+                  type: 'string'
+                },
                 additionalTraces: {
                   items: {
                     additionalProperties: false,
@@ -218,6 +223,9 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
                       },
                       yValue: {
                         required: true,
+                        type: 'string'
+                      },
+                      name: {
                         type: 'string'
                       }
                     },
@@ -481,6 +489,13 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       });
     }
 
+    if (outputPlot.name === '') {
+      res.push({
+        type: EIssueType.WARNING,
+        description: 'UI JSON: an output plot name must not be empty.'
+      });
+    }
+
     if (outputPlot.additionalTraces !== undefined) {
       for (const additionalTrace of outputPlot.additionalTraces) {
         if (additionalTrace.xValue === '') {
@@ -494,6 +509,13 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
           res.push({
             type: EIssueType.WARNING,
             description: 'UI JSON: an output plot additional trace Y value must not be empty.'
+          });
+        }
+
+        if (additionalTrace.name === '') {
+          res.push({
+            type: EIssueType.WARNING,
+            description: 'UI JSON: an output plot additional trace name must not be empty.'
           });
         }
       }
