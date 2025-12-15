@@ -1,4 +1,3 @@
-import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,25 +16,17 @@ const minorVersion = `${year}${String(month).padStart(2, '0')}${String(day).padS
 
 // Patch version.
 
+const scriptDirName = path.dirname(fileURLToPath(import.meta.url));
+const currentVersion = JSON.parse(fs.readFileSync(`${scriptDirName}/../package.json`)).version;
+const currentVersionParts = currentVersion.split('.');
 let patchVersion = 0;
 
-try {
-  const gitDescribe = execSync('git describe --tags --long', {
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'ignore']
-  }).trim();
-  const match = gitDescribe.match(/^v?(\d+)\.(\d+)\.(\d+)-(\d+)-g[0-9a-f]+$/);
-  const [, , minor, patch] = match;
+patchVersion = parseInt(currentVersionParts[2], 10);
 
-  patchVersion = parseInt(patch, 10);
-
-  if (minor === minorVersion) {
-    ++patchVersion;
-  } else {
-    patchVersion = 0;
-  }
-} catch {
-  // Intentionally ignored.
+if (currentVersionParts[1] === minorVersion) {
+  ++patchVersion;
+} else {
+  patchVersion = 0;
 }
 
 // (Full) version.
@@ -52,9 +43,7 @@ function updatePackageJsonFile(filePath) {
   fs.writeFileSync(filePath, `${JSON.stringify(contents, null, 2)}\n`);
 }
 
-// Output the current directory.
-
-const scriptDirName = path.dirname(fileURLToPath(import.meta.url));
+// Perform the updates.
 
 updatePackageJsonFile(`${scriptDirName}/../../../package.json`);
 updatePackageJsonFile(`${scriptDirName}/../package.json`);
