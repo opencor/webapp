@@ -363,7 +363,7 @@ vue.watch(
       updatePlot();
     });
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 
 vue.watch(
@@ -399,7 +399,7 @@ vue.watch(
         }
       });
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 
 vue.watch(
