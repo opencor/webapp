@@ -76,6 +76,7 @@
         v-model:visible="resetAllVisible"
         title="Reset All..."
         question="You are about to reset all of your settings. Do you want to proceed?"
+        severity="danger"
         @yes="onResetAll"
         @no="resetAllVisible = false"
       />
