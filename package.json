@@ -54,7 +54,7 @@
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
     "quill": "^2.0.3",
-    "systeminformation": "^5.27.14",
+    "systeminformation": "^5.27.15",
     "ua-parser-js": "^2.0.7",
     "vue": "3.4.21"
   },
@@ -68,7 +68,7 @@
     "@types/plotly.js": "3.0.3",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vue/tsconfig": "^0.8.1",
-    "@wasm-fmt/clang-format": "^21.1.7",
+    "@wasm-fmt/clang-format": "^21.1.8",
     "autoprefixer": "^10.4.23",
     "cmake-js": "^7.4.0",
     "electron": "^38.7.2",
