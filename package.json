@@ -68,7 +68,7 @@
     "@types/plotly.js": "3.0.3",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vue/tsconfig": "^0.8.1",
-    "@wasm-fmt/clang-format": "^21.1.6",
+    "@wasm-fmt/clang-format": "^21.1.7",
     "autoprefixer": "^10.4.23",
     "cmake-js": "^7.4.0",
     "electron": "^38.7.2",

@@ -26,7 +26,7 @@
         "@types/plotly.js": "3.0.3",
         "@vitejs/plugin-vue": "^6.0.3",
         "@vue/tsconfig": "^0.8.1",
-        "@wasm-fmt/clang-format": "^21.1.6",
+        "@wasm-fmt/clang-format": "^21.1.7",
         "autoprefixer": "^10.4.23",
         "cmake-js": "^7.4.0",
         "electron": "^38.7.2",
@@ -393,7 +393,7 @@
 
     "@vueuse/shared": ["@vueuse/shared@12.8.2", "", { "dependencies": { "vue": "^3.5.13" } }, "sha512-dznP38YzxZoNloI0qpEfpkms8knDtaoQ6Y/sfS0L7Yki4zh40LFHEhur0odJC6xTHG5dxWVPiUWBXn+wCG2s5w=="],
 
-    "@wasm-fmt/clang-format": ["@wasm-fmt/clang-format@21.1.6", "", { "bin": { "clang-format": "clang-format-cli.cjs", "git-clang-format": "git-clang-format", "clang-format-diff": "clang-format-diff.py" } }, "sha512-vyYxRkOFOsNJGrI1u2TbWBPc2hzUExYwkEx1N/x+lNUlweOmW8fb9VANQMlPjYBHa8oIsPxxyTZJDZj6f7lw8Q=="],
+    "@wasm-fmt/clang-format": ["@wasm-fmt/clang-format@21.1.7", "", { "bin": { "clang-format": "clang-format-cli.cjs", "git-clang-format": "git-clang-format", "clang-format-diff": "clang-format-diff.py" } }, "sha512-00pPQzGvY0MfjfUMnoNtod0fRviz9WEU7A3pUb9XSaXek11f2iiamJvzpESxWyvRohxqxwLA8wNJ+Bakd3KCkg=="],
 
     "@xmldom/xmldom": ["@xmldom/xmldom@0.8.11", "", {}, "sha512-cQzWCtO6C8TQiYl1ruKNn2U6Ao4o4WBBcbL61yJl84x+j5sOWWFU9X7DpND8XZG3daDppSsigMdfAIl2upQBRw=="],
 
