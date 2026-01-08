@@ -245,6 +245,7 @@ function updateMargins(): Promise<unknown> | undefined {
 
     if (margins.value.right !== newMargins.right) {
       margins.value.right = newMargins.right;
+
       relayoutUpdates['margin.r'] = margins.value.right;
     }
   }
