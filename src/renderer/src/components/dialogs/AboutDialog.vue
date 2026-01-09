@@ -4,7 +4,7 @@
       <div class="text-center">
         <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
         <div v-if="electronApi !== undefined" class="text-xl italic font-bold">{{ electronApi.operatingSystem() }}</div>
-        <div class="text-sm italic">Copyright {{ constants.COPYRIGHT }}</div>
+        <div class="text-sm italic">Copyright {{ COPYRIGHT }}</div>
       </div>
       <div class="space-y-2">
         <div>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import * as constants from '../../common/constants';
+import { COPYRIGHT } from '../../common/constants';
 import { electronApi } from '../../common/electronApi';
 import * as locApi from '../../libopencor/locApi';
 

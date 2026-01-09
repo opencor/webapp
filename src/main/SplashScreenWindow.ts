@@ -1,6 +1,6 @@
 import * as electron from 'electron';
 
-import * as constants from '../renderer/src/common/constants';
+import { COPYRIGHT } from '../renderer/src/common/constants';
 
 import { ApplicationWindow } from './ApplicationWindow';
 import { electronConf, type IElectronConfState } from './index';
@@ -35,7 +35,7 @@ export class SplashScreenWindow extends ApplicationWindow {
 
     this.on('ready-to-show', () => {
       this.webContents.send('init-splash-screen-window', {
-        copyright: constants.COPYRIGHT,
+        copyright: COPYRIGHT,
         version: electron.app.getVersion()
       });
     });
