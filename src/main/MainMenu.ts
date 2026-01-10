@@ -1,9 +1,9 @@
 import electron from 'electron';
 
-import { isMacOs, isPackaged } from '../renderer/src/common/electron';
+import { isMacOs, isPackaged } from '../renderer/src/common/electron.ts';
 
-import { mainWindow } from './index';
-import { clearRecentFiles } from './MainWindow';
+import { mainWindow } from './index.ts';
+import { clearRecentFiles } from './MainWindow.ts';
 
 let enabledMenu: electron.Menu | null = null;
 let disabledMenu: electron.Menu | null = null;

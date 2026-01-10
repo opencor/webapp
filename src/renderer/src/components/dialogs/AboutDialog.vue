@@ -41,9 +41,9 @@
 </template>
 
 <script setup lang="ts">
-import { COPYRIGHT } from '../../common/constants';
-import { electronApi } from '../../common/electronApi';
-import * as locApi from '../../libopencor/locApi';
+import { COPYRIGHT } from '../../common/constants.ts';
+import { electronApi } from '../../common/electronApi.ts';
+import * as locApi from '../../libopencor/locApi.ts';
 
 defineEmits<(event: 'close') => void>();
 

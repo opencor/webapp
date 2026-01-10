@@ -1,6 +1,6 @@
 <template>
   <div v-if="simulationOnly" class="h-full">
-    <div v-for="(fileTab, index) in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" :value="fileTab.file.path()">
+    <div v-for="fileTab in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" :value="fileTab.file.path()">
       <IssuesView
         v-if="fileTab.file.issues().length !== 0"
         :width="width"
@@ -16,7 +16,7 @@
         :file="fileTab.file"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="simulationOnly"
-        :uiJson="fileTab.uiJson"
+        :uiJson="fileTab.uiJson!"
       />
     </div>
   </div>
@@ -51,7 +51,7 @@
       </TabList>
       <TabPanels class="p-0!">
         <TabPanel
-          v-for="(fileTab, index) in fileTabs"
+          v-for="fileTab in fileTabs"
           :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
@@ -69,7 +69,7 @@
             :uiEnabled="uiEnabled"
             :file="fileTab.file"
             :isActiveFile="fileTab.file.path() === activeFile"
-            :uiJson="fileTab.uiJson"
+            :uiJson="fileTab.uiJson!"
           />
         </TabPanel>
       </TabPanels>
@@ -82,12 +82,11 @@ import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
 
-import * as common from '../common/common';
-import { SHORT_DELAY } from '../common/constants';
-import { electronApi } from '../common/electronApi';
-import * as vueCommon from '../common/vueCommon';
-import * as locApi from '../libopencor/locApi';
-
+import * as common from '../common/common.ts';
+import { SHORT_DELAY } from '../common/constants.ts';
+import { electronApi } from '../common/electronApi.ts';
+import * as vueCommon from '../common/vueCommon.ts';
+import * as locApi from '../libopencor/locApi.ts';
 export interface IFileTab {
   file: locApi.File;
   uiJson?: locApi.IUiJson;

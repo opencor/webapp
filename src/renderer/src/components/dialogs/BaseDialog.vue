@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import { enableDisableMainMenu } from '../../common/common';
+import { enableDisableMainMenu } from '../../common/common.ts';
 
 let dialogElement: HTMLElement | null = null;
 let containerElement: HTMLElement | null | undefined = null;
