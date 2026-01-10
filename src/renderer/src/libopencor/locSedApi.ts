@@ -10,7 +10,7 @@ import {
   type IWasmIssues,
   wasmIssuesToIssues,
   wasmVersion
-} from './locApi.js';
+} from './locApi.ts';
 
 // SED-ML API.
 

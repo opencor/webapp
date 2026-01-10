@@ -9,7 +9,7 @@ import {
   type IWasmIssues,
   SedDocument,
   wasmIssuesToIssues
-} from './locApi.js';
+} from './locApi.ts';
 
 // FileManager API.
 

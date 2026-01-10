@@ -1,8 +1,8 @@
 import * as jsonschema from 'jsonschema';
 
-import * as common from '../common/common.js';
+import * as common from '../common/common.ts';
 
-import { EIssueType, type IIssue } from './locLoggerApi.js';
+import { EIssueType, type IIssue } from './locLoggerApi.ts';
 
 export interface IUiJson {
   input: IUiJsonInput[];

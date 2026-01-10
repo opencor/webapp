@@ -1,8 +1,8 @@
-import { corsProxyUrl } from '../common/common.js';
+import { corsProxyUrl } from '../common/common.ts';
 
-import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.js';
-import type { IIssue } from './locLoggerApi.js';
-import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi.js';
+import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.ts';
+import type { IIssue } from './locLoggerApi.ts';
+import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi.ts';
 
 export interface ICppLocApi {
   // FileManager API.
@@ -141,11 +141,11 @@ export async function initialiseLocApi() {
 
 // Logger API.
 
-export { EIssueType, type IIssue, type IWasmIssues, wasmIssuesToIssues } from './locLoggerApi.js';
+export { EIssueType, type IIssue, type IWasmIssues, wasmIssuesToIssues } from './locLoggerApi.ts';
 
 // File API.
 
-export { EFileType, File, fileManager, type IWasmFile } from './locFileApi.js';
+export { EFileType, File, fileManager, type IWasmFile } from './locFileApi.ts';
 
 // SED-ML API.
 
@@ -155,7 +155,7 @@ export {
   SedInstance,
   SedInstanceTask,
   SedSimulationUniformTimeCourse
-} from './locSedApi.js';
+} from './locSedApi.ts';
 
 // UI JSON API.
 
@@ -169,8 +169,8 @@ export {
   type IUiJsonOutputPlotAdditionalTrace,
   type IUiJsonParameter,
   uiJsonIssues
-} from './locUiJsonApi.js';
+} from './locUiJsonApi.ts';
 
 // Version API.
 
-export { cppVersion, version, wasmVersion } from './locVersionApi.js';
+export { cppVersion, version, wasmVersion } from './locVersionApi.ts';

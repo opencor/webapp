@@ -1,7 +1,7 @@
 import SHA256 from 'crypto-js/sha256';
 import { UAParser } from 'ua-parser-js';
 
-import { electronApi } from './electronApi.js';
+import { electronApi } from './electronApi.ts';
 
 // Some interfaces.
 

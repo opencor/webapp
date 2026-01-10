@@ -18,7 +18,7 @@
  *  - Height: 257.92px + 8px = 266.92px.
  */
 
-import { COPYRIGHT } from '../common/constants.js';
+import { COPYRIGHT } from '../common/constants.ts';
 import { version } from '../../package.json';
 </script>
 
