@@ -7,9 +7,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import type { ISettings } from '../renderer/src/common/common';
-import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants';
-import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron';
+import type { ISettings } from '../renderer/src/common/common.ts';
+import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants.ts';
+import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
 /*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import {
   clearGitHubCache,
@@ -18,9 +18,9 @@ import {
   saveGitHubAccessToken
 } from '../renderer/src/common/gitHubIntegration';
  */
-import { startRendererServer, stopRendererServer } from '../renderer/src/common/rendererServer';
+import { startRendererServer, stopRendererServer } from '../renderer/src/common/rendererServer.ts';
 
-import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu';
+import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu.ts';
 import {
   checkForUpdates,
   downloadAndInstallUpdate,
@@ -34,8 +34,8 @@ import {
   MainWindow,
   resetAll,
   saveSettings
-} from './MainWindow';
-import { SplashScreenWindow } from './SplashScreenWindow';
+} from './MainWindow.ts';
+import { SplashScreenWindow } from './SplashScreenWindow.ts';
 
 // Electron store.
 

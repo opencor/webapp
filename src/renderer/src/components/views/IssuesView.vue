@@ -16,8 +16,8 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import { SHORT_DELAY } from '../../common/constants';
-import * as locApi from '../../libopencor/locApi';
+import { SHORT_DELAY } from '../../common/constants.ts';
+import * as locApi from '../../libopencor/locApi.ts';
 
 const props = withDefaults(
   defineProps<{

@@ -120,19 +120,19 @@ import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
-import type { IOpenCORProps } from '../../index';
+import type { IOpenCORProps } from '../../index.ts';
 
 import '../assets/app.css';
-import * as common from '../common/common';
-import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
-import { electronApi } from '../common/electronApi';
+import * as common from '../common/common.ts';
+import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
+import { electronApi } from '../common/electronApi.ts';
 /*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 */
-import * as locCommon from '../common/locCommon';
-import * as vueCommon from '../common/vueCommon';
+import * as locCommon from '../common/locCommon.ts';
+import * as vueCommon from '../common/vueCommon.ts';
 import type IContentsComponent from '../components/ContentsComponent.vue';
-import * as locApi from '../libopencor/locApi';
+import * as locApi from '../libopencor/locApi.ts';
 
 const props = defineProps<IOpenCORProps>();
 

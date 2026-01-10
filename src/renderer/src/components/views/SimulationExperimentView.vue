@@ -109,12 +109,12 @@ import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
 
-import * as common from '../../common/common';
-import { SHORT_DELAY } from '../../common/constants';
-import * as locCommon from '../../common/locCommon';
-import * as vueCommon from '../../common/vueCommon';
-import * as locApi from '../../libopencor/locApi';
-import * as locSedApi from '../../libopencor/locSedApi';
+import * as common from '../../common/common.ts';
+import { SHORT_DELAY } from '../../common/constants.ts';
+import * as locCommon from '../../common/locCommon.ts';
+import * as vueCommon from '../../common/vueCommon.ts';
+import * as locApi from '../../libopencor/locApi.ts';
+import * as locSedApi from '../../libopencor/locSedApi.ts';
 
 import type {
   IGraphPanelData,
@@ -240,7 +240,7 @@ const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
   interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
 );
 const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
-const interactiveInputValues = vue.ref<number[]>(
+const interactiveInputValues = vue.ref<Array<number>>(
   interactiveModeAvailable.value
     ? props.uiJson.input.map((input: locApi.IUiJsonInput) => {
         return input.defaultValue;
@@ -325,11 +325,13 @@ function updateInteractiveSimulation(): void {
   props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/');
 
-    interactiveModel.addChange(
-      componentVariableNames[0],
-      componentVariableNames[1],
-      String(evaluateValue(parameter.value))
-    );
+    if (componentVariableNames[0] !== undefined && componentVariableNames[1] !== undefined) {
+      interactiveModel.addChange(
+        componentVariableNames[0],
+        componentVariableNames[1],
+        String(evaluateValue(parameter.value))
+      );
+    }
   });
 
   // Reset our interactive margins.
@@ -351,7 +353,13 @@ function updateInteractiveSimulation(): void {
   const parser = interactiveMath.parser();
 
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-    parser.set(data.id, locCommon.simulationData(interactiveInstanceTask, interactiveIdToInfo[data.id]));
+    const info = interactiveIdToInfo[data.id];
+
+    if (info !== undefined) {
+      parser.set(data.id, locCommon.simulationData(interactiveInstanceTask, info));
+    } else {
+      parser.set(data.id, []);
+    }
   });
 
   interactiveData.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {

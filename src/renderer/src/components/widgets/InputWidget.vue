@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import type * as locApi from '../../libopencor/locApi';
+import type * as locApi from '../../libopencor/locApi.ts';
 
 const value = defineModel<number>({ required: true });
 const emits = defineEmits<(event: 'change', name: string, newValue: number) => void>();
@@ -121,7 +121,7 @@ function inputTextKeyPress(event: KeyboardEvent) {
 function sliderChange(newValue: number | number[]) {
   const valueToEmit = Array.isArray(newValue) ? newValue[0] : newValue;
 
-  if (valueToEmit !== oldValue) {
+  if (valueToEmit !== undefined && valueToEmit !== oldValue) {
     emitChange(valueToEmit);
   }
 }

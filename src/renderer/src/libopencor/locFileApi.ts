@@ -86,9 +86,9 @@ export interface IWasmFile {
 }
 
 export class File {
-  private _path: string;
-  private _wasmFile: IWasmFile = {} as IWasmFile;
-  private _issues: IIssue[] = [];
+  _path: string;
+  _wasmFile: IWasmFile = {} as IWasmFile;
+  _issues: IIssue[] = [];
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
     this._path = path;

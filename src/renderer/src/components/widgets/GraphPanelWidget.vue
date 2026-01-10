@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-row h-full" :class="isVisible ? 'visible' : 'invisible'">
-    <div v-if="showMarker" class="w-[3px] bg-primary" />
+    <div v-if="showMarker" class="w-0.75 bg-primary" />
     <div ref="mainDiv" class="grow h-full" />
   </div>
 </template>
@@ -9,7 +9,7 @@
 import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.1.1/+esm';
 import * as vue from 'vue';
 
-import * as vueCommon from '../../common/vueCommon';
+import * as vueCommon from '../../common/vueCommon.ts';
 
 interface IPlotlyTrace {
   name: string;

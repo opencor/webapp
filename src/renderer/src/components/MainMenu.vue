@@ -29,7 +29,7 @@ import * as vueusecore from '@vueuse/core';
 import type Menubar from 'primevue/menubar';
 import * as vue from 'vue';
 
-import * as common from '../common/common';
+import * as common from '../common/common.ts';
 
 const props = defineProps<{
   isActive: boolean;

@@ -1,9 +1,9 @@
 import * as electron from 'electron';
 
-import { COPYRIGHT } from '../renderer/src/common/constants';
+import { COPYRIGHT } from '../renderer/src/common/constants.ts';
 
-import { ApplicationWindow } from './ApplicationWindow';
-import { electronConf, type IElectronConfState } from './index';
+import { ApplicationWindow } from './ApplicationWindow.ts';
+import { electronConf, type IElectronConfState } from './index.ts';
 
 export class SplashScreenWindow extends ApplicationWindow {
   constructor() {
