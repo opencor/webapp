@@ -1,12 +1,12 @@
-export const URI_SCHEME = 'opencor';
-export const FULL_URI_SCHEME = `${URI_SCHEME}://`;
+export const URI_SCHEME: string = 'opencor';
+export const FULL_URI_SCHEME: string = `${URI_SCHEME}://`;
 
-export const SHORT_DELAY = 69;
-export const MEDIUM_DELAY = 169;
-export const LONG_DELAY = 369;
+export const SHORT_DELAY: number = 69;
+export const MEDIUM_DELAY: number = 169;
+export const LONG_DELAY: number = 369;
 
-export const TOAST_LIFE = 3000;
+export const TOAST_LIFE: number = 3000;
 
-const crtYear = new Date().getFullYear();
+const crtYear: number = new Date().getFullYear();
 
-export const COPYRIGHT = crtYear === 2025 ? '2025' : `2025-${String(crtYear)}`;
+export const COPYRIGHT: string = crtYear === 2025 ? '2025' : `2025-${String(crtYear)}`;

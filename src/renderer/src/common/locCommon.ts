@@ -1,7 +1,7 @@
-import { corsProxyUrl, sha256 } from '../common/common.js';
-import * as locApi from '../libopencor/locApi.js';
+import { corsProxyUrl, sha256 } from '../common/common.ts';
+import * as locApi from '../libopencor/locApi.ts';
 
-import { electronApi } from './electronApi.js';
+import { electronApi } from './electronApi.ts';
 
 // Some file-related methods.
 

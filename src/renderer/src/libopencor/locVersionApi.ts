@@ -1,6 +1,6 @@
-import { electronApi } from '../common/electronApi.js';
+import { electronApi } from '../common/electronApi.ts';
 
-import { _cppLocApi, _wasmLocApi } from './locApi.js';
+import { _cppLocApi, _wasmLocApi } from './locApi.ts';
 
 // Some general methods.
 

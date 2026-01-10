@@ -1,4 +1,4 @@
-import type { ISettings } from './common.js';
+import type { ISettings } from './common.ts';
 
 export interface ISplashScreenInfo {
   copyright: string;

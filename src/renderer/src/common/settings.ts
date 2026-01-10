@@ -1,5 +1,5 @@
-import type { ISettings, ISettingsGeneral } from './common.js';
-import { electronApi } from './electronApi.js';
+import type { ISettings, ISettingsGeneral } from './common.ts';
+import { electronApi } from './electronApi.ts';
 
 class Settings {
   protected static _instance: Settings | null = null;
