@@ -2,7 +2,6 @@
   <Toolbar v-if="toolbarNeeded" :id="toolbarId" class="p-1!">
     <template #start>
       <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
-      <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
     </template>
     <template #center>
       <div v-show="interactiveModeAvailable">
