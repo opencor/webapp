@@ -12,7 +12,7 @@ export interface IUiJson {
 
 export type IUiJsonInput = IUiJsonDiscreteInput | IUiJsonScalarInput;
 
-interface IUiJsonDiscreteInput {
+export interface IUiJsonDiscreteInput {
   defaultValue: number;
   id: string;
   name: string;
@@ -25,7 +25,7 @@ export interface IUiJsonDiscreteInputPossibleValue {
   value: number;
 }
 
-interface IUiJsonScalarInput {
+export interface IUiJsonScalarInput {
   defaultValue: number;
   id: string;
   maximumValue: number;

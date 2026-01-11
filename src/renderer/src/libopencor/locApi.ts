@@ -161,6 +161,7 @@ export {
 
 export {
   type IUiJson,
+  type IUiJsonDiscreteInput,
   type IUiJsonDiscreteInputPossibleValue,
   type IUiJsonInput,
   type IUiJsonOutput,
@@ -168,6 +169,7 @@ export {
   type IUiJsonOutputPlot,
   type IUiJsonOutputPlotAdditionalTrace,
   type IUiJsonParameter,
+  type IUiJsonScalarInput,
   uiJsonIssues
 } from './locUiJsonApi.ts';
 

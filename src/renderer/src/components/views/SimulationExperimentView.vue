@@ -70,15 +70,15 @@
           <ScrollPanel class="h-full">
             <Fieldset legend="Input parameters">
               <InputWidget
-                v-for="(input, index) in (uiJson as any).input"
+                v-for="(input, index) in uiJson.input"
                 v-model="interactiveInputValues[index]!"
                 v-show="interactiveShowInput[index]"
                 :key="`input_${index}`"
                 :name="input.name"
-                :maximumValue="input.maximumValue"
-                :minimumValue="input.minimumValue"
-                :possibleValues="input.possibleValues"
-                :stepValue="input.stepValue"
+                :maximumValue="isScalarInput(input) ? input.maximumValue : undefined"
+                :minimumValue="isScalarInput(input) ? input.minimumValue : undefined"
+                :possibleValues="isDiscreteInput(input) ? input.possibleValues : undefined"
+                :stepValue="isScalarInput(input) ? input.stepValue : undefined"
                 :class="index !== 0 ? 'mt-6' : ''"
                 @change="updateInteractiveSimulation"
               />
@@ -88,7 +88,7 @@
         <div class="flex flex-col grow gap-2 h-full min-h-0">
           <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="actualHeight" :issues="interactiveInstanceIssues" />
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
-            v-for="(_plot, index) in (uiJson as any).output.plots"
+            v-for="(_plot, index) in uiJson.output.plots"
             :key="`plot_${index}`"
             class="flex-1 w-full min-h-0"
             :margins="interactiveCompMargins"
@@ -173,6 +173,16 @@ function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedA
   // Sort the parameters alphabetically.
 
   parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
+}
+
+// Type guards.
+
+function isScalarInput(input: locApi.IUiJsonInput): input is locApi.IUiJsonScalarInput {
+  return 'maximumValue' in input && 'minimumValue' in input;
+}
+
+function isDiscreteInput(input: locApi.IUiJsonInput): input is locApi.IUiJsonDiscreteInput {
+  return 'possibleValues' in input;
 }
 
 // Standard mode.
