@@ -1,11 +1,24 @@
 <template>
   <Toolbar v-if="toolbarNeeded" :id="toolbarId" class="p-1!">
     <template #start>
-      <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
+      <div :class="{ 'invisible': interactiveModeEnabled && interactiveLiveUpdatesEnabled }">
+        <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
+      </div>
     </template>
     <template #center>
       <div v-show="interactiveModeAvailable">
         <ToggleButton size="small" v-model="interactiveModeEnabled" onLabel="Interactive mode" offLabel="Standard mode" />
+      </div>
+    </template>
+    <template #end>
+      <div :class="{ 'invisible': !interactiveModeAvailable || !interactiveModeEnabled }" class="flex">
+        <Button class="p-1!" icon="pi pi-cog" severity="secondary" text @click="settingsMenu.toggle($event)" />
+        <Popover ref="settingsMenu">
+          <div class="flex items-center gap-2 px-1 py-1">
+            <Checkbox :inputId="liveUpdatesCheckboxId" v-model="interactiveLiveUpdatesEnabled" binary size="small" @change="onLiveUpdatesChange()" />
+            <label :for="liveUpdatesCheckboxId" class="text-sm select-none">Live updates</label>
+          </div>
+        </Popover>
       </div>
     </template>
   </Toolbar>
@@ -79,8 +92,65 @@
                 :possibleValues="isDiscreteInput(input) ? input.possibleValues : undefined"
                 :stepValue="isScalarInput(input) ? input.stepValue : undefined"
                 :class="index !== 0 ? 'mt-6' : ''"
-                @change="updateInteractiveSimulation"
+                @change="updateInteractiveSimulation()"
               />
+            </Fieldset>
+            <Fieldset legend="Runs">
+              <div class="flex flex-col gap-4">
+                <div class="flex gap-2">
+                  <Button class="w-full"
+                    icon="pi pi-plus"
+                    label="Add run"
+                    size="small"
+                    @click="onAddRun()"
+                  />
+                  <Button class="w-12!"
+                    icon="pi pi-refresh"
+                    size="small"
+                    severity="danger"
+                    title="Remove all runs"
+                    @click="onRemoveAllRuns()"
+                    :disabled="interactiveRuns.length === 0"
+                  />
+                </div>
+                <div class="flex flex-col gap-2">
+                  <div v-if="interactiveRuns.length > 0" v-for="(run, index) in interactiveRuns"
+                    :key="`run_${index}`"
+                    class="run border border-dashed rounded px-2 py-1"
+                  >
+                    <div class="flex gap-2">
+                      <div class="w-full text-sm cursor-help"
+                        v-tippy:bottom="{
+                          allowHTML: true,
+                          content: runTooltip(run),
+                          placement: 'bottom'
+                        }"
+                      >
+                        Run #{{ index + 1 }}
+                      </div>
+                      <Button class="p-0! w-5! h-5!"
+                        :icon="run.visible ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                        :severity="run.visible ? 'info' : 'secondary'"
+                        text size="small"
+                        :title="(run.visible ? 'Hide' : 'Show') + ' run'"
+                        @click="onToggleRun(index)"
+                      />
+                      <Button class="p-0! w-5! h-5!"
+                        icon="pi pi-trash"
+                        severity="danger"
+                        text size="small"
+                        title="Remove run"
+                        @click="onRemoveRun(index)"
+                      />
+                    </div>
+                  </div>
+                  <div v-else class="hint text-center text-sm">
+                    No runs yet.<br/>
+                    Click "Add run"<br/>
+                    to create one.
+                  </div>
+                </div>
+              </div>
             </Fieldset>
           </ScrollPanel>
         </div>
@@ -89,9 +159,9 @@
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
             v-for="(_plot, index) in uiJson.output.plots"
             :key="`plot_${index}`"
-            class="flex-1 w-full min-h-0"
+            class="w-full min-h-0"
             :margins="interactiveCompMargins"
-            :data="interactiveData[index] || { name: '', xValues: [], yValues: [] }"
+            :data="interactiveCompData[index] || { name: '', xValues: [], yValues: [] }"
             @marginsUpdated="(newMargins: IGraphPanelMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
             @resetMargins="() => onResetMargins()"
           />
@@ -121,6 +191,12 @@ import type {
   IGraphPanelMargins
 } from '../widgets/GraphPanelWidget.vue';
 
+interface ISimulationRun {
+  inputParameters: Record<string, number>;
+  visible: boolean;
+  data: IGraphPanelData[];
+}
+
 const props = defineProps<{
   file: locApi.File;
   height: number;
@@ -138,9 +214,12 @@ const toolbarNeeded = vue.computed(() => {
 
 const toolbarId = vue.ref('simulationExperimentViewToolbar');
 const editorId = vue.ref('simulationExperimentViewEditor');
+const liveUpdatesCheckboxId = vue.ref('simulationExperimentViewLiveUpdatesCheckbox');
 const actualHeight = vue.ref<number>(0);
 const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
 const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
+const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
+const settingsMenu = vue.ref();
 
 function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedApi.SedInstanceTask): void {
   function addParameter(param: string): void {
@@ -184,6 +263,43 @@ function isDiscreteInput(input: locApi.IUiJsonInput): input is locApi.IUiJsonDis
   return 'possibleValues' in input;
 }
 
+// Event handlers.
+
+function onRun(): void {
+  // Run either the standard or interactive simulation.
+
+  if (!interactiveModeEnabled.value) {
+    // Run the standard simulation, i.e. run the instance, output the simulation time to the console, and update the
+    // plot.
+
+    const simulationTime = standardInstance.run();
+
+    standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
+
+    void vue.nextTick(() => {
+      const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
+
+      if (consoleElement !== undefined) {
+        consoleElement.scrollTop = consoleElement.scrollHeight;
+      }
+    });
+
+    updatePlot();
+
+    return;
+  }
+
+  // Run the interactive simulation.
+
+  updateInteractiveSimulation(true);
+}
+
+function onLiveUpdatesChange(): void {
+  if (interactiveLiveUpdatesEnabled.value) {
+    updateInteractiveSimulation();
+  }
+}
+
 // Standard mode.
 
 const standardDocument = props.file.document();
@@ -204,24 +320,6 @@ populateParameters(standardParameters, standardInstanceTask);
 
 function traceName(name: string | undefined, xValue: string, yValue: string): string {
   return name !== undefined ? name : `${yValue} <i>vs.</i> ${xValue}`;
-}
-
-function onRun(): void {
-  // Run the instance, output the simulation time to the console, and update the plot.
-
-  const simulationTime = standardInstance.run();
-
-  standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
-
-  void vue.nextTick(() => {
-    const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
-
-    if (consoleElement !== undefined) {
-      consoleElement.scrollTop = consoleElement.scrollHeight;
-    }
-  });
-
-  updatePlot();
 }
 
 const xInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value));
@@ -260,6 +358,56 @@ const interactiveShowInput = vue.ref<string[]>(
   interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []
 );
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
+const interactiveRuns = vue.ref<ISimulationRun[]>([]);
+const interactiveCompData = vue.computed(() => {
+  // Combine the live data with the data from the visible runs.
+
+  const res: IGraphPanelData[] = [];
+
+  for (
+    let interactiveDataIndex = 0;
+    interactiveDataIndex < (interactiveData.value.length || 0);
+    ++interactiveDataIndex
+  ) {
+    const defaultTrace = interactiveData.value[interactiveDataIndex] || { name: '', xValues: [], yValues: [] };
+    const additionalTraces: IGraphPanelPlotAdditionalTrace[] = [...(defaultTrace.additionalTraces || [])];
+
+    // Add the traces from the visible runs.
+
+    interactiveRuns.value.forEach((run: ISimulationRun, runIndex: number) => {
+      if (run.visible && run.data[interactiveDataIndex]) {
+        const runPlotData = run.data[interactiveDataIndex]!;
+
+        // Add the default trace.
+
+        additionalTraces.push({
+          name: runPlotData.name,
+          xValues: runPlotData.xValues,
+          yValues: runPlotData.yValues
+        });
+
+        // Add the additional traces.
+
+        if (runPlotData.additionalTraces !== undefined) {
+          runPlotData.additionalTraces.forEach((additionalTrace: IGraphPanelPlotAdditionalTrace) => {
+            additionalTraces.push({
+              name: additionalTrace.name,
+              xValues: additionalTrace.xValues,
+              yValues: additionalTrace.yValues
+            });
+          });
+        }
+      }
+    });
+
+    res.push({
+      ...defaultTrace,
+      additionalTraces: additionalTraces.length > 0 ? additionalTraces : undefined
+    });
+  }
+
+  return res;
+});
 
 if (interactiveModeAvailable.value) {
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
@@ -314,10 +462,10 @@ function evaluateValue(value: string): mathjs.MathType {
   return parser.evaluate(value);
 }
 
-function updateInteractiveSimulation(): void {
-  // Make sure that there are no issues.
+function updateInteractiveSimulation(forceUpdate: boolean = false): void {
+  // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
-  if (interactiveUiJsonIssues.value.length > 0) {
+  if (interactiveUiJsonIssues.value.length > 0 || (!interactiveLiveUpdatesEnabled.value && !forceUpdate)) {
     return;
   }
 
@@ -393,6 +541,8 @@ function updateInteractiveSimulation(): void {
   });
 }
 
+// Interactive mode's margins-related event handlers.
+
 function onMarginsUpdated(plotId: string, newMargins: IGraphPanelMargins): void {
   interactiveMargins[plotId] = newMargins;
 
@@ -415,6 +565,69 @@ function onResetMargins() {
   interactiveCompMargins.value = undefined;
 }
 
+// Interactive mode's runs-related event handlers
+
+function onAddRun(): void {
+  // Create a new run from the live run.
+
+  const inputParameters: Record<string, number> = {};
+
+  props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
+    inputParameters[input.id] = interactiveInputValues.value[index]!;
+  });
+
+  interactiveRuns.value.push({
+    inputParameters: inputParameters,
+    visible: true,
+    data: interactiveData.value
+  });
+}
+
+function onRemoveRun(index: number): void {
+  // Remove the given run.
+
+  interactiveRuns.value.splice(index, 1);
+}
+
+function onRemoveAllRuns(): void {
+  // Remove all the runs.
+
+  interactiveRuns.value = [];
+}
+
+function onToggleRun(index: number): void {
+  // Toggle the visibility of the given run.
+
+  const run = interactiveRuns.value[index]!;
+
+  run.visible = !run.visible;
+}
+
+function runTooltip(run: ISimulationRun): string {
+  const rows = Object.entries(run.inputParameters)
+    .map(
+      ([key, value]) => `
+<tr>
+  <td>
+    <b>${key}:</b>
+  </td>
+  <td style="padding-left: 8px;">
+    ${value}
+  </td>
+</tr>
+`
+    )
+    .join('');
+
+  return `
+<table>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+`;
+}
+
 // "Initialise" our standard and/or interactive modes.
 
 vue.onMounted(() => {
@@ -434,6 +647,7 @@ vue.onMounted(() => {
 
   toolbarId.value = `simulationExperimentViewToolbar${String(crtInstance?.uid)}`;
   editorId.value = `simulationExperimentViewEditor${String(crtInstance?.uid)}`;
+  liveUpdatesCheckboxId.value = `simulationExperimentViewLiveUpdatesCheckbox${String(crtInstance?.uid)}`;
 
   // Track the height of our toolbar.
 
@@ -490,7 +704,7 @@ if (common.isDesktop()) {
     }
 
     if (props.isActiveFile && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.code === 'F9') {
-      if (!interactiveModeEnabled.value) {
+      if (!interactiveModeEnabled.value || (interactiveModeEnabled.value && !interactiveLiveUpdatesEnabled.value)) {
         event.preventDefault();
 
         onRun();
@@ -507,10 +721,6 @@ if (common.isDesktop()) {
 
 :deep(.p-button-icon-only) {
   width: 2rem;
-}
-
-:deep(.p-button-label) {
-  height: 0;
 }
 
 :deep(.p-editor-content) {
@@ -542,7 +752,15 @@ if (common.isDesktop()) {
   cursor: default;
 }
 
+.hint {
+  color: var(--p-text-muted-color);
+}
+
 .invisible {
   visibility: hidden;
+}
+
+.run {
+  border-color: var(--p-content-border-color);
 }
 </style>

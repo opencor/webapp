@@ -57,7 +57,8 @@
     "quill": "^2.0.3",
     "systeminformation": "^5.30.4",
     "ua-parser-js": "^2.0.8",
-    "vue": "3.4.21"
+    "vue": "3.4.21",
+    "vue-tippy": "^6.7.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
