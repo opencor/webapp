@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@14.9.1/+esm';
+import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@15.1.0/+esm';
 
 import * as vueusecore from '@vueuse/core';
 
