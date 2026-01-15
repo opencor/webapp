@@ -12,3 +12,5 @@ export const GraphPanelWidgetPalette = [
   '#9c755f', // Brown
   '#bab0ac' // Gray
 ];
+
+export const DefaultGraphPanelWidgetColor = '#4e79a7'; // Default colour (blue)
