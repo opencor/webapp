@@ -119,6 +119,8 @@ import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
+import vueTippy from 'vue-tippy';
+import 'tippy.js/dist/tippy.css';
 
 import type { IOpenCORProps } from '../../index.ts';
 
@@ -187,7 +189,7 @@ const compUiEnabled = vue.computed(() => {
   );
 });
 
-// Get the current Vue app instance to use some PrimeVue plugins.
+// Get the current Vue app instance to use some PrimeVue plugins and VueTippy.
 
 const crtInstance = vue.getCurrentInstance();
 
@@ -212,6 +214,8 @@ if (crtInstance !== null) {
   if (app.config.globalProperties.$toast === undefined) {
     app.use(primeVueToastService as unknown as vue.Plugin);
   }
+
+  app.use(vueTippy);
 }
 
 vueCommon.useTheme().setTheme(props.theme);

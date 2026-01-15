@@ -6,30 +6,25 @@
 </template>
 
 <script setup lang="ts">
-import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.1.1/+esm';
+import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.3.1/+esm';
 import * as vue from 'vue';
 
 import * as vueCommon from '../../common/vueCommon.ts';
 
-interface IPlotlyTrace {
+import { GraphPanelWidgetPalette } from './GraphPanelWidgetPalette.ts';
+
+export interface IGraphPanelPlotTrace {
   name: string;
   x: number[];
   y: number[];
-}
-
-export interface IGraphPanelPlotAdditionalTrace {
-  name: string;
-  xValues: number[];
-  yValues: number[];
+  color: string;
+  zorder?: number;
 }
 
 export interface IGraphPanelData {
-  name: string;
   xAxisTitle?: string;
-  xValues: number[];
   yAxisTitle?: string;
-  yValues: number[];
-  additionalTraces?: IGraphPanelPlotAdditionalTrace[];
+  traces: IGraphPanelPlotTrace[];
 }
 
 export interface IGraphPanelMargins {
@@ -96,15 +91,7 @@ function themeData(): IThemeData {
     font: {
       color: theme.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
     },
-    colorway: [
-      '#7289ab', // Blue
-      '#ea7e53', // Orange
-      '#eedd78', // Yellow
-      '#e69d87', // Pink
-      '#73a373', // Green
-      '#73b9bc', // Cyan
-      '#dd6b66' // Red
-    ],
+    colorway: GraphPanelWidgetPalette,
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };
@@ -263,25 +250,15 @@ function updatePlot(): void {
     margins.value.right = -1;
   }
 
-  // Retrieve all the traces, i.e. the default trace and any additional traces.
-
-  let traces: IPlotlyTrace[] = [
-    {
-      name: props.data.name,
-      x: props.data.xValues,
-      y: props.data.yValues
-    }
-  ];
-
-  for (const additionalTrace of props.data.additionalTraces || []) {
-    traces.push({
-      name: additionalTrace.name,
-      x: additionalTrace.xValues,
-      y: additionalTrace.yValues
-    });
-  }
-
   // Update the plots.
+
+  const traces = props.data.traces.map((trace) => ({
+    ...trace,
+    ...{
+      line: { color: trace.color },
+      legendrank: trace.zorder
+    }
+  }));
 
   Plotly.react(
     mainDiv.value,
@@ -313,8 +290,7 @@ function updatePlot(): void {
     .then(() => updateMargins())
     .then(() => {
       if (!isVisible.value) {
-        // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct
-        // dimensions.
+        // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
 
         return Plotly.Plots.resize(mainDiv.value);
       }

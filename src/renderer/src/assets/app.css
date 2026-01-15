@@ -36,6 +36,10 @@ body {
       transition: none !important;
     }
 
+    .tippy-box ul {
+      list-style: disc;
+    }
+
     a {
       color: var(--p-button-link-color);
     }

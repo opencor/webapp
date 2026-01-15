@@ -1,12 +1,24 @@
 <template>
   <Toolbar v-if="toolbarNeeded" :id="toolbarId" class="p-1!">
     <template #start>
-      <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
-      <Button :class="{ 'invisible': interactiveModeEnabled }" class="p-1!" disabled icon="pi pi-stop-circle" severity="secondary" text />
+      <div :class="{ 'invisible': interactiveModeEnabled && interactiveLiveUpdatesEnabled }">
+        <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
+      </div>
     </template>
     <template #center>
       <div v-show="interactiveModeAvailable">
         <ToggleButton size="small" v-model="interactiveModeEnabled" onLabel="Interactive mode" offLabel="Standard mode" />
+      </div>
+    </template>
+    <template #end>
+      <div :class="{ 'invisible': !interactiveModeAvailable || !interactiveModeEnabled }" class="flex">
+        <Button class="p-1!" icon="pi pi-cog" severity="secondary" text @click="settingsMenu.toggle($event)" />
+        <Popover ref="settingsMenu">
+          <div class="flex items-center gap-2 px-1 py-1">
+            <Checkbox :inputId="liveUpdatesCheckboxId" v-model="interactiveLiveUpdatesEnabled" binary size="small" @change="onLiveUpdatesChange()" />
+            <label :for="liveUpdatesCheckboxId" class="text-sm select-none">Live updates</label>
+          </div>
+        </Popover>
       </div>
     </template>
   </Toolbar>
@@ -80,8 +92,121 @@
                 :possibleValues="isDiscreteInput(input) ? input.possibleValues : undefined"
                 :stepValue="isScalarInput(input) ? input.stepValue : undefined"
                 :class="index !== 0 ? 'mt-6' : ''"
-                @change="updateInteractiveSimulation"
+                @change="updateInteractiveSimulation()"
               />
+            </Fieldset>
+            <Fieldset legend="Runs">
+              <div class="flex flex-col gap-4">
+                <div class="flex gap-2">
+                  <Button class="w-full"
+                    icon="pi pi-plus"
+                    label="Add run"
+                    size="small"
+                    @click="onAddRun()"
+                  />
+                  <Button class="w-12!"
+                    icon="pi pi-refresh"
+                    size="small"
+                    severity="danger"
+                    title="Remove all runs"
+                    @click="onRemoveAllRuns()"
+                    :disabled="interactiveRuns.length === 0"
+                  />
+                </div>
+                <div class="flex flex-col gap-2">
+                  <div class="run border border-dashed rounded px-2 py-1">
+                    <div class="flex gap-2 items-center">
+                      <div class="w-full text-sm">
+                        Live run
+                      </div>
+                      <div>
+                        <Button class="p-0! w-5! h-5!"
+                          icon="pi pi-wave-pulse"
+                          :style="{ color: interactiveLiveRunColor }"
+                          text size="small"
+                          :title="'Change live run colour'"
+                          @click="interactiveLiveRunColorPopover.toggle($event)"
+                        />
+                        <Popover ref="interactiveLiveRunColorPopover">
+                          <div class="flex gap-2">
+                            <button class="w-6 h-6 rounded"
+                              v-for="color in GraphPanelWidgetPalette" :key="color"
+                              :style="{ backgroundColor: color }"
+                              @click="onLiveRunColorChange(color)"
+                            >
+                              <span v-if="color === interactiveLiveRunColor" class="pi pi-check text-xs text-white"></span>
+                            </button>
+                          </div>
+                        </Popover>
+                      </div>
+                      <Button class="p-0! w-5! h-5!"
+                        :icon="interactiveLiveRunVisible ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                        :severity="interactiveLiveRunVisible ? 'info' : 'secondary'"
+                        text size="small"
+                        :title="(interactiveLiveRunVisible ? 'Hide' : 'Show') + ' live run'"
+                        @click="interactiveLiveRunVisible = !interactiveLiveRunVisible"
+                      />
+                      <div class="w-5 h-5"></div>
+                    </div>
+                  </div>
+                  <div v-if="interactiveRuns.length > 0" v-for="(run, index) in interactiveRuns"
+                    :key="`run_${index}`"
+                    class="run border border-dashed rounded px-2 py-1"
+                  >
+                    <div class="flex gap-2 items-center">
+                      <div class="w-full text-sm cursor-help"
+                        v-tippy:bottom="{
+                          allowHTML: true,
+                          content: run.tooltip,
+                          placement: 'bottom'
+                        }"
+                      >
+                        Run #{{ index + 1 }}
+                      </div>
+                      <div>
+                        <Button class="p-0! w-5! h-5!"
+                          icon="pi pi-wave-pulse"
+                          :style="{ color: run.color }"
+                          text size="small"
+                          :title="'Change run colour'"
+                          @click="onToggleRunColorPopover(index, $event)"
+                        />
+                        <Popover :ref="(element: IPopover | undefined) => interactiveRunPopoverRefs[index] = element"
+                          v-if="interactiveRunColorPopoverIndex === index"
+                        >
+                          <div class="flex gap-2">
+                            <button class="w-6 h-6 rounded"
+                              v-for="color in GraphPanelWidgetPalette" :key="color"
+                              :style="{ backgroundColor: color }"
+                              @click="onRunColorChange(index, color)"
+                            >
+                              <span v-if="color === run.color" class="pi pi-check text-xs text-white"></span>
+                            </button>
+                          </div>
+                        </Popover>
+                      </div>
+                      <Button class="p-0! w-5! h-5!"
+                        :icon="run.visible ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                        :severity="run.visible ? 'info' : 'secondary'"
+                        text size="small"
+                        :title="(run.visible ? 'Hide' : 'Show') + ' run'"
+                        @click="onToggleRun(index)"
+                      />
+                      <Button class="p-0! w-5! h-5!"
+                        icon="pi pi-trash"
+                        severity="danger"
+                        text size="small"
+                        title="Remove run"
+                        @click="onRemoveRun(index)"
+                      />
+                    </div>
+                  </div>
+                  <div v-else class="hint text-center text-xs">
+                    There are no (additional) runs.<br/>
+                    Click "Add run" to add one.
+                  </div>
+                </div>
+              </div>
             </Fieldset>
           </ScrollPanel>
         </div>
@@ -90,9 +215,9 @@
           <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
             v-for="(_plot, index) in uiJson.output.plots"
             :key="`plot_${index}`"
-            class="flex-1 w-full min-h-0"
+            class="w-full min-h-0"
             :margins="interactiveCompMargins"
-            :data="interactiveData[index] || { name: '', xValues: [], yValues: [] }"
+            :data="interactiveCompData[index] || { traces: [] }"
             @marginsUpdated="(newMargins: IGraphPanelMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
             @resetMargins="() => onResetMargins()"
           />
@@ -103,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@14.9.1/+esm';
+import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@15.1.0/+esm';
 
 import * as vueusecore from '@vueuse/core';
 
@@ -116,11 +241,16 @@ import * as vueCommon from '../../common/vueCommon.ts';
 import * as locApi from '../../libopencor/locApi.ts';
 import * as locSedApi from '../../libopencor/locSedApi.ts';
 
-import type {
-  IGraphPanelData,
-  IGraphPanelPlotAdditionalTrace,
-  IGraphPanelMargins
-} from '../widgets/GraphPanelWidget.vue';
+import type { IGraphPanelData, IGraphPanelPlotTrace, IGraphPanelMargins } from '../widgets/GraphPanelWidget.vue';
+import { DefaultGraphPanelWidgetColor, GraphPanelWidgetPalette } from '../widgets/GraphPanelWidgetPalette.ts';
+
+interface ISimulationRun {
+  inputParameters: Record<string, number>;
+  visible: boolean;
+  data: IGraphPanelData[];
+  color: string;
+  tooltip: string;
+}
 
 const props = defineProps<{
   file: locApi.File;
@@ -139,9 +269,12 @@ const toolbarNeeded = vue.computed(() => {
 
 const toolbarId = vue.ref('simulationExperimentViewToolbar');
 const editorId = vue.ref('simulationExperimentViewEditor');
+const liveUpdatesCheckboxId = vue.ref('simulationExperimentViewLiveUpdatesCheckbox');
 const actualHeight = vue.ref<number>(0);
 const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
 const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
+const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
+const settingsMenu = vue.ref();
 
 function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedApi.SedInstanceTask): void {
   function addParameter(param: string): void {
@@ -185,6 +318,43 @@ function isDiscreteInput(input: locApi.IUiJsonInput): input is locApi.IUiJsonDis
   return 'possibleValues' in input;
 }
 
+// Event handlers.
+
+function onRun(): void {
+  // Run either the standard or interactive simulation.
+
+  if (!interactiveModeEnabled.value) {
+    // Run the standard simulation, i.e. run the instance, output the simulation time to the console, and update the
+    // plot.
+
+    const simulationTime = standardInstance.run();
+
+    standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
+
+    void vue.nextTick(() => {
+      const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
+
+      if (consoleElement !== undefined) {
+        consoleElement.scrollTop = consoleElement.scrollHeight;
+      }
+    });
+
+    updatePlot();
+
+    return;
+  }
+
+  // Run the interactive simulation.
+
+  updateInteractiveSimulation(true);
+}
+
+function onLiveUpdatesChange(): void {
+  if (interactiveLiveUpdatesEnabled.value) {
+    updateInteractiveSimulation();
+  }
+}
+
 // Standard mode.
 
 const standardDocument = props.file.document();
@@ -195,9 +365,9 @@ const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask.voiName());
 const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
 const standardData = vue.ref<IGraphPanelData>({
-  name: '',
-  xValues: [],
-  yValues: []
+  xAxisTitle: undefined,
+  yAxisTitle: undefined,
+  traces: []
 });
 const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
@@ -207,36 +377,30 @@ function traceName(name: string | undefined, xValue: string, yValue: string): st
   return name !== undefined ? name : `${yValue} <i>vs.</i> ${xValue}`;
 }
 
-function onRun(): void {
-  // Run the instance, output the simulation time to the console, and update the plot.
-
-  const simulationTime = standardInstance.run();
-
-  standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
-
-  void vue.nextTick(() => {
-    const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
-
-    if (consoleElement !== undefined) {
-      consoleElement.scrollTop = consoleElement.scrollHeight;
-    }
-  });
-
-  updatePlot();
-}
-
 const xInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value));
 const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value));
 
 function updatePlot() {
   standardData.value = {
-    name: traceName(undefined, standardXParameter.value, standardYParameter.value),
-    xValues: locCommon.simulationData(standardInstanceTask, xInfo.value),
-    yValues: locCommon.simulationData(standardInstanceTask, yInfo.value)
+    xAxisTitle: standardXParameter.value,
+    yAxisTitle: standardYParameter.value,
+    traces: [
+      {
+        name: traceName(undefined, standardXParameter.value, standardYParameter.value),
+        x: locCommon.simulationData(standardInstanceTask, xInfo.value),
+        y: locCommon.simulationData(standardInstanceTask, yInfo.value),
+        color: DefaultGraphPanelWidgetColor
+      }
+    ]
   };
 }
 
 // Interactive mode.
+
+interface IPopover {
+  toggle: (event: MouseEvent) => void;
+  hide: () => void;
+}
 
 const interactiveDocument = props.file.document();
 const interactiveInstance = interactiveDocument.instantiate();
@@ -250,17 +414,77 @@ const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
   interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
 );
 const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
-const interactiveInputValues = vue.ref<Array<number>>(
-  interactiveModeAvailable.value
-    ? props.uiJson.input.map((input: locApi.IUiJsonInput) => {
-        return input.defaultValue;
-      })
-    : []
+const interactiveInputValues = vue.ref<number[]>(
+  interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []
 );
 const interactiveShowInput = vue.ref<string[]>(
   interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []
 );
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
+const interactiveRuns = vue.ref<ISimulationRun[]>([]);
+const interactiveLiveRunColor = vue.ref<string>(DefaultGraphPanelWidgetColor);
+const interactiveLiveRunVisible = vue.ref<boolean>(true);
+const interactiveLiveRunColorPopover = vue.ref();
+const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
+const interactiveRunPopoverRefs = vue.ref<Record<number, IPopover | undefined>>({});
+const interactiveCompData = vue.computed(() => {
+  // Combine the live data with the data from the visible runs.
+
+  const res: IGraphPanelData[] = [];
+
+  for (
+    let interactiveDataIndex = 0;
+    interactiveDataIndex < (interactiveData.value.length || 0);
+    ++interactiveDataIndex
+  ) {
+    const traces: IGraphPanelPlotTrace[] = interactiveLiveRunVisible.value
+      ? (interactiveData.value[interactiveDataIndex]?.traces ?? []).map((trace, traceIndex) => {
+          return {
+            ...trace,
+            name: trace.name + (interactiveRuns.value.length > 0 ? ` [Live]` : ''),
+            color:
+              GraphPanelWidgetPalette.length > 0
+                ? (GraphPanelWidgetPalette[
+                    (GraphPanelWidgetPalette.indexOf(interactiveLiveRunColor.value) + traceIndex) %
+                      GraphPanelWidgetPalette.length
+                  ] ?? DefaultGraphPanelWidgetColor)
+                : DefaultGraphPanelWidgetColor,
+            zorder: 1
+          };
+        })
+      : [];
+
+    interactiveRuns.value.forEach((interactiveRun: ISimulationRun, runIndex: number) => {
+      if (interactiveRun.visible) {
+        const runTraces = (interactiveRun.data[interactiveDataIndex]?.traces ?? []).map((trace, traceIndex) => {
+          return {
+            ...trace,
+            name: trace.name + (interactiveRuns.value.length > 0 ? ` [#${runIndex + 1}]` : ''),
+            color:
+              GraphPanelWidgetPalette.length > 0
+                ? (GraphPanelWidgetPalette[
+                    (GraphPanelWidgetPalette.indexOf(interactiveRun.color) + traceIndex) %
+                      GraphPanelWidgetPalette.length
+                  ] ?? DefaultGraphPanelWidgetColor)
+                : DefaultGraphPanelWidgetColor
+          };
+        });
+
+        traces.push(...runTraces);
+      }
+    });
+
+    res.push({
+      xAxisTitle: interactiveData.value[interactiveDataIndex]?.xAxisTitle,
+      yAxisTitle: interactiveData.value[interactiveDataIndex]?.yAxisTitle,
+      traces: traces
+    });
+  }
+
+  return res;
+});
+
+// Map data IDs to simulation data info.
 
 if (interactiveModeAvailable.value) {
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
@@ -268,10 +492,10 @@ if (interactiveModeAvailable.value) {
   });
 }
 
+// Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
+
 interactiveMath.import(
   {
-    // Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
-
     // Arithmetic operators.
 
     pow: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number) => v ** y),
@@ -315,10 +539,10 @@ function evaluateValue(value: string): mathjs.MathType {
   return parser.evaluate(value);
 }
 
-function updateInteractiveSimulation(): void {
-  // Make sure that there are no issues.
+function updateInteractiveSimulation(forceUpdate: boolean = false): void {
+  // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
-  if (interactiveUiJsonIssues.value.length > 0) {
+  if (interactiveUiJsonIssues.value.length > 0 || (!interactiveLiveUpdatesEnabled.value && !forceUpdate)) {
     return;
   }
 
@@ -373,26 +597,33 @@ function updateInteractiveSimulation(): void {
   });
 
   interactiveData.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
-    let additionalTraces: IGraphPanelPlotAdditionalTrace[] = [];
+    const traces: IGraphPanelPlotTrace[] = [
+      {
+        name: traceName(plot.name, plot.xValue, plot.yValue),
+        x: parser.evaluate(plot.xValue),
+        y: parser.evaluate(plot.yValue),
+        color: DefaultGraphPanelWidgetColor
+      }
+    ];
 
     plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
-      additionalTraces.push({
+      traces.push({
         name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
-        xValues: parser.evaluate(additionalTrace.xValue),
-        yValues: parser.evaluate(additionalTrace.yValue)
+        x: parser.evaluate(additionalTrace.xValue),
+        y: parser.evaluate(additionalTrace.yValue),
+        color: DefaultGraphPanelWidgetColor
       });
     });
 
     return {
-      name: traceName(plot.name, plot.xValue, plot.yValue),
       xAxisTitle: plot.xAxisTitle,
-      xValues: parser.evaluate(plot.xValue),
       yAxisTitle: plot.yAxisTitle,
-      yValues: parser.evaluate(plot.yValue),
-      additionalTraces: additionalTraces
+      traces
     };
   });
 }
+
+// Interactive mode's margins-related event handlers.
 
 function onMarginsUpdated(plotId: string, newMargins: IGraphPanelMargins): void {
   interactiveMargins[plotId] = newMargins;
@@ -416,6 +647,153 @@ function onResetMargins() {
   interactiveCompMargins.value = undefined;
 }
 
+// Interactive mode's runs-related event handlers
+
+function onAddRun(): void {
+  // Create a new run from the live run.
+
+  const inputParameters: Record<string, number> = {};
+
+  props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
+    const interactiveInputValue = interactiveInputValues.value[index];
+
+    if (interactiveInputValue) {
+      inputParameters[input.id] = interactiveInputValue;
+    }
+  });
+
+  // Compute the tooltip for this run, keeping in mind that some input parameters may not be visible.
+
+  const rows = props.uiJson.input
+    .map((input, index) => ({
+      input: input,
+      visible: interactiveShowInput.value[index]
+    }))
+    .filter((input) => input.visible)
+    .map(({ input }) => {
+      let inputValue: string | number | undefined = inputParameters[input.id];
+
+      if (isDiscreteInput(input)) {
+        const selectedValue = input.possibleValues.find(
+          (possibleValue) => possibleValue.value === inputParameters[input.id]
+        );
+
+        if (selectedValue?.name) {
+          inputValue = selectedValue.name.charAt(0).toLowerCase() + selectedValue.name.slice(1);
+        } else {
+          inputValue = inputParameters[input.id];
+        }
+      }
+
+      return `
+<tr>
+  <td>
+    <b>${input.name}:</b>
+  </td>
+  <td style="padding-left: 8px;">
+    ${inputValue}
+  </td>
+</tr>
+`;
+    })
+    .join('');
+  const tooltip = `
+<table>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+`;
+
+  // Determine the colour (of the first trace) by using the next unused colour in the palette unless all the colours
+  // have already been used.
+
+  const usedColors = new Set<string>([interactiveLiveRunColor.value, ...interactiveRuns.value.map((run) => run.color)]);
+  const interactiveRun =
+    interactiveRuns.value.length > 0 ? interactiveRuns.value[interactiveRuns.value.length - 1] : null;
+  const lastColor = interactiveRun ? interactiveRun.color : interactiveLiveRunColor.value;
+  const lastColorIndex = GraphPanelWidgetPalette.indexOf(lastColor);
+  let color: string = DefaultGraphPanelWidgetColor;
+
+  for (let i = 1; i <= GraphPanelWidgetPalette.length; ++i) {
+    const newColor = GraphPanelWidgetPalette[(lastColorIndex + i) % GraphPanelWidgetPalette.length];
+
+    if (newColor && (!usedColors.has(newColor) || usedColors.size === GraphPanelWidgetPalette.length)) {
+      color = newColor;
+
+      break;
+    }
+  }
+
+  // Add the new run.
+
+  interactiveRuns.value.push({
+    inputParameters,
+    visible: true,
+    data: interactiveData.value,
+    color,
+    tooltip
+  });
+}
+
+function onRemoveRun(index: number): void {
+  // Remove the given run.
+
+  interactiveRuns.value.splice(index, 1);
+}
+
+function onRemoveAllRuns(): void {
+  // Remove all the runs.
+
+  interactiveRuns.value = [];
+}
+
+function onToggleRun(index: number): void {
+  // Toggle the visibility of the given run.
+
+  const interactiveRun = interactiveRuns.value[index];
+
+  if (interactiveRun) {
+    interactiveRun.visible = !interactiveRun.visible;
+  }
+}
+
+function onLiveRunColorChange(color: string) {
+  interactiveLiveRunColor.value = color;
+
+  interactiveLiveRunColorPopover.value.hide();
+}
+
+function onRunColorChange(index: number, color: string) {
+  const interactiveRun = interactiveRuns.value[index];
+
+  if (interactiveRun) {
+    interactiveRun.color = color;
+
+    closeRunColorPopover(index);
+  }
+}
+
+function onToggleRunColorPopover(index: number, event: MouseEvent) {
+  if (interactiveRunColorPopoverIndex.value === index) {
+    closeRunColorPopover(index);
+  } else {
+    interactiveRunColorPopoverIndex.value = index;
+
+    vue.nextTick(() => {
+      // Note: we do this in a next tick to ensure that the reference is available.
+
+      interactiveRunPopoverRefs.value[index]?.toggle(event);
+    });
+  }
+}
+
+function closeRunColorPopover(index: number) {
+  interactiveRunPopoverRefs.value[index]?.hide();
+
+  interactiveRunColorPopoverIndex.value = -1;
+}
+
 // "Initialise" our standard and/or interactive modes.
 
 vue.onMounted(() => {
@@ -429,12 +807,14 @@ vue.onMounted(() => {
 // Various things that need to be done once we are is mounted.
 
 const crtInstance = vue.getCurrentInstance();
+const windowIsFocused = vueusecore.useWindowFocus();
 
 vue.onMounted(() => {
   // Customise our IDs.
 
   toolbarId.value = `simulationExperimentViewToolbar${String(crtInstance?.uid)}`;
   editorId.value = `simulationExperimentViewEditor${String(crtInstance?.uid)}`;
+  liveUpdatesCheckboxId.value = `simulationExperimentViewLiveUpdatesCheckbox${String(crtInstance?.uid)}`;
 
   // Track the height of our toolbar.
 
@@ -475,6 +855,23 @@ vue.onMounted(() => {
 
   mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 
+  // Close popovers when the window loses focus.
+
+  vue.watch(
+    () => windowIsFocused.value,
+    (isFocused) => {
+      if (!isFocused) {
+        interactiveLiveRunColorPopover.value?.hide();
+
+        if (interactiveRunColorPopoverIndex.value !== -1) {
+          closeRunColorPopover(interactiveRunColorPopoverIndex.value);
+        }
+      }
+    }
+  );
+
+  // Disconnect our observers when unmounting.
+
   vue.onUnmounted(() => {
     mutationObserver.disconnect();
 
@@ -491,7 +888,7 @@ if (common.isDesktop()) {
     }
 
     if (props.isActiveFile && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.code === 'F9') {
-      if (!interactiveModeEnabled.value) {
+      if (!interactiveModeEnabled.value || (interactiveModeEnabled.value && !interactiveLiveUpdatesEnabled.value)) {
         event.preventDefault();
 
         onRun();
@@ -502,16 +899,20 @@ if (common.isDesktop()) {
 </script>
 
 <style scoped>
+.hint {
+  color: var(--p-text-muted-color);
+}
+
+.invisible {
+  visibility: hidden;
+}
+
 :deep(.p-button-icon) {
   font-size: 1.5rem;
 }
 
 :deep(.p-button-icon-only) {
   width: 2rem;
-}
-
-:deep(.p-button-label) {
-  height: 0;
 }
 
 :deep(.p-editor-content) {
@@ -543,7 +944,7 @@ if (common.isDesktop()) {
   cursor: default;
 }
 
-.invisible {
-  visibility: hidden;
+.run {
+  border-color: var(--p-content-border-color);
 }
 </style>
