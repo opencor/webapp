@@ -29,7 +29,7 @@
     "build": "electron-vite build",
     "build:web": "cd ./src/renderer && vite build",
     "clean": "bun src/renderer/scripts/clean.js",
-    "dependencies:update": "bun clean && bun update && bun install && cd ./src/renderer && bun clean && bun update && bun install",
+    "dependencies:update": "bun clean && bun update -i && bun install && cd ./src/renderer && bun clean && bun update -i && bun install",
     "dev": "electron-vite dev --watch",
     "dev:web": "cd ./src/renderer && vite dev",
     "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/renderer/src/libopencor/src/*",
