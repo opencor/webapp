@@ -792,6 +792,7 @@ vue.onMounted(() => {
 // Various things that need to be done once we are is mounted.
 
 const crtInstance = vue.getCurrentInstance();
+const windowIsFocused = vueusecore.useWindowFocus();
 
 vue.onMounted(() => {
   // Customise our IDs.
@@ -838,6 +839,21 @@ vue.onMounted(() => {
   });
 
   mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+  // Close popovers when the window loses focus.
+
+  vue.watch(
+    () => windowIsFocused.value,
+    (isFocused) => {
+      if (!isFocused) {
+        interactiveLiveRunColorPopover.value?.hide();
+
+        if (interactiveRunColorPopoverIndex.value !== -1) {
+          closeRunColorPopover(interactiveRunColorPopoverIndex.value);
+        }
+      }
+    }
+  );
 
   // Disconnect our observers when unmounting.
 
