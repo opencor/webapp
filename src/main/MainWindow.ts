@@ -123,7 +123,7 @@ let openedFilePaths: string[] = [];
 export function filesOpened(filePaths: string[]): void {
   openedFilePaths = filePaths;
 
-  if (filePaths.length === 0) {
+  if (!filePaths.length) {
     selectedFilePath = null;
   }
 }
@@ -201,7 +201,7 @@ export class MainWindow extends ApplicationWindow {
         //       case we filter out all null entries.
 
         recentFilePaths = (electronConf.get('app.files.recent') as string[]).filter(
-          (filePath: string | null) => filePath !== null
+          (filePath: string | null) => filePath
         );
 
         updateReopenMenu(recentFilePaths);
@@ -222,7 +222,7 @@ export class MainWindow extends ApplicationWindow {
 
           commandLine.shift();
 
-          if (!isPackaged() && commandLine.length > 0) {
+          if (!isPackaged() && commandLine.length) {
             commandLine.shift();
           }
         }
@@ -352,19 +352,19 @@ export class MainWindow extends ApplicationWindow {
   //       reopen. So, we need to wait for the file to be reopened before reopening the next one.
 
   reopenFilePathsAndSelectFilePath(): void {
-    if (this._openedFilePaths.length > 0) {
+    if (this._openedFilePaths.length) {
       const filePath = this._openedFilePaths[0];
 
       this.webContents.send('open', filePath);
 
       this._openedFilePaths = this._openedFilePaths.slice(1);
 
-      if (this._openedFilePaths.length > 0) {
+      if (this._openedFilePaths.length) {
         return;
       }
     }
 
-    if (this._selectedFilePath !== '') {
+    if (this._selectedFilePath) {
       this.webContents.send('select', this._selectedFilePath);
 
       this._selectedFilePath = '';
@@ -374,7 +374,7 @@ export class MainWindow extends ApplicationWindow {
   // Handle our command line arguments.
 
   isAction(argument: string | undefined): boolean {
-    if (argument === undefined) {
+    if (!argument) {
       return false;
     }
 
@@ -382,7 +382,7 @@ export class MainWindow extends ApplicationWindow {
   }
 
   handleArguments(commandLine: string[]): void {
-    if (commandLine.length === 0) {
+    if (!commandLine.length) {
       return;
     }
 

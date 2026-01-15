@@ -4,7 +4,7 @@
       <a v-bind="props.action">
         <div class="p-menubar-item-label">{{ item.label }}</div>
         <svg
-          v-if="item.items !== undefined"
+          v-if="item.items"
           width="14"
           height="14"
           viewBox="0 0 14 14"
@@ -15,7 +15,7 @@
             fill="currentColor"
           />
         </svg>
-        <div v-if="item.shortcut !== undefined" class="ml-auto border rounded shortcut text-xs/3">
+        <div v-if="item.shortcut" class="ml-auto border rounded shortcut text-xs/3">
           {{ item.shortcut }}
         </div>
       </a>
@@ -149,7 +149,7 @@ const items = [
 const menuBar = vue.ref<(vue.ComponentPublicInstance<typeof Menubar> & { hide: () => void }) | null>(null);
 
 vue.onMounted(() => {
-  if (menuBar.value !== null) {
+  if (menuBar.value) {
     // Ensure that the menubar never gets the 'p-menubar-mobile' class, which would turn it into a hamburger menu.
 
     const menuBarElement = menuBar.value.$el as HTMLElement;

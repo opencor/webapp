@@ -65,6 +65,14 @@ export interface IUiJsonParameter {
   value: string;
 }
 
+export function isScalarInput(input: IUiJsonInput): input is IUiJsonScalarInput {
+  return 'maximumValue' in input && 'minimumValue' in input;
+}
+
+export function isDiscreteInput(input: IUiJsonInput): input is IUiJsonDiscreteInput {
+  return 'possibleValues' in input;
+}
+
 function isDivisible(a: number, b: number): boolean {
   const res = a / b;
 
@@ -74,7 +82,7 @@ function isDivisible(a: number, b: number): boolean {
 export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   // Make sure that we have some UI JSON.
 
-  if (uiJson === undefined) {
+  if (!uiJson) {
     return [
       {
         type: EIssueType.WARNING,
@@ -274,7 +282,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
     const res: IIssue[] = [];
 
     for (const issue of String(validatorRes).split('\n')) {
-      if (issue !== '') {
+      if (issue) {
         res.push({
           type: EIssueType.WARNING,
           description: `UI JSON: ${common.formatMessage(issue)}`
@@ -291,14 +299,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   const inputIdUsed: Record<string, boolean> = {};
 
   for (const input of uiJson.input) {
-    if (input.id !== undefined) {
-      if (input.id === '') {
-        res.push({
-          type: EIssueType.WARNING,
-          description: 'UI JSON: an input id must not be empty.'
-        });
-      }
-
+    if (input.id) {
       if (inputIdUsed[input.id]) {
         res.push({
           type: EIssueType.WARNING,
@@ -307,9 +308,14 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       }
 
       inputIdUsed[input.id] = true;
+    } else {
+      res.push({
+        type: EIssueType.WARNING,
+        description: 'UI JSON: an input id must not be empty.'
+      });
     }
 
-    if (input.name === '') {
+    if (!input.name) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an input name must not be empty.'
@@ -318,7 +324,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
     if ('possibleValues' in input) {
       for (const possibleValue of input.possibleValues) {
-        if (possibleValue.name === '') {
+        if (!possibleValue.name) {
           res.push({
             type: EIssueType.WARNING,
             description: 'UI JSON: an input possible value name must not be empty.'
@@ -326,40 +332,36 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
         }
       }
 
-      const values = input.possibleValues.map((value) => {
-        return value.value;
+      const possibleValues = input.possibleValues.map((possibleValue) => {
+        return possibleValue.value;
       });
-      const valueUsed: Record<number, boolean> = {};
+      const usedPossibleValues: Record<number, boolean> = {};
 
-      for (const value of values) {
-        if (valueUsed[value]) {
+      for (const possibleValue of possibleValues) {
+        if (usedPossibleValues[possibleValue]) {
           res.push({
             type: EIssueType.WARNING,
             description:
               'UI JSON: an input possible value must have a unique value (' +
-              String(value) +
+              String(possibleValue) +
               ' is used more than once).'
           });
         }
 
-        valueUsed[value] = true;
+        usedPossibleValues[possibleValue] = true;
       }
 
-      if (!values.includes(input.defaultValue)) {
+      if (!possibleValues.includes(input.defaultValue)) {
         res.push({
           type: EIssueType.WARNING,
           description:
             'UI JSON: an input default value (' +
             String(input.defaultValue) +
             ') must be one of the possible values (' +
-            values.join(', ') +
+            possibleValues.join(', ') +
             ').'
         });
       }
-    }
-
-    function isScalarInput(input: IUiJsonInput): input is IUiJsonScalarInput {
-      return 'minimumValue' in input && 'maximumValue' in input;
     }
 
     if (isScalarInput(input)) {
@@ -423,7 +425,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
       }
     }
 
-    if (input.visible !== undefined && input.visible === '') {
+    if (input.visible !== undefined && !input.visible) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an input visible must not be empty.'
@@ -436,7 +438,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   const outputIdUsed: Record<string, boolean> = {};
 
   for (const outputData of uiJson.output.data) {
-    if (outputData.id === '') {
+    if (!outputData.id) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an output data id must not be empty.'
@@ -452,7 +454,7 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
     outputIdUsed[outputData.id] = true;
 
-    if (outputData.name === '') {
+    if (!outputData.name) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an output data name must not be empty.'
@@ -461,35 +463,35 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   }
 
   for (const outputPlot of uiJson.output.plots) {
-    if (outputPlot.xAxisTitle === '') {
+    if (outputPlot.xAxisTitle !== undefined && !outputPlot.xAxisTitle) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an output plot X axis title must not be empty.'
       });
     }
 
-    if (outputPlot.xValue === '') {
+    if (!outputPlot.xValue) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an output plot X value must not be empty.'
       });
     }
 
-    if (outputPlot.yAxisTitle === '') {
+    if (outputPlot.yAxisTitle !== undefined && !outputPlot.yAxisTitle) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an output plot Y axis title must not be empty.'
       });
     }
 
-    if (outputPlot.yValue === '') {
+    if (!outputPlot.yValue) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an output plot Y value must not be empty.'
       });
     }
 
-    if (outputPlot.name === '') {
+    if (outputPlot.name !== undefined && !outputPlot.name) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: an output plot name must not be empty.'
@@ -498,21 +500,21 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
 
     if (outputPlot.additionalTraces !== undefined) {
       for (const additionalTrace of outputPlot.additionalTraces) {
-        if (additionalTrace.xValue === '') {
+        if (!additionalTrace.xValue) {
           res.push({
             type: EIssueType.WARNING,
             description: 'UI JSON: an output plot additional trace X value must not be empty.'
           });
         }
 
-        if (additionalTrace.yValue === '') {
+        if (!additionalTrace.yValue) {
           res.push({
             type: EIssueType.WARNING,
             description: 'UI JSON: an output plot additional trace Y value must not be empty.'
           });
         }
 
-        if (additionalTrace.name === '') {
+        if (additionalTrace.name !== undefined && !additionalTrace.name) {
           res.push({
             type: EIssueType.WARNING,
             description: 'UI JSON: an output plot additional trace name must not be empty.'
@@ -525,14 +527,14 @@ export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
   // Make sure that the parameters information makes sense.
 
   for (const parameter of uiJson.parameters) {
-    if (parameter.name === '') {
+    if (!parameter.name) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: a parameter name must not be empty.'
       });
     }
 
-    if (parameter.value === '') {
+    if (!parameter.value) {
       res.push({
         type: EIssueType.WARNING,
         description: 'UI JSON: a parameter value must not be empty.'

@@ -15,10 +15,10 @@
       :pt:root:style="{ position: 'absolute' }"
       :class="compIsActive ? 'visible' : 'invisible'"
     />
-    <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
+    <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
-    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :width="width" :height="height" />
+    <IssuesView v-if="issues.length" class="h-full" :issues="issues" :width="width" :height="height" />
     <div
       v-else
       @dragenter="onDragEnter"
@@ -28,10 +28,10 @@
       @dragleave="onDragLeave"
     >
       <input ref="files" type="file" multiple style="display: none" @change="onChange" />
-      <DragNDropComponent v-show="dragAndDropCounter > 0" />
+      <DragNDropComponent v-show="dragAndDropCounter" />
       <MainMenu
         :id="mainMenuId"
-        v-if="electronApi === undefined && omex === undefined"
+        v-if="!electronApi && !omex"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -45,9 +45,9 @@
         @settings="onSettingsMenu"
       />
       <!-- ---OPENCOR--- Enable once our GitHub integration is fully ready.
-      <div v-if="firebaseConfig !== undefined && omex === undefined">
+      <div v-if="firebaseConfig && !omex">
         <div class="absolute top-1 right-1 z-999">
-          <Button icon="pi pi-github" severity="secondary" :class="octokit !== null ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
+          <Button icon="pi pi-github" severity="secondary" :class="octokit ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
         </div>
         <YesNoQuestionDialog
           v-model:visible="disconnectFromGitHubVisible"
@@ -62,7 +62,7 @@
         ref="contents"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
-        :simulationOnly="omex !== undefined"
+        :simulationOnly="omex"
         :width="width"
         :height="heightMinusMainMenu"
       />
@@ -193,10 +193,10 @@ const compUiEnabled = vue.computed(() => {
 
 const crtInstance = vue.getCurrentInstance();
 
-if (crtInstance !== null) {
+if (crtInstance) {
   const app = crtInstance.appContext.app;
 
-  if (app.config.globalProperties.$primevue === undefined) {
+  if (!app.config.globalProperties.$primevue) {
     app.use(primeVueConfig as unknown as vue.Plugin, {
       theme: {
         preset: primeVueAuraTheme,
@@ -207,11 +207,11 @@ if (crtInstance !== null) {
     });
   }
 
-  if (app.config.globalProperties.$confirm === undefined) {
+  if (!app.config.globalProperties.$confirm) {
     app.use(primeVueConfirmationService as unknown as vue.Plugin);
   }
 
-  if (app.config.globalProperties.$toast === undefined) {
+  if (!app.config.globalProperties.$toast) {
     app.use(primeVueToastService as unknown as vue.Plugin);
   }
 
@@ -230,7 +230,7 @@ const locApiInitialised = vue.ref(false);
 const loadingOpencorMessageVisible = vue.ref<boolean>(false);
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
-if (window.locApi === undefined) {
+if (!window.locApi) {
   loadingOpencorMessageVisible.value = true;
 
   vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
@@ -249,11 +249,11 @@ void locApi.initialiseLocApi().then(() => {
 // Note: we check whether a Firebase app is already initialised to avoid issues when hot-reloading during development
 //       and/or using OpenCOR as a Vue component within another application that also uses Firebase.
 
-if (firebaseConfig !== undefined) {
+if (firebaseConfig) {
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
-} else if (props.omex === undefined) {
+} else if (!props.omex) {
   const items = missingFirebaseKeys();
   const formatList = (items: string[]): string => {
     if (items.length === 1) {
@@ -416,7 +416,7 @@ electronApi?.onAbout(() => {
 });
 
 function onAboutMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -432,7 +432,7 @@ electronApi?.onSettings(() => {
 });
 
 function onSettingsMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -466,9 +466,9 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
       if (
         fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
         fileType === locApi.EFileType.UNKNOWN_FILE ||
-        (props.omex !== undefined && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
+        (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
       ) {
-        if (props.omex !== undefined) {
+        if (props.omex) {
           void vue.nextTick(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
@@ -507,7 +507,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
         hideLoadingModelMessage();
       }
 
-      if (props.omex !== undefined) {
+      if (props.omex) {
         void vue.nextTick(() => {
           issues.value.push({
             type: locApi.EIssueType.ERROR,
@@ -533,7 +533,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
 function onChange(event: Event): void {
   const files = (event.target as HTMLInputElement).files;
 
-  if (files !== null) {
+  if (files) {
     for (const file of Array.from(files)) {
       openFile(file);
     }
@@ -545,7 +545,7 @@ function onChange(event: Event): void {
 const dragAndDropCounter = vue.ref<number>(0);
 
 function onDragEnter(): void {
-  if (!compUiEnabled.value || props.omex !== undefined) {
+  if (!compUiEnabled.value || props.omex) {
     return;
   }
 
@@ -553,7 +553,7 @@ function onDragEnter(): void {
 }
 
 function onDrop(event: DragEvent): void {
-  if (dragAndDropCounter.value === 0) {
+  if (!dragAndDropCounter.value) {
     return;
   }
 
@@ -561,7 +561,7 @@ function onDrop(event: DragEvent): void {
 
   const files = event.dataTransfer?.files;
 
-  if (files !== undefined) {
+  if (files) {
     for (const file of Array.from(files)) {
       openFile(file);
     }
@@ -569,7 +569,7 @@ function onDrop(event: DragEvent): void {
 }
 
 function onDragLeave(): void {
-  if (dragAndDropCounter.value === 0) {
+  if (!dragAndDropCounter.value) {
     return;
   }
 
@@ -583,7 +583,7 @@ electronApi?.onOpen((filePath: string) => {
 });
 
 function onOpenMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -599,7 +599,7 @@ electronApi?.onOpenRemote(() => {
 });
 
 function onOpenRemoteMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -622,7 +622,7 @@ electronApi?.onOpenSampleLorenz(() => {
 });
 
 function onOpenSampleLorenzMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -636,7 +636,7 @@ electronApi?.onOpenSampleInteractiveLorenz(() => {
 });
 
 function onOpenSampleInteractiveLorenzMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -650,7 +650,7 @@ electronApi?.onClose(() => {
 });
 
 function onCloseMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -664,7 +664,7 @@ electronApi?.onCloseAll(() => {
 });
 
 function onCloseAllMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -729,7 +729,7 @@ vue.onMounted(() => {
   setTimeout(() => {
     const toastElement = document.getElementById(toastId.value);
 
-    if (toastElement !== null) {
+    if (toastElement) {
       blockUiElement.appendChild(toastElement);
     }
   }, SHORT_DELAY);
@@ -786,9 +786,9 @@ vue.onMounted(() => {
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry on as normal (i.e. the whole OpenCOR UI will be shown).
 
-if (props.omex !== undefined) {
+if (props.omex) {
   vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
-    if (newLocApiInitialised && props.omex !== undefined) {
+    if (newLocApiInitialised && props.omex) {
       openFile(props.omex);
     }
   });
@@ -799,7 +799,7 @@ if (props.omex !== undefined) {
     // Do what follows with a bit of a delay to give our background (with the OpenCOR logo) time to be renderered.
 
     setTimeout(() => {
-      if (electronApi !== undefined) {
+      if (electronApi) {
         // Check for updates.
         // Note: the main process will actually check for updates if requested and if OpenCOR is packaged.
 
@@ -812,11 +812,11 @@ if (props.omex !== undefined) {
           if (newLocApiInitialised) {
             const action = vueusecore.useStorage('action', '');
 
-            if (window.location.search !== '') {
+            if (window.location.search) {
               action.value = window.location.search.substring(1);
 
               window.location.search = '';
-            } else if (action.value !== '') {
+            } else if (action.value) {
               setTimeout(() => {
                 handleAction(action.value.slice(FULL_URI_SCHEME.length));
 
@@ -839,7 +839,7 @@ vue.watch(compBlockUiEnabled, (newCompBlockUiEnabled: boolean) => {
       const blockUiElement = blockUi.value?.$el as HTMLElement;
       const maskElement = blockUiElement.querySelector('.p-blockui-mask');
 
-      if (maskElement !== null && maskElement.parentElement === blockUiElement) {
+      if (maskElement && maskElement.parentElement === blockUiElement) {
         blockUiElement.removeChild(maskElement);
       }
     }, SHORT_DELAY);
@@ -851,7 +851,7 @@ vue.watch(compBlockUiEnabled, (newCompBlockUiEnabled: boolean) => {
 const disconnectFromGitHubVisible = vue.ref<boolean>(false);
 
 async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
-  if (electronApi === undefined) {
+  if (!electronApi) {
     return;
   }
 
@@ -874,7 +874,7 @@ async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
 
 /*---OPENCOR--- Enable once our GitHub integration is fully ready.
 async function loadGitHubAccessToken(): Promise<void> {
-  if (electronApi === undefined || props.omex !== undefined || firebaseConfig === undefined) {
+  if (!electronApi || props.omex || !firebaseConfig) {
     return;
   }
 
@@ -888,7 +888,7 @@ async function loadGitHubAccessToken(): Promise<void> {
     return;
   }
 
-  if (gitHubAccessToken === null) {
+  if (!gitHubAccessToken) {
     return;
   }
 
@@ -906,7 +906,7 @@ async function loadGitHubAccessToken(): Promise<void> {
 }
 
 async function saveGitHubAccessToken(accessToken: string): Promise<void> {
-  if (electronApi === undefined) {
+  if (!electronApi) {
     return;
   }
 
@@ -939,7 +939,7 @@ async function checkGitHubAccessToken(accessToken: string): Promise<void> {
 
   octokit.value = client;
 
-  if (electronApi !== undefined) {
+  if (electronApi) {
     await saveGitHubAccessToken(accessToken);
   }
 
@@ -964,7 +964,7 @@ async function onDisconnectFromGitHub(): Promise<void> {
 
     await deleteGitHubAccessToken();
 
-    if (electronApi !== undefined) {
+    if (electronApi) {
       await electronApi.clearGitHubCache();
     }
   } catch (error: unknown) {
@@ -981,7 +981,7 @@ async function onDisconnectFromGitHub(): Promise<void> {
 }
 
 async function onGitHubButtonClick(): Promise<void> {
-  if (octokit.value !== null) {
+  if (octokit.value) {
     disconnectFromGitHubVisible.value = true;
 
     return;
@@ -1003,7 +1003,7 @@ async function onGitHubButtonClick(): Promise<void> {
     const result = await firebase.auth().signInWithPopup(gitHubAuthProvider);
     const credential = result.credential as firebase.auth.OAuthCredential | null;
 
-    if (credential?.accessToken === undefined || credential.accessToken === null) {
+    if (!credential?.accessToken) {
       throw new Error('GitHub OAuth flow did not return an access token.');
     }
 

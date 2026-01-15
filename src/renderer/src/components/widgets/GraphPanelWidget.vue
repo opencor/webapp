@@ -165,7 +165,7 @@ function compMargins(): IGraphPanelMargins {
   const yTicks = mainDiv.value?.querySelectorAll('.ytick text');
   let yTicksWidth = 0;
 
-  if (yTicks !== undefined && yTicks.length !== 0) {
+  if (yTicks?.length) {
     yTicks.forEach((yTick: Element) => {
       yTicksWidth = Math.max(yTicksWidth, yTick.getBoundingClientRect()?.width || 0);
     });
@@ -173,10 +173,9 @@ function compMargins(): IGraphPanelMargins {
 
   // Retrieve the width of the Y Axis title.
 
-  const yTitleWidth =
-    props.data.yAxisTitle !== undefined
-      ? mainDiv.value?.querySelector('.ytitle')?.getBoundingClientRect()?.width || 0
-      : 0;
+  const yTitleWidth = props.data.yAxisTitle
+    ? mainDiv.value?.querySelector('.ytitle')?.getBoundingClientRect()?.width || 0
+    : 0;
 
   // Compute the final left margin.
 
@@ -195,7 +194,7 @@ function compMargins(): IGraphPanelMargins {
 
   const xTicks = mainDiv.value?.querySelectorAll('.xtick text');
 
-  if (xTicks !== undefined && xTicks.length !== 0) {
+  if (xTicks?.length) {
     const lastTick = xTicks[xTicks.length - 1] as HTMLElement;
     const originalDisplay = lastTick.style.display;
 
@@ -207,8 +206,8 @@ function compMargins(): IGraphPanelMargins {
   }
 
   return {
-    left: leftMargin > 0 ? Math.ceil(leftMargin + 5) : 0,
-    right: rightMargin > 0 ? Math.ceil(rightMargin + 5) : 0
+    left: leftMargin ? Math.ceil(leftMargin + 5) : 0,
+    right: rightMargin ? Math.ceil(rightMargin + 5) : 0
   };
 }
 
@@ -223,7 +222,7 @@ function updateMargins(): Promise<unknown> | undefined {
 
   const relayoutUpdates: Record<string, number> = {};
 
-  if (props.margins === undefined) {
+  if (!props.margins) {
     if (margins.value.left !== newMargins.left) {
       margins.value.left = newMargins.left;
 
@@ -237,7 +236,7 @@ function updateMargins(): Promise<unknown> | undefined {
     }
   }
 
-  if (Object.keys(relayoutUpdates).length > 0) {
+  if (Object.keys(relayoutUpdates).length) {
     return Plotly.relayout(mainDiv.value, relayoutUpdates);
   }
 }
@@ -245,7 +244,7 @@ function updateMargins(): Promise<unknown> | undefined {
 function updatePlot(): void {
   // Reset our margins if they are not overridden.
 
-  if (props.margins === undefined) {
+  if (!props.margins) {
     margins.value.left = -1;
     margins.value.right = -1;
   }
@@ -270,7 +269,7 @@ function updatePlot(): void {
       margin: {
         t: 0,
         l: resolvedMargin(props.margins?.left, margins.value.left),
-        b: props.data.xAxisTitle !== undefined ? 35 : 20,
+        b: props.data.xAxisTitle ? 35 : 20,
         r: resolvedMargin(props.margins?.right, margins.value.right),
         pad: 0
       },
@@ -314,7 +313,7 @@ vue.onMounted(() => {
   vue.nextTick(() => {
     // Reset our margins on double-click and relayout.
 
-    if (mainDiv.value !== null) {
+    if (mainDiv.value) {
       const plotlyElement = mainDiv.value as IPlotlyHTMLElement;
 
       plotlyElement.on('plotly_doubleclick', () => {
@@ -322,10 +321,7 @@ vue.onMounted(() => {
       });
 
       plotlyElement.on('plotly_relayout', (eventData: Partial<Plotly.Layout>) => {
-        if (
-          eventData !== undefined &&
-          (eventData['xaxis.range[0]'] !== undefined || eventData['yaxis.range[0]'] !== undefined)
-        ) {
+        if (eventData && (eventData['xaxis.range[0]'] || eventData['yaxis.range[0]'])) {
           emit('resetMargins');
         }
       });
@@ -347,7 +343,7 @@ vue.watch(
   () => theme.useLightMode(),
   () => {
     vue.nextTick(() => {
-      if (mainDiv.value !== null) {
+      if (mainDiv.value) {
         Plotly.relayout(mainDiv.value, {
           ...themeData(),
           ...axesData()
@@ -363,7 +359,7 @@ vue.watch(
   () => {
     vue
       .nextTick(() => {
-        if (mainDiv.value !== null) {
+        if (mainDiv.value) {
           return Plotly.relayout(mainDiv.value, {
             'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
             'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
@@ -371,7 +367,7 @@ vue.watch(
         }
       })
       .then(() => {
-        if (props.margins === undefined) {
+        if (!props.margins) {
           updateMargins();
         }
       });
@@ -383,7 +379,7 @@ vue.watch(
   () => props.showLegend,
   () => {
     vue.nextTick(() => {
-      if (mainDiv.value !== null) {
+      if (mainDiv.value) {
         Plotly.relayout(mainDiv.value, {
           showlegend: props.showLegend
         }).then(() => {

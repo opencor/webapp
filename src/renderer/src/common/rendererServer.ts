@@ -14,7 +14,7 @@ let rendererBaseUrl: string | null = null;
 export async function startRendererServer(): Promise<string> {
   // If we already have a base URL then return it.
 
-  if (rendererBaseUrl !== null) {
+  if (rendererBaseUrl) {
     return rendererBaseUrl;
   }
 
@@ -74,7 +74,7 @@ export async function startRendererServer(): Promise<string> {
     rendererServer?.listen(0, rendererHost, () => {
       const addressInfo = rendererServer?.address() as AddressInfo | null;
 
-      if (addressInfo?.port !== undefined) {
+      if (addressInfo?.port) {
         rendererBaseUrl = `http://${rendererHost}:${addressInfo.port}`;
 
         resolve();
@@ -84,7 +84,7 @@ export async function startRendererServer(): Promise<string> {
     });
   });
 
-  if (rendererBaseUrl === null) {
+  if (!rendererBaseUrl) {
     throw new Error('Failed to initialise the renderer server.');
   }
 
@@ -94,7 +94,7 @@ export async function startRendererServer(): Promise<string> {
 export async function stopRendererServer(): Promise<void> {
   // Make sure that we have a server to stop.
 
-  if (rendererServer === null) {
+  if (!rendererServer) {
     return;
   }
 
