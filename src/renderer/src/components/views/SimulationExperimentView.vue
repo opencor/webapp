@@ -437,6 +437,7 @@ const interactiveCompData = vue.computed(() => {
       ? interactiveData.value[interactiveDataIndex]!.traces.map((trace, traceIndex) => {
           return {
             ...trace,
+            name: trace.name + (interactiveRuns.value.length > 0 ? ` [Live]` : ''),
             color:
               GraphPanelWidgetPalette[
                 (GraphPanelWidgetPalette.indexOf(interactiveLiveRunColor.value) + traceIndex) % GraphPanelWidgetPalette.length
@@ -445,11 +446,12 @@ const interactiveCompData = vue.computed(() => {
         })
       : [];
 
-    interactiveRuns.value.forEach((interactiveRun: ISimulationRun) => {
+    interactiveRuns.value.forEach((interactiveRun: ISimulationRun, runIndex: number) => {
       if (interactiveRun.visible) {
         const runTraces = interactiveRun.data[interactiveDataIndex]!.traces.map((trace, traceIndex) => {
           return {
             ...trace,
+            name: trace.name + (interactiveRuns.value.length > 0 ? ` [#${runIndex + 1}]` : ''),
             color:
               GraphPanelWidgetPalette[
                 (GraphPanelWidgetPalette.indexOf(interactiveRun.color) + traceIndex) % GraphPanelWidgetPalette.length
