@@ -313,8 +313,7 @@ function updatePlot(): void {
     .then(() => updateMargins())
     .then(() => {
       if (!isVisible.value) {
-        // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct
-        // dimensions.
+        // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
 
         return Plotly.Plots.resize(mainDiv.value);
       }
