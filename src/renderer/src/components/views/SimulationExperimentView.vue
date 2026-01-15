@@ -122,7 +122,7 @@
                       <div class="w-full text-sm cursor-help"
                         v-tippy:bottom="{
                           allowHTML: true,
-                          content: runTooltip(run),
+                          content: run.tooltip,
                           placement: 'bottom'
                         }"
                       >
@@ -195,6 +195,7 @@ interface ISimulationRun {
   inputParameters: Record<string, number>;
   visible: boolean;
   data: IGraphPanelData[];
+  tooltip: string;
 }
 
 const props = defineProps<{
@@ -563,10 +564,56 @@ function onAddRun(): void {
     inputParameters[input.id] = interactiveInputValues.value[index]!;
   });
 
+  // Compute the tooltip for this run, keeping in mind that some input parameters may not be visible.
+
+  const rows = props.uiJson.input
+    .map((input, index) => ({
+      input: input,
+      visible: interactiveShowInput.value[index]
+    }))
+    .filter(input => input.visible)
+    .map(({ input }) => {
+      let inputValue: string | number | undefined = inputParameters[input.id];
+
+      if (isDiscreteInput(input)) {
+        const selectedValue = input.possibleValues.find(
+          (possibleValue) => possibleValue.value === inputParameters[input.id]
+        );
+
+        if (selectedValue?.name) {
+          inputValue = selectedValue.name.charAt(0).toLowerCase() + selectedValue.name.slice(1);
+        } else {
+          inputValue = inputParameters[input.id];
+        }
+      }
+
+      return `
+<tr>
+  <td>
+    <b>${input.name}:</b>
+  </td>
+  <td style="padding-left: 8px;">
+    ${inputValue}
+  </td>
+</tr>
+`;
+    })
+    .join('');
+  const tooltip = `
+<table>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+`;
+
+  // Add the new run.
+
   interactiveRuns.value.push({
-    inputParameters: inputParameters,
+    inputParameters,
     visible: true,
-    data: interactiveData.value
+    data: interactiveData.value,
+    tooltip
   });
 }
 
@@ -588,31 +635,6 @@ function onToggleRun(index: number): void {
   const run = interactiveRuns.value[index]!;
 
   run.visible = !run.visible;
-}
-
-function runTooltip(run: ISimulationRun): string {
-  const rows = Object.entries(run.inputParameters)
-    .map(
-      ([key, value]) => `
-<tr>
-  <td>
-    <b>${key}:</b>
-  </td>
-  <td style="padding-left: 8px;">
-    ${value}
-  </td>
-</tr>
-`
-    )
-    .join('');
-
-  return `
-<table>
-  <tbody>
-    ${rows}
-  </tbody>
-</table>
-`;
 }
 
 // "Initialise" our standard and/or interactive modes.
