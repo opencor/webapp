@@ -440,8 +440,10 @@ const interactiveCompData = vue.computed(() => {
             name: trace.name + (interactiveRuns.value.length > 0 ? ` [Live]` : ''),
             color:
               GraphPanelWidgetPalette[
-                (GraphPanelWidgetPalette.indexOf(interactiveLiveRunColor.value) + traceIndex) % GraphPanelWidgetPalette.length
-              ]!
+                (GraphPanelWidgetPalette.indexOf(interactiveLiveRunColor.value) + traceIndex) %
+                  GraphPanelWidgetPalette.length
+              ]!,
+            zorder: 1
           };
         })
       : [];

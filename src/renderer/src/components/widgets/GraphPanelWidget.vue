@@ -18,6 +18,7 @@ export interface IGraphPanelPlotTrace {
   x: number[];
   y: number[];
   color: string;
+  zorder?: number;
 }
 
 export interface IGraphPanelData {
@@ -253,7 +254,10 @@ function updatePlot(): void {
 
   const traces = props.data.traces.map((trace) => ({
     ...trace,
-    ...{ line: { color: trace.color } }
+    ...{
+      line: { color: trace.color },
+      legendrank: trace.zorder
+    }
   }));
 
   Plotly.react(
