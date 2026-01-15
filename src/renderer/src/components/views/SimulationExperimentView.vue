@@ -408,6 +408,7 @@ const interactiveCompData = vue.computed(() => {
 
   return res;
 });
+// Map data IDs to simulation data info.
 
 if (interactiveModeAvailable.value) {
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
@@ -415,10 +416,10 @@ if (interactiveModeAvailable.value) {
   });
 }
 
+// Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
+
 interactiveMath.import(
   {
-    // Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
-
     // Arithmetic operators.
 
     pow: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number) => v ** y),
@@ -711,6 +712,8 @@ vue.onMounted(() => {
   });
 
   mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+  // Disconnect our observers when unmounting.
 
   vue.onUnmounted(() => {
     mutationObserver.disconnect();
