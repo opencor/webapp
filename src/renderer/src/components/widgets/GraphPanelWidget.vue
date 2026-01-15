@@ -11,25 +11,16 @@ import * as vue from 'vue';
 
 import * as vueCommon from '../../common/vueCommon.ts';
 
-interface IPlotlyTrace {
+export interface IGraphPanelPlotTrace {
   name: string;
   x: number[];
   y: number[];
 }
 
-export interface IGraphPanelPlotAdditionalTrace {
-  name: string;
-  xValues: number[];
-  yValues: number[];
-}
-
 export interface IGraphPanelData {
-  name: string;
   xAxisTitle?: string;
-  xValues: number[];
   yAxisTitle?: string;
-  yValues: number[];
-  additionalTraces?: IGraphPanelPlotAdditionalTrace[];
+  traces: IGraphPanelPlotTrace[];
 }
 
 export interface IGraphPanelMargins {
@@ -263,29 +254,11 @@ function updatePlot(): void {
     margins.value.right = -1;
   }
 
-  // Retrieve all the traces, i.e. the default trace and any additional traces.
-
-  let traces: IPlotlyTrace[] = [
-    {
-      name: props.data.name,
-      x: props.data.xValues,
-      y: props.data.yValues
-    }
-  ];
-
-  for (const additionalTrace of props.data.additionalTraces || []) {
-    traces.push({
-      name: additionalTrace.name,
-      x: additionalTrace.xValues,
-      y: additionalTrace.yValues
-    });
-  }
-
   // Update the plots.
 
   Plotly.react(
     mainDiv.value,
-    traces,
+    props.data.traces,
     {
       // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 

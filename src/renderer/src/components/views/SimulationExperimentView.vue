@@ -161,7 +161,7 @@
             :key="`plot_${index}`"
             class="w-full min-h-0"
             :margins="interactiveCompMargins"
-            :data="interactiveCompData[index] || { name: '', xValues: [], yValues: [] }"
+            :data="interactiveCompData[index] || { traces: [] }"
             @marginsUpdated="(newMargins: IGraphPanelMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
             @resetMargins="() => onResetMargins()"
           />
@@ -187,7 +187,7 @@ import * as locSedApi from '../../libopencor/locSedApi.ts';
 
 import type {
   IGraphPanelData,
-  IGraphPanelPlotAdditionalTrace,
+  IGraphPanelPlotTrace,
   IGraphPanelMargins
 } from '../widgets/GraphPanelWidget.vue';
 
@@ -310,9 +310,9 @@ const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask.voiName());
 const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
 const standardData = vue.ref<IGraphPanelData>({
-  name: '',
-  xValues: [],
-  yValues: []
+  xAxisTitle: undefined,
+  yAxisTitle: undefined,
+  traces: []
 });
 const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 
@@ -327,9 +327,15 @@ const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTa
 
 function updatePlot() {
   standardData.value = {
-    name: traceName(undefined, standardXParameter.value, standardYParameter.value),
-    xValues: locCommon.simulationData(standardInstanceTask, xInfo.value),
-    yValues: locCommon.simulationData(standardInstanceTask, yInfo.value)
+    xAxisTitle: standardXParameter.value,
+    yAxisTitle: standardYParameter.value,
+    traces: [
+      {
+        name: traceName(undefined, standardXParameter.value, standardYParameter.value),
+        x: locCommon.simulationData(standardInstanceTask, xInfo.value),
+        y: locCommon.simulationData(standardInstanceTask, yInfo.value)
+      }
+    ]
   };
 }
 
@@ -369,40 +375,18 @@ const interactiveCompData = vue.computed(() => {
     interactiveDataIndex < (interactiveData.value.length || 0);
     ++interactiveDataIndex
   ) {
-    const defaultTrace = interactiveData.value[interactiveDataIndex] || { name: '', xValues: [], yValues: [] };
-    const additionalTraces: IGraphPanelPlotAdditionalTrace[] = [...(defaultTrace.additionalTraces || [])];
+    const traces: IGraphPanelPlotTrace[] = [...interactiveData.value[interactiveDataIndex]!.traces];
 
-    // Add the traces from the visible runs.
-
-    interactiveRuns.value.forEach((run: ISimulationRun, runIndex: number) => {
-      if (run.visible && run.data[interactiveDataIndex]) {
-        const runPlotData = run.data[interactiveDataIndex]!;
-
-        // Add the default trace.
-
-        additionalTraces.push({
-          name: runPlotData.name,
-          xValues: runPlotData.xValues,
-          yValues: runPlotData.yValues
-        });
-
-        // Add the additional traces.
-
-        if (runPlotData.additionalTraces !== undefined) {
-          runPlotData.additionalTraces.forEach((additionalTrace: IGraphPanelPlotAdditionalTrace) => {
-            additionalTraces.push({
-              name: additionalTrace.name,
-              xValues: additionalTrace.xValues,
-              yValues: additionalTrace.yValues
-            });
-          });
-        }
+    interactiveRuns.value.forEach((interactiveRun: ISimulationRun) => {
+      if (interactiveRun.visible) {
+        traces.push(...interactiveRun.data[interactiveDataIndex]!.traces);
       }
     });
 
     res.push({
-      ...defaultTrace,
-      additionalTraces: additionalTraces.length > 0 ? additionalTraces : undefined
+      xAxisTitle: interactiveData.value[interactiveDataIndex]?.xAxisTitle,
+      yAxisTitle: interactiveData.value[interactiveDataIndex]?.yAxisTitle,
+      traces: traces
     });
   }
 
@@ -520,23 +504,26 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
   });
 
   interactiveData.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
-    let additionalTraces: IGraphPanelPlotAdditionalTrace[] = [];
+    const traces: IGraphPanelPlotTrace[] = [
+      {
+        name: traceName(plot.name, plot.xValue, plot.yValue),
+        x: parser.evaluate(plot.xValue),
+        y: parser.evaluate(plot.yValue)
+      }
+    ];
 
     plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
-      additionalTraces.push({
+      traces.push({
         name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
-        xValues: parser.evaluate(additionalTrace.xValue),
-        yValues: parser.evaluate(additionalTrace.yValue)
+        x: parser.evaluate(additionalTrace.xValue),
+        y: parser.evaluate(additionalTrace.yValue)
       });
     });
 
     return {
-      name: traceName(plot.name, plot.xValue, plot.yValue),
       xAxisTitle: plot.xAxisTitle,
-      xValues: parser.evaluate(plot.xValue),
       yAxisTitle: plot.yAxisTitle,
-      yValues: parser.evaluate(plot.yValue),
-      additionalTraces: additionalTraces
+      traces
     };
   });
 }
