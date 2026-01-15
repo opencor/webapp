@@ -11,10 +11,13 @@ import * as vue from 'vue';
 
 import * as vueCommon from '../../common/vueCommon.ts';
 
+import { GraphPanelWidgetPalette } from './GraphPanelWidgetPalette.ts';
+
 export interface IGraphPanelPlotTrace {
   name: string;
   x: number[];
   y: number[];
+  color: string;
 }
 
 export interface IGraphPanelData {
@@ -87,15 +90,7 @@ function themeData(): IThemeData {
     font: {
       color: theme.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
     },
-    colorway: [
-      '#7289ab', // Blue
-      '#ea7e53', // Orange
-      '#eedd78', // Yellow
-      '#e69d87', // Pink
-      '#73a373', // Green
-      '#73b9bc', // Cyan
-      '#dd6b66' // Red
-    ],
+    colorway: GraphPanelWidgetPalette,
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };
@@ -256,9 +251,14 @@ function updatePlot(): void {
 
   // Update the plots.
 
+  const traces = props.data.traces.map((trace) => ({
+    ...trace,
+    ...{ line: { color: trace.color } }
+  }));
+
   Plotly.react(
     mainDiv.value,
-    props.data.traces,
+    traces,
     {
       // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 

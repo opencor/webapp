@@ -115,9 +115,29 @@
                 </div>
                 <div class="flex flex-col gap-2">
                   <div class="run border border-dashed rounded px-2 py-1">
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 items-center">
                       <div class="w-full text-sm">
                         Live run
+                      </div>
+                      <div>
+                        <Button class="p-0! w-5! h-5!"
+                          icon="pi pi-wave-pulse"
+                          :style="{ color: interactiveLiveRunColor }"
+                          text size="small"
+                          :title="'Change live run colour'"
+                          @click="interactiveLiveRunColorPopover.toggle($event)"
+                        />
+                        <Popover ref="interactiveLiveRunColorPopover">
+                          <div class="flex gap-2">
+                            <button class="w-6 h-6 rounded"
+                              v-for="color in GraphPanelWidgetPalette" :key="color"
+                              :style="{ backgroundColor: color }"
+                              @click="onLiveRunColorChange(color)"
+                            >
+                              <span v-if="color === interactiveLiveRunColor" class="pi pi-check text-xs text-white"></span>
+                            </button>
+                          </div>
+                        </Popover>
                       </div>
                       <Button class="p-0! w-5! h-5!"
                         :icon="interactiveLiveRunVisible ? 'pi pi-eye' : 'pi pi-eye-slash'"
@@ -133,7 +153,7 @@
                     :key="`run_${index}`"
                     class="run border border-dashed rounded px-2 py-1"
                   >
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 items-center">
                       <div class="w-full text-sm cursor-help"
                         v-tippy:bottom="{
                           allowHTML: true,
@@ -142,6 +162,28 @@
                         }"
                       >
                         Run #{{ index + 1 }}
+                      </div>
+                      <div>
+                        <Button class="p-0! w-5! h-5!"
+                          icon="pi pi-wave-pulse"
+                          :style="{ color: run.color }"
+                          text size="small"
+                          :title="'Change run colour'"
+                          @click="onToggleRunColorPopover(index, $event)"
+                        />
+                        <Popover :ref="element => interactiveRunPopoverRefs[index] = element"
+                          v-if="interactiveRunColorPopoverIndex === index"
+                        >
+                          <div class="flex gap-2">
+                            <button class="w-6 h-6 rounded"
+                              v-for="color in GraphPanelWidgetPalette" :key="color"
+                              :style="{ backgroundColor: color }"
+                              @click="onRunColorChange(index, color)"
+                            >
+                              <span v-if="color === run.color" class="pi pi-check text-xs text-white"></span>
+                            </button>
+                          </div>
+                        </Popover>
                       </div>
                       <Button class="p-0! w-5! h-5!"
                         :icon="run.visible ? 'pi pi-eye' : 'pi pi-eye-slash'"
@@ -199,16 +241,14 @@ import * as vueCommon from '../../common/vueCommon.ts';
 import * as locApi from '../../libopencor/locApi.ts';
 import * as locSedApi from '../../libopencor/locSedApi.ts';
 
-import type {
-  IGraphPanelData,
-  IGraphPanelPlotTrace,
-  IGraphPanelMargins
-} from '../widgets/GraphPanelWidget.vue';
+import type { IGraphPanelData, IGraphPanelPlotTrace, IGraphPanelMargins } from '../widgets/GraphPanelWidget.vue';
+import { GraphPanelWidgetPalette } from '../widgets/GraphPanelWidgetPalette.ts';
 
 interface ISimulationRun {
   inputParameters: Record<string, number>;
   visible: boolean;
   data: IGraphPanelData[];
+  color: string;
   tooltip: string;
 }
 
@@ -348,7 +388,8 @@ function updatePlot() {
       {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
         x: locCommon.simulationData(standardInstanceTask, xInfo.value),
-        y: locCommon.simulationData(standardInstanceTask, yInfo.value)
+        y: locCommon.simulationData(standardInstanceTask, yInfo.value),
+        color: GraphPanelWidgetPalette[0]!
       }
     ]
   };
@@ -380,6 +421,7 @@ const interactiveShowInput = vue.ref<string[]>(
 );
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 const interactiveRuns = vue.ref<ISimulationRun[]>([]);
+const interactiveLiveRunColor = vue.ref<string>(GraphPanelWidgetPalette[0]!);
 const interactiveLiveRunVisible = vue.ref<boolean>(true);
 const interactiveCompData = vue.computed(() => {
   // Combine the live data with the data from the visible runs.
@@ -391,11 +433,31 @@ const interactiveCompData = vue.computed(() => {
     interactiveDataIndex < (interactiveData.value.length || 0);
     ++interactiveDataIndex
   ) {
-    const traces: IGraphPanelPlotTrace[] = interactiveLiveRunVisible.value ? [...interactiveData.value[interactiveDataIndex]!.traces] : [];
+    const traces: IGraphPanelPlotTrace[] = interactiveLiveRunVisible.value
+      ? interactiveData.value[interactiveDataIndex]!.traces.map((trace, traceIndex) => {
+          return {
+            ...trace,
+            color:
+              GraphPanelWidgetPalette[
+                (GraphPanelWidgetPalette.indexOf(interactiveLiveRunColor.value) + traceIndex) % GraphPanelWidgetPalette.length
+              ]!
+          };
+        })
+      : [];
 
     interactiveRuns.value.forEach((interactiveRun: ISimulationRun) => {
       if (interactiveRun.visible) {
-        traces.push(...interactiveRun.data[interactiveDataIndex]!.traces);
+        const runTraces = interactiveRun.data[interactiveDataIndex]!.traces.map((trace, traceIndex) => {
+          return {
+            ...trace,
+            color:
+              GraphPanelWidgetPalette[
+                (GraphPanelWidgetPalette.indexOf(interactiveRun.color) + traceIndex) % GraphPanelWidgetPalette.length
+              ]!
+          };
+        });
+
+        traces.push(...runTraces);
       }
     });
 
@@ -408,6 +470,10 @@ const interactiveCompData = vue.computed(() => {
 
   return res;
 });
+const interactiveLiveRunColorPopover = vue.ref();
+const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
+const interactiveRunPopoverRefs = vue.ref<Record<number, any>>({});
+
 // Map data IDs to simulation data info.
 
 if (interactiveModeAvailable.value) {
@@ -525,7 +591,8 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
       {
         name: traceName(plot.name, plot.xValue, plot.yValue),
         x: parser.evaluate(plot.xValue),
-        y: parser.evaluate(plot.yValue)
+        y: parser.evaluate(plot.yValue),
+        color: '' // Note: the colour gets set in interactiveCompData.
       }
     ];
 
@@ -533,7 +600,8 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
       traces.push({
         name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
         x: parser.evaluate(additionalTrace.xValue),
-        y: parser.evaluate(additionalTrace.yValue)
+        y: parser.evaluate(additionalTrace.yValue),
+        color: '' // Note: the colour gets set in interactiveCompData.
       });
     });
 
@@ -587,7 +655,7 @@ function onAddRun(): void {
       input: input,
       visible: interactiveShowInput.value[index]
     }))
-    .filter(input => input.visible)
+    .filter((input) => input.visible)
     .map(({ input }) => {
       let inputValue: string | number | undefined = inputParameters[input.id];
 
@@ -623,12 +691,34 @@ function onAddRun(): void {
 </table>
 `;
 
+  // Determine the colour (of the first trace) by using the next unused colour in the palette unless all the colours
+  // have already been used.
+
+  const usedColors = new Set<string>([interactiveLiveRunColor.value, ...interactiveRuns.value.map((run) => run.color)]);
+  const lastColor =
+    interactiveRuns.value.length > 0
+      ? interactiveRuns.value[interactiveRuns.value.length - 1]!.color
+      : interactiveLiveRunColor.value;
+  const lastColorIndex = GraphPanelWidgetPalette.indexOf(lastColor);
+  let color: string = '';
+
+  for (let i = 1; i <= GraphPanelWidgetPalette.length; ++i) {
+    const newColor = GraphPanelWidgetPalette[(lastColorIndex + i) % GraphPanelWidgetPalette.length]!;
+
+    if (!usedColors.has(newColor) || usedColors.size === GraphPanelWidgetPalette.length) {
+      color = newColor;
+
+      break;
+    }
+  }
+
   // Add the new run.
 
   interactiveRuns.value.push({
     inputParameters,
     visible: true,
     data: interactiveData.value,
+    color,
     tooltip
   });
 }
@@ -651,6 +741,38 @@ function onToggleRun(index: number): void {
   const run = interactiveRuns.value[index]!;
 
   run.visible = !run.visible;
+}
+
+function onLiveRunColorChange(color: string) {
+  interactiveLiveRunColor.value = color;
+
+  interactiveLiveRunColorPopover.value.hide();
+}
+
+function onRunColorChange(index: number, color: string) {
+  interactiveRuns.value[index]!.color = color;
+
+  closeRunColorPopover(index);
+}
+
+function onToggleRunColorPopover(index: number, event: MouseEvent) {
+  if (interactiveRunColorPopoverIndex.value === index) {
+    closeRunColorPopover(index);
+  } else {
+    interactiveRunColorPopoverIndex.value = index;
+
+    vue.nextTick(() => {
+      // Note: we do this in a next tick to ensure that the reference is available.
+
+      interactiveRunPopoverRefs.value[index].toggle(event);
+    });
+  }
+}
+
+function closeRunColorPopover(index: number) {
+  interactiveRunPopoverRefs.value[index].hide();
+
+  interactiveRunColorPopoverIndex.value = -1;
 }
 
 // "Initialise" our standard and/or interactive modes.
