@@ -114,6 +114,21 @@
                   />
                 </div>
                 <div class="flex flex-col gap-2">
+                  <div class="run border border-dashed rounded px-2 py-1">
+                    <div class="flex gap-2">
+                      <div class="w-full text-sm">
+                        Live run
+                      </div>
+                      <Button class="p-0! w-5! h-5!"
+                        :icon="interactiveLiveRunVisible ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                        :severity="interactiveLiveRunVisible ? 'info' : 'secondary'"
+                        text size="small"
+                        :title="(interactiveLiveRunVisible ? 'Hide' : 'Show') + ' live run'"
+                        @click="interactiveLiveRunVisible = !interactiveLiveRunVisible"
+                      />
+                      <div class="w-5 h-5"></div>
+                    </div>
+                  </div>
                   <div v-if="interactiveRuns.length > 0" v-for="(run, index) in interactiveRuns"
                     :key="`run_${index}`"
                     class="run border border-dashed rounded px-2 py-1"
@@ -144,10 +159,9 @@
                       />
                     </div>
                   </div>
-                  <div v-else class="hint text-center text-sm">
-                    No runs yet.<br/>
-                    Click "Add run"<br/>
-                    to create one.
+                  <div v-else class="hint text-center text-xs">
+                    No (additional) runs yet.<br/>
+                    Click "Add run" to create one.
                   </div>
                 </div>
               </div>
@@ -366,6 +380,7 @@ const interactiveShowInput = vue.ref<string[]>(
 );
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 const interactiveRuns = vue.ref<ISimulationRun[]>([]);
+const interactiveLiveRunVisible = vue.ref<boolean>(true);
 const interactiveCompData = vue.computed(() => {
   // Combine the live data with the data from the visible runs.
 
@@ -376,7 +391,7 @@ const interactiveCompData = vue.computed(() => {
     interactiveDataIndex < (interactiveData.value.length || 0);
     ++interactiveDataIndex
   ) {
-    const traces: IGraphPanelPlotTrace[] = [...interactiveData.value[interactiveDataIndex]!.traces];
+    const traces: IGraphPanelPlotTrace[] = interactiveLiveRunVisible.value ? [...interactiveData.value[interactiveDataIndex]!.traces] : [];
 
     interactiveRuns.value.forEach((interactiveRun: ISimulationRun) => {
       if (interactiveRun.visible) {
