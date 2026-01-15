@@ -202,8 +202,8 @@
                     </div>
                   </div>
                   <div v-else class="hint text-center text-xs">
-                    No (additional) runs yet.<br/>
-                    Click "Add run" to create one.
+                    There are no (additional) runs.<br/>
+                    Click "Add run" to add one.
                   </div>
                 </div>
               </div>
@@ -868,6 +868,14 @@ if (common.isDesktop()) {
 </script>
 
 <style scoped>
+.hint {
+  color: var(--p-text-muted-color);
+}
+
+.invisible {
+  visibility: hidden;
+}
+
 :deep(.p-button-icon) {
   font-size: 1.5rem;
 }
@@ -903,14 +911,6 @@ if (common.isDesktop()) {
 
 :deep(.ql-editor > *) {
   cursor: default;
-}
-
-.hint {
-  color: var(--p-text-muted-color);
-}
-
-.invisible {
-  visibility: hidden;
 }
 
 .run {
