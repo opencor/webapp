@@ -37,7 +37,7 @@ export const useTheme = vueusecore.createGlobalState(() => {
   }
 
   function setTheme(newTheme: Theme | undefined) {
-    _theme.value = newTheme === undefined ? 'system' : newTheme;
+    _theme.value = newTheme ?? 'system';
 
     if (_theme.value === 'light') {
       isLightMode.value = true;
@@ -79,18 +79,18 @@ export function trackedCssVariableName(id: string): string {
 export function trackElementHeight(id: string): ResizeObserver | undefined {
   const element = document.getElementById(id);
 
-  if (element !== null) {
+  if (element) {
     const resizeObserver = new ResizeObserver(() => {
       let elementHeight = window.getComputedStyle(element).height;
 
-      if (elementHeight === '' || elementHeight === 'auto') {
+      if (!elementHeight || elementHeight === 'auto') {
         elementHeight = '0px';
       }
 
       const cssVariableName = trackedCssVariableName(id);
       const oldElementHeight = document.documentElement.style.getPropertyValue(cssVariableName);
 
-      if (oldElementHeight === '' || (elementHeight !== '0px' && oldElementHeight !== elementHeight)) {
+      if (!oldElementHeight || (elementHeight !== '0px' && oldElementHeight !== elementHeight)) {
         document.documentElement.style.setProperty(cssVariableName, elementHeight);
       }
     });

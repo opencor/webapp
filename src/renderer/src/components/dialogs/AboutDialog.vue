@@ -3,7 +3,7 @@
     <div class="space-y-7">
       <div class="text-center">
         <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
-        <div v-if="electronApi !== undefined" class="text-xl italic font-bold">{{ electronApi.operatingSystem() }}</div>
+        <div v-if="electronApi" class="text-xl italic font-bold">{{ electronApi.operatingSystem() }}</div>
         <div class="text-sm italic">Copyright {{ COPYRIGHT }}</div>
       </div>
       <div class="space-y-2">

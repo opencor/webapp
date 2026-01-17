@@ -2,7 +2,7 @@
   <div v-if="simulationOnly" class="h-full">
     <div v-for="fileTab in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" :value="fileTab.file.path()">
       <IssuesView
-        v-if="fileTab.file.issues().length !== 0"
+        v-if="fileTab.file.issues().length"
         :width="width"
         :height="height"
         :issues="fileTab.file.issues()"
@@ -21,9 +21,9 @@
     </div>
   </div>
   <div v-else class="h-full">
-    <BackgroundComponent v-show="fileTabs.length === 0" :style="{ height: height + 'px' }" />
+    <BackgroundComponent v-show="!fileTabs.length" :style="{ height: height + 'px' }" />
     <Tabs
-      v-show="fileTabs.length !== 0"
+      v-show="fileTabs.length"
       id="fileTabs"
       v-model:value="activeFile"
       :scrollable="true"
@@ -56,7 +56,7 @@
           :value="fileTab.file.path()"
         >
           <IssuesView
-            v-if="fileTab.file.issues().length !== 0"
+            v-if="fileTab.file.issues().length"
             :width="width"
             :height="heightMinusFileTablist"
             :issues="fileTab.file.issues()"
@@ -167,7 +167,7 @@ function selectNextFile(): void {
   const nextFileTabIndex = (crtFileTabIndex + 1) % fileTabs.value.length;
   const nextFileTab = fileTabs.value[nextFileTabIndex];
 
-  if (nextFileTab !== undefined) {
+  if (nextFileTab) {
     selectFile(nextFileTab.file.path());
   }
 }
@@ -177,7 +177,7 @@ function selectPreviousFile(): void {
   const nextFileTabIndex = (crtFileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length;
   const nextFileTab = fileTabs.value[nextFileTabIndex];
 
-  if (nextFileTab !== undefined) {
+  if (nextFileTab) {
     selectFile(nextFileTab.file.path());
   }
 }
@@ -189,10 +189,10 @@ function closeFile(filePath: string): void {
 
   fileTabs.value.splice(fileTabIndex, 1);
 
-  if (activeFile.value === filePath && fileTabs.value.length > 0) {
+  if (activeFile.value === filePath && fileTabs.value.length) {
     const nextFileTab = fileTabs.value[Math.min(fileTabIndex, fileTabs.value.length - 1)];
 
-    if (nextFileTab !== undefined) {
+    if (nextFileTab) {
       selectFile(nextFileTab.file.path());
     }
   }
@@ -205,7 +205,7 @@ function closeCurrentFile(): void {
 }
 
 function closeAllFiles(): void {
-  while (fileTabs.value.length > 0) {
+  while (fileTabs.value.length) {
     closeCurrentFile();
   }
 }
@@ -265,7 +265,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled || fileTabs.value.length === 0) {
+    if (!props.isActive || !props.uiEnabled || !fileTabs.value.length) {
       return;
     }
 

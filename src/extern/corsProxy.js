@@ -8,7 +8,7 @@ export default {
       const url = new URL(request.url);
       const targetUrl = url.searchParams.get('url');
 
-      if (targetUrl === null) {
+      if (!targetUrl) {
         return new Response('Missing "url" query parameter.', { status: 400 });
       }
 

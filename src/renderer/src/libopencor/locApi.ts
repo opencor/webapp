@@ -117,7 +117,7 @@ export let _wasmLocApi = {} as IWasmLocApi;
 
 export async function initialiseLocApi() {
   // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
-  if (window.locApi !== undefined) {
+  if (window.locApi) {
     // We are running OpenCOR, so libOpenCOR can be accessed using window.locApi.
 
     // @ts-expect-error (window.locApi is defined)
@@ -170,6 +170,8 @@ export {
   type IUiJsonOutputPlotAdditionalTrace,
   type IUiJsonParameter,
   type IUiJsonScalarInput,
+  isScalarInput,
+  isDiscreteInput,
   uiJsonIssues
 } from './locUiJsonApi.ts';
 

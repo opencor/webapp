@@ -1,7 +1,7 @@
 <template>
   <Fieldset :class="`${leftMargin ? 'ml-4!' : ''} ${rightMargin ? 'mr-4!' : ''}`" legend="Issues" :style="`{ width: ${fieldsetWidth}; height: ${fieldsetHeight}; }`">
     <ScrollPanel :style="`{ width: ${width}px; height: ${scrollPanelHeight}; }`">
-      <div v-for="(issue, index) in issues" :key="`issue_${index}`" :class="`select-text ${index > 0 ? 'mt-4!' : ''}`">
+      <div v-for="(issue, index) in issues" :key="`issue_${index}`" :class="`select-text ${index ? 'mt-4!' : ''}`">
         <Message v-if="issue.type === locApi.EIssueType.ERROR" severity="error" icon="pi pi-times-circle">
           {{ issue.description }}
         </Message>
@@ -42,9 +42,9 @@ const fieldsetHeight = vue.ref<string>('');
 const scrollPanelHeight = vue.ref<string>('');
 
 function resizeElements() {
-  fieldsetWidth.value = props.width === 0 ? '100%' : `${String(props.width)}px`;
-  fieldsetHeight.value = props.height === 0 ? '100%' : `calc(${String(props.height)}px - 1rem)`;
-  scrollPanelHeight.value = props.height === 0 ? '100%' : `calc(${String(props.height)}px - 4.75rem)`;
+  fieldsetWidth.value = props.width ? `${String(props.width)}px` : '100%';
+  fieldsetHeight.value = props.height ? `calc(${String(props.height)}px - 1rem)` : '100%';
+  scrollPanelHeight.value = props.height ? `calc(${String(props.height)}px - 4.75rem)` : '100%';
 }
 
 vue.onMounted(() => {

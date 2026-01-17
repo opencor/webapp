@@ -1,5 +1,5 @@
 <template>
-  <div v-if="possibleValues !== undefined">
+  <div v-if="possibleValues">
     <FloatLabel variant="on">
       <Select
         v-model="discreteValue"
@@ -64,7 +64,7 @@ function emitChange(newValue: number) {
   void vue.nextTick(() => {
     value.value = newValue;
 
-    if (props.possibleValues === undefined) {
+    if (!props.possibleValues) {
       scalarValue.value = newValue;
       scalarValueString.value = String(newValue); // This will properly format the input text.
     }
@@ -89,7 +89,7 @@ function selectChange(event: ISelectChangeEvent) {
 }
 
 function inputTextChange(newValueString: string) {
-  if (newValueString === '') {
+  if (!newValueString) {
     newValueString = String(props.minimumValue);
   }
 

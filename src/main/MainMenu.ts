@@ -13,9 +13,9 @@ let hasFiles = false;
 export function enableDisableMainMenu(enable: boolean): void {
   // Build our menu, if needed.
 
-  if (enable && enabledMenu !== null) {
+  if (enable && enabledMenu) {
     electron.Menu.setApplicationMenu(enabledMenu);
-  } else if (!enable && disabledMenu !== null) {
+  } else if (!enable && disabledMenu) {
     electron.Menu.setApplicationMenu(disabledMenu);
   } else {
     // Some common menu items.
@@ -58,7 +58,7 @@ export function enableDisableMainMenu(enable: boolean): void {
       if (enable) {
         appSubMenu.push(aboutOpencorMenuItem);
 
-        if (checkForUpdatesMenuItem !== null) {
+        if (checkForUpdatesMenuItem) {
           appSubMenu.push({ type: 'separator' });
           appSubMenu.push(checkForUpdatesMenuItem);
         }
@@ -129,7 +129,7 @@ export function enableDisableMainMenu(enable: boolean): void {
       enabled: recentFilePaths.length > 0
     });
 
-    if (recentFilePaths.length > 0) {
+    if (recentFilePaths.length) {
       fileReopenSubMenu.push({ type: 'separator' });
 
       recentFilePaths.forEach((filePath: string) => {
@@ -258,7 +258,7 @@ export function enableDisableMainMenu(enable: boolean): void {
     });
 
     if (!isMacOs()) {
-      if (checkForUpdatesMenuItem !== null) {
+      if (checkForUpdatesMenuItem) {
         helpSubMenu.push({ type: 'separator' });
         helpSubMenu.push(checkForUpdatesMenuItem);
       }
@@ -298,13 +298,13 @@ export function enableDisableMainMenu(enable: boolean): void {
 }
 
 export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
-  if (enabledMenu !== null) {
+  if (enabledMenu) {
     hasFiles = enable;
 
     const fileCloseMenu = enabledMenu.getMenuItemById('fileClose');
     const fileCloseAllMenu = enabledMenu.getMenuItemById('fileCloseAll');
 
-    if (fileCloseMenu !== null && fileCloseAllMenu !== null) {
+    if (fileCloseMenu && fileCloseAllMenu) {
       fileCloseMenu.enabled = hasFiles;
       fileCloseAllMenu.enabled = hasFiles;
     }

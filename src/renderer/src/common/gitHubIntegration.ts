@@ -44,7 +44,7 @@ function gitHubAccessTokenEntry(): AsyncEntry | null {
 export async function deleteGitHubAccessToken(): Promise<boolean> {
   const entry = gitHubAccessTokenEntry();
 
-  if (entry === null) {
+  if (!entry) {
     return false;
   }
 
@@ -60,7 +60,7 @@ export async function deleteGitHubAccessToken(): Promise<boolean> {
 export async function loadGitHubAccessToken(): Promise<string | null> {
   const entry = gitHubAccessTokenEntry();
 
-  if (entry === null) {
+  if (!entry) {
     return null;
   }
 
@@ -76,7 +76,7 @@ export async function loadGitHubAccessToken(): Promise<string | null> {
 }
 
 export async function saveGitHubAccessToken(token: string): Promise<boolean> {
-  if (token.trim() === '') {
+  if (!token.trim()) {
     console.warn('Ignoring request to store an empty GitHub access token.');
 
     return false;
@@ -84,7 +84,7 @@ export async function saveGitHubAccessToken(token: string): Promise<boolean> {
 
   const entry = gitHubAccessTokenEntry();
 
-  if (entry === null) {
+  if (!entry) {
     return false;
   }
 

@@ -76,7 +76,7 @@
   </div>
   <div v-if="interactiveModeAvailable">
     <div v-show="interactiveModeEnabled" class="flex" :style="{ width: width + 'px', height: actualHeight + 'px' }">
-      <IssuesView v-if="interactiveUiJsonIssues.length !== 0" class="grow" :width="width" :height="actualHeight" :issues="interactiveUiJsonIssues" />
+      <IssuesView v-if="interactiveUiJsonIssues.length" class="grow" :width="width" :height="actualHeight" :issues="interactiveUiJsonIssues" />
       <div v-else class="flex grow min-h-0">
         <div class="ml-4 mr-4 mb-4">
           <ScrollPanel class="h-full">
@@ -87,10 +87,10 @@
                 v-show="interactiveShowInput[index]"
                 :key="`input_${index}`"
                 :name="input.name"
-                :maximumValue="isScalarInput(input) ? input.maximumValue : undefined"
-                :minimumValue="isScalarInput(input) ? input.minimumValue : undefined"
-                :possibleValues="isDiscreteInput(input) ? input.possibleValues : undefined"
-                :stepValue="isScalarInput(input) ? input.stepValue : undefined"
+                :maximumValue="locApi.isScalarInput(input) ? input.maximumValue : undefined"
+                :minimumValue="locApi.isScalarInput(input) ? input.minimumValue : undefined"
+                :possibleValues="locApi.isDiscreteInput(input) ? input.possibleValues : undefined"
+                :stepValue="locApi.isScalarInput(input) ? input.stepValue : undefined"
                 :class="index !== 0 ? 'mt-6' : ''"
                 @change="updateInteractiveSimulation()"
               />
@@ -110,7 +110,7 @@
                     severity="danger"
                     title="Remove all runs"
                     @click="onRemoveAllRuns()"
-                    :disabled="interactiveRuns.length === 0"
+                    :disabled="!interactiveRuns.length"
                   />
                 </div>
                 <div class="flex flex-col gap-2">
@@ -149,7 +149,7 @@
                       <div class="w-5 h-5"></div>
                     </div>
                   </div>
-                  <div v-if="interactiveRuns.length > 0" v-for="(run, index) in interactiveRuns"
+                  <div v-if="interactiveRuns.length" v-for="(run, index) in interactiveRuns"
                     :key="`run_${index}`"
                     class="run border border-dashed rounded px-2 py-1"
                   >
@@ -211,8 +211,8 @@
           </ScrollPanel>
         </div>
         <div class="flex flex-col grow gap-2 h-full min-h-0">
-          <IssuesView v-show="interactiveInstanceIssues.length !== 0" :leftMargin="false" :width="width" :height="actualHeight" :issues="interactiveInstanceIssues" />
-          <GraphPanelWidget v-show="interactiveInstanceIssues.length === 0"
+          <IssuesView v-show="interactiveInstanceIssues.length" :leftMargin="false" :width="width" :height="actualHeight" :issues="interactiveInstanceIssues" />
+          <GraphPanelWidget v-show="!interactiveInstanceIssues.length"
             v-for="(_plot, index) in uiJson.output.plots"
             :key="`plot_${index}`"
             class="w-full min-h-0"
@@ -264,15 +264,15 @@ const props = defineProps<{
 }>();
 
 const toolbarNeeded = vue.computed(() => {
-  return (props.simulationOnly && props.uiJson === undefined) || !props.simulationOnly;
+  return (props.simulationOnly && !props.uiJson) || !props.simulationOnly;
 });
 
 const toolbarId = vue.ref('simulationExperimentViewToolbar');
 const editorId = vue.ref('simulationExperimentViewEditor');
 const liveUpdatesCheckboxId = vue.ref('simulationExperimentViewLiveUpdatesCheckbox');
 const actualHeight = vue.ref<number>(0);
-const interactiveModeAvailable = vue.ref<boolean>(props.uiJson !== undefined);
-const interactiveModeEnabled = vue.ref<boolean>(props.uiJson !== undefined);
+const interactiveModeAvailable = vue.ref<boolean>(!!props.uiJson);
+const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
 const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
 const settingsMenu = vue.ref();
 
@@ -308,16 +308,6 @@ function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedA
   parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
 }
 
-// Type guards.
-
-function isScalarInput(input: locApi.IUiJsonInput): input is locApi.IUiJsonScalarInput {
-  return 'maximumValue' in input && 'minimumValue' in input;
-}
-
-function isDiscreteInput(input: locApi.IUiJsonInput): input is locApi.IUiJsonDiscreteInput {
-  return 'possibleValues' in input;
-}
-
 // Event handlers.
 
 function onRun(): void {
@@ -334,7 +324,7 @@ function onRun(): void {
     void vue.nextTick(() => {
       const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
 
-      if (consoleElement !== undefined) {
+      if (consoleElement) {
         consoleElement.scrollTop = consoleElement.scrollHeight;
       }
     });
@@ -374,7 +364,7 @@ const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 populateParameters(standardParameters, standardInstanceTask);
 
 function traceName(name: string | undefined, xValue: string, yValue: string): string {
-  return name !== undefined ? name : `${yValue} <i>vs.</i> ${xValue}`;
+  return name ?? `${yValue} <i>vs.</i> ${xValue}`;
 }
 
 const xInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value));
@@ -441,14 +431,12 @@ const interactiveCompData = vue.computed(() => {
       ? (interactiveData.value[interactiveDataIndex]?.traces ?? []).map((trace, traceIndex) => {
           return {
             ...trace,
-            name: trace.name + (interactiveRuns.value.length > 0 ? ` [Live]` : ''),
+            name: trace.name + (interactiveRuns.value.length ? ` [Live]` : ''),
             color:
-              GraphPanelWidgetPalette.length > 0
-                ? (GraphPanelWidgetPalette[
-                    (GraphPanelWidgetPalette.indexOf(interactiveLiveRunColor.value) + traceIndex) %
-                      GraphPanelWidgetPalette.length
-                  ] ?? DefaultGraphPanelWidgetColor)
-                : DefaultGraphPanelWidgetColor,
+              GraphPanelWidgetPalette[
+                (GraphPanelWidgetPalette.indexOf(interactiveLiveRunColor.value) + traceIndex) %
+                  GraphPanelWidgetPalette.length
+              ] ?? DefaultGraphPanelWidgetColor,
             zorder: 1
           };
         })
@@ -459,14 +447,11 @@ const interactiveCompData = vue.computed(() => {
         const runTraces = (interactiveRun.data[interactiveDataIndex]?.traces ?? []).map((trace, traceIndex) => {
           return {
             ...trace,
-            name: trace.name + (interactiveRuns.value.length > 0 ? ` [#${runIndex + 1}]` : ''),
+            name: trace.name + (interactiveRuns.value.length ? ` [#${runIndex + 1}]` : ''),
             color:
-              GraphPanelWidgetPalette.length > 0
-                ? (GraphPanelWidgetPalette[
-                    (GraphPanelWidgetPalette.indexOf(interactiveRun.color) + traceIndex) %
-                      GraphPanelWidgetPalette.length
-                  ] ?? DefaultGraphPanelWidgetColor)
-                : DefaultGraphPanelWidgetColor
+              GraphPanelWidgetPalette[
+                (GraphPanelWidgetPalette.indexOf(interactiveRun.color) + traceIndex) % GraphPanelWidgetPalette.length
+              ] ?? DefaultGraphPanelWidgetColor
           };
         });
 
@@ -542,7 +527,7 @@ function evaluateValue(value: string): mathjs.MathType {
 function updateInteractiveSimulation(forceUpdate: boolean = false): void {
   // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
-  if (interactiveUiJsonIssues.value.length > 0 || (!interactiveLiveUpdatesEnabled.value && !forceUpdate)) {
+  if (interactiveUiJsonIssues.value.length || (!interactiveLiveUpdatesEnabled.value && !forceUpdate)) {
     return;
   }
 
@@ -559,7 +544,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
   props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/');
 
-    if (componentVariableNames[0] !== undefined && componentVariableNames[1] !== undefined) {
+    if (componentVariableNames[0] && componentVariableNames[1]) {
       interactiveModel.addChange(
         componentVariableNames[0],
         componentVariableNames[1],
@@ -589,7 +574,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
   props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     const info = interactiveIdToInfo[data.id];
 
-    if (info !== undefined) {
+    if (info) {
       parser.set(data.id, locCommon.simulationData(interactiveInstanceTask, info));
     } else {
       parser.set(data.id, []);
@@ -673,7 +658,7 @@ function onAddRun(): void {
     .map(({ input }) => {
       let inputValue: string | number | undefined = inputParameters[input.id];
 
-      if (isDiscreteInput(input)) {
+      if (locApi.isDiscreteInput(input)) {
         const selectedValue = input.possibleValues.find(
           (possibleValue) => possibleValue.value === inputParameters[input.id]
         );
@@ -709,8 +694,7 @@ function onAddRun(): void {
   // have already been used.
 
   const usedColors = new Set<string>([interactiveLiveRunColor.value, ...interactiveRuns.value.map((run) => run.color)]);
-  const interactiveRun =
-    interactiveRuns.value.length > 0 ? interactiveRuns.value[interactiveRuns.value.length - 1] : null;
+  const interactiveRun = interactiveRuns.value.length ? interactiveRuns.value[interactiveRuns.value.length - 1] : null;
   const lastColor = interactiveRun ? interactiveRun.color : interactiveLiveRunColor.value;
   const lastColorIndex = GraphPanelWidgetPalette.indexOf(lastColor);
   let color: string = DefaultGraphPanelWidgetColor;

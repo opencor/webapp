@@ -73,7 +73,7 @@ if (!electron.app.requestSingleInstanceLock()) {
 export let mainWindow: MainWindow | null = null;
 
 electron.app.on('second-instance', (_event, argv) => {
-  if (mainWindow !== null) {
+  if (mainWindow) {
     if (mainWindow.isMinimized()) {
       mainWindow.restore();
     }
@@ -123,7 +123,7 @@ MimeType=x-scheme-handler/${URI_SCHEME}`
   // Update the desktop database.
 
   nodeChildProcess.exec('update-desktop-database ~/.local/share/applications', (error) => {
-    if (error !== null) {
+    if (error) {
       console.error('Failed to update the desktop database:', error);
     }
   });
@@ -271,11 +271,9 @@ electron.app
         // triggering URL.
 
         mainWindow = new MainWindow(
-          triggeringUrl !== null ? [triggeringUrl] : process.argv,
+          triggeringUrl ? [triggeringUrl] : process.argv,
           splashScreenWindow,
-          process.env.ELECTRON_RENDERER_URL !== undefined
-            ? process.env.ELECTRON_RENDERER_URL
-            : await startRendererServer()
+          process.env.ELECTRON_RENDERER_URL ?? (await startRendererServer())
         );
       }, SHORT_DELAY);
     });

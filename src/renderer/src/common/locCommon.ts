@@ -11,7 +11,7 @@ export function isRemoteFilePath(filePath: string): boolean {
 
 export function filePath(fileFilePathOrFileContents: string | Uint8Array | File): string {
   return fileFilePathOrFileContents instanceof File
-    ? electronApi !== undefined
+    ? electronApi
       ? electronApi.filePath(fileFilePathOrFileContents)
       : fileFilePathOrFileContents.name
     : typeof fileFilePathOrFileContents === 'string'
@@ -65,7 +65,7 @@ export function file(fileFilePathOrFileContents: string | Uint8Array | File): Pr
     }
 
     return new Promise((resolve, reject) => {
-      if (electronApi !== undefined) {
+      if (electronApi) {
         resolve(new locApi.File(filePath(fileFilePathOrFileContents)));
       } else {
         reject(new Error('Local files cannot be opened.'));
@@ -111,7 +111,7 @@ export interface ISimulationDataInfo {
 }
 
 export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: string): ISimulationDataInfo {
-  if (name === '') {
+  if (!name) {
     return {
       type: ESimulationDataInfoType.UNKNOWN,
       index: -1
