@@ -98,28 +98,28 @@
             <Fieldset legend="Runs">
               <div class="flex flex-col gap-4">
                 <div class="flex gap-2">
-                  <Button class="w-full"
+                  <Button class="grow"
                     icon="pi pi-plus"
                     label="Add run"
                     size="small"
                     @click="onAddRun()"
                   />
-                  <Button class="w-12!"
+                  <Button class="w-9!"
                     icon="pi pi-refresh"
                     size="small"
                     severity="danger"
                     title="Remove all runs"
                     @click="onRemoveAllRuns()"
-                    :disabled="!interactiveRuns.length"
+                    :disabled="interactiveRuns.length === 1"
                   />
                 </div>
                 <div class="flex flex-col gap-2">
                   <div v-for="(run, index) in interactiveRuns"
                     :key="`run_${index}`"
-                    class="run border border-dashed rounded px-2 py-1"
+                    class="run border border-dashed rounded pl-2 pr-1.5 py-1"
                   >
-                    <div class="flex gap-2 items-center">
-                      <div class="w-full text-sm"
+                    <div class="flex items-center">
+                      <div class="grow text-sm"
                         :class="{ 'cursor-help': !run.isLiveRun }"
                         v-tippy:bottom="!run.isLiveRun ? {
                           allowHTML: true,
@@ -137,16 +137,16 @@
                           :title="`Change ${run.isLiveRun ? 'live run' : 'run'} colour`"
                           @click="onToggleRunColorPopover(index, $event)"
                         />
-                        <Popover :ref="(element: IPopover | undefined) => interactiveRunColorPopoverRefs[index] = element"
+                        <Popover :ref="(element) => interactiveRunColorPopoverRefs[index] = element as unknown as IPopover | undefined"
                           v-if="interactiveRunColorPopoverIndex === index"
                         >
                           <div class="flex gap-2">
-                            <button class="w-6 h-6 rounded"
+                            <button class="cursor-pointer w-6 h-6 rounded"
                               v-for="color in GraphPanelWidgetPalette" :key="color"
                               :style="{ backgroundColor: color }"
+                              :class="{ 'selected-color': color === run.color }"
                               @click="onRunColorChange(index, color)"
                             >
-                              <span v-if="color === run.color" class="pi pi-check text-xs text-white"></span>
                             </button>
                           </div>
                         </Popover>
@@ -716,29 +716,20 @@ function onRunColorChange(index: number, color: string) {
 
   if (interactiveRun) {
     interactiveRun.color = color;
-
-    closeRunColorPopover(index);
   }
 }
 
 function onToggleRunColorPopover(index: number, event: MouseEvent) {
-  if (interactiveRunColorPopoverIndex.value === index) {
-    closeRunColorPopover(index);
-  } else {
-    interactiveRunColorPopoverIndex.value = index;
+  // Note: interactiveRunColorPopoverIndex is only used to ensure that the active popover gets properly hidden when the
+  //       window loses focus as a result of switching tabs (see onMounted below).
 
-    vue.nextTick(() => {
-      // Note: we do this in a next tick to ensure that the reference is available.
+  interactiveRunColorPopoverIndex.value = index;
 
-      interactiveRunColorPopoverRefs.value[index]?.toggle(event);
-    });
-  }
-}
+  vue.nextTick(() => {
+    // Note: we do this in a next tick to ensure that the reference is available.
 
-function closeRunColorPopover(index: number) {
-  interactiveRunColorPopoverRefs.value[index]?.hide();
-
-  interactiveRunColorPopoverIndex.value = -1;
+    interactiveRunColorPopoverRefs.value[index]?.toggle(event);
+  });
 }
 
 // "Initialise" our standard and/or interactive modes.
@@ -802,14 +793,16 @@ vue.onMounted(() => {
 
   mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 
-  // Close popovers when the window loses focus.
+  // Make sure that our active popover gets hidden when the window loses focus.
 
   vue.watch(
     () => windowIsFocused.value,
     (isFocused) => {
       if (!isFocused) {
         if (interactiveRunColorPopoverIndex.value !== -1) {
-          closeRunColorPopover(interactiveRunColorPopoverIndex.value);
+          interactiveRunColorPopoverRefs.value[interactiveRunColorPopoverIndex.value]?.hide();
+
+          interactiveRunColorPopoverIndex.value = -1;
         }
       }
     }
@@ -891,5 +884,9 @@ if (common.isDesktop()) {
 
 .run {
   border-color: var(--p-content-border-color);
+}
+
+.selected-color {
+  outline: 3px solid var(--p-text-color);
 }
 </style>
