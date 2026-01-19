@@ -98,89 +98,55 @@
             <Fieldset legend="Runs">
               <div class="flex flex-col gap-4">
                 <div class="flex gap-2">
-                  <Button class="w-full"
+                  <Button class="grow"
                     icon="pi pi-plus"
                     label="Add run"
                     size="small"
                     @click="onAddRun()"
                   />
-                  <Button class="w-12!"
+                  <Button class="w-9!"
                     icon="pi pi-refresh"
                     size="small"
                     severity="danger"
                     title="Remove all runs"
                     @click="onRemoveAllRuns()"
-                    :disabled="!interactiveRuns.length"
+                    :disabled="interactiveRuns.length === 1"
                   />
                 </div>
                 <div class="flex flex-col gap-2">
-                  <div class="run border border-dashed rounded px-2 py-1">
-                    <div class="flex gap-2 items-center">
-                      <div class="w-full text-sm">
-                        Live run
-                      </div>
-                      <div>
-                        <Button class="p-0! w-5! h-5!"
-                          icon="pi pi-wave-pulse"
-                          :style="{ color: interactiveLiveRunColor }"
-                          text size="small"
-                          :title="'Change live run colour'"
-                          @click="interactiveLiveRunColorPopover.toggle($event)"
-                        />
-                        <Popover ref="interactiveLiveRunColorPopover">
-                          <div class="flex gap-2">
-                            <button class="w-6 h-6 rounded"
-                              v-for="color in GraphPanelWidgetPalette" :key="color"
-                              :style="{ backgroundColor: color }"
-                              @click="onLiveRunColorChange(color)"
-                            >
-                              <span v-if="color === interactiveLiveRunColor" class="pi pi-check text-xs text-white"></span>
-                            </button>
-                          </div>
-                        </Popover>
-                      </div>
-                      <Button class="p-0! w-5! h-5!"
-                        :icon="interactiveLiveRunVisible ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                        :severity="interactiveLiveRunVisible ? 'info' : 'secondary'"
-                        text size="small"
-                        :title="(interactiveLiveRunVisible ? 'Hide' : 'Show') + ' live run'"
-                        @click="interactiveLiveRunVisible = !interactiveLiveRunVisible"
-                      />
-                      <div class="w-5 h-5"></div>
-                    </div>
-                  </div>
-                  <div v-if="interactiveRuns.length" v-for="(run, index) in interactiveRuns"
+                  <div v-for="(run, index) in interactiveRuns"
                     :key="`run_${index}`"
-                    class="run border border-dashed rounded px-2 py-1"
+                    class="run border border-dashed rounded pl-2 pr-1.5 py-1"
                   >
-                    <div class="flex gap-2 items-center">
-                      <div class="w-full text-sm cursor-help"
-                        v-tippy:bottom="{
+                    <div class="flex items-center">
+                      <div class="grow text-sm"
+                        :class="{ 'cursor-help': !run.isLiveRun }"
+                        v-tippy:bottom="!run.isLiveRun ? {
                           allowHTML: true,
                           content: run.tooltip,
                           placement: 'bottom'
-                        }"
+                        } : undefined"
                       >
-                        Run #{{ index + 1 }}
+                        {{ run.isLiveRun ? 'Live run' : `Run #${index}` }}
                       </div>
                       <div>
                         <Button class="p-0! w-5! h-5!"
                           icon="pi pi-wave-pulse"
                           :style="{ color: run.color }"
                           text size="small"
-                          :title="'Change run colour'"
+                          :title="`Change ${run.isLiveRun ? 'live run' : 'run'} colour`"
                           @click="onToggleRunColorPopover(index, $event)"
                         />
-                        <Popover :ref="(element: IPopover | undefined) => interactiveRunPopoverRefs[index] = element"
+                        <Popover :ref="(element) => interactiveRunColorPopoverRefs[index] = element as unknown as IPopover | undefined"
                           v-if="interactiveRunColorPopoverIndex === index"
                         >
                           <div class="flex gap-2">
-                            <button class="w-6 h-6 rounded"
+                            <button class="cursor-pointer w-6 h-6 rounded"
                               v-for="color in GraphPanelWidgetPalette" :key="color"
                               :style="{ backgroundColor: color }"
+                              :class="{ 'selected-color': color === run.color }"
                               @click="onRunColorChange(index, color)"
                             >
-                              <span v-if="color === run.color" class="pi pi-check text-xs text-white"></span>
                             </button>
                           </div>
                         </Popover>
@@ -189,19 +155,20 @@
                         :icon="run.visible ? 'pi pi-eye' : 'pi pi-eye-slash'"
                         :severity="run.visible ? 'info' : 'secondary'"
                         text size="small"
-                        :title="(run.visible ? 'Hide' : 'Show') + ' run'"
+                        :title="`${run.visible ? 'Hide' : 'Show'} ${run.isLiveRun ? 'live run' : 'run'}`"
                         @click="onToggleRun(index)"
                       />
-                      <Button class="p-0! w-5! h-5!"
+                      <Button v-if="!run.isLiveRun" class="p-0! w-5! h-5!"
                         icon="pi pi-trash"
                         severity="danger"
                         text size="small"
                         title="Remove run"
                         @click="onRemoveRun(index)"
                       />
+                      <div v-else class="w-5 h-5"></div>
                     </div>
                   </div>
-                  <div v-else class="hint text-center text-xs">
+                  <div v-if="interactiveRuns.length === 1" class="hint text-center text-xs">
                     There are no (additional) runs.<br/>
                     Click "Add run" to add one.
                   </div>
@@ -250,6 +217,7 @@ interface ISimulationRun {
   data: IGraphPanelData[];
   color: string;
   tooltip: string;
+  isLiveRun: boolean;
 }
 
 const props = defineProps<{
@@ -411,14 +379,20 @@ const interactiveShowInput = vue.ref<string[]>(
   interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []
 );
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
-const interactiveRuns = vue.ref<ISimulationRun[]>([]);
-const interactiveLiveRunColor = vue.ref<string>(DefaultGraphPanelWidgetColor);
-const interactiveLiveRunVisible = vue.ref<boolean>(true);
-const interactiveLiveRunColorPopover = vue.ref();
+const interactiveRuns = vue.ref<ISimulationRun[]>([
+  {
+    inputParameters: {},
+    visible: true,
+    data: [],
+    color: DefaultGraphPanelWidgetColor,
+    tooltip: '',
+    isLiveRun: true
+  }
+]);
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
-const interactiveRunPopoverRefs = vue.ref<Record<number, IPopover | undefined>>({});
+const interactiveRunColorPopoverRefs = vue.ref<Record<number, IPopover | undefined>>({});
 const interactiveCompData = vue.computed(() => {
-  // Combine the live data with the data from the visible runs.
+  // Combine the live data with the data from the additional runs.
 
   const res: IGraphPanelData[] = [];
 
@@ -427,36 +401,31 @@ const interactiveCompData = vue.computed(() => {
     interactiveDataIndex < (interactiveData.value.length || 0);
     ++interactiveDataIndex
   ) {
-    const traces: IGraphPanelPlotTrace[] = interactiveLiveRunVisible.value
-      ? (interactiveData.value[interactiveDataIndex]?.traces ?? []).map((trace, traceIndex) => {
-          return {
-            ...trace,
-            name: trace.name + (interactiveRuns.value.length ? ` [Live]` : ''),
-            color:
-              GraphPanelWidgetPalette[
-                (GraphPanelWidgetPalette.indexOf(interactiveLiveRunColor.value) + traceIndex) %
-                  GraphPanelWidgetPalette.length
-              ] ?? DefaultGraphPanelWidgetColor,
-            zorder: 1
-          };
-        })
-      : [];
+    const traces: IGraphPanelPlotTrace[] = [];
 
     interactiveRuns.value.forEach((interactiveRun: ISimulationRun, runIndex: number) => {
-      if (interactiveRun.visible) {
-        const runTraces = (interactiveRun.data[interactiveDataIndex]?.traces ?? []).map((trace, traceIndex) => {
-          return {
-            ...trace,
-            name: trace.name + (interactiveRuns.value.length ? ` [#${runIndex + 1}]` : ''),
-            color:
-              GraphPanelWidgetPalette[
-                (GraphPanelWidgetPalette.indexOf(interactiveRun.color) + traceIndex) % GraphPanelWidgetPalette.length
-              ] ?? DefaultGraphPanelWidgetColor
-          };
-        });
-
-        traces.push(...runTraces);
+      if (!interactiveRun.visible) {
+        return;
       }
+
+      const data = interactiveRun.isLiveRun
+        ? interactiveData.value[interactiveDataIndex]
+        : interactiveRun.data[interactiveDataIndex];
+      const runTraces = (data?.traces ?? []).map((trace, traceIndex) => {
+        return {
+          ...trace,
+          name:
+            trace.name +
+            (interactiveRuns.value.length === 1 ? '' : interactiveRun.isLiveRun ? ' [Live]' : ` [#${runIndex}]`),
+          color:
+            GraphPanelWidgetPalette[
+              (GraphPanelWidgetPalette.indexOf(interactiveRun.color) + traceIndex) % GraphPanelWidgetPalette.length
+            ] ?? DefaultGraphPanelWidgetColor,
+          zorder: interactiveRun.isLiveRun ? 1 : undefined
+        };
+      });
+
+      traces.push(...runTraces);
     });
 
     res.push({
@@ -693,9 +662,8 @@ function onAddRun(): void {
   // Determine the colour (of the first trace) by using the next unused colour in the palette unless all the colours
   // have already been used.
 
-  const usedColors = new Set<string>([interactiveLiveRunColor.value, ...interactiveRuns.value.map((run) => run.color)]);
-  const interactiveRun = interactiveRuns.value.length ? interactiveRuns.value[interactiveRuns.value.length - 1] : null;
-  const lastColor = interactiveRun ? interactiveRun.color : interactiveLiveRunColor.value;
+  const usedColors = new Set<string>(interactiveRuns.value.map((run) => run.color));
+  const lastColor = interactiveRuns.value[interactiveRuns.value.length - 1]?.color ?? DefaultGraphPanelWidgetColor;
   const lastColorIndex = GraphPanelWidgetPalette.indexOf(lastColor);
   let color: string = DefaultGraphPanelWidgetColor;
 
@@ -716,7 +684,8 @@ function onAddRun(): void {
     visible: true,
     data: interactiveData.value,
     color,
-    tooltip
+    tooltip,
+    isLiveRun: false
   });
 }
 
@@ -727,9 +696,9 @@ function onRemoveRun(index: number): void {
 }
 
 function onRemoveAllRuns(): void {
-  // Remove all the runs.
+  // Remove all the runs except the live run.
 
-  interactiveRuns.value = [];
+  interactiveRuns.value.splice(1);
 }
 
 function onToggleRun(index: number): void {
@@ -742,40 +711,25 @@ function onToggleRun(index: number): void {
   }
 }
 
-function onLiveRunColorChange(color: string) {
-  interactiveLiveRunColor.value = color;
-
-  interactiveLiveRunColorPopover.value.hide();
-}
-
 function onRunColorChange(index: number, color: string) {
   const interactiveRun = interactiveRuns.value[index];
 
   if (interactiveRun) {
     interactiveRun.color = color;
-
-    closeRunColorPopover(index);
   }
 }
 
 function onToggleRunColorPopover(index: number, event: MouseEvent) {
-  if (interactiveRunColorPopoverIndex.value === index) {
-    closeRunColorPopover(index);
-  } else {
-    interactiveRunColorPopoverIndex.value = index;
+  // Note: interactiveRunColorPopoverIndex is only used to ensure that the active popover gets properly hidden when the
+  //       window loses focus as a result of switching tabs (see onMounted below).
 
-    vue.nextTick(() => {
-      // Note: we do this in a next tick to ensure that the reference is available.
+  interactiveRunColorPopoverIndex.value = index;
 
-      interactiveRunPopoverRefs.value[index]?.toggle(event);
-    });
-  }
-}
+  vue.nextTick(() => {
+    // Note: we do this in a next tick to ensure that the reference is available.
 
-function closeRunColorPopover(index: number) {
-  interactiveRunPopoverRefs.value[index]?.hide();
-
-  interactiveRunColorPopoverIndex.value = -1;
+    interactiveRunColorPopoverRefs.value[index]?.toggle(event);
+  });
 }
 
 // "Initialise" our standard and/or interactive modes.
@@ -839,16 +793,16 @@ vue.onMounted(() => {
 
   mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 
-  // Close popovers when the window loses focus.
+  // Make sure that our active popover gets hidden when the window loses focus.
 
   vue.watch(
     () => windowIsFocused.value,
     (isFocused) => {
       if (!isFocused) {
-        interactiveLiveRunColorPopover.value?.hide();
-
         if (interactiveRunColorPopoverIndex.value !== -1) {
-          closeRunColorPopover(interactiveRunColorPopoverIndex.value);
+          interactiveRunColorPopoverRefs.value[interactiveRunColorPopoverIndex.value]?.hide();
+
+          interactiveRunColorPopoverIndex.value = -1;
         }
       }
     }
@@ -930,5 +884,9 @@ if (common.isDesktop()) {
 
 .run {
   border-color: var(--p-content-border-color);
+}
+
+.selected-color {
+  outline: 3px solid var(--p-text-color);
 }
 </style>
