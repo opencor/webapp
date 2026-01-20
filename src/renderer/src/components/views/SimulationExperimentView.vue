@@ -13,13 +13,7 @@
       </template>
       <template #end>
         <div :class="{ 'invisible': !interactiveModeAvailable || !interactiveModeEnabled }" class="flex">
-          <Button class="p-1!" icon="pi pi-cog" severity="secondary" text @click="settingsMenu.toggle($event)" />
-          <Popover ref="settingsMenu">
-            <div class="flex items-center gap-2 px-1 py-1">
-              <Checkbox :inputId="liveUpdatesCheckboxId" v-model="interactiveLiveUpdatesEnabled" binary size="small" @change="onLiveUpdatesChange()" />
-              <label :for="liveUpdatesCheckboxId" class="text-sm select-none">Live updates</label>
-            </div>
-          </Popover>
+          <Button class="p-1!" icon="pi pi-cog" severity="secondary" text @click="simulationSettingsVisible = true" />
         </div>
       </template>
     </Toolbar>
