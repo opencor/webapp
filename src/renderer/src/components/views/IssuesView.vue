@@ -33,10 +33,8 @@ withDefaults(
     rightMargin?: boolean;
   }>(),
   {
-    height: 0,
     leftMargin: true,
-    rightMargin: true,
-    width: 0
+    rightMargin: true
   }
 );
 </script>

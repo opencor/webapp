@@ -392,7 +392,7 @@ function removeParameter(index: number) {
 function onDownload(uiJson: locApi.IUiJson) {
   const uiJsonString = JSON.stringify(uiJson, null, 2);
 
-  downloadFile('simulation_settings.json', uiJsonString, 'application/json');
+  downloadFile('simulation.json', uiJsonString, 'application/json');
 }
 
 function onOk() {

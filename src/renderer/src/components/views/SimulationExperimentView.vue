@@ -193,15 +193,15 @@
         </div>
       </div>
     </div>
+    <SimulationSettingsDialog
+      v-model:visible="simulationSettingsVisible"
+      :uiJson="uiJson"
+      :allParameters="interactiveAllParameters"
+      :editableParameters="interactiveEditableParameters"
+      @ok="onSimulationSettingsOk"
+      @close="simulationSettingsVisible = false"
+    />
   </div>
-  <SimulationSettingsDialog
-    v-model:visible="simulationSettingsVisible"
-    :uiJson="uiJson"
-    :allParameters="interactiveAllParameters"
-    :editableParameters="interactiveEditableParameters"
-    @ok="onSimulationSettingsOk"
-    @close="simulationSettingsVisible = false"
-  />
 </template>
 
 <script setup lang="ts">
@@ -241,7 +241,7 @@ const toolbarNeeded = vue.computed(() => {
   return (
     !interactiveUiJsonIssues.value.length &&
     !interactiveInstanceIssues.value.length &&
-    ((props.simulationOnly && !props.uiJson) || !props.simulationOnly)
+    ((props.simulationOnly && !uiJson) || !props.simulationOnly)
   );
 });
 
@@ -322,6 +322,30 @@ function onLiveUpdatesChange(): void {
   if (interactiveLiveUpdatesEnabled.value) {
     updateInteractiveSimulation();
   }
+}
+
+function populateInputProperties(currentUiJson: locApi.IUiJson) {
+  if (!interactiveModeAvailable.value) {
+    interactiveInputValues.value = [];
+    interactiveShowInput.value = [];
+
+    Object.keys(interactiveIdToInfo).forEach((key) => {
+      delete interactiveIdToInfo[key];
+    });
+
+    return;
+  }
+
+  interactiveInputValues.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue);
+  interactiveShowInput.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true');
+
+  Object.keys(interactiveIdToInfo).forEach((key) => {
+    delete interactiveIdToInfo[key];
+  });
+
+  currentUiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+    interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
+  });
 }
 
 // Standard mode.
@@ -450,45 +474,9 @@ const interactiveCompData = vue.computed(() => {
 // Map data IDs to simulation data info.
 
 populateParameters(interactiveAllParameters, interactiveInstanceTask);
-populateParameters(interactiveEditableParameters, interactiveInstanceTask, true);
+populateParameters(interactiveEditableParameters, interactiveInstanceTask);
 
 populateInputProperties(props.uiJson);
-
-interactiveMath.import(
-  {
-    // Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
-
-    // Arithmetic operators.
-
-    pow: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number) => v ** y),
-    sqrt: (x: mathjs.MathType) => x.map((v: number) => Math.sqrt(v)),
-    abs: (x: mathjs.MathType) => x.map((v: number) => Math.abs(v)),
-    exp: (x: mathjs.MathType) => x.map((v: number) => Math.exp(v)),
-    log: (x: mathjs.MathType) => x.map((v: number) => Math.log(v)),
-    log10: (x: mathjs.MathType) => x.map((v: number) => Math.log10(v)),
-    ceil: (x: mathjs.MathType) => x.map((v: number) => Math.ceil(v)),
-    floor: (x: mathjs.MathType) => x.map((v: number) => Math.floor(v)),
-    min: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number, index: number) => Math.min(v, y[index])),
-    max: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number, index: number) => Math.max(v, y[index])),
-    mod: (x: mathjs.MathType, y: mathjs.MathType) => x.map((v: number) => v % y),
-
-    // // Trigonometric operators.
-
-    sin: (x: mathjs.MathType) => x.map((v: number) => Math.sin(v)),
-    cos: (x: mathjs.MathType) => x.map((v: number) => Math.cos(v)),
-    tan: (x: mathjs.MathType) => x.map((v: number) => Math.tan(v)),
-    sinh: (x: mathjs.MathType) => x.map((v: number) => Math.sinh(v)),
-    cosh: (x: mathjs.MathType) => x.map((v: number) => Math.cosh(v)),
-    tanh: (x: mathjs.MathType) => x.map((v: number) => Math.tanh(v)),
-    asin: (x: mathjs.MathType) => x.map((v: number) => Math.asin(v)),
-    acos: (x: mathjs.MathType) => x.map((v: number) => Math.acos(v)),
-    atan: (x: mathjs.MathType) => x.map((v: number) => Math.atan(v)),
-    asinh: (x: mathjs.MathType) => x.map((v: number) => Math.asinh(v)),
-    acosh: (x: mathjs.MathType) => x.map((v: number) => Math.acosh(v)),
-    atanh: (x: mathjs.MathType) => x.map((v: number) => Math.atanh(v))
-  },
-  { override: true }
-);
 
 // Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
 
@@ -594,12 +582,19 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
     }
   });
 
+  const parserEvaluate = (value: string): number[] => {
+    // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure element-wise
+    //       operations.
+
+    return parser.evaluate(value.replace(/(?<!\.)\*(?!\.)/g, '.*').replace(/(?<!\.)\/(?!\.)/g, './'));
+  };
+
   interactiveData.value = uiJson.value.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
     const traces: IGraphPanelPlotTrace[] = [
       {
         name: traceName(plot.name, plot.xValue, plot.yValue),
-        x: parser.evaluate(plot.xValue),
-        y: parser.evaluate(plot.yValue),
+        x: parserEvaluate(plot.xValue),
+        y: parserEvaluate(plot.yValue),
         color: DefaultGraphPanelWidgetColor
       }
     ];
@@ -607,8 +602,8 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
     plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
       traces.push({
         name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
-        x: parser.evaluate(additionalTrace.xValue),
-        y: parser.evaluate(additionalTrace.yValue),
+        x: parserEvaluate(additionalTrace.xValue),
+        y: parserEvaluate(additionalTrace.yValue),
         color: DefaultGraphPanelWidgetColor
       });
     });
@@ -628,7 +623,7 @@ function onMarginsUpdated(plotId: string, newMargins: IGraphPanelMargins): void 
 
   const margins = Object.values(interactiveMargins);
 
-  if (margins.length !== props.uiJson.output.plots.length) {
+  if (margins.length !== uiJson.value.output.plots.length) {
     interactiveCompMargins.value = undefined;
 
     return;
@@ -652,7 +647,7 @@ function onAddRun(): void {
 
   const inputParameters: Record<string, number> = {};
 
-  props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
+  uiJson.value.input.forEach((input: locApi.IUiJsonInput, index: number) => {
     const interactiveInputValue = interactiveInputValues.value[index];
 
     if (interactiveInputValue) {
@@ -662,7 +657,7 @@ function onAddRun(): void {
 
   // Compute the tooltip for this run, keeping in mind that some input parameters may not be visible.
 
-  const rows = props.uiJson.input
+  const rows = uiJson.value.input
     .map((input, index) => ({
       input: input,
       visible: interactiveShowInput.value[index]
