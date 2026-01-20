@@ -193,7 +193,7 @@
         </div>
       </div>
     </div>
-    <SimulationSettingsDialog
+    <SimulationExperimentViewSettingsDialog
       v-model:visible="simulationSettingsVisible"
       :uiJson="uiJson"
       :allModelParameters="interactiveAllModelParameters"
