@@ -23,7 +23,7 @@
         </div>
       </template>
     </Toolbar>
-    <div v-show="!interactiveModeEnabled" class="grow min-h-0">
+    <div v-show="!interactiveModeEnabled" class="grow h-full min-h-0">
       <Splitter class="border-none! h-full m-0" layout="vertical">
         <SplitterPanel :size="simulationOnly ? 100 : 89">
           <Splitter>
