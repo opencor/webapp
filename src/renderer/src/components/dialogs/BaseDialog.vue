@@ -1,5 +1,18 @@
 <template>
-  <Dialog :modal="true" appendTo="self" :pt:mask:style="{ position: 'absolute' }" @show="onShow" @hide="onHide">
+  <Dialog :modal="true" appendTo="self"
+    :pt:mask:style="{
+      position: 'absolute'
+    }"
+    :pt:content="{
+      class: 'h-full',
+      style: 'padding-bottom: 0'
+    }"
+    :pt:footer="{
+      style: 'padding-top: 1.25rem'
+    }"
+    @show="onShow"
+    @hide="onHide"
+  >
     <template v-for="(_event, slot) of $slots" #[slot]="scope">
       <slot :name="slot" v-bind="scope" />
     </template>
