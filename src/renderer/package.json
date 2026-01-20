@@ -44,9 +44,10 @@
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
     "clean": "bun scripts/clean.js",
+    "dependencies:update": "cd ../.. && bun clean && bun update -i && bun install && bun clean && cd src/renderer && bun clean && bun update -i && bun install && bun clean",
     "dev": "vite dev",
-    "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/libopencor/src/*",
-    "format:check": "bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/libopencor/src/*",
+    "format": "cd ../.. && bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/renderer/src/libopencor/src/*",
+    "format:check": "cd ../.. && bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/renderer/src/libopencor/src/*",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
     "version:new": "bun scripts/version.js"
