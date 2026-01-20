@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="Simulation Settings..." class="w-169">
+  <BaseDialog header="Simulation Settings..." class="w-169" @keydown.prevent.enter="onOk">
     <div class="flex flex-col gap-4">
       <Tabs v-model:value="activeTab">
         <TabList>
