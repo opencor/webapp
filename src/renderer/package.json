@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20251202.0",
+  "version": "0.20260120.1",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -47,7 +47,7 @@
     "dev": "vite dev",
     "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/libopencor/src/*",
     "format:check": "bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/libopencor/src/*",
-    "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none",
+    "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
     "version:new": "bun scripts/version.js"
   },
@@ -55,30 +55,35 @@
     "vue": "3.4.21"
   },
   "dependencies": {
-    "@primeuix/themes": "^1.2.5",
+    "@napi-rs/keyring": "^1.2.0",
+    "@primeuix/themes": "^2.0.3",
     "@primevue/auto-import-resolver": "4.2.5",
-    "@vueuse/core": "12.8.2",
-    "firebase": "^12.6.0",
+    "@vueuse/core": "14.1.0",
+    "crypto-js": "^4.2.0",
     "jsonschema": "^1.5.0",
-    "octokit": "^5.0.5",
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
     "quill": "^2.0.3",
-    "ua-parser-js": "^2.0.6",
-    "vue": "3.4.21"
+    "ua-parser-js": "^2.0.8",
+    "vue": "3.4.21",
+    "vue-tippy": "^6.7.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.8",
-    "@tailwindcss/postcss": "^4.1.17",
-    "@tailwindcss/vite": "^4.1.17",
-    "@types/node": "^24.10.1",
-    "@types/plotly.js": "3.0.6",
-    "@vitejs/plugin-vue": "^6.0.2",
+    "@biomejs/biome": "^2.3.11",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/crypto-js": "^4.2.2",
+    "@types/node": "^25.0.9",
+    "@types/plotly.js": "^3.0.9",
+    "@vitejs/plugin-vue": "^6.0.3",
     "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "^10.4.22",
-    "tailwindcss": "^4.1.17",
+    "autoprefixer": "^10.4.23",
+    "stylelint": "^17.0.0",
+    "stylelint-config-standard": "^40.0.0",
+    "tailwindcss": "^4.1.18",
     "tailwindcss-primeui": "^0.6.1",
-    "unplugin-vue-components": "^29.2.0",
-    "vite": "^7.2.6"
+    "typescript": "^5.9.3",
+    "unplugin-vue-components": "^31.0.0",
+    "vite": "7.2.7"
   }
 }

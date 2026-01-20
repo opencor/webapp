@@ -1,7 +1,7 @@
-import { proxyUrl } from '../common/common.js';
-import * as locApi from '../libopencor/locApi.js';
+import { corsProxyUrl, sha256 } from '../common/common.ts';
+import * as locApi from '../libopencor/locApi.ts';
 
-import { electronApi } from './electronApi.js';
+import { electronApi } from './electronApi.ts';
 
 // Some file-related methods.
 
@@ -9,30 +9,54 @@ export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://');
 }
 
-export function filePath(fileOrFilePath: string | File): string {
-  return fileOrFilePath instanceof File
-    ? electronApi !== undefined
-      ? electronApi.filePath(fileOrFilePath)
-      : fileOrFilePath.name
-    : fileOrFilePath;
+export function filePath(fileFilePathOrFileContents: string | Uint8Array | File): string {
+  return fileFilePathOrFileContents instanceof File
+    ? electronApi
+      ? electronApi.filePath(fileFilePathOrFileContents)
+      : fileFilePathOrFileContents.name
+    : typeof fileFilePathOrFileContents === 'string'
+      ? fileFilePathOrFileContents
+      : sha256(fileFilePathOrFileContents);
 }
 
-export function file(fileOrFilePath: string | File): Promise<locApi.File> {
-  if (typeof fileOrFilePath === 'string') {
-    if (isRemoteFilePath(fileOrFilePath)) {
+export function file(fileFilePathOrFileContents: string | Uint8Array | File): Promise<locApi.File> {
+  if (typeof fileFilePathOrFileContents === 'string') {
+    if (isRemoteFilePath(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
-        fetch(proxyUrl(fileOrFilePath))
+        // First try fetching the URL through OpenCOR's CORS proxy.
+
+        fetch(corsProxyUrl(fileFilePathOrFileContents))
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer();
             }
 
-            throw new Error(`The server responded with a status of ${String(response.status)}.`);
+            throw new Error(
+              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${String(response.status)}.`
+            );
+          })
+          .catch((error: unknown) => {
+            // A network/CORS error is an instance of TypeError in fetch. So, if this is the case then we try fetching
+            // the file directly otherwise we re-throw the error.
+
+            if (!(error instanceof TypeError)) {
+              throw error instanceof Error ? error : new Error(String(error));
+            }
+
+            return fetch(fileFilePathOrFileContents).then((response) => {
+              if (response.ok) {
+                return response.arrayBuffer();
+              }
+
+              throw new Error(
+                `Failed to fetch the file directly. The server responded with a status of ${String(response.status)}.`
+              );
+            });
           })
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer);
 
-            resolve(new locApi.File(filePath(fileOrFilePath), fileContents));
+            resolve(new locApi.File(filePath(fileFilePathOrFileContents), fileContents));
           })
           .catch((error: unknown) => {
             reject(error instanceof Error ? error : new Error(String(error)));
@@ -41,21 +65,27 @@ export function file(fileOrFilePath: string | File): Promise<locApi.File> {
     }
 
     return new Promise((resolve, reject) => {
-      if (electronApi !== undefined) {
-        resolve(new locApi.File(filePath(fileOrFilePath)));
+      if (electronApi) {
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents)));
       } else {
         reject(new Error('Local files cannot be opened.'));
       }
     });
   }
 
+  if (fileFilePathOrFileContents instanceof Uint8Array) {
+    return new Promise((resolve) => {
+      resolve(new locApi.File(filePath(fileFilePathOrFileContents), fileFilePathOrFileContents));
+    });
+  }
+
   return new Promise((resolve, reject) => {
-    fileOrFilePath
+    fileFilePathOrFileContents
       .arrayBuffer()
       .then((arrayBuffer) => {
         const fileContents = new Uint8Array(arrayBuffer);
 
-        resolve(new locApi.File(filePath(fileOrFilePath), fileContents));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents), fileContents));
       })
       .catch((error: unknown) => {
         reject(error instanceof Error ? error : new Error(String(error)));
@@ -81,7 +111,7 @@ export interface ISimulationDataInfo {
 }
 
 export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: string): ISimulationDataInfo {
-  if (name === '') {
+  if (!name) {
     return {
       type: ESimulationDataInfoType.UNKNOWN,
       index: -1
@@ -131,8 +161,8 @@ export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: s
     }
   }
 
-  for (let i = 0; i < instanceTask.algebraicCount(); i++) {
-    if (name === instanceTask.algebraicName(i)) {
+  for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
+    if (name === instanceTask.algebraicVariableName(i)) {
       return {
         type: ESimulationDataInfoType.ALGEBRAIC,
         index: i
@@ -161,7 +191,7 @@ export function simulationData(instanceTask: locApi.SedInstanceTask, info: ISimu
     case ESimulationDataInfoType.COMPUTED_CONSTANT:
       return instanceTask.computedConstant(info.index);
     case ESimulationDataInfoType.ALGEBRAIC:
-      return instanceTask.algebraic(info.index);
+      return instanceTask.algebraicVariable(info.index);
     default:
       return [];
   }

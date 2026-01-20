@@ -1,35 +1,26 @@
 <template>
   <div v-if="simulationOnly" class="h-full">
-    <div v-for="(fileTab, index) in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" :value="fileTab.file.path()">
-      <IssuesView
-        v-if="fileTab.file.issues().length !== 0"
-        :width="width"
-        :height="height"
-        :issues="fileTab.file.issues()"
+    <div v-for="fileTab in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" class="h-full" :value="fileTab.file.path()">
+      <IssuesView v-if="fileTab.file.issues().length" class="h-full" :issues="fileTab.file.issues()"
       />
-      <SimulationExperimentView
-        v-else
-        :width="width"
-        :height="height"
+      <SimulationExperimentView v-else class="h-full"
         :isActive="isActive"
-        :interactiveEnabled="interactiveEnabled"
+        :uiEnabled="uiEnabled"
         :file="fileTab.file"
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="simulationOnly"
-        :uiJson="fileTab.uiJson"
+        :uiJson="fileTab.uiJson!"
       />
     </div>
   </div>
-  <div v-else class="h-full">
-    <BackgroundComponent v-show="fileTabs.length === 0" :style="{ height: height + 'px' }" />
-    <Tabs
-      v-show="fileTabs.length !== 0"
-      id="fileTabs"
+  <div v-else class="h-full flex flex-col">
+    <BackgroundComponent v-show="!fileTabs.length" class="h-full" />
+    <Tabs v-show="fileTabs.length" id="fileTabs" class="h-full flex flex-col"
       v-model:value="activeFile"
       :scrollable="true"
       :selectOnFocus="true"
     >
-      <TabList :id="fileTablistId" class="border-b border-b-primary">
+      <TabList :id="fileTablistId" class="border-b border-b-primary shrink-0">
         <Tab
           v-for="fileTab in fileTabs"
           :id="`tab_${fileTab.file.path()}`"
@@ -39,37 +30,27 @@
           <div class="flex gap-2 items-center">
             <div>
               {{
-                fileTab.file
-                  .path()
-                  .split(/(\\|\/)/g)
-                  .pop()
+                fileName(fileTab.file.path())
               }}
             </div>
             <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
           </div>
         </Tab>
       </TabList>
-      <TabPanels class="p-0!">
-        <TabPanel
-          v-for="(fileTab, index) in fileTabs"
+      <TabPanels class="p-0! grow min-h-0">
+        <TabPanel v-for="fileTab in fileTabs" class="h-full"
           :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
-          <IssuesView
-            v-if="fileTab.file.issues().length !== 0"
-            :width="width"
-            :height="heightMinusFileTablist"
+          <IssuesView v-if="fileTab.file.issues().length" class="h-full"
             :issues="fileTab.file.issues()"
           />
-          <SimulationExperimentView
-            v-else
-            :width="width"
-            :height="heightMinusFileTablist"
+          <SimulationExperimentView v-else class="h-full"
             :isActive="isActive"
-            :interactiveEnabled="interactiveEnabled"
+            :uiEnabled="uiEnabled"
             :file="fileTab.file"
             :isActiveFile="fileTab.file.path() === activeFile"
-            :uiJson="fileTab.uiJson"
+            :uiJson="fileTab.uiJson!"
           />
         </TabPanel>
       </TabPanels>
@@ -82,23 +63,18 @@ import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
 
-import * as common from '../common/common';
-import { SHORT_DELAY } from '../common/constants';
-import { electronApi } from '../common/electronApi';
-import * as vueCommon from '../common/vueCommon';
-import * as locApi from '../libopencor/locApi';
-
+import * as common from '../common/common.ts';
+import { electronApi } from '../common/electronApi.ts';
+import * as locApi from '../libopencor/locApi.ts';
 export interface IFileTab {
   file: locApi.File;
   uiJson?: locApi.IUiJson;
 }
 
 const props = defineProps<{
-  width: number;
-  height: number;
   isActive: boolean;
-  interactiveEnabled: boolean;
   simulationOnly?: boolean;
+  uiEnabled: boolean;
 }>();
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile });
 
@@ -114,7 +90,6 @@ export interface IContentsComponent {
 const fileTablistId = vue.ref('contentsComponentFileTablist');
 const fileTabs = vue.ref<IFileTab[]>([]);
 const activeFile = vue.ref<string>('');
-const heightMinusFileTablist = vue.ref<number>(0);
 
 const filePaths = vue.computed(() => {
   const res: string[] = [];
@@ -136,6 +111,18 @@ vue.watch(activeFile, (newActiveFile: string) => {
 
   electronApi?.fileSelected(newActiveFile);
 });
+
+function fileName(filePath: string): string {
+  const res = filePath.split(/(\\|\/)/g).pop() || '';
+
+  try {
+    return decodeURIComponent(res);
+  } catch (error: unknown) {
+    console.error('Failed to decode the file path:', res, error);
+
+    return res;
+  }
+}
 
 function openFile(file: locApi.File): void {
   const filePath = file.path();
@@ -168,7 +155,7 @@ function selectNextFile(): void {
   const nextFileTabIndex = (crtFileTabIndex + 1) % fileTabs.value.length;
   const nextFileTab = fileTabs.value[nextFileTabIndex];
 
-  if (nextFileTab !== undefined) {
+  if (nextFileTab) {
     selectFile(nextFileTab.file.path());
   }
 }
@@ -178,7 +165,7 @@ function selectPreviousFile(): void {
   const nextFileTabIndex = (crtFileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length;
   const nextFileTab = fileTabs.value[nextFileTabIndex];
 
-  if (nextFileTab !== undefined) {
+  if (nextFileTab) {
     selectFile(nextFileTab.file.path());
   }
 }
@@ -190,10 +177,10 @@ function closeFile(filePath: string): void {
 
   fileTabs.value.splice(fileTabIndex, 1);
 
-  if (activeFile.value === filePath && fileTabs.value.length > 0) {
+  if (activeFile.value === filePath && fileTabs.value.length) {
     const nextFileTab = fileTabs.value[Math.min(fileTabIndex, fileTabs.value.length - 1)];
 
-    if (nextFileTab !== undefined) {
+    if (nextFileTab) {
       selectFile(nextFileTab.file.path());
     }
   }
@@ -206,7 +193,7 @@ function closeCurrentFile(): void {
 }
 
 function closeAllFiles(): void {
-  while (fileTabs.value.length > 0) {
+  while (fileTabs.value.length) {
     closeCurrentFile();
   }
 }
@@ -219,54 +206,13 @@ vue.onMounted(() => {
   // Customise our IDs.
 
   fileTablistId.value = `contentsComponentFileTablist${String(crtInstance?.uid)}`;
-
-  // Track the height of our file tablist.
-
-  let fileTablistResizeObserver: ResizeObserver | undefined;
-
-  setTimeout(() => {
-    fileTablistResizeObserver = vueCommon.trackElementHeight(fileTablistId.value);
-  }, SHORT_DELAY);
-
-  // Monitor "our" contents size.
-
-  function resizeOurselves() {
-    heightMinusFileTablist.value = props.height - vueCommon.trackedCssVariableValue(fileTablistId.value);
-  }
-
-  vue.watch(
-    () => props.height,
-    () => {
-      resizeOurselves();
-    }
-  );
-
-  let oldFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value);
-
-  const mutationObserver = new MutationObserver(() => {
-    const newFileTablistHeight = vueCommon.trackedCssVariableValue(fileTablistId.value);
-
-    if (newFileTablistHeight !== oldFileTablistHeight) {
-      oldFileTablistHeight = newFileTablistHeight;
-
-      resizeOurselves();
-    }
-  });
-
-  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
-
-  vue.onUnmounted(() => {
-    mutationObserver.disconnect();
-
-    fileTablistResizeObserver?.disconnect();
-  });
 });
 
 // Keyboard shortcuts.
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.interactiveEnabled || fileTabs.value.length === 0) {
+    if (!props.isActive || !props.uiEnabled || !fileTabs.value.length) {
       return;
     }
 

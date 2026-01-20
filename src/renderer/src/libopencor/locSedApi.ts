@@ -10,7 +10,7 @@ import {
   type IWasmIssues,
   wasmIssuesToIssues,
   wasmVersion
-} from './locApi.js';
+} from './locApi.ts';
 
 // SED-ML API.
 
@@ -405,10 +405,10 @@ interface IWasmSedInstanceTask {
   computedConstantName(index: number): string;
   computedConstantUnit(index: number): string;
   computedConstantAsArray(index: number): number[];
-  algebraicCount: number;
-  algebraicName(index: number): string;
-  algebraicUnit(index: number): string;
-  algebraicAsArray(index: number): number[];
+  algebraicVariableCount: number;
+  algebraicVariableName(index: number): string;
+  algebraicVariableUnit(index: number): string;
+  algebraicVariableAsArray(index: number): number[];
 }
 
 export class SedInstanceTask extends SedIndex {
@@ -539,27 +539,27 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.computedConstantAsArray(index);
   }
 
-  algebraicCount(): number {
+  algebraicVariableCount(): number {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskAlgebraicCount(this._cppInstanceId, this._index)
-      : this._wasmSedInstanceTask.algebraicCount;
+      ? _cppLocApi.sedInstanceTaskAlgebraicVariableCount(this._cppInstanceId, this._index)
+      : this._wasmSedInstanceTask.algebraicVariableCount;
   }
 
-  algebraicName(index: number): string {
+  algebraicVariableName(index: number): string {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskAlgebraicName(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.algebraicName(index);
+      ? _cppLocApi.sedInstanceTaskAlgebraicVariableName(this._cppInstanceId, this._index, index)
+      : this._wasmSedInstanceTask.algebraicVariableName(index);
   }
 
-  algebraicUnit(index: number): string {
+  algebraicVariableUnit(index: number): string {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskAlgebraicUnit(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.algebraicUnit(index);
+      ? _cppLocApi.sedInstanceTaskAlgebraicVariableUnit(this._cppInstanceId, this._index, index)
+      : this._wasmSedInstanceTask.algebraicVariableUnit(index);
   }
 
-  algebraic(index: number): number[] {
+  algebraicVariable(index: number): number[] {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskAlgebraic(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.algebraicAsArray(index);
+      ? _cppLocApi.sedInstanceTaskAlgebraicVariable(this._cppInstanceId, this._index, index)
+      : this._wasmSedInstanceTask.algebraicVariableAsArray(index);
   }
 }

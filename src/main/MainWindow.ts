@@ -2,16 +2,18 @@ import electron from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
 import path from 'node:path';
 
-import { isHttpUrl, type ISettings } from '../renderer/src/common/common';
-import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
-import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
+import { isHttpUrl, type ISettings } from '../renderer/src/common/common.ts';
+import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants.ts';
+import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import { deleteGitHubAccessToken } from '../renderer/src/common/gitHubIntegration';
+*/
 
 import icon from './assets/icon.png?asset';
-import { ApplicationWindow } from './ApplicationWindow';
-import { electronConf, type IElectronConfState } from './index';
-import { enableDisableMainMenu, updateReopenMenu } from './MainMenu';
-import type { SplashScreenWindow } from './SplashScreenWindow';
+import { ApplicationWindow } from './ApplicationWindow.ts';
+import { electronConf, type IElectronConfState } from './index.ts';
+import { enableDisableMainMenu, updateReopenMenu } from './MainMenu.ts';
+import type { SplashScreenWindow } from './SplashScreenWindow.ts';
 
 autoUpdater.autoDownload = false;
 autoUpdater.logger = null;
@@ -75,7 +77,9 @@ let _resetAll = false;
 export function resetAll(): void {
   _resetAll = true;
 
+  /*---OPENCOR--- Enable once our GitHub integration is fully ready.
   deleteGitHubAccessToken();
+*/
 
   electron.app.relaunch();
   electron.app.quit();
@@ -119,7 +123,7 @@ let openedFilePaths: string[] = [];
 export function filesOpened(filePaths: string[]): void {
   openedFilePaths = filePaths;
 
-  if (filePaths.length === 0) {
+  if (!filePaths.length) {
     selectedFilePath = null;
   }
 }
@@ -197,7 +201,7 @@ export class MainWindow extends ApplicationWindow {
         //       case we filter out all null entries.
 
         recentFilePaths = (electronConf.get('app.files.recent') as string[]).filter(
-          (filePath: string | null) => filePath !== null
+          (filePath: string | null) => filePath
         );
 
         updateReopenMenu(recentFilePaths);
@@ -218,7 +222,7 @@ export class MainWindow extends ApplicationWindow {
 
           commandLine.shift();
 
-          if (!isPackaged() && commandLine.length > 0) {
+          if (!isPackaged() && commandLine.length) {
             commandLine.shift();
           }
         }
@@ -348,19 +352,19 @@ export class MainWindow extends ApplicationWindow {
   //       reopen. So, we need to wait for the file to be reopened before reopening the next one.
 
   reopenFilePathsAndSelectFilePath(): void {
-    if (this._openedFilePaths.length > 0) {
+    if (this._openedFilePaths.length) {
       const filePath = this._openedFilePaths[0];
 
       this.webContents.send('open', filePath);
 
       this._openedFilePaths = this._openedFilePaths.slice(1);
 
-      if (this._openedFilePaths.length > 0) {
+      if (this._openedFilePaths.length) {
         return;
       }
     }
 
-    if (this._selectedFilePath !== '') {
+    if (this._selectedFilePath) {
       this.webContents.send('select', this._selectedFilePath);
 
       this._selectedFilePath = '';
@@ -370,7 +374,7 @@ export class MainWindow extends ApplicationWindow {
   // Handle our command line arguments.
 
   isAction(argument: string | undefined): boolean {
-    if (argument === undefined) {
+    if (!argument) {
       return false;
     }
 
@@ -378,7 +382,7 @@ export class MainWindow extends ApplicationWindow {
   }
 
   handleArguments(commandLine: string[]): void {
-    if (commandLine.length === 0) {
+    if (!commandLine.length) {
       return;
     }
 

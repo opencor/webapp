@@ -1,5 +1,5 @@
 <template>
-  <div v-if="possibleValues !== undefined">
+  <div v-if="possibleValues">
     <FloatLabel variant="on">
       <Select
         v-model="discreteValue"
@@ -39,10 +39,10 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import type * as locApi from '../../libopencor/locApi';
+import type * as locApi from '../../libopencor/locApi.ts';
 
 const value = defineModel<number>({ required: true });
-const emits = defineEmits(['change']);
+const emits = defineEmits<(event: 'change', name: string, newValue: number) => void>();
 const props = defineProps<{
   maximumValue?: number;
   minimumValue?: number;
@@ -53,7 +53,7 @@ const props = defineProps<{
 
 let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
-  props.possibleValues ? props.possibleValues[value.value] : undefined
+  props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
 const scalarValue = vue.ref<number>(value.value);
 const scalarValueString = vue.ref<string>(String(value.value));
@@ -61,10 +61,10 @@ const scalarValueString = vue.ref<string>(String(value.value));
 // Some methods to handle a scalar value using an input text and a slider.
 
 function emitChange(newValue: number) {
-  void vue.nextTick().then(() => {
+  void vue.nextTick(() => {
     value.value = newValue;
 
-    if (props.possibleValues === undefined) {
+    if (!props.possibleValues) {
       scalarValue.value = newValue;
       scalarValueString.value = String(newValue); // This will properly format the input text.
     }
@@ -89,7 +89,7 @@ function selectChange(event: ISelectChangeEvent) {
 }
 
 function inputTextChange(newValueString: string) {
-  if (newValueString === '') {
+  if (!newValueString) {
     newValueString = String(props.minimumValue);
   }
 
@@ -121,7 +121,7 @@ function inputTextKeyPress(event: KeyboardEvent) {
 function sliderChange(newValue: number | number[]) {
   const valueToEmit = Array.isArray(newValue) ? newValue[0] : newValue;
 
-  if (valueToEmit !== oldValue) {
+  if (valueToEmit !== undefined && valueToEmit !== oldValue) {
     emitChange(valueToEmit);
   }
 }

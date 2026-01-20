@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-defineEmits(['ok']);
+defineEmits<(event: 'ok') => void>();
 defineProps<{
   title: string;
   message: string;

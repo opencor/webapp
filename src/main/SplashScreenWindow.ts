@@ -1,9 +1,9 @@
 import * as electron from 'electron';
 
-import * as constants from '../renderer/src/common/constants';
+import { COPYRIGHT } from '../renderer/src/common/constants.ts';
 
-import { ApplicationWindow } from './ApplicationWindow';
-import { electronConf, type IElectronConfState } from './index';
+import { ApplicationWindow } from './ApplicationWindow.ts';
+import { electronConf, type IElectronConfState } from './index.ts';
 
 export class SplashScreenWindow extends ApplicationWindow {
   constructor() {
@@ -35,7 +35,7 @@ export class SplashScreenWindow extends ApplicationWindow {
 
     this.on('ready-to-show', () => {
       this.webContents.send('init-splash-screen-window', {
-        copyright: constants.COPYRIGHT,
+        copyright: COPYRIGHT,
         version: electron.app.getVersion()
       });
     });

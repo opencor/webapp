@@ -1,39 +1,31 @@
 <template>
-  <BlockUI
-    ref="blockUi"
-    :blocked="compUiBlocked"
-    :class="['overflow-hidden', blockUiClass]"
+  <BlockUI ref="blockUi" class="opencor overflow-hidden h-full"
+    :blocked="compBlockUiEnabled"
     @click="activateInstance"
     @focus="activateInstance"
     @focusin="activateInstance"
     @keydown="activateInstance"
     @mousedown="activateInstance"
   >
-    <Toast
-      :id="toastId"
+    <Toast :id="toastId" :class="compIsActive ? 'visible' : 'invisible'"
       :group="toastId"
       :pt:root:style="{ position: 'absolute' }"
-      :class="compIsActive ? 'visible' : 'invisible'"
     />
-    <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex !== undefined" />
+    <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
-    <IssuesView v-if="issues.length !== 0" class="h-full" :issues="issues" :width="width" :height="height" />
-    <div
-      v-else
+    <IssuesView v-if="issues.length" class="h-full" :issues="issues" />
+    <div v-else class="h-full flex flex-col"
       @dragenter="onDragEnter"
-      class="h-full"
       @dragover.prevent
       @drop.prevent="onDrop"
       @dragleave="onDragLeave"
     >
       <input ref="files" type="file" multiple style="display: none" @change="onChange" />
-      <DragNDropComponent v-show="dragAndDropCounter > 0" />
-      <MainMenu
-        :id="mainMenuId"
-        v-if="electronApi === undefined && omex === undefined"
+      <DragNDropComponent v-show="dragAndDropCounter" />
+      <MainMenu :id="mainMenuId" v-if="!electronApi && !omex"
         :isActive="compIsActive"
-        :interactiveEnabled="compInteractiveEnabled"
+        :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
         @about="onAboutMenu"
         @open="onOpenMenu"
@@ -44,9 +36,10 @@
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
       />
-      <div v-if="firebaseConfig !== undefined">
+      <!-- ---OPENCOR--- Enable once our GitHub integration is fully ready.
+      <div v-if="firebaseConfig && !omex">
         <div class="absolute top-1 right-1 z-999">
-          <Button icon="pi pi-github" severity="secondary" :class="octokit !== null ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
+          <Button icon="pi pi-github" severity="secondary" :class="octokit ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
         </div>
         <YesNoQuestionDialog
           v-model:visible="disconnectFromGitHubVisible"
@@ -56,13 +49,11 @@
           @no="disconnectFromGitHubVisible = false"
         />
       </div>
-      <ContentsComponent
-        ref="contents"
+      -->
+      <ContentsComponent ref="contents" class="grow min-h-0"
         :isActive="compIsActive"
-        :interactiveEnabled="compInteractiveEnabled"
-        :simulationOnly="omex !== undefined"
-        :width="width"
-        :height="heightMinusMainMenu"
+        :uiEnabled="compUiEnabled"
+        :simulationOnly="!!omex"
       />
       <OpenRemoteDialog
         v-model:visible="openRemoteVisible"
@@ -74,6 +65,7 @@
         v-model:visible="resetAllVisible"
         title="Reset All..."
         question="You are about to reset all of your settings. Do you want to proceed?"
+        severity="danger"
         @yes="onResetAll"
         @no="resetAllVisible = false"
       />
@@ -103,31 +95,35 @@
 </template>
 
 <script setup lang="ts">
-import type * as octokitTypes from '@octokit/types';
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { Octokit } from 'octokit';
-import 'primeicons/primeicons.css';
+*/
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
+import vueTippy from 'vue-tippy';
+import 'tippy.js/dist/tippy.css';
 
-import type { IOpenCORProps } from '../../index';
+import type { IOpenCORProps } from '../../index.ts';
 
 import '../assets/app.css';
-import * as common from '../common/common';
-import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
-import { electronApi } from '../common/electronApi';
+import * as common from '../common/common.ts';
+import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
+import { electronApi } from '../common/electronApi.ts';
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
-import * as locCommon from '../common/locCommon';
-import * as vueCommon from '../common/vueCommon';
+*/
+import * as locCommon from '../common/locCommon.ts';
+import * as vueCommon from '../common/vueCommon.ts';
 import type IContentsComponent from '../components/ContentsComponent.vue';
-import * as locApi from '../libopencor/locApi';
+import * as locApi from '../libopencor/locApi.ts';
 
 const props = defineProps<IOpenCORProps>();
 
@@ -139,7 +135,9 @@ const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const activeInstanceUid = vueCommon.activeInstanceUid();
 const connectingToGitHub = vue.ref<boolean>(false);
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 const octokit = vue.ref<Octokit | null>(null);
+*/
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -152,19 +150,22 @@ const compIsActive = vue.computed(() => {
 });
 
 // Determine whether the component UI should be blocked/enabled.
+// Note: compBlockUiEnabled is used to determine whether PrimeVue's BlockUI component should be enabled, whereas
+//       compUiEnabled is used to determine whether the UI should be enabled (it checks whether various dialogs are
+//       visible since those dialogs block the UI).
 
-const compUiBlocked = vue.computed(() => {
+const compBlockUiEnabled = vue.computed(() => {
   return (
-    !uiEnabled.value ||
+    !electronUiEnabled.value ||
     loadingOpencorMessageVisible.value ||
     loadingModelMessageVisible.value ||
     connectingToGitHub.value
   );
 });
 
-const compInteractiveEnabled = vue.computed(() => {
+const compUiEnabled = vue.computed(() => {
   return (
-    !compUiBlocked.value &&
+    !compBlockUiEnabled.value &&
     !disconnectFromGitHubVisible.value &&
     !openRemoteVisible.value &&
     !settingsVisible.value &&
@@ -177,49 +178,36 @@ const compInteractiveEnabled = vue.computed(() => {
   );
 });
 
-// Get the current Vue app instance to use some PrimeVue plugins.
+// Get the current Vue app instance to use some PrimeVue plugins and VueTippy.
 
 const crtInstance = vue.getCurrentInstance();
 
-if (crtInstance !== null) {
+if (crtInstance) {
   const app = crtInstance.appContext.app;
 
-  if (app.config.globalProperties.$primevue === undefined) {
-    let options = {};
-
-    if (props.theme === 'light') {
-      options = {
-        darkModeSelector: false
-      };
-    } else if (props.theme === 'dark') {
-      document.documentElement.classList.add('opencor-dark-mode');
-      document.body.classList.add('opencor-dark-mode');
-
-      options = {
-        darkModeSelector: '.opencor-dark-mode'
-      };
-    }
-
+  if (!app.config.globalProperties.$primevue) {
     app.use(primeVueConfig as unknown as vue.Plugin, {
       theme: {
         preset: primeVueAuraTheme,
-        options: options
+        options: {
+          darkModeSelector: '.opencor-dark-mode'
+        }
       }
     });
   }
 
-  if (app.config.globalProperties.$confirm === undefined) {
+  if (!app.config.globalProperties.$confirm) {
     app.use(primeVueConfirmationService as unknown as vue.Plugin);
   }
 
-  if (app.config.globalProperties.$toast === undefined) {
+  if (!app.config.globalProperties.$toast) {
     app.use(primeVueToastService as unknown as vue.Plugin);
   }
+
+  app.use(vueTippy);
 }
 
-if (props.theme !== undefined) {
-  vueCommon.useTheme().setTheme(props.theme);
-}
+vueCommon.useTheme().setTheme(props.theme);
 
 const toast = useToast();
 
@@ -231,7 +219,7 @@ const locApiInitialised = vue.ref(false);
 const loadingOpencorMessageVisible = vue.ref<boolean>(false);
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
-if (window.locApi === undefined) {
+if (!window.locApi) {
   loadingOpencorMessageVisible.value = true;
 
   vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
@@ -245,15 +233,16 @@ void locApi.initialiseLocApi().then(() => {
   locApiInitialised.value = true;
 });
 
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 // Initialise Firebase.
 // Note: we check whether a Firebase app is already initialised to avoid issues when hot-reloading during development
 //       and/or using OpenCOR as a Vue component within another application that also uses Firebase.
 
-if (firebaseConfig !== undefined) {
+if (firebaseConfig) {
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
-} else if (props.omex === undefined) {
+} else if (!props.omex) {
   const items = missingFirebaseKeys();
   const formatList = (items: string[]): string => {
     if (items.length === 1) {
@@ -273,6 +262,7 @@ if (firebaseConfig !== undefined) {
 }
 
 loadGitHubAccessToken();
+*/
 
 // Handle an action.
 
@@ -315,12 +305,12 @@ function handleAction(action: string): void {
   }
 }
 
-// Enable/disable the UI.
+// Enable/disable the UI from Electron.
 
-const uiEnabled = vue.ref<boolean>(true);
+const electronUiEnabled = vue.ref<boolean>(true);
 
 electronApi?.onEnableDisableUi((enable: boolean) => {
-  uiEnabled.value = enable;
+  electronUiEnabled.value = enable;
 });
 
 // Enable/disable some menu items.
@@ -415,7 +405,7 @@ electronApi?.onAbout(() => {
 });
 
 function onAboutMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -431,7 +421,7 @@ electronApi?.onSettings(() => {
 });
 
 function onSettingsMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -440,10 +430,10 @@ function onSettingsMenu(): void {
 
 // Open a file.
 
-function openFile(fileOrFilePath: string | File): void {
+function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void {
   // Check whether the file is already open and if so then select it.
 
-  const filePath = locCommon.filePath(fileOrFilePath);
+  const filePath = locCommon.filePath(fileFilePathOrFileContents);
 
   if (contents.value?.hasFile(filePath) ?? false) {
     contents.value?.selectFile(filePath);
@@ -458,17 +448,17 @@ function openFile(fileOrFilePath: string | File): void {
   }
 
   locCommon
-    .file(fileOrFilePath)
+    .file(fileFilePathOrFileContents)
     .then((file) => {
       const fileType = file.type();
 
       if (
         fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
         fileType === locApi.EFileType.UNKNOWN_FILE ||
-        (props.omex !== undefined && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
+        (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
       ) {
-        if (props.omex !== undefined) {
-          void vue.nextTick().then(() => {
+        if (props.omex) {
+          void vue.nextTick(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
               description:
@@ -506,8 +496,8 @@ function openFile(fileOrFilePath: string | File): void {
         hideLoadingModelMessage();
       }
 
-      if (props.omex !== undefined) {
-        void vue.nextTick().then(() => {
+      if (props.omex) {
+        void vue.nextTick(() => {
           issues.value.push({
             type: locApi.EIssueType.ERROR,
             description: common.formatMessage(error instanceof Error ? error.message : String(error))
@@ -532,7 +522,7 @@ function openFile(fileOrFilePath: string | File): void {
 function onChange(event: Event): void {
   const files = (event.target as HTMLInputElement).files;
 
-  if (files !== null) {
+  if (files) {
     for (const file of Array.from(files)) {
       openFile(file);
     }
@@ -544,7 +534,7 @@ function onChange(event: Event): void {
 const dragAndDropCounter = vue.ref<number>(0);
 
 function onDragEnter(): void {
-  if (!uiEnabled.value || props.omex !== undefined) {
+  if (!compUiEnabled.value || props.omex) {
     return;
   }
 
@@ -552,7 +542,7 @@ function onDragEnter(): void {
 }
 
 function onDrop(event: DragEvent): void {
-  if (dragAndDropCounter.value === 0) {
+  if (!dragAndDropCounter.value) {
     return;
   }
 
@@ -560,7 +550,7 @@ function onDrop(event: DragEvent): void {
 
   const files = event.dataTransfer?.files;
 
-  if (files !== undefined) {
+  if (files) {
     for (const file of Array.from(files)) {
       openFile(file);
     }
@@ -568,7 +558,7 @@ function onDrop(event: DragEvent): void {
 }
 
 function onDragLeave(): void {
-  if (dragAndDropCounter.value === 0) {
+  if (!dragAndDropCounter.value) {
     return;
   }
 
@@ -582,7 +572,7 @@ electronApi?.onOpen((filePath: string) => {
 });
 
 function onOpenMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -598,7 +588,7 @@ electronApi?.onOpenRemote(() => {
 });
 
 function onOpenRemoteMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -621,7 +611,7 @@ electronApi?.onOpenSampleLorenz(() => {
 });
 
 function onOpenSampleLorenzMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -635,7 +625,7 @@ electronApi?.onOpenSampleInteractiveLorenz(() => {
 });
 
 function onOpenSampleInteractiveLorenzMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -649,7 +639,7 @@ electronApi?.onClose(() => {
 });
 
 function onCloseMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -663,7 +653,7 @@ electronApi?.onCloseAll(() => {
 });
 
 function onCloseAllMenu(): void {
-  if (props.omex !== undefined) {
+  if (props.omex) {
     return;
   }
 
@@ -690,29 +680,8 @@ electronApi?.onSelect((filePath: string) => {
 
 // A few things that can only be done when the component is mounted.
 
-const blockUiClass = vue.ref('');
-const width = vue.ref<number>(0);
-const height = vue.ref<number>(0);
-const heightMinusMainMenu = vue.ref<number>(0);
-
 vue.onMounted(() => {
-  // Set our height to '100vh'/'100dvh' or '100%', depending on whether we are mounted as a Vue application or a Vue
-  // component.
-
   const blockUiElement = blockUi.value?.$el as HTMLElement;
-  const parentElement = blockUiElement.parentElement;
-  const grandParentElement = parentElement?.parentElement;
-  const greatGrandParentElement = grandParentElement?.parentElement;
-  const greatGreatGrandParentElement = greatGrandParentElement?.parentElement;
-
-  blockUiClass.value =
-    parentElement?.tagName === 'DIV' &&
-    parentElement.id === 'app' &&
-    grandParentElement?.tagName === 'BODY' &&
-    greatGrandParentElement?.tagName === 'HTML' &&
-    greatGreatGrandParentElement === null
-      ? 'opencor-application'
-      : 'opencor-component';
 
   // Customise our IDs.
 
@@ -725,79 +694,23 @@ vue.onMounted(() => {
     activateInstance();
   }, SHORT_DELAY);
 
-  // Track the height of our main menu.
-
-  let mainMenuResizeObserver: ResizeObserver | undefined;
-
-  setTimeout(() => {
-    mainMenuResizeObserver = vueCommon.trackElementHeight(mainMenuId.value);
-  }, SHORT_DELAY);
-
   // Ensure that our toasts are shown within our block UI.
 
   setTimeout(() => {
     const toastElement = document.getElementById(toastId.value);
 
-    if (toastElement !== null) {
+    if (toastElement) {
       blockUiElement.appendChild(toastElement);
     }
   }, SHORT_DELAY);
-
-  // Monitor our size.
-  // Note: this accounts for changes in viewport size (e.g., when rotating a mobile device).
-
-  window.addEventListener('resize', resizeOurselves);
-
-  vue.onUnmounted(() => {
-    window.removeEventListener('resize', resizeOurselves);
-  });
-
-  // Monitor our contents size.
-
-  function resizeOurselves() {
-    const style = window.getComputedStyle(blockUiElement);
-
-    width.value = parseFloat(style.width);
-    height.value = parseFloat(style.height);
-
-    heightMinusMainMenu.value = height.value - vueCommon.trackedCssVariableValue(mainMenuId.value);
-  }
-
-  const resizeObserver = new ResizeObserver(() => {
-    setTimeout(() => {
-      resizeOurselves();
-    }, SHORT_DELAY);
-  });
-
-  let oldMainMenuHeight = vueCommon.trackedCssVariableValue(mainMenuId.value);
-
-  const mutationObserver = new MutationObserver(() => {
-    const newMainMenuHeight = vueCommon.trackedCssVariableValue(mainMenuId.value);
-
-    if (newMainMenuHeight !== oldMainMenuHeight) {
-      oldMainMenuHeight = newMainMenuHeight;
-
-      resizeOurselves();
-    }
-  });
-
-  resizeObserver.observe(blockUiElement);
-  mutationObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
-
-  vue.onUnmounted(() => {
-    resizeObserver.disconnect();
-    mutationObserver.disconnect();
-
-    mainMenuResizeObserver?.disconnect();
-  });
 });
 
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
-// carry as normal (i.e. the whole OpenCOR UI will be shown).
+// carry on as normal (i.e. the whole OpenCOR UI will be shown).
 
-if (props.omex !== undefined) {
+if (props.omex) {
   vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
-    if (newLocApiInitialised && props.omex !== undefined) {
+    if (newLocApiInitialised && props.omex) {
       openFile(props.omex);
     }
   });
@@ -808,7 +721,7 @@ if (props.omex !== undefined) {
     // Do what follows with a bit of a delay to give our background (with the OpenCOR logo) time to be renderered.
 
     setTimeout(() => {
-      if (electronApi !== undefined) {
+      if (electronApi) {
         // Check for updates.
         // Note: the main process will actually check for updates if requested and if OpenCOR is packaged.
 
@@ -821,11 +734,11 @@ if (props.omex !== undefined) {
           if (newLocApiInitialised) {
             const action = vueusecore.useStorage('action', '');
 
-            if (window.location.search !== '') {
+            if (window.location.search) {
               action.value = window.location.search.substring(1);
 
               window.location.search = '';
-            } else if (action.value !== '') {
+            } else if (action.value) {
               setTimeout(() => {
                 handleAction(action.value.slice(FULL_URI_SCHEME.length));
 
@@ -842,13 +755,13 @@ if (props.omex !== undefined) {
 // Ensure that our BlockUI mask is removed when the UI is enabled.
 // Note: this is a workaround for a PrimeVue BlockUI issue when handling an action passed to our Web app.
 
-vue.watch(compUiBlocked, (newCompUiBlocked: boolean) => {
-  if (!newCompUiBlocked) {
+vue.watch(compBlockUiEnabled, (newCompBlockUiEnabled: boolean) => {
+  if (!newCompBlockUiEnabled) {
     setTimeout(() => {
       const blockUiElement = blockUi.value?.$el as HTMLElement;
       const maskElement = blockUiElement.querySelector('.p-blockui-mask');
 
-      if (maskElement !== null && maskElement.parentElement === blockUiElement) {
+      if (maskElement && maskElement.parentElement === blockUiElement) {
         blockUiElement.removeChild(maskElement);
       }
     }, SHORT_DELAY);
@@ -860,7 +773,7 @@ vue.watch(compUiBlocked, (newCompUiBlocked: boolean) => {
 const disconnectFromGitHubVisible = vue.ref<boolean>(false);
 
 async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
-  if (electronApi === undefined) {
+  if (!electronApi) {
     return;
   }
 
@@ -881,8 +794,9 @@ async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
   }
 }
 
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 async function loadGitHubAccessToken(): Promise<void> {
-  if (electronApi === undefined || props.omex !== undefined || firebaseConfig === undefined) {
+  if (!electronApi || props.omex || !firebaseConfig) {
     return;
   }
 
@@ -896,7 +810,7 @@ async function loadGitHubAccessToken(): Promise<void> {
     return;
   }
 
-  if (gitHubAccessToken === null) {
+  if (!gitHubAccessToken) {
     return;
   }
 
@@ -914,7 +828,7 @@ async function loadGitHubAccessToken(): Promise<void> {
 }
 
 async function saveGitHubAccessToken(accessToken: string): Promise<void> {
-  if (electronApi === undefined) {
+  if (!electronApi) {
     return;
   }
 
@@ -947,7 +861,7 @@ async function checkGitHubAccessToken(accessToken: string): Promise<void> {
 
   octokit.value = client;
 
-  if (electronApi !== undefined) {
+  if (electronApi) {
     await saveGitHubAccessToken(accessToken);
   }
 
@@ -972,7 +886,7 @@ async function onDisconnectFromGitHub(): Promise<void> {
 
     await deleteGitHubAccessToken();
 
-    if (electronApi !== undefined) {
+    if (electronApi) {
       await electronApi.clearGitHubCache();
     }
   } catch (error: unknown) {
@@ -989,7 +903,7 @@ async function onDisconnectFromGitHub(): Promise<void> {
 }
 
 async function onGitHubButtonClick(): Promise<void> {
-  if (octokit.value !== null) {
+  if (octokit.value) {
     disconnectFromGitHubVisible.value = true;
 
     return;
@@ -1011,7 +925,7 @@ async function onGitHubButtonClick(): Promise<void> {
     const result = await firebase.auth().signInWithPopup(gitHubAuthProvider);
     const credential = result.credential as firebase.auth.OAuthCredential | null;
 
-    if (credential?.accessToken === undefined || credential.accessToken === null) {
+    if (!credential?.accessToken) {
       throw new Error('GitHub OAuth flow did not return an access token.');
     }
 
@@ -1030,6 +944,7 @@ async function onGitHubButtonClick(): Promise<void> {
     connectingToGitHub.value = false;
   }
 }
+*/
 </script>
 
 <style scoped>
@@ -1089,14 +1004,5 @@ async function onGitHubButtonClick(): Promise<void> {
     border-color: var(--p-red-700) !important;
     color: var(--p-red-200);
   }
-}
-
-.opencor-application {
-  height: 100vh;
-  height: 100dvh;
-}
-
-.opencor-component {
-  height: 100%;
 }
 </style>

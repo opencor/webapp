@@ -7,7 +7,7 @@
       </FloatLabel>
     </div>
     <template #footer>
-      <Button label="Open" :disabled="url === ''" @click="emitOpenRemote()" />
+      <Button label="Open" :disabled="!url" @click="emitOpenRemote()" />
       <Button label="Cancel" severity="secondary" @click="emitClose()" />
     </template>
   </BaseDialog>
@@ -16,11 +16,14 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-const emit = defineEmits(['openRemote', 'close']);
+const emit = defineEmits<{
+  (event: 'openRemote', url: string): void;
+  (event: 'close'): void;
+}>();
 const url = vue.ref<string>('');
 
 function emitOpenRemote(): void {
-  if (url.value === '') {
+  if (!url.value) {
     return;
   }
 

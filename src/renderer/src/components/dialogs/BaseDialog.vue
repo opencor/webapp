@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import { enableDisableMainMenu } from '../../common/common';
+import { enableDisableMainMenu } from '../../common/common.ts';
 
 let dialogElement: HTMLElement | null = null;
 let containerElement: HTMLElement | null | undefined = null;
@@ -28,11 +28,11 @@ function checkDialogPosition() {
 function onShow() {
   enableDisableMainMenu(false);
 
-  void vue.nextTick().then(() => {
+  void vue.nextTick(() => {
     dialogElement = document.querySelector('.p-dialog');
     containerElement = dialogElement?.closest('[data-pc-section="mask"]');
 
-    if (dialogElement !== null && containerElement !== null) {
+    if (dialogElement && containerElement) {
       mutationObserver = new MutationObserver(() => {
         checkDialogPosition();
       });
@@ -47,8 +47,8 @@ function onShow() {
 function onHide() {
   enableDisableMainMenu(true);
 
-  void vue.nextTick().then(() => {
-    if (mutationObserver !== null) {
+  void vue.nextTick(() => {
+    if (mutationObserver) {
       mutationObserver.disconnect();
 
       mutationObserver = null;

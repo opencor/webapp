@@ -1,6 +1,7 @@
+import SHA256 from 'crypto-js/sha256';
 import { UAParser } from 'ua-parser-js';
 
-import { electronApi } from './electronApi.js';
+import { electronApi } from './electronApi.ts';
 
 // Some interfaces.
 
@@ -56,10 +57,16 @@ export function isHttpUrl(url: string): boolean {
   }
 }
 
-// A method to get the proxy URL for a given URL.
+// A method to get the CORS proxy URL for a given URL.
 
-export function proxyUrl(url: string): string {
+export function corsProxyUrl(url: string): string {
   return `https://cors-proxy.opencor.workers.dev/?url=${url}`;
+}
+
+// A method to return the SHA-256 hash of some data.
+
+export function sha256(data: string | Uint8Array): string {
+  return SHA256(data).toString();
 }
 
 // A method to format a given number of milliseconds into a string.
@@ -72,24 +79,24 @@ export function formatTime(time: number): string {
   const d = Math.floor((time / (1000 * 60 * 60 * 24)) % 24);
   let res = '';
 
-  if (d !== 0 || ((h !== 0 || m !== 0 || s !== 0 || ms !== 0) && res !== '')) {
-    res += `${res === '' ? '' : ' '}${String(d)}d`;
+  if (d) {
+    res = `${String(d)}d`;
   }
 
-  if (h !== 0 || ((m !== 0 || s !== 0 || ms !== 0) && res !== '')) {
-    res += `${res === '' ? '' : ' '}${String(h)}h`;
+  if (h || ((m || s || ms) && res)) {
+    res += `${res ? ' ' : ''}${String(h)}h`;
   }
 
-  if (m !== 0 || ((s !== 0 || ms !== 0) && res !== '')) {
-    res += `${res === '' ? '' : ' '}${String(m)}m`;
+  if (m || ((s || ms) && res)) {
+    res += `${res ? ' ' : ''}${String(m)}m`;
   }
 
-  if (s !== 0 || (ms !== 0 && res !== '')) {
-    res += `${res === '' ? '' : ' '}${String(s)}s`;
+  if (s || (ms && res)) {
+    res += `${res ? ' ' : ''}${String(s)}s`;
   }
 
-  if (ms !== 0 || res === '') {
-    res += `${res === '' ? '' : ' '}${String(ms)}ms`;
+  if (ms || !res) {
+    res += `${res ? ' ' : ''}${String(ms)}ms`;
   }
 
   return res;

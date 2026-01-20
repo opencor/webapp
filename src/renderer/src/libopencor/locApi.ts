@@ -1,8 +1,8 @@
-import { proxyUrl } from '../common/common.js';
+import { corsProxyUrl } from '../common/common.ts';
 
-import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.js';
-import type { IIssue } from './locLoggerApi.js';
-import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi.js';
+import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.ts';
+import type { IIssue } from './locLoggerApi.ts';
+import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi.ts';
 
 export interface ICppLocApi {
   // FileManager API.
@@ -69,10 +69,10 @@ export interface ICppLocApi {
   sedInstanceTaskComputedConstantName: (instanceId: number, index: number, computedConstantIndex: number) => string;
   sedInstanceTaskComputedConstantUnit: (instanceId: number, index: number, computedConstantIndex: number) => string;
   sedInstanceTaskComputedConstant: (instanceId: number, index: number, computedConstantIndex: number) => number[];
-  sedInstanceTaskAlgebraicCount: (instanceId: number, index: number) => number;
-  sedInstanceTaskAlgebraicName: (instanceId: number, index: number, algebraicIndex: number) => string;
-  sedInstanceTaskAlgebraicUnit: (instanceId: number, index: number, algebraicIndex: number) => string;
-  sedInstanceTaskAlgebraic: (instanceId: number, index: number, algebraicIndex: number) => number[];
+  sedInstanceTaskAlgebraicVariableCount: (instanceId: number, index: number) => number;
+  sedInstanceTaskAlgebraicVariableName: (instanceId: number, index: number, algebraicVariableIndex: number) => string;
+  sedInstanceTaskAlgebraicVariableUnit: (instanceId: number, index: number, algebraicVariableIndex: number) => string;
+  sedInstanceTaskAlgebraicVariable: (instanceId: number, index: number, algebraicVariableIndex: number) => number[];
 
   // Version API.
 
@@ -117,7 +117,7 @@ export let _wasmLocApi = {} as IWasmLocApi;
 
 export async function initialiseLocApi() {
   // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
-  if (window.locApi !== undefined) {
+  if (window.locApi) {
     // We are running OpenCOR, so libOpenCOR can be accessed using window.locApi.
 
     // @ts-expect-error (window.locApi is defined)
@@ -128,7 +128,7 @@ export async function initialiseLocApi() {
     try {
       const libOpenCOR = (
         await import(
-          /* @vite-ignore */ proxyUrl('https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20251027.0.js')
+          /* @vite-ignore */ corsProxyUrl('https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20251204.0.js')
         )
       ).default;
 
@@ -141,11 +141,11 @@ export async function initialiseLocApi() {
 
 // Logger API.
 
-export { EIssueType, type IIssue, type IWasmIssues, wasmIssuesToIssues } from './locLoggerApi.js';
+export { EIssueType, type IIssue, type IWasmIssues, wasmIssuesToIssues } from './locLoggerApi.ts';
 
 // File API.
 
-export { EFileType, File, fileManager, type IWasmFile } from './locFileApi.js';
+export { EFileType, File, fileManager, type IWasmFile } from './locFileApi.ts';
 
 // SED-ML API.
 
@@ -155,21 +155,26 @@ export {
   SedInstance,
   SedInstanceTask,
   SedSimulationUniformTimeCourse
-} from './locSedApi.js';
+} from './locSedApi.ts';
 
 // UI JSON API.
 
 export {
   type IUiJson,
+  type IUiJsonDiscreteInput,
   type IUiJsonDiscreteInputPossibleValue,
   type IUiJsonInput,
   type IUiJsonOutput,
   type IUiJsonOutputData,
   type IUiJsonOutputPlot,
+  type IUiJsonOutputPlotAdditionalTrace,
   type IUiJsonParameter,
+  type IUiJsonScalarInput,
+  isScalarInput,
+  isDiscreteInput,
   uiJsonIssues
-} from './locUiJsonApi.js';
+} from './locUiJsonApi.ts';
 
 // Version API.
 
-export { cppVersion, version, wasmVersion } from './locVersionApi.js';
+export { cppVersion, version, wasmVersion } from './locVersionApi.ts';

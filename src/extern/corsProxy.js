@@ -8,14 +8,14 @@ export default {
       const url = new URL(request.url);
       const targetUrl = url.searchParams.get('url');
 
-      if (targetUrl === null) {
+      if (!targetUrl) {
         return new Response('Missing "url" query parameter.', { status: 400 });
       }
 
       // Validate and restrict the target URL.
 
       const parsedUrl = new URL(targetUrl);
-      const allowedHosts = ['cellml.org', 'github.com', 'githubusercontent.com', 'opencor.ws', 'physiomeproject.org'];
+      const allowedHosts = ['cellml.org', 'opencor.ws', 'physiomeproject.org'];
 
       if (!allowedHosts.some((host) => parsedUrl.hostname.endsWith(host))) {
         return new Response('Target URL is not allowed.', { status: 403 });

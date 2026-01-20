@@ -1,57 +1,58 @@
 <template>
-  <div class="flex flex-row h-full">
-    <div v-if="showMarker" class="w-[3px] bg-primary" />
+  <div class="flex flex-row h-full" :class="isVisible ? 'visible' : 'invisible'">
+    <div v-if="showMarker" class="w-0.75 bg-primary" />
     <div ref="mainDiv" class="grow h-full" />
   </div>
 </template>
 
 <script setup lang="ts">
-import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.3.0/+esm';
+import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.3.1/+esm';
 import * as vue from 'vue';
 
-import * as vueCommon from '../../common/vueCommon';
-import { MEDIUM_DELAY } from '../../common/constants';
+import * as vueCommon from '../../common/vueCommon.ts';
 
-let oldMainDivClientWidth = -1;
-let oldMainDivClientHeight = -1;
+import { GraphPanelWidgetPalette } from './GraphPanelWidgetPalette.ts';
 
-function resizeIfNeeded() {
-  if (mainDiv.value !== null) {
-    if (mainDiv.value.clientWidth !== oldMainDivClientWidth || mainDiv.value.clientHeight !== oldMainDivClientHeight) {
-      oldMainDivClientWidth = mainDiv.value.clientWidth;
-      oldMainDivClientHeight = mainDiv.value.clientHeight;
-
-      Plotly.Plots.resize(mainDiv.value);
-    }
-  }
-
-  setTimeout(resizeIfNeeded, MEDIUM_DELAY);
+export interface IGraphPanelPlotTrace {
+  name: string;
+  x: number[];
+  y: number[];
+  color: string;
+  zorder?: number;
 }
 
-vue.onMounted(() => {
-  resizeIfNeeded();
-});
-
-interface IGraphPanelPlotData {
-  data: number[];
+export interface IGraphPanelData {
+  xAxisTitle?: string;
+  yAxisTitle?: string;
+  traces: IGraphPanelPlotTrace[];
 }
 
-export interface IGraphPanelPlot {
-  x: IGraphPanelPlotData;
-  y: IGraphPanelPlotData;
+export interface IGraphPanelMargins {
+  left: number;
+  right: number;
 }
 
 const props = withDefaults(
   defineProps<{
-    plots: IGraphPanelPlot[];
+    data: IGraphPanelData;
     showMarker?: boolean;
+    margins?: IGraphPanelMargins;
+    showLegend?: boolean;
   }>(),
   {
-    showMarker: false
+    showMarker: false,
+    showLegend: true
   }
 );
 
+const emit = defineEmits<{
+  (event: 'marginsUpdated', newMargins: IGraphPanelMargins): void;
+  (event: 'resetMargins'): void;
+}>();
+
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
+const isVisible = vue.ref(false);
+const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
 
 interface IAxisThemeData {
@@ -90,70 +91,303 @@ function themeData(): IThemeData {
     font: {
       color: theme.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
     },
-    colorway: [
-      '#7289ab', // Blue
-      '#ea7e53', // Orange
-      '#eedd78', // Yellow
-      '#e69d87', // Pink
-      '#73a373', // Green
-      '#73b9bc', // Cyan
-      '#dd6b66' // Red
-    ],
+    colorway: GraphPanelWidgetPalette,
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };
 }
 
-vue.watch(
-  () => [props.plots, theme.useLightMode()],
-  () => {
-    Plotly.react(
-      mainDiv.value,
-      props.plots.map((plot) => ({
-        x: plot.x.data,
-        y: plot.y.data
-        // type: 'scattergl'
-        //---OPENCOR---
-        // Ideally, we would render using WebGL, but... Web browsers impose a limit on the number of active WebGL
-        // contexts that can be used (8 to 16, apparently). So, depending on how the OpenCOR component is used, we may
-        // reach that limit and get the following warning as a result:
-        //   Too many active WebGL contexts. Oldest context will be lost.
-        // and nothing gets rendered. Apparently, plotly.js added support for virtual-webgl in version 2.28.0 (see
-        // https://github.com/plotly/plotly.js/releases/tag/v2.28.0), but to do what they say in
-        // https://github.com/plotly/plotly.js/pull/6784#issue-1991790973 still results in the same behaviour as above.
-        // So, it looks like we have no choice but to disable WebGL rendering. The downside is that 1) it doesn't look
-        // as good and 2) it is not as fast to render when there are a lot of data points. However, to use a virtual
-        // WebGL would mean that all WebGL-based components would also be using virtual WebGL, which might not be
-        // desirable.
-      })),
-      {
-        // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+interface IAxesData {
+  xaxis: {
+    tickangle: number;
+    automargin: boolean;
+    title: {
+      font: {
+        size: number;
+      };
+      text?: string;
+      standoff: number;
+    };
+  };
+  yaxis: {
+    tickangle: number;
+    automargin: boolean;
+    title: {
+      font: {
+        size: number;
+      };
+      text?: string;
+      standoff: number;
+    };
+  };
+}
 
-        ...themeData(),
-        margin: {
-          t: 5,
-          l: 30,
-          b: 20,
-          r: 5
-        },
-        showlegend: false,
-        xaxis: {
-          tickangle: 0
-        },
-        yaxis: {
-          tickangle: 0
-        }
-      },
-      {
-        // Note: the various keys can be found at https://plotly.com/javascript/configuration-options/.
+function axesData(): IAxesData {
+  const axisTitleFontSize = 10;
 
-        responsive: true,
-        displayModeBar: false,
-        doubleClickDelay: 1000,
-        scrollZoom: true,
-        showTips: false
+  return {
+    xaxis: {
+      tickangle: 0,
+      automargin: true,
+      title: {
+        font: {
+          size: axisTitleFontSize
+        },
+        text: props.data.xAxisTitle,
+        standoff: 8
       }
-    );
+    },
+    yaxis: {
+      tickangle: 0,
+      automargin: true,
+      title: {
+        font: {
+          size: axisTitleFontSize
+        },
+        text: props.data.yAxisTitle,
+        standoff: 8
+      }
+    }
+  };
+}
+
+function resolvedMargin(propValue: number | undefined, compValue: number): number {
+  if (propValue !== undefined) {
+    return propValue;
   }
+
+  return compValue === -1 ? 0 : compValue;
+}
+
+function compMargins(): IGraphPanelMargins {
+  // Retrieve the width of the Y ticks.
+
+  const yTicks = mainDiv.value?.querySelectorAll('.ytick text');
+  let yTicksWidth = 0;
+
+  if (yTicks?.length) {
+    yTicks.forEach((yTick: Element) => {
+      yTicksWidth = Math.max(yTicksWidth, yTick.getBoundingClientRect()?.width || 0);
+    });
+  }
+
+  // Retrieve the width of the Y Axis title.
+
+  const yTitleWidth = props.data.yAxisTitle
+    ? mainDiv.value?.querySelector('.ytitle')?.getBoundingClientRect()?.width || 0
+    : 0;
+
+  // Compute the final left margin.
+
+  const leftMargin = yTicksWidth + yTitleWidth;
+
+  // Retrieve the width of the legend, if it's to be shown, and that last X tick.
+  // Note #1: for the last X tick, we only use half its width since the tick is centered on the tick mark.
+  // Note #2: to get the correct width of the last X tick, we temporarily set its display to block in case it was
+  //          hidden, something that can happen if the tick label is long for instance.
+
+  let rightMargin = 0;
+
+  if (props.showLegend) {
+    rightMargin = mainDiv.value?.querySelector('.legend')?.getBoundingClientRect()?.width || 0;
+  }
+
+  const xTicks = mainDiv.value?.querySelectorAll('.xtick text');
+
+  if (xTicks?.length) {
+    const lastTick = xTicks[xTicks.length - 1] as HTMLElement;
+    const originalDisplay = lastTick.style.display;
+
+    lastTick.style.display = 'block';
+
+    rightMargin += 0.5 * (lastTick?.getBoundingClientRect()?.width || 0);
+
+    lastTick.style.display = originalDisplay;
+  }
+
+  return {
+    left: leftMargin ? Math.ceil(leftMargin + 5) : 0,
+    right: rightMargin ? Math.ceil(rightMargin + 5) : 0
+  };
+}
+
+function updateMargins(): Promise<unknown> | undefined {
+  // Retrieve and emit our new margins.
+
+  const newMargins = compMargins();
+
+  emit('marginsUpdated', newMargins);
+
+  // Update our margins if they have changed.
+
+  const relayoutUpdates: Record<string, number> = {};
+
+  if (!props.margins) {
+    if (margins.value.left !== newMargins.left) {
+      margins.value.left = newMargins.left;
+
+      relayoutUpdates['margin.l'] = margins.value.left;
+    }
+
+    if (margins.value.right !== newMargins.right) {
+      margins.value.right = newMargins.right;
+
+      relayoutUpdates['margin.r'] = margins.value.right;
+    }
+  }
+
+  if (Object.keys(relayoutUpdates).length) {
+    return Plotly.relayout(mainDiv.value, relayoutUpdates);
+  }
+}
+
+function updatePlot(): void {
+  // Reset our margins if they are not overridden.
+
+  if (!props.margins) {
+    margins.value.left = -1;
+    margins.value.right = -1;
+  }
+
+  // Update the plots.
+
+  const traces = props.data.traces.map((trace) => ({
+    ...trace,
+    ...{
+      line: { color: trace.color },
+      legendrank: trace.zorder
+    }
+  }));
+
+  Plotly.react(
+    mainDiv.value,
+    traces,
+    {
+      // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+
+      ...themeData(),
+      margin: {
+        t: 0,
+        l: resolvedMargin(props.margins?.left, margins.value.left),
+        b: props.data.xAxisTitle ? 35 : 20,
+        r: resolvedMargin(props.margins?.right, margins.value.right),
+        pad: 0
+      },
+      showlegend: props.showLegend,
+      ...axesData()
+    },
+    {
+      // Note: the various keys can be found at https://plotly.com/javascript/configuration-options/.
+
+      responsive: true,
+      displayModeBar: false,
+      doubleClickDelay: 1000,
+      scrollZoom: true,
+      showTips: false
+    }
+  )
+    .then(() => updateMargins())
+    .then(() => {
+      if (!isVisible.value) {
+        // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
+
+        return Plotly.Plots.resize(mainDiv.value);
+      }
+    })
+    .then(() => {
+      if (!isVisible.value) {
+        // Show the component now that the plot has been properly sized.
+
+        vue.nextTick(() => {
+          isVisible.value = true;
+        });
+      }
+    });
+}
+
+interface IPlotlyHTMLElement extends HTMLElement {
+  on(event: string, callback: (...args: unknown[]) => void): void;
+}
+
+vue.onMounted(() => {
+  vue.nextTick(() => {
+    // Reset our margins on double-click and relayout.
+
+    if (mainDiv.value) {
+      const plotlyElement = mainDiv.value as IPlotlyHTMLElement;
+
+      plotlyElement.on('plotly_doubleclick', () => {
+        emit('resetMargins');
+      });
+
+      plotlyElement.on('plotly_relayout', (eventData: Partial<Plotly.Layout>) => {
+        if (eventData && (eventData['xaxis.range[0]'] || eventData['yaxis.range[0]'])) {
+          emit('resetMargins');
+        }
+      });
+    }
+  });
+});
+
+vue.watch(
+  () => props.data,
+  () => {
+    vue.nextTick(() => {
+      updatePlot();
+    });
+  },
+  { immediate: true }
+);
+
+vue.watch(
+  () => theme.useLightMode(),
+  () => {
+    vue.nextTick(() => {
+      if (mainDiv.value) {
+        Plotly.relayout(mainDiv.value, {
+          ...themeData(),
+          ...axesData()
+        });
+      }
+    });
+  },
+  { immediate: true }
+);
+
+vue.watch(
+  () => props.margins,
+  () => {
+    vue
+      .nextTick(() => {
+        if (mainDiv.value) {
+          return Plotly.relayout(mainDiv.value, {
+            'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
+            'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
+          });
+        }
+      })
+      .then(() => {
+        if (!props.margins) {
+          updateMargins();
+        }
+      });
+  },
+  { immediate: true }
+);
+
+vue.watch(
+  () => props.showLegend,
+  () => {
+    vue.nextTick(() => {
+      if (mainDiv.value) {
+        Plotly.relayout(mainDiv.value, {
+          showlegend: props.showLegend
+        }).then(() => {
+          updateMargins();
+        });
+      }
+    });
+  },
+  { immediate: true }
 );
 </script>

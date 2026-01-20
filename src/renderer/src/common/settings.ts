@@ -1,5 +1,5 @@
-import type { ISettings, ISettingsGeneral } from './common.js';
-import { electronApi } from './electronApi.js';
+import type { ISettings, ISettingsGeneral } from './common.ts';
+import { electronApi } from './electronApi.ts';
 
 class Settings {
   protected static _instance: Settings | null = null;
@@ -42,7 +42,7 @@ class Settings {
   }
 
   load(): void {
-    if (electronApi !== undefined) {
+    if (electronApi) {
       void electronApi.loadSettings().then((settings: ISettings) => {
         this._settings = settings;
 
@@ -52,7 +52,7 @@ class Settings {
       try {
         const raw = window.localStorage.getItem('settings');
 
-        if (raw !== null) {
+        if (raw) {
           this._settings = JSON.parse(raw);
         }
       } catch (error: unknown) {
@@ -66,7 +66,7 @@ class Settings {
   }
 
   save(): void {
-    if (electronApi !== undefined) {
+    if (electronApi) {
       electronApi.saveSettings(this._settings);
     } else {
       try {

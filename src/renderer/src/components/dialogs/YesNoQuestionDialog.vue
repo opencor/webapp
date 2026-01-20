@@ -4,16 +4,25 @@
       {{ question }}
     </div>
     <template #footer>
-      <Button autofocus label="Yes" severity="danger" @click="$emit('yes')" />
+      <Button autofocus label="Yes" :severity="severity" @click="$emit('yes')" />
       <Button label="No" severity="secondary" @click="$emit('no')" />
     </template>
   </BaseDialog>
 </template>
 
 <script setup lang="ts">
-defineEmits(['yes', 'no']);
-defineProps<{
-  title: string;
-  question: string;
+defineEmits<{
+  (event: 'yes'): void;
+  (event: 'no'): void;
 }>();
+withDefaults(
+  defineProps<{
+    title: string;
+    question: string;
+    severity?: 'danger' | 'warning' | 'info';
+  }>(),
+  {
+    severity: 'warning'
+  }
+);
 </script>

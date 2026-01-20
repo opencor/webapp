@@ -9,5 +9,8 @@
 </template>
 
 <script setup lang="ts">
-defineEmits(['yes', 'no']);
+defineEmits<{
+  (event: 'yes'): void;
+  (event: 'no'): void;
+}>();
 </script>

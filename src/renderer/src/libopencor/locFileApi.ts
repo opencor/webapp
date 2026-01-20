@@ -9,7 +9,7 @@ import {
   type IWasmIssues,
   SedDocument,
   wasmIssuesToIssues
-} from './locApi.js';
+} from './locApi.ts';
 
 // FileManager API.
 
@@ -86,9 +86,9 @@ export interface IWasmFile {
 }
 
 export class File {
-  private _path: string;
-  private _wasmFile: IWasmFile = {} as IWasmFile;
-  private _issues: IIssue[] = [];
+  _path: string;
+  _wasmFile: IWasmFile = {} as IWasmFile;
+  _issues: IIssue[] = [];
 
   constructor(path: string, contents: Uint8Array | undefined = undefined) {
     this._path = path;
@@ -97,7 +97,7 @@ export class File {
       _cppLocApi.fileCreate(path, contents);
 
       this._issues = _cppLocApi.fileIssues(path);
-    } else if (contents !== undefined) {
+    } else if (contents) {
       this._wasmFile = vue.markRaw(new _wasmLocApi.File(path));
 
       const heapContentsPtr = _wasmLocApi._malloc(contents.length);
@@ -145,13 +145,13 @@ export class File {
     if (cppVersion()) {
       uiJsonContents = _cppLocApi.fileUiJson(this._path);
 
-      if (uiJsonContents === undefined) {
+      if (!uiJsonContents) {
         return undefined;
       }
     } else {
       const uiJson = this._wasmFile.childFileFromFileName('simulation.json');
 
-      if (uiJson === null) {
+      if (!uiJson) {
         return undefined;
       }
 

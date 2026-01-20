@@ -18,7 +18,7 @@ const firebaseEnvVarMap = {
 
 export function missingFirebaseKeys(): string[] {
   function missingFirebaseKey(firebaseValue: unknown): boolean {
-    return firebaseValue === undefined || firebaseValue === null || firebaseValue === '';
+    return !firebaseValue;
   }
 
   return (Object.entries(firebaseEnvVarMap) as Array<[keyof typeof firebaseEnvVarMap, string]>)

@@ -4,7 +4,7 @@
       <a v-bind="props.action">
         <div class="p-menubar-item-label">{{ item.label }}</div>
         <svg
-          v-if="item.items !== undefined"
+          v-if="item.items"
           width="14"
           height="14"
           viewBox="0 0 14 14"
@@ -15,7 +15,7 @@
             fill="currentColor"
           />
         </svg>
-        <div v-if="item.shortcut !== undefined" class="ml-auto border rounded shortcut text-xs/3">
+        <div v-if="item.shortcut" class="ml-auto border rounded shortcut text-xs/3">
           {{ item.shortcut }}
         </div>
       </a>
@@ -29,24 +29,24 @@ import * as vueusecore from '@vueuse/core';
 import type Menubar from 'primevue/menubar';
 import * as vue from 'vue';
 
-import * as common from '../common/common';
+import * as common from '../common/common.ts';
 
 const props = defineProps<{
   isActive: boolean;
-  interactiveEnabled: boolean;
   hasFiles: boolean;
+  uiEnabled: boolean;
 }>();
 
-const emit = defineEmits([
-  'about',
-  'close',
-  'closeAll',
-  'open',
-  'openRemote',
-  'openSampleLorenz',
-  'openSampleInteractiveLorenz',
-  'settings'
-]);
+const emit = defineEmits<{
+  (event: 'about'): void;
+  (event: 'close'): void;
+  (event: 'closeAll'): void;
+  (event: 'open'): void;
+  (event: 'openRemote'): void;
+  (event: 'openSampleLorenz'): void;
+  (event: 'openSampleInteractiveLorenz'): void;
+  (event: 'settings'): void;
+}>();
 const isWindowsOrLinux = common.isWindows() || common.isLinux();
 const isMacOs = common.isMacOs();
 
@@ -149,7 +149,7 @@ const items = [
 const menuBar = vue.ref<(vue.ComponentPublicInstance<typeof Menubar> & { hide: () => void }) | null>(null);
 
 vue.onMounted(() => {
-  if (menuBar.value !== null) {
+  if (menuBar.value) {
     // Ensure that the menubar never gets the 'p-menubar-mobile' class, which would turn it into a hamburger menu.
 
     const menuBarElement = menuBar.value.$el as HTMLElement;
@@ -191,7 +191,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.interactiveEnabled) {
+    if (!props.isActive || !props.uiEnabled) {
       return;
     }
 
@@ -251,6 +251,7 @@ if (common.isDesktop()) {
 
 .p-menubar-item-link {
   padding: 0.25rem 0.5rem !important;
+  color: var(--p-menubar-item-color);
 }
 
 :deep(.p-menubar-root-list) {

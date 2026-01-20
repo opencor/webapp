@@ -2,13 +2,13 @@
   <BaseDialog header=" " class="w-169">
     <div class="space-y-7">
       <div class="text-center">
-        <div class="text-3xl font-bold">OpenCOR (MVP) {{ version }}</div>
-        <div v-if="electronApi !== undefined" class="text-xl italic font-bold">{{ electronApi.operatingSystem() }}</div>
-        <div class="text-sm italic">Copyright {{ constants.COPYRIGHT }}</div>
+        <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
+        <div v-if="electronApi" class="text-xl italic font-bold">{{ electronApi.operatingSystem() }}</div>
+        <div class="text-sm italic">Copyright {{ COPYRIGHT }}</div>
       </div>
       <div class="space-y-2">
         <div>
-          <a href="https://opencor.ws/" target="_blank" rel="noopener">OpenCOR</a> (MVP) is a frontend to
+          <a href="https://opencor.ws/" target="_blank" rel="noopener">OpenCOR</a> is a frontend to
           <a href="https://opencor.ws/libopencor/" target="_blank" rel="noopener">libOpenCOR</a> {{ locApi.version() }},
           a library that can be used to organise, edit, simulate, and analyse
           <a href="https://cellml.org/" target="_blank" rel="noopener">CellML</a> files.
@@ -41,11 +41,11 @@
 </template>
 
 <script setup lang="ts">
-import * as constants from '../../common/constants';
-import { electronApi } from '../../common/electronApi';
-import * as locApi from '../../libopencor/locApi';
+import { COPYRIGHT } from '../../common/constants.ts';
+import { electronApi } from '../../common/electronApi.ts';
+import * as locApi from '../../libopencor/locApi.ts';
 
-defineEmits(['close']);
+defineEmits<(event: 'close') => void>();
 
 import { version } from '../../../package.json';
 </script>

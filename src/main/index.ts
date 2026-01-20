@@ -7,18 +7,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import type { ISettings } from '../renderer/src/common/common';
-import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants';
-import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron';
+import type { ISettings } from '../renderer/src/common/common.ts';
+import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants.ts';
+import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
+/*---OPENCOR--- Enable once our GitHub integration is fully ready.
 import {
   clearGitHubCache,
   deleteGitHubAccessToken,
   loadGitHubAccessToken,
   saveGitHubAccessToken
 } from '../renderer/src/common/gitHubIntegration';
-import { startRendererServer, stopRendererServer } from '../renderer/src/common/rendererServer';
+ */
+import { startRendererServer, stopRendererServer } from '../renderer/src/common/rendererServer.ts';
 
-import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu';
+import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu.ts';
 import {
   checkForUpdates,
   downloadAndInstallUpdate,
@@ -32,8 +34,8 @@ import {
   MainWindow,
   resetAll,
   saveSettings
-} from './MainWindow';
-import { SplashScreenWindow } from './SplashScreenWindow';
+} from './MainWindow.ts';
+import { SplashScreenWindow } from './SplashScreenWindow.ts';
 
 // Electron store.
 
@@ -71,7 +73,7 @@ if (!electron.app.requestSingleInstanceLock()) {
 export let mainWindow: MainWindow | null = null;
 
 electron.app.on('second-instance', (_event, argv) => {
-  if (mainWindow !== null) {
+  if (mainWindow) {
     if (mainWindow.isMinimized()) {
       mainWindow.restore();
     }
@@ -121,7 +123,7 @@ MimeType=x-scheme-handler/${URI_SCHEME}`
   // Update the desktop database.
 
   nodeChildProcess.exec('update-desktop-database ~/.local/share/applications', (error) => {
-    if (error !== null) {
+    if (error) {
       console.error('Failed to update the desktop database:', error);
     }
   });
@@ -212,12 +214,14 @@ electron.app
         electron.ipcMain.handle('check-for-updates', (_event, atStartup: boolean) => {
           checkForUpdates(atStartup);
         });
+        /*---OPENCOR--- Enable once our GitHub integration is fully ready.
         electron.ipcMain.handle('clear-github-cache', async (): Promise<void> => {
           await clearGitHubCache();
         });
         electron.ipcMain.handle('delete-github-access-token', async (): Promise<boolean> => {
           return deleteGitHubAccessToken();
         });
+*/
         electron.ipcMain.handle('download-and-install-update', () => {
           downloadAndInstallUpdate();
         });
@@ -245,16 +249,20 @@ electron.app
         electron.ipcMain.handle('install-update-and-restart', () => {
           installUpdateAndRestart();
         });
+        /*---OPENCOR--- Enable once our GitHub integration is fully ready.
         electron.ipcMain.handle('load-github-access-token', async (): Promise<string | null> => {
           return loadGitHubAccessToken();
         });
+*/
         electron.ipcMain.handle('load-settings', (): ISettings => {
           return loadSettings();
         });
         electron.ipcMain.handle('reset-all', resetAll);
+        /*---OPENCOR--- Enable once our GitHub integration is fully ready.
         electron.ipcMain.handle('save-github-access-token', async (_event, token: string): Promise<boolean> => {
           return saveGitHubAccessToken(token);
         });
+*/
         electron.ipcMain.handle('save-settings', (_event, settings: ISettings) => {
           saveSettings(settings);
         });
@@ -263,11 +271,9 @@ electron.app
         // triggering URL.
 
         mainWindow = new MainWindow(
-          triggeringUrl !== null ? [triggeringUrl] : process.argv,
+          triggeringUrl ? [triggeringUrl] : process.argv,
           splashScreenWindow,
-          process.env.ELECTRON_RENDERER_URL !== undefined
-            ? process.env.ELECTRON_RENDERER_URL
-            : await startRendererServer()
+          process.env.ELECTRON_RENDERER_URL ?? (await startRendererServer())
         );
       }, SHORT_DELAY);
     });
