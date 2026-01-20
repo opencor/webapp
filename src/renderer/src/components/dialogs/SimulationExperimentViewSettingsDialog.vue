@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="Simulation Settings..." class="w-169" @keydown.prevent.enter="onOk">
+  <BaseDialog header="Settings..." class="w-169" @keydown.prevent.enter="onOk">
     <div class="flex flex-col gap-4">
       <Tabs v-model:value="activeTab">
         <TabList>
@@ -44,7 +44,7 @@
                       <div class="flex gap-2">
                         <FloatLabel variant="on" class="flex! flex-1">
                           <Select
-                            :modelValue="isDiscreteInput(input) ? 'discrete' : 'scalar'"
+                            :modelValue="locApi.isDiscreteInput(input) ? 'discrete' : 'scalar'"
                             @update:modelValue="(val: string) => toggleInputType(inputIndex, val)"
                             :options="[{label: 'Discrete', value: 'discrete'}, {label: 'Scalar', value: 'scalar'}]"
                             optionLabel="label"
@@ -58,7 +58,7 @@
 
                       <!-- Scalar input fields -->
 
-                      <div v-if="isScalarInput(input)" class="flex gap-2">
+                      <div v-if="locApi.isScalarInput(input)" class="flex gap-2">
                         <FloatLabel variant="on" class="flex! flex-1">
                           <InputNumber v-model="input.minimumValue" class="grow" size="small" :maxFractionDigits="15" />
                           <label>Minimum Value</label>
@@ -75,7 +75,7 @@
 
                       <!-- Discrete input fields -->
 
-                      <div v-if="isDiscreteInput(input)" class="flex flex-col gap-2">
+                      <div v-if="locApi.isDiscreteInput(input)" class="flex flex-col gap-2">
                         <label class="font-semibold">Possible Values:</label>
 
                         <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possibleValue${possibleValueIndex}`" class="flex gap-2 ml-2">
@@ -236,10 +236,10 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import * as locApi from '../../libopencor/locApi';
-import { downloadFile } from '../../common/common';
-import type * as locUiJsonApi from '../../libopencor/locUiJsonApi';
-import { uiJsonIssues } from '../../libopencor/locUiJsonApi';
+import * as locApi from '../../libopencor/locApi.ts';
+import { downloadFile } from '../../common/common.ts';
+import type * as locUiJsonApi from '../../libopencor/locUiJsonApi.ts';
+import { uiJsonIssues } from '../../libopencor/locUiJsonApi.ts';
 
 const props = defineProps<{
   uiJson: locUiJsonApi.IUiJson;
@@ -267,22 +267,10 @@ const validationIssues = vue.computed(() => {
   return uiJsonIssues(localUiJson.value);
 });
 
-// Type guards
-function isDiscreteInput(
-  input: locUiJsonApi.IUiJsonInput
-): input is locUiJsonApi.IUiJsonInput & { possibleValues: locUiJsonApi.IUiJsonDiscreteInputPossibleValue[] } {
-  return 'possibleValues' in input;
-}
-
-function isScalarInput(
-  input: locUiJsonApi.IUiJsonInput
-): input is locUiJsonApi.IUiJsonInput & { minimumValue: number; maximumValue: number } {
-  return 'minimumValue' in input && 'maximumValue' in input;
-}
-
 // Input management
 function addInput() {
   localUiJson.value.input.push({
+    id: `input_${localUiJson.value.input.length}`,
     name: 'New Input',
     defaultValue: 0,
     minimumValue: 0,
@@ -328,7 +316,7 @@ function toggleInputType(index: number, type: string) {
 
 function addPossibleValue(inputIndex: number) {
   const input = localUiJson.value.input[inputIndex];
-  if (input && isDiscreteInput(input)) {
+  if (input && locApi.isDiscreteInput(input)) {
     const maxValue = Math.max(...input.possibleValues.map((possibleValue) => possibleValue.value), -1);
     input.possibleValues.push({
       name: `Option ${input.possibleValues.length + 1}`,
@@ -339,7 +327,7 @@ function addPossibleValue(inputIndex: number) {
 
 function removePossibleValue(inputIndex: number, possibleValueIndex: number) {
   const input = localUiJson.value.input[inputIndex];
-  if (input && isDiscreteInput(input) && input.possibleValues.length > 1) {
+  if (input && locApi.isDiscreteInput(input) && input.possibleValues.length > 1) {
     input.possibleValues.splice(possibleValueIndex, 1);
   }
 }
