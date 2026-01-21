@@ -103,7 +103,7 @@ const items = [
       }
     ]
   },
-  /*---OPENCOR--- Enable the settings menu once we have settings for OpenCOR's Web app.
+  /* TODO: enable the settings menu once we have settings for OpenCOR's Web app.
   {
     label: 'Tools',
     items: [

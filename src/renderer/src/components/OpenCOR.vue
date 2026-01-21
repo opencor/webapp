@@ -36,7 +36,7 @@
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
       />
-      <!-- ---OPENCOR--- Enable once our GitHub integration is fully ready.
+      <!-- TODO: enable once our GitHub integration is fully ready.
       <div v-if="firebaseConfig && !omex">
         <div class="absolute top-1 right-1 z-999">
           <Button icon="pi pi-github" severity="secondary" :class="octokit ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
@@ -98,7 +98,7 @@
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
-/*---OPENCOR--- Enable once our GitHub integration is fully ready.
+/* TODO: enable once our GitHub integration is fully ready.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { Octokit } from 'octokit';
@@ -117,7 +117,7 @@ import '../assets/app.css';
 import * as common from '../common/common.ts';
 import { FULL_URI_SCHEME, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
 import { electronApi } from '../common/electronApi.ts';
-/*---OPENCOR--- Enable once our GitHub integration is fully ready.
+/* TODO: enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 */
 import * as locCommon from '../common/locCommon.ts';
@@ -135,7 +135,7 @@ const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const activeInstanceUid = vueCommon.activeInstanceUid();
 const connectingToGitHub = vue.ref<boolean>(false);
-/*---OPENCOR--- Enable once our GitHub integration is fully ready.
+/* TODO: enable once our GitHub integration is fully ready.
 const octokit = vue.ref<Octokit | null>(null);
 */
 
@@ -233,7 +233,7 @@ void locApi.initialiseLocApi().then(() => {
   locApiInitialised.value = true;
 });
 
-/*---OPENCOR--- Enable once our GitHub integration is fully ready.
+/* TODO: enable once our GitHub integration is fully ready.
 // Initialise Firebase.
 // Note: we check whether a Firebase app is already initialised to avoid issues when hot-reloading during development
 //       and/or using OpenCOR as a Vue component within another application that also uses Firebase.
@@ -794,7 +794,7 @@ async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
   }
 }
 
-/*---OPENCOR--- Enable once our GitHub integration is fully ready.
+/* TODO: enable once our GitHub integration is fully ready.
 async function loadGitHubAccessToken(): Promise<void> {
   if (!electronApi || props.omex || !firebaseConfig) {
     return;

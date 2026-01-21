@@ -51,9 +51,8 @@ export class SedDocument {
       ? _cppLocApi.sedDocumentIssues(this._cppDocumentId)
       : wasmIssuesToIssues(this._wasmSedDocument.issues);
 
-    //---OPENCOR---
-    // We only support a limited subset of SED-ML for now, so we need to check a few more things. Might wnat to check
-    // https://github.com/opencor/opencor/blob/master/src/plugins/support/SEDMLSupport/src/sedmlfile.cpp#L579-L1492.
+    // TODO: we only support a limited subset of SED-ML for now, so we need to check a few more things. Might wnat to
+    // check https://github.com/opencor/opencor/blob/master/src/plugins/support/SEDMLSupport/src/sedmlfile.cpp#L579-L1492.
 
     // Make sure that there is only one model.
 
