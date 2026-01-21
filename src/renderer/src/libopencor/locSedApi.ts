@@ -78,7 +78,7 @@ export class SedDocument {
 
     // Make sure that the simulation is a uniform time course simulation.
 
-    const simulation = this.simulation(0) as SedSimulationUniformTimeCourse;
+    const simulation = this.simulation(0) as SedUniformTimeCourse;
 
     if (simulation.type() !== ESedSimulationType.UNIFORM_TIME_COURSE) {
       this._issues.push({
@@ -162,18 +162,18 @@ export class SedDocument {
     }
 
     if (type === ESedSimulationType.ANALYSIS) {
-      return new SedSimulationAnalysis(this._cppDocumentId, this._wasmSedDocument, index, type);
+      return new SedAnalysis(this._cppDocumentId, this._wasmSedDocument, index, type);
     }
 
     if (type === ESedSimulationType.STEADY_STATE) {
-      return new SedSimulationSteadyState(this._cppDocumentId, this._wasmSedDocument, index, type);
+      return new SedSteadyState(this._cppDocumentId, this._wasmSedDocument, index, type);
     }
 
     if (type === ESedSimulationType.ONE_STEP) {
-      return new SedSimulationOneStep(this._cppDocumentId, this._wasmSedDocument, index, type);
+      return new SedOneStep(this._cppDocumentId, this._wasmSedDocument, index, type);
     }
 
-    return new SedSimulationUniformTimeCourse(this._cppDocumentId, this._wasmSedDocument, index, type);
+    return new SedUniformTimeCourse(this._cppDocumentId, this._wasmSedDocument, index, type);
   }
 
   instantiate(): SedInstance {
@@ -208,7 +208,7 @@ export class SedModel extends SedIndex {
 
   addChange(componentName: string, variableName: string, newValue: string): void {
     if (cppVersion()) {
-      _cppLocApi.sedDocumentModelAddChange(this._cppDocumentId, this._index, componentName, variableName, newValue);
+      _cppLocApi.sedModelAddChange(this._cppDocumentId, this._index, componentName, variableName, newValue);
     } else {
       this._wasmSedModel.addChange(new _wasmLocApi.SedChangeAttribute(componentName, variableName, newValue));
     }
@@ -216,7 +216,7 @@ export class SedModel extends SedIndex {
 
   removeAllChanges(): void {
     if (cppVersion()) {
-      _cppLocApi.sedDocumentModelRemoveAllChanges(this._cppDocumentId, this._index);
+      _cppLocApi.sedModelRemoveAllChanges(this._cppDocumentId, this._index);
     } else {
       this._wasmSedModel.removeAllChanges();
     }
@@ -250,98 +250,133 @@ export class SedSimulation extends SedIndex {
   }
 }
 
-export class SedSimulationAnalysis extends SedSimulation {}
+export class SedAnalysis extends SedSimulation {}
 
-export class SedSimulationSteadyState extends SedSimulation {}
+export class SedSteadyState extends SedSimulation {}
 
-interface IWasmSedSimulationOneStep extends IWasmSedSimulation {
+interface IWasmSedOneStep extends IWasmSedSimulation {
   step: number;
 }
 
-export class SedSimulationOneStep extends SedSimulation {
-  private _wasmSedSimulationOneStep: IWasmSedSimulationOneStep = {} as IWasmSedSimulationOneStep;
+export class SedOneStep extends SedSimulation {
+  private _wasmSedOneStep: IWasmSedOneStep = {} as IWasmSedOneStep;
 
   constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
     super(cppDocumentId, wasmSedDocument, index, type);
 
     if (wasmVersion()) {
-      this._wasmSedSimulationOneStep = wasmSedDocument.simulation(index) as IWasmSedSimulationOneStep;
+      this._wasmSedOneStep = wasmSedDocument.simulation(index) as IWasmSedOneStep;
     }
   }
 
   step(): number {
-    return cppVersion()
-      ? _cppLocApi.sedDocumentSimulationOneStepStep(this._cppDocumentId, this._index)
-      : this._wasmSedSimulationOneStep.step;
+    return cppVersion() ? _cppLocApi.sedOneStepStep(this._cppDocumentId, this._index) : this._wasmSedOneStep.step;
   }
 }
 
-interface IWasmSedSimulationUniformTimeCourse extends IWasmSedSimulation {
+interface IWasmSedUniformTimeCourse extends IWasmSedSimulation {
   initialTime: number;
   outputStartTime: number;
   outputEndTime: number;
   numberOfSteps: number;
+  odeSolver: unknown;
 }
 
-export class SedSimulationUniformTimeCourse extends SedSimulation {
-  private _wasmSedSimulationUniformTimeCourse: IWasmSedSimulationUniformTimeCourse =
-    {} as IWasmSedSimulationUniformTimeCourse;
+export class SedUniformTimeCourse extends SedSimulation {
+  private _wasmSedUniformTimeCourse: IWasmSedUniformTimeCourse = {} as IWasmSedUniformTimeCourse;
 
   constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
     super(cppDocumentId, wasmSedDocument, index, type);
 
     if (wasmVersion()) {
-      this._wasmSedSimulationUniformTimeCourse = wasmSedDocument.simulation(
-        index
-      ) as IWasmSedSimulationUniformTimeCourse;
+      this._wasmSedUniformTimeCourse = wasmSedDocument.simulation(index) as IWasmSedUniformTimeCourse;
     }
   }
 
   initialTime(): number {
     return cppVersion()
-      ? _cppLocApi.sedDocumentSimulationUniformTimeCourseInitialTime(this._cppDocumentId, this._index)
-      : this._wasmSedSimulationUniformTimeCourse.initialTime;
+      ? _cppLocApi.sedUniformTimeCourseInitialTime(this._cppDocumentId, this._index)
+      : this._wasmSedUniformTimeCourse.initialTime;
   }
 
   outputStartTime(): number {
     return cppVersion()
-      ? _cppLocApi.sedDocumentSimulationUniformTimeCourseOutputStartTime(this._cppDocumentId, this._index)
-      : this._wasmSedSimulationUniformTimeCourse.outputStartTime;
+      ? _cppLocApi.sedUniformTimeCourseOutputStartTime(this._cppDocumentId, this._index)
+      : this._wasmSedUniformTimeCourse.outputStartTime;
   }
 
   setOutputStartTime(value: number): void {
     if (cppVersion()) {
-      _cppLocApi.sedDocumentSimulationUniformTimeCourseSetOutputStartTime(this._cppDocumentId, this._index, value);
+      _cppLocApi.sedUniformTimeCourseSetOutputStartTime(this._cppDocumentId, this._index, value);
     } else {
-      this._wasmSedSimulationUniformTimeCourse.outputStartTime = value;
+      this._wasmSedUniformTimeCourse.outputStartTime = value;
     }
   }
 
   outputEndTime(): number {
     return cppVersion()
-      ? _cppLocApi.sedDocumentSimulationUniformTimeCourseOutputEndTime(this._cppDocumentId, this._index)
-      : this._wasmSedSimulationUniformTimeCourse.outputEndTime;
+      ? _cppLocApi.sedUniformTimeCourseOutputEndTime(this._cppDocumentId, this._index)
+      : this._wasmSedUniformTimeCourse.outputEndTime;
   }
 
   setOutputEndTime(value: number): void {
     if (cppVersion()) {
-      _cppLocApi.sedDocumentSimulationUniformTimeCourseSetOutputEndTime(this._cppDocumentId, this._index, value);
+      _cppLocApi.sedUniformTimeCourseSetOutputEndTime(this._cppDocumentId, this._index, value);
     } else {
-      this._wasmSedSimulationUniformTimeCourse.outputEndTime = value;
+      this._wasmSedUniformTimeCourse.outputEndTime = value;
     }
   }
 
   numberOfSteps(): number {
     return cppVersion()
-      ? _cppLocApi.sedDocumentSimulationUniformTimeCourseNumberOfSteps(this._cppDocumentId, this._index)
-      : this._wasmSedSimulationUniformTimeCourse.numberOfSteps;
+      ? _cppLocApi.sedUniformTimeCourseNumberOfSteps(this._cppDocumentId, this._index)
+      : this._wasmSedUniformTimeCourse.numberOfSteps;
   }
 
   setNumberOfSteps(value: number): void {
     if (cppVersion()) {
-      _cppLocApi.sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(this._cppDocumentId, this._index, value);
+      _cppLocApi.sedUniformTimeCourseSetNumberOfSteps(this._cppDocumentId, this._index, value);
     } else {
-      this._wasmSedSimulationUniformTimeCourse.numberOfSteps = value;
+      this._wasmSedUniformTimeCourse.numberOfSteps = value;
+    }
+  }
+
+  cvode(): SolverCvode {
+    return new SolverCvode(this._cppDocumentId, this._wasmSedUniformTimeCourse, this._index);
+  }
+}
+
+interface IWasmSolverCvode {
+  maximumStep: number;
+}
+
+export class SolverCvode extends SedIndex {
+  private _cppDocumentId: number;
+  private _wasmSolverCvode: IWasmSolverCvode = {} as IWasmSolverCvode;
+
+  constructor(cppDocumentId: number, wasmSedUniformTimeCourse: IWasmSedUniformTimeCourse, index: number) {
+    super(index);
+
+    this._cppDocumentId = cppDocumentId;
+
+    if (wasmVersion()) {
+      this._wasmSolverCvode = wasmSedUniformTimeCourse.odeSolver as IWasmSolverCvode;
+    }
+  }
+
+  // TODO: this is only temporary until we have full support for our different solvers.
+
+  maximumStep(): number {
+    return cppVersion()
+      ? _cppLocApi.solverCvodeMaximumStep(this._cppDocumentId, this._index)
+      : this._wasmSolverCvode.maximumStep;
+  }
+
+  setMaximumStep(value: number): void {
+    if (cppVersion()) {
+      _cppLocApi.solverCvodeSetMaximumStep(this._cppDocumentId, this._index, value);
+    } else {
+      this._wasmSolverCvode.maximumStep = value;
     }
   }
 }
