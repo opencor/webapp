@@ -69,7 +69,10 @@
         @yes="onResetAll"
         @no="resetAllVisible = false"
       />
-      <AboutDialog v-model:visible="aboutVisible" @close="aboutVisible = false" />
+      <AboutDialog
+        v-model:visible="aboutVisible"
+        @close="aboutVisible = false"
+      />
     </div>
     <OkMessageDialog
       v-model:visible="updateErrorVisible"
