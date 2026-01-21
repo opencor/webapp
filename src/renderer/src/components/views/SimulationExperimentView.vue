@@ -196,8 +196,8 @@
     <SimulationSettingsDialog
       v-model:visible="simulationSettingsVisible"
       :uiJson="uiJson"
-      :allParameters="interactiveAllParameters"
-      :editableParameters="interactiveEditableParameters"
+      :allModelParameters="interactiveAllModelParameters"
+      :editableModelParameters="interactiveEditableModelParameters"
       @ok="onSimulationSettingsOk"
       @close="simulationSettingsVisible = false"
     />
@@ -255,31 +255,41 @@ const settingsMenu = vue.ref();
 const simulationSettingsVisible = vue.ref<boolean>(false);
 const uiJson = vue.ref<locApi.IUiJson>(JSON.parse(JSON.stringify(props.uiJson)));
 
-function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedApi.SedInstanceTask): void {
+function populateParameters(
+  parameters: vue.Ref<string[]>,
+  instanceTask: locSedApi.SedInstanceTask,
+  onlyEditableModelParameters = false
+): void {
   function addParameter(param: string): void {
     parameters.value.push(param);
   }
 
-  addParameter(instanceTask.voiName());
+  if (!onlyEditableModelParameters) {
+    addParameter(instanceTask.voiName());
+  }
 
   for (let i = 0; i < instanceTask.stateCount(); i++) {
     addParameter(instanceTask.stateName(i));
   }
 
-  for (let i = 0; i < instanceTask.rateCount(); i++) {
-    addParameter(instanceTask.rateName(i));
+  if (!onlyEditableModelParameters) {
+    for (let i = 0; i < instanceTask.rateCount(); i++) {
+      addParameter(instanceTask.rateName(i));
+    }
   }
 
   for (let i = 0; i < instanceTask.constantCount(); i++) {
     addParameter(instanceTask.constantName(i));
   }
 
-  for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
-    addParameter(instanceTask.computedConstantName(i));
-  }
+  if (!onlyEditableModelParameters) {
+    for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+      addParameter(instanceTask.computedConstantName(i));
+    }
 
-  for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
-    addParameter(instanceTask.algebraicVariableName(i));
+    for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
+      addParameter(instanceTask.algebraicVariableName(i));
+    }
   }
 
   // Sort the parameters alphabetically.
@@ -398,8 +408,8 @@ interface IPopover {
 const interactiveDocument = props.file.document();
 const interactiveInstance = interactiveDocument.instantiate();
 const interactiveInstanceTask = interactiveInstance.task(0);
-const interactiveAllParameters = vue.ref<string[]>([]);
-const interactiveEditableParameters = vue.ref<string[]>([]);
+const interactiveAllModelParameters = vue.ref<string[]>([]);
+const interactiveEditableModelParameters = vue.ref<string[]>([]);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = interactiveDocument.model(0);
 const interactiveData = vue.ref<IGraphPanelData[]>([]);
@@ -471,10 +481,12 @@ const interactiveCompData = vue.computed(() => {
   return res;
 });
 
-// Map data IDs to simulation data info.
+// Populate our model parameters.
 
-populateParameters(interactiveAllParameters, interactiveInstanceTask);
-populateParameters(interactiveEditableParameters, interactiveInstanceTask);
+populateParameters(interactiveAllModelParameters, interactiveInstanceTask);
+populateParameters(interactiveEditableModelParameters, interactiveInstanceTask, true);
+
+// Populate our input properties.
 
 populateInputProperties(props.uiJson);
 
