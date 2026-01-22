@@ -187,7 +187,7 @@ export {
   type IUiJsonScalarInput,
   isScalarInput,
   isDiscreteInput,
-  uiJsonIssues
+  validateUiJson
 } from './locUiJsonApi.ts';
 
 // Version API.

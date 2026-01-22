@@ -79,7 +79,7 @@ function isDivisible(a: number, b: number): boolean {
   return Math.abs(res - Math.round(res)) < 1e-9;
 }
 
-export function uiJsonIssues(uiJson: IUiJson | undefined): IIssue[] {
+export function validateUiJson(uiJson: IUiJson | undefined): IIssue[] {
   // Make sure that we have some UI JSON.
 
   if (!uiJson) {

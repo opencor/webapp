@@ -16,7 +16,9 @@ import * as vue from 'vue';
 
 import { settings } from '../../common/settings.ts';
 
-const emit = defineEmits<(event: 'close') => void>();
+const emit = defineEmits<{
+  (event: 'close'): void;
+}>();
 
 const checkForUpdatesAtStartup = vue.ref(settings.general.checkForUpdatesAtStartup);
 

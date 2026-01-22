@@ -247,7 +247,10 @@ const props = defineProps<{
   editableParameters?: string[];
 }>();
 
-const emit = defineEmits(['close', 'download', 'ok']);
+const emit = defineEmits<{
+  (event: 'close'): void;
+  (event: 'ok', settings: ISimulationExperimentViewSettings): void;
+}>();
 
 const activeTab = vue.ref('input');
 const localUiJson = vue.ref<locUiJsonApi.IUiJson>(JSON.parse(JSON.stringify(props.uiJson)));

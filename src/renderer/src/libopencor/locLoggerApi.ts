@@ -2,7 +2,8 @@
 
 export enum EIssueType {
   ERROR,
-  WARNING
+  WARNING,
+  INFORMATION
 }
 
 export interface IIssue {

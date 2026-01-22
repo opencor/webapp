@@ -21,7 +21,7 @@
       @drop.prevent="onDrop"
       @dragleave="onDragLeave"
     >
-      <input ref="files" type="file" multiple style="display: none" @change="onChange" />
+      <input ref="files" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
       <MainMenu :id="mainMenuId" v-if="!electronApi && !omex"
         :isActive="compIsActive"
