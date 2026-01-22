@@ -39,7 +39,7 @@
       <!-- TODO: enable once our GitHub integration is fully ready.
       <div v-if="firebaseConfig && !omex">
         <div class="absolute top-1 right-1 z-999">
-          <Button icon="pi pi-github" severity="secondary" :class="octokit ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
+          <Button icon="pi pi-github" outlined severity="secondary" :class="octokit ? 'connected-to-github' : 'disconnected-from-github'" rounded @click="onGitHubButtonClick" />
         </div>
         <YesNoQuestionDialog
           v-model:visible="disconnectFromGitHubVisible"
