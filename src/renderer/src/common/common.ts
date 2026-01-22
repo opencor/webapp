@@ -120,6 +120,12 @@ export function formatMessage(message: string, selfContained: boolean = true): s
         : message;
 }
 
+// A method to determine whether a number is divisible by another one.
+
+export function isDivisible(a: number, b: number): boolean {
+  return Number.isInteger(a / b);
+}
+
 // A method to trigger a browser download for a given file.
 
 export function downloadFile(filename: string, content: string | Blob, type: string): void {

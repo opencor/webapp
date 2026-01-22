@@ -14,7 +14,7 @@
     <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex" />
     <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
     <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
-    <IssuesView v-if="issues.length" class="h-full" :issues="issues" />
+    <IssuesView v-if="issues.length" class="m-4" style="height: calc(100% - 2rem);" :issues="issues" />
     <div v-else class="h-full flex flex-col"
       @dragenter="onDragEnter"
       @dragover.prevent
@@ -128,7 +128,11 @@ import * as vueCommon from '../common/vueCommon.ts';
 import type IContentsComponent from '../components/ContentsComponent.vue';
 import * as locApi from '../libopencor/locApi.ts';
 
+import { provideDialogState } from './dialogs/BaseDialog.vue';
+
 const props = defineProps<IOpenCORProps>();
+
+const { isDialogActive } = provideDialogState();
 
 const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null);
 const toastId = vue.ref('opencorToast');
@@ -167,18 +171,7 @@ const compBlockUiEnabled = vue.computed(() => {
 });
 
 const compUiEnabled = vue.computed(() => {
-  return (
-    !compBlockUiEnabled.value &&
-    !disconnectFromGitHubVisible.value &&
-    !openRemoteVisible.value &&
-    !settingsVisible.value &&
-    !resetAllVisible.value &&
-    !aboutVisible.value &&
-    !updateErrorVisible.value &&
-    !updateAvailableVisible.value &&
-    !updateDownloadProgressVisible.value &&
-    !updateNotAvailableVisible.value
-  );
+  return !compBlockUiEnabled.value && !isDialogActive.value;
 });
 
 // Get the current Vue app instance to use some PrimeVue plugins and VueTippy.
@@ -458,6 +451,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
       if (
         fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
         fileType === locApi.EFileType.UNKNOWN_FILE ||
+        fileType === locApi.EFileType.SEDML_FILE ||
         (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
       ) {
         if (props.omex) {
@@ -480,7 +474,9 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
               '\n\n' +
               (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
                 ? 'The file could not be retrieved.'
-                : 'Only CellML files, SED-ML files, and COMBINE archives are supported.'),
+                : fileType === locApi.EFileType.SEDML_FILE
+                  ? 'SED-ML files are not currently supported.'
+                  : 'Only CellML files and COMBINE archives are supported.'),
             life: TOAST_LIFE
           });
         }

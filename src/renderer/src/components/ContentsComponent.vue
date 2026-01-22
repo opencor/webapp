@@ -1,7 +1,8 @@
 <template>
   <div v-if="simulationOnly" class="h-full">
     <div v-for="fileTab in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" class="h-full" :value="fileTab.file.path()">
-      <IssuesView v-if="fileTab.file.issues().length" class="h-full" :issues="fileTab.file.issues()"
+      <IssuesView v-if="fileTab.file.issues().length" class="m-4" style="height: calc(100% - 2rem);"
+        :issues="fileTab.file.issues()"
       />
       <SimulationExperimentView v-else class="h-full"
         :isActive="isActive"
@@ -42,10 +43,10 @@
           :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
-          <IssuesView v-if="fileTab.file.issues().length" class="h-full"
+          <IssuesView v-if="fileTab.file.issues().length" class="m-4" style="height: calc(100% - 2rem);"
             :issues="fileTab.file.issues()"
           />
-          <SimulationExperimentView v-else class="h-full"
+          <SimulationExperimentView v-else
             :isActive="isActive"
             :uiEnabled="uiEnabled"
             :file="fileTab.file"

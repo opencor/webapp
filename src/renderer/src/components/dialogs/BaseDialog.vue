@@ -24,6 +24,12 @@ import * as vue from 'vue';
 
 import { enableDisableMainMenu } from '../../common/common.ts';
 
+const emit = defineEmits<{
+  (event: 'cancel'): void;
+}>();
+
+const { incrementDialogs, decrementDialogs } = useDialogState();
+
 let dialogElement: HTMLElement | null = null;
 let containerElement: HTMLElement | null | undefined = null;
 let mutationObserver: MutationObserver | null = null;
@@ -39,6 +45,8 @@ function checkDialogPosition() {
 }
 
 function onShow() {
+  incrementDialogs();
+
   enableDisableMainMenu(false);
 
   void vue.nextTick(() => {
@@ -58,7 +66,11 @@ function onShow() {
 }
 
 function onHide() {
+  decrementDialogs();
+
   enableDisableMainMenu(true);
+
+  emit('cancel');
 
   void vue.nextTick(() => {
     if (mutationObserver) {
@@ -67,5 +79,53 @@ function onHide() {
       mutationObserver = null;
     }
   });
+}
+</script>
+
+<script lang="ts">
+// Dialog state management for tracking active dialogs in a given instance of OpenCOR.
+// Note: this uses Vue's provide()/inject() methods to ensure that each OpenCOR instance has its own dialog state.
+
+const DialogStateKey = Symbol('DialogState');
+
+interface IDialogState {
+  activeDialogs: vue.Ref<number>;
+  isDialogActive: vue.ComputedRef<boolean>;
+  incrementDialogs: () => void;
+  decrementDialogs: () => void;
+}
+
+export function provideDialogState(): IDialogState {
+  const activeDialogs = vue.ref(0);
+  const isDialogActive = vue.computed(() => activeDialogs.value > 0);
+
+  const incrementDialogs = () => {
+    ++activeDialogs.value;
+  };
+
+  const decrementDialogs = () => {
+    --activeDialogs.value;
+  };
+
+  const state: IDialogState = {
+    activeDialogs,
+    isDialogActive,
+    incrementDialogs,
+    decrementDialogs
+  };
+
+  vue.provide(DialogStateKey, state);
+
+  return state;
+}
+
+export function useDialogState(): IDialogState {
+  const state = vue.inject<IDialogState>(DialogStateKey);
+
+  if (!state) {
+    throw new Error('useDialogState() must be called within a component that has provideDialogState in its ancestor tree.');
+  }
+
+  return state;
 }
 </script>
