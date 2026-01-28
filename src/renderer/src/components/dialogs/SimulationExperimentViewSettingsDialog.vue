@@ -38,20 +38,20 @@
 
               <div class="settings-form">
                 <div class="form-row">
-                  <FloatLabel variant="on" class="form-field">
-                    <InputNumber v-model="localSettings.simulation.startingPoint" class="w-full" size="small" :maxFractionDigits="15" />
-                    <label>Starting point ({{ localSettings.extra.voiUnit }})</label>
-                  </FloatLabel>
-                  <FloatLabel variant="on" class="form-field">
-                    <InputNumber v-model="localSettings.simulation.endingPoint" class="w-full" size="small" :maxFractionDigits="15" />
-                    <label>Ending point ({{ localSettings.extra.voiUnit }})</label>
-                  </FloatLabel>
+                  <InputScientificNumber v-model="localSettings.simulation.startingPoint" class="form-field"
+                    :label="`Starting point (${localSettings.extra.voiUnit})`"
+                    size="small"
+                  />
+                  <InputScientificNumber v-model="localSettings.simulation.endingPoint" class="form-field"
+                    :label="`Ending point (${localSettings.extra.voiUnit})`"
+                    size="small"
+                  />
                 </div>
                 <div class="form-row">
-                  <FloatLabel variant="on" class="form-field">
-                    <InputNumber v-model="localSettings.simulation.pointInterval" class="w-full" size="small" :maxFractionDigits="15" />
-                    <label>Point interval ({{ localSettings.extra.voiUnit }})</label>
-                  </FloatLabel>
+                  <InputScientificNumber v-model="localSettings.simulation.pointInterval" class="form-field"
+                    :label="`Point interval (${localSettings.extra.voiUnit})`"
+                    size="small"
+                  />
                   <div class="form-field self-stretch">
                     <div v-if="!simulationSettingsIssues.length" class="form-field items-center text-muted-color text-sm">
                       <i class="pi pi-info-circle mr-2"></i>
@@ -81,10 +81,10 @@
 
               <div class="settings-form">
                 <div class="form-row">
-                  <FloatLabel variant="on" class="form-field">
-                    <InputNumber v-model="localSettings.solvers.cvodeMaximumStep" class="w-full" size="small" :maxFractionDigits="15" />
-                    <label>CVODE's maximum step ({{ localSettings.extra.voiUnit }})</label>
-                  </FloatLabel>
+                  <InputScientificNumber v-model="localSettings.solvers.cvodeMaximumStep" class="form-field"
+                    :label="`CVODE's maximum step (${localSettings.extra.voiUnit})`"
+                    size="small"
+                  />
                   <div class="form-field self-stretch flex items-center">
                     <div class="form-field items-center text-muted-color text-sm">
                       <i class="pi pi-info-circle mr-2"></i>
@@ -184,10 +184,10 @@
                                   </FloatLabel>
                                 </div>
                                 <div class="form-row">
-                                  <FloatLabel variant="on" class="form-field">
-                                    <InputNumber v-model="input.defaultValue" class="w-full" size="small" :maxFractionDigits="15" />
-                                    <label>Default value</label>
-                                  </FloatLabel>
+                                  <InputScientificNumber v-model="input.defaultValue" class="form-field"
+                                    label="Default value"
+                                    size="small"
+                                  />
                                   <FloatLabel variant="on" class="form-field">
                                     <InputText v-model="input.visible" class="w-full" size="small" />
                                     <label>Visible (optional)</label>
@@ -214,18 +214,19 @@
                                 <!-- Scalar input fields -->
 
                                 <div v-if="locApi.isScalarInput(input)" class="form-row">
-                                  <FloatLabel variant="on" class="form-field">
-                                    <InputNumber v-model="input.minimumValue" class="w-full" size="small" :maxFractionDigits="15" />
-                                    <label>Minimum value</label>
-                                  </FloatLabel>
-                                  <FloatLabel variant="on" class="form-field">
-                                    <InputNumber v-model="input.maximumValue" class="w-full" size="small" :maxFractionDigits="15" />
-                                    <label>Maximum value</label>
-                                  </FloatLabel>
-                                  <FloatLabel variant="on" class="form-field">
-                                    <InputNumber v-model="input.stepValue" class="w-full" size="small" :maxFractionDigits="15" />
-                                    <label>Step value (optional)</label>
-                                  </FloatLabel>
+                                  <InputScientificNumber v-model="input.minimumValue" class="form-field"
+                                    label="Minimum value"
+                                    size="small"
+                                  />
+                                  <InputScientificNumber v-model="input.maximumValue" class="form-field"
+                                    label="Maximum value"
+                                    size="small"
+                                  />
+                                  <InputScientificNumber v-model="input.stepValue" class="form-field"
+                                    label="Step value (optional)"
+                                    :allowEmpty="true"
+                                    size="small"
+                                  />
                                 </div>
 
                                 <!-- Discrete input fields -->
@@ -249,10 +250,10 @@
                                         <InputText v-model="possibleValue.name" class="w-full" size="small" />
                                         <label>Name</label>
                                       </FloatLabel>
-                                      <FloatLabel variant="on" class="flex-1">
-                                        <InputNumber v-model="possibleValue.value" class="w-full" size="small" />
-                                        <label>Value</label>
-                                      </FloatLabel>
+                                      <InputScientificNumber v-model="possibleValue.value" class="form-field"
+                                        label="Value"
+                                        size="small"
+                                      />
                                       <Button
                                         icon="pi pi-times"
                                         severity="secondary"
