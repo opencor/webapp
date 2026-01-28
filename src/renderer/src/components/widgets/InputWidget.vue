@@ -32,9 +32,7 @@ import * as vue from 'vue';
 import type * as locApi from '../../libopencor/locApi.ts';
 
 const value = defineModel<number>({ required: true });
-const emits = defineEmits<{
-  (event: 'change', name: string, newValue: number): void;
-}>();
+const emits = defineEmits<(event: 'change', name: string, newValue: number) => void>();
 const props = defineProps<{
   maximumValue?: number;
   minimumValue?: number;
