@@ -13,25 +13,15 @@
     </FloatLabel>
   </div>
   <div v-else>
-    <FloatLabel variant="on">
-      <InputText
-        v-model="scalarValueString"
-        v-keyfilter="{ pattern: /^[+-]?(\d*(\.\d*)?|\.d*)([eE][+-]?\d*)?$/, validateOnly: true }"
-        v-on:focusout="inputTextFocusOut"
-        v-on:keypress="inputTextKeyPress"
-        class="w-full"
-        size="small"
-      />
-      <label>{{ name }}</label>
-    </FloatLabel>
-    <Slider
-      v-model="scalarValue"
-      :min="minimumValue"
-      :max="maximumValue"
-      :step="stepValue"
-      @change="sliderChange"
-      class="w-full mt-3"
+    <InputScientificNumber v-model="scalarValue"
+      :label="name"
       size="small"
+      @update:model-value="inputTextValueUpdated"
+    />
+    <Slider v-model="scalarValue" class="w-full mt-3"
+      :min="minimumValue" :max="maximumValue" :step="stepValue"
+      size="small"
+      @change="sliderChange"
     />
   </div>
 </template>
@@ -58,9 +48,8 @@ const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefin
   props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
 const scalarValue = vue.ref<number>(value.value);
-const scalarValueString = vue.ref<string>(String(value.value));
 
-// Some methods to handle a scalar value using an input text and a slider.
+// Some methods to handle a scalar value using an input component and a slider.
 
 function emitChange(newValue: number) {
   void vue.nextTick(() => {
@@ -68,7 +57,6 @@ function emitChange(newValue: number) {
 
     if (!props.possibleValues) {
       scalarValue.value = newValue;
-      scalarValueString.value = String(newValue); // This will properly format the input text.
     }
 
     oldValue = newValue;
@@ -90,33 +78,25 @@ function selectChange(event: ISelectChangeEvent) {
   }
 }
 
-function inputTextChange(newValueString: string) {
-  if (!newValueString) {
-    newValueString = String(props.minimumValue);
-  }
+function inputTextValueUpdated(newValue: number | undefined) {
+  if (newValue === undefined) {
+    scalarValue.value = oldValue;
 
-  if (props.minimumValue !== undefined && Number(newValueString) < props.minimumValue) {
-    newValueString = String(props.minimumValue);
+    return;
   }
-
-  if (props.maximumValue !== undefined && Number(newValueString) > props.maximumValue) {
-    newValueString = String(props.maximumValue);
-  }
-
-  const newValue = Number(newValueString);
 
   if (newValue !== oldValue) {
-    emitChange(newValue);
-  }
-}
+    let constrainedValue = newValue;
 
-function inputTextFocusOut(event: Event) {
-  inputTextChange((event.target as HTMLInputElement).value);
-}
+    if (props.minimumValue !== undefined && constrainedValue < props.minimumValue) {
+      constrainedValue = props.minimumValue;
+    }
 
-function inputTextKeyPress(event: KeyboardEvent) {
-  if (event.key === 'Enter') {
-    inputTextChange((event.target as HTMLInputElement).value);
+    if (props.maximumValue !== undefined && constrainedValue > props.maximumValue) {
+      constrainedValue = props.maximumValue;
+    }
+
+    emitChange(constrainedValue);
   }
 }
 
