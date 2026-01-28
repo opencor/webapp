@@ -119,3 +119,28 @@ export function formatMessage(message: string, selfContained: boolean = true): s
         ? `${message}.`
         : message;
 }
+
+// A method to determine whether a number is divisible by another one.
+
+export function isDivisible(a: number, b: number): boolean {
+  return Number.isInteger(a / b);
+}
+
+// A method to trigger a browser download for a given file.
+
+export function downloadFile(filename: string, content: string | Blob, type: string): void {
+  const link = document.createElement('a');
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+
+  link.href = url;
+  link.download = filename;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+}

@@ -3,23 +3,32 @@
     <Toolbar v-if="toolbarNeeded" :id="toolbarId" class="p-1! shrink-0">
       <template #start>
         <div :class="{ 'invisible': interactiveModeEnabled && interactiveLiveUpdatesEnabled }">
-          <Button class="p-1!" icon="pi pi-play-circle" severity="secondary" text @click="onRun()" />
+          <Button class="p-1! toolbar-button"
+            icon="pi pi-play-circle"
+            text severity="secondary"
+            title="Run simulation (F9)"
+            @click="onRun()"
+          />
         </div>
       </template>
       <template #center>
-        <div v-show="interactiveModeAvailable">
-          <ToggleButton size="small" v-model="interactiveModeEnabled" onLabel="Interactive mode" offLabel="Standard mode" />
+        <div>
+          <ToggleButton
+            size="small"
+            v-model="interactiveModeEnabled"
+            onLabel="Interactive mode"
+            offLabel="Standard mode"
+          />
         </div>
       </template>
       <template #end>
-        <div :class="{ 'invisible': !interactiveModeAvailable || !interactiveModeEnabled }" class="flex">
-          <Button class="p-1!" icon="pi pi-cog" severity="secondary" text @click="settingsMenu.toggle($event)" />
-          <Popover ref="settingsMenu">
-            <div class="flex items-center gap-2 px-1 py-1">
-              <Checkbox :inputId="liveUpdatesCheckboxId" v-model="interactiveLiveUpdatesEnabled" binary size="small" @change="onLiveUpdatesChange()" />
-              <label :for="liveUpdatesCheckboxId" class="text-sm select-none">Live updates</label>
-            </div>
-          </Popover>
+        <div :class="{ 'invisible': !interactiveModeEnabled }" class="flex gap-1">
+          <Button class="p-1! toolbar-button"
+            icon="pi pi-cog"
+            text severity="secondary"
+            title="Settings"
+            @click="interactiveSettingsVisible = true"
+          />
         </div>
       </template>
     </Toolbar>
@@ -75,15 +84,15 @@
         </SplitterPanel>
       </Splitter>
     </div>
-    <div v-if="interactiveModeAvailable" class="grow min-h-0">
+    <div class="grow min-h-0">
       <div v-show="interactiveModeEnabled" class="flex h-full">
-        <IssuesView v-if="interactiveUiJsonIssues.length" class="grow h-full" :issues="interactiveUiJsonIssues" />
+        <IssuesView v-if="interactiveUiJsonIssues.length" class="w-full m-4" :issues="interactiveUiJsonIssues" />
         <div v-else class="flex grow min-h-0">
           <div class="ml-4 mr-4 mb-4">
             <ScrollPanel class="h-full">
               <Fieldset legend="Input parameters">
                 <InputWidget
-                  v-for="(input, index) in uiJson.input"
+                  v-for="(input, index) in interactiveUiJson.input"
                   v-model="interactiveInputValues[index]!"
                   v-show="interactiveShowInput[index]"
                   :key="`input_${index}`"
@@ -101,87 +110,95 @@
                   <div class="flex gap-2">
                     <Button class="grow"
                       icon="pi pi-plus"
-                      label="Add run"
+                      label="Track run"
+                      outlined
                       size="small"
-                      @click="onAddRun()"
+                      title="Track current run"
+                      @click="onTrackRun()"
                     />
                     <Button class="w-9!"
-                      icon="pi pi-refresh"
+                      icon="pi pi-trash"
+                      outlined severity="danger"
                       size="small"
-                      severity="danger"
-                      title="Remove all runs"
+                      title="Remove all tracked runs"
                       @click="onRemoveAllRuns()"
                       :disabled="interactiveRuns.length === 1"
                     />
                   </div>
                   <div class="flex flex-col gap-2">
                     <div v-for="(run, index) in interactiveRuns"
-                      :key="`run_${index}`"
-                      class="run border border-dashed rounded pl-2 pr-1.5 py-1"
+                      :key="run.isLiveRun ? 'live' : `run_${index}`"
+                      class="run-card rounded-lg p-1 pl-2 opacity-75 hover:opacity-100"
+                      :class="{ 'run-card-live': run.isLiveRun, 'opacity-50': !run.isVisible }"
                     >
                       <div class="flex items-center">
+                        <div class="w-1 h-6 rounded-xs mr-2" :style="`background-color: ${run.color};`"></div>
                         <div class="grow text-sm"
-                          :class="{ 'cursor-help': !run.isLiveRun }"
-                          v-tippy:bottom="!run.isLiveRun ? {
+                          :class="{ 'cursor-help': !run.isLiveRun, 'opacity-50': !run.isVisible }"
+                          v-tippy="!run.isLiveRun ? {
                             allowHTML: true,
                             content: run.tooltip,
-                            placement: 'bottom'
+                            placement: 'bottom-start'
                           } : undefined"
                         >
                           {{ run.isLiveRun ? 'Live run' : `Run #${index}` }}
                         </div>
-                        <div>
-                          <Button class="p-0! w-5! h-5!"
-                            icon="pi pi-wave-pulse"
-                            :style="{ color: run.color }"
-                            text size="small"
+                        <div class="flex items-center">
+                          <Button class="p-0! w-5! h-5! run-action-button"
+                            icon="pi pi-palette"
+                            text
+                            size="small"
+                            :style="`color: ${run.color};`"
                             :title="`Change ${run.isLiveRun ? 'live run' : 'run'} colour`"
                             @click="onToggleRunColorPopover(index, $event)"
                           />
-                          <Popover :ref="(element) => interactiveRunColorPopoverRefs[index] = element as unknown as IPopover | undefined"
+                          <Popover :ref="(element) => interactiveRunColorPopovers[index] = element as unknown as IPopover | undefined"
                             v-if="interactiveRunColorPopoverIndex === index"
                           >
                             <div class="flex gap-2">
-                              <button class="cursor-pointer w-6 h-6 rounded"
-                                v-for="color in GraphPanelWidgetPalette" :key="color"
-                                :style="{ backgroundColor: color }"
-                                :class="{ 'selected-color': color === run.color }"
+                              <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
+                                v-for="(name, color) in GraphPanelWidgetPalette" :key="color"
+                                :style="`background-color: ${color};`"
+                                :class="{ 'color-swatch-selected': color === run.color }"
+                                :title="name"
                                 @click="onRunColorChange(index, color)"
                               >
                               </button>
                             </div>
                           </Popover>
+                          <Button class="p-0! w-5! h-5! run-action-button"
+                            :icon="run.isVisible ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                            text :severity="run.isVisible ? 'info' : 'secondary'"
+                            size="small"
+                            :title="`${run.isVisible ? 'Hide' : 'Show'} ${run.isLiveRun ? 'live run' : 'run'}`"
+                            @click="onToggleRun(index)"
+                          />
+                          <Button v-if="!run.isLiveRun" class="p-0! w-5! h-5! run-action-button"
+                            icon="pi pi-times"
+                            text severity="danger"
+                            size="small"
+                            title="Remove run"
+                            @click="onRemoveRun(index)"
+                          />
+                          <div v-else class="w-5 h-5"></div>
                         </div>
-                        <Button class="p-0! w-5! h-5!"
-                          :icon="run.visible ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                          :severity="run.visible ? 'info' : 'secondary'"
-                          text size="small"
-                          :title="`${run.visible ? 'Hide' : 'Show'} ${run.isLiveRun ? 'live run' : 'run'}`"
-                          @click="onToggleRun(index)"
-                        />
-                        <Button v-if="!run.isLiveRun" class="p-0! w-5! h-5!"
-                          icon="pi pi-trash"
-                          severity="danger"
-                          text size="small"
-                          title="Remove run"
-                          @click="onRemoveRun(index)"
-                        />
-                        <div v-else class="w-5 h-5"></div>
                       </div>
                     </div>
-                    <div v-if="interactiveRuns.length === 1" class="hint text-center text-xs">
-                      There are no (additional) runs.<br/>
-                      Click "Add run" to add one.
-                    </div>
+                  </div>
+                  <div v-if="interactiveRuns.length === 1" class="empty-state p-2 text-center rounded-lg">
+                    <i class="pi pi-info-circle empty-state-icon mb-1.5 opacity-50"></i>
+                    <p class="text-xs">
+                      No runs are being tracked.
+                    </p>
                   </div>
                 </div>
               </Fieldset>
             </ScrollPanel>
           </div>
           <div class="flex flex-col grow gap-2 h-full min-h-0">
-            <IssuesView v-show="interactiveInstanceIssues.length" class="h-full" :leftMargin="false" :issues="interactiveInstanceIssues" />
+            <IssuesView v-show="interactiveInstanceIssues.length" class="mt-4 mr-4" style="height: calc(100% - 2rem);" :issues="interactiveInstanceIssues" />
             <GraphPanelWidget v-show="!interactiveInstanceIssues.length"
-              v-for="(_plot, index) in uiJson.output.plots"
+              v-for="(_plot, index) in interactiveUiJson.output.plots"
               :key="`plot_${index}`"
               class="w-full min-h-0"
               :margins="interactiveCompMargins"
@@ -193,6 +210,12 @@
         </div>
       </div>
     </div>
+    <SimulationExperimentViewSettingsDialog
+      v-model:visible="interactiveSettingsVisible"
+      :settings="interactiveSettings"
+      @ok="onInteractiveSettingsOk"
+      @close="interactiveSettingsVisible = false"
+    />
   </div>
 </template>
 
@@ -208,12 +231,17 @@ import * as locCommon from '../../common/locCommon.ts';
 import * as locApi from '../../libopencor/locApi.ts';
 import * as locSedApi from '../../libopencor/locSedApi.ts';
 
+import type { ISimulationExperimentViewSettings } from '../dialogs/SimulationExperimentViewSettingsDialog.vue';
 import type { IGraphPanelData, IGraphPanelPlotTrace, IGraphPanelMargins } from '../widgets/GraphPanelWidget.vue';
-import { DefaultGraphPanelWidgetColor, GraphPanelWidgetPalette } from '../widgets/GraphPanelWidgetPalette.ts';
+import {
+  DefaultGraphPanelWidgetColor,
+  GraphPanelWidgetPalette,
+  GraphPanelWidgetPaletteColors
+} from '../widgets/GraphPanelWidgetPalette.ts';
 
 interface ISimulationRun {
   inputParameters: Record<string, number>;
-  visible: boolean;
+  isVisible: boolean;
   data: IGraphPanelData[];
   color: string;
   tooltip: string;
@@ -230,46 +258,48 @@ const props = defineProps<{
 }>();
 
 const toolbarNeeded = vue.computed(() => {
-  return (
-    !interactiveUiJsonIssues.value.length &&
-    !interactiveInstanceIssues.value.length &&
-    ((props.simulationOnly && !props.uiJson) || !props.simulationOnly)
-  );
+  return (props.simulationOnly && !interactiveUiJson) || !props.simulationOnly;
 });
 
 const toolbarId = vue.ref('simulationExperimentViewToolbar');
 const editorId = vue.ref('simulationExperimentViewEditor');
 const liveUpdatesCheckboxId = vue.ref('simulationExperimentViewLiveUpdatesCheckbox');
-const interactiveModeAvailable = vue.ref<boolean>(!!props.uiJson);
-const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
-const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
-const settingsMenu = vue.ref();
 
-function populateParameters(parameters: vue.Ref<string[]>, instanceTask: locSedApi.SedInstanceTask): void {
+function populateParameters(
+  parameters: vue.Ref<string[]>,
+  instanceTask: locSedApi.SedInstanceTask,
+  onlyEditableModelParameters = false
+): void {
   function addParameter(param: string): void {
     parameters.value.push(param);
   }
 
-  addParameter(instanceTask.voiName());
+  if (!onlyEditableModelParameters) {
+    addParameter(instanceTask.voiName());
+  }
 
   for (let i = 0; i < instanceTask.stateCount(); i++) {
     addParameter(instanceTask.stateName(i));
   }
 
-  for (let i = 0; i < instanceTask.rateCount(); i++) {
-    addParameter(instanceTask.rateName(i));
+  if (!onlyEditableModelParameters) {
+    for (let i = 0; i < instanceTask.rateCount(); i++) {
+      addParameter(instanceTask.rateName(i));
+    }
   }
 
   for (let i = 0; i < instanceTask.constantCount(); i++) {
     addParameter(instanceTask.constantName(i));
   }
 
-  for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
-    addParameter(instanceTask.computedConstantName(i));
-  }
+  if (!onlyEditableModelParameters) {
+    for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+      addParameter(instanceTask.computedConstantName(i));
+    }
 
-  for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
-    addParameter(instanceTask.algebraicVariableName(i));
+    for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
+      addParameter(instanceTask.algebraicVariableName(i));
+    }
   }
 
   // Sort the parameters alphabetically.
@@ -288,7 +318,7 @@ function onRun(): void {
 
     const simulationTime = standardInstance.run();
 
-    standardConsoleContents.value += `<br/>&nbsp;&nbsp;<b>Simulation time:</b> ${common.formatTime(simulationTime)}`;
+    standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> ${common.formatTime(simulationTime)}`;
 
     void vue.nextTick(() => {
       const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
@@ -308,16 +338,23 @@ function onRun(): void {
   updateInteractiveSimulation(true);
 }
 
-function onLiveUpdatesChange(): void {
-  if (interactiveLiveUpdatesEnabled.value) {
-    updateInteractiveSimulation();
-  }
+function populateInputProperties(currentUiJson: locApi.IUiJson) {
+  interactiveInputValues.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue);
+  interactiveShowInput.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true');
+
+  Object.keys(interactiveIdToInfo).forEach((key) => {
+    delete interactiveIdToInfo[key];
+  });
+
+  currentUiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+    interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
+  });
 }
 
 // Standard mode.
 
 const standardDocument = props.file.document();
-const standardUniformTimeCourse = standardDocument.simulation(0) as locApi.SedSimulationUniformTimeCourse;
+const standardUniformTimeCourse = standardDocument.simulation(0) as locApi.SedUniformTimeCourse;
 const standardInstance = standardDocument.instantiate();
 const standardInstanceTask = standardInstance.task(0);
 const standardParameters = vue.ref<string[]>([]);
@@ -361,29 +398,31 @@ interface IPopover {
   hide: () => void;
 }
 
+const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
+const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
+const interactiveSettingsVisible = vue.ref<boolean>(false);
+const interactiveUiJson = vue.ref<locApi.IUiJson>(initialUiJson());
 const interactiveDocument = props.file.document();
-const interactiveInstance = interactiveDocument.instantiate();
-const interactiveInstanceTask = interactiveInstance.task(0);
+const interactiveUniformTimeCourse = interactiveDocument.simulation(0) as locApi.SedUniformTimeCourse;
+const interactiveCvode = interactiveUniformTimeCourse.cvode();
+let interactiveInstance = interactiveDocument.instantiate();
+let interactiveInstanceTask = interactiveInstance.task(0);
+const interactiveAllModelParameters = vue.ref<string[]>([]);
+const interactiveEditableModelParameters = vue.ref<string[]>([]);
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = interactiveDocument.model(0);
 const interactiveData = vue.ref<IGraphPanelData[]>([]);
 let interactiveMargins: Record<string, IGraphPanelMargins> = {};
 const interactiveCompMargins = vue.ref<IGraphPanelMargins>();
-const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(
-  interactiveModeAvailable.value ? locApi.uiJsonIssues(props.uiJson) : []
-);
+const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(locApi.validateUiJson(interactiveUiJson.value));
 const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
-const interactiveInputValues = vue.ref<number[]>(
-  interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue) : []
-);
-const interactiveShowInput = vue.ref<string[]>(
-  interactiveModeAvailable.value ? props.uiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true') : []
-);
+const interactiveInputValues = vue.ref<number[]>([]);
+const interactiveShowInput = vue.ref<string[]>([]);
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 const interactiveRuns = vue.ref<ISimulationRun[]>([
   {
     inputParameters: {},
-    visible: true,
+    isVisible: true,
     data: [],
     color: DefaultGraphPanelWidgetColor,
     tooltip: '',
@@ -391,9 +430,9 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
   }
 ]);
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
-const interactiveRunColorPopoverRefs = vue.ref<Record<number, IPopover | undefined>>({});
+const interactiveRunColorPopovers = vue.ref<Record<number, IPopover | undefined>>({});
 const interactiveCompData = vue.computed(() => {
-  // Combine the live data with the data from the additional runs.
+  // Combine the live data with the data from the tracked runs.
 
   const res: IGraphPanelData[] = [];
 
@@ -405,7 +444,7 @@ const interactiveCompData = vue.computed(() => {
     const traces: IGraphPanelPlotTrace[] = [];
 
     interactiveRuns.value.forEach((interactiveRun: ISimulationRun, runIndex: number) => {
-      if (!interactiveRun.visible) {
+      if (!interactiveRun.isVisible) {
         return;
       }
 
@@ -419,8 +458,9 @@ const interactiveCompData = vue.computed(() => {
             trace.name +
             (interactiveRuns.value.length === 1 ? '' : interactiveRun.isLiveRun ? ' [Live]' : ` [#${runIndex}]`),
           color:
-            GraphPanelWidgetPalette[
-              (GraphPanelWidgetPalette.indexOf(interactiveRun.color) + traceIndex) % GraphPanelWidgetPalette.length
+            GraphPanelWidgetPaletteColors[
+              (GraphPanelWidgetPaletteColors.indexOf(interactiveRun.color) + traceIndex) %
+                GraphPanelWidgetPaletteColors.length
             ] ?? DefaultGraphPanelWidgetColor,
           zorder: interactiveRun.isLiveRun ? 1 : undefined
         };
@@ -438,14 +478,55 @@ const interactiveCompData = vue.computed(() => {
 
   return res;
 });
+const interactiveSettings = vue.computed(() => ({
+  simulation: {
+    startingPoint: interactiveUniformTimeCourse.initialTime(),
+    endingPoint: interactiveUniformTimeCourse.outputEndTime(),
+    pointInterval:
+      (interactiveUniformTimeCourse.outputEndTime() - interactiveUniformTimeCourse.outputStartTime()) /
+      interactiveUniformTimeCourse.numberOfSteps()
+  },
+  solvers: {
+    cvodeMaximumStep: interactiveCvode.maximumStep()
+  },
+  interactive: {
+    uiJson: interactiveUiJson.value,
+    allModelParameters: interactiveAllModelParameters.value,
+    editableModelParameters: interactiveEditableModelParameters.value
+  },
+  miscellaneous: {
+    liveUpdates: interactiveLiveUpdatesEnabled.value
+  },
+  extra: {
+    voiUnit: interactiveInstanceTask.voiUnit()
+  }
+}));
 
-// Map data IDs to simulation data info.
+// Initial UI JSON content.
 
-if (interactiveModeAvailable.value) {
-  props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-    interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
-  });
+function initialUiJson(): locApi.IUiJson {
+  if (props.uiJson) {
+    return JSON.parse(JSON.stringify(props.uiJson));
+  }
+
+  return {
+    input: [],
+    output: {
+      data: [],
+      plots: []
+    },
+    parameters: []
+  };
 }
+
+// Populate our model parameters.
+
+populateParameters(interactiveAllModelParameters, interactiveInstanceTask);
+populateParameters(interactiveEditableModelParameters, interactiveInstanceTask, true);
+
+// Populate our input properties.
+
+populateInputProperties(interactiveUiJson.value);
 
 // Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
 
@@ -487,7 +568,7 @@ function evaluateValue(value: string): mathjs.MathType {
   const parser = interactiveMath.parser();
   let index = -1;
 
-  props.uiJson.input.forEach((input: locApi.IUiJsonInput) => {
+  interactiveUiJson.value.input.forEach((input: locApi.IUiJsonInput) => {
     parser.set(input.id, interactiveInputValues.value[++index]);
   });
 
@@ -503,7 +584,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
 
   // Show/hide the input widgets.
 
-  props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
+  interactiveUiJson.value.input.forEach((input: locApi.IUiJsonInput, index: number) => {
     interactiveShowInput.value[index] = evaluateValue(input.visible ?? 'true');
   });
 
@@ -511,7 +592,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
 
   interactiveModel.removeAllChanges();
 
-  props.uiJson.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
+  interactiveUiJson.value.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/');
 
     if (componentVariableNames[0] && componentVariableNames[1]) {
@@ -541,7 +622,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
 
   const parser = interactiveMath.parser();
 
-  props.uiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+  interactiveUiJson.value.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     const info = interactiveIdToInfo[data.id];
 
     if (info) {
@@ -551,31 +632,51 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
     }
   });
 
-  interactiveData.value = props.uiJson.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
-    const traces: IGraphPanelPlotTrace[] = [
+  const parserEvaluate = (value: string): number[] => {
+    // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure element-wise
+    //       operations.
+
+    return parser.evaluate(value.replace(/(?<!\.)\*(?!\.)/g, '.*').replace(/(?<!\.)\/(?!\.)/g, './'));
+  };
+
+  try {
+    interactiveData.value = interactiveUiJson.value.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
+      const traces: IGraphPanelPlotTrace[] = [
+        {
+          name: traceName(plot.name, plot.xValue, plot.yValue),
+          x: parserEvaluate(plot.xValue),
+          y: parserEvaluate(plot.yValue),
+          color: DefaultGraphPanelWidgetColor
+        }
+      ];
+
+      plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
+        traces.push({
+          name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
+          x: parserEvaluate(additionalTrace.xValue),
+          y: parserEvaluate(additionalTrace.yValue),
+          color: DefaultGraphPanelWidgetColor
+        });
+      });
+
+      return {
+        xAxisTitle: plot.xAxisTitle,
+        yAxisTitle: plot.yAxisTitle,
+        traces
+      };
+    });
+  } catch (error: unknown) {
+    interactiveInstanceIssues.value = [
       {
-        name: traceName(plot.name, plot.xValue, plot.yValue),
-        x: parser.evaluate(plot.xValue),
-        y: parser.evaluate(plot.yValue),
-        color: DefaultGraphPanelWidgetColor
+        type: locApi.EIssueType.ERROR,
+        description: `An error occurred while evaluating the plot expressions (${common.formatMessage(error instanceof Error ? error.message : String(error), false)}).`
+      },
+      {
+        type: locApi.EIssueType.INFORMATION,
+        description: 'Please check the interactive settings and try again.'
       }
     ];
-
-    plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
-      traces.push({
-        name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
-        x: parser.evaluate(additionalTrace.xValue),
-        y: parser.evaluate(additionalTrace.yValue),
-        color: DefaultGraphPanelWidgetColor
-      });
-    });
-
-    return {
-      xAxisTitle: plot.xAxisTitle,
-      yAxisTitle: plot.yAxisTitle,
-      traces
-    };
-  });
+  }
 }
 
 // Interactive mode's margins-related event handlers.
@@ -585,7 +686,7 @@ function onMarginsUpdated(plotId: string, newMargins: IGraphPanelMargins): void 
 
   const margins = Object.values(interactiveMargins);
 
-  if (margins.length !== props.uiJson.output.plots.length) {
+  if (margins.length !== interactiveUiJson.value.output.plots.length) {
     interactiveCompMargins.value = undefined;
 
     return;
@@ -604,12 +705,12 @@ function onResetMargins() {
 
 // Interactive mode's runs-related event handlers
 
-function onAddRun(): void {
+function onTrackRun(): void {
   // Create a new run from the live run.
 
   const inputParameters: Record<string, number> = {};
 
-  props.uiJson.input.forEach((input: locApi.IUiJsonInput, index: number) => {
+  interactiveUiJson.value.input.forEach((input: locApi.IUiJsonInput, index: number) => {
     const interactiveInputValue = interactiveInputValues.value[index];
 
     if (interactiveInputValue) {
@@ -619,7 +720,7 @@ function onAddRun(): void {
 
   // Compute the tooltip for this run, keeping in mind that some input parameters may not be visible.
 
-  const rows = props.uiJson.input
+  const tooltipLines = interactiveUiJson.value.input
     .map((input, index) => ({
       input: input,
       visible: interactiveShowInput.value[index]
@@ -640,38 +741,34 @@ function onAddRun(): void {
         }
       }
 
-      return `
-<tr>
-  <td>
-    <b>${input.name}:</b>
-  </td>
-  <td style="padding-left: 8px;">
-    ${inputValue}
-  </td>
-</tr>
-`;
+      return `<tr>
+      <td>
+        <b>${input.name}:</b>
+      </td>
+      <td style="padding-left: 8px;">
+        ${inputValue}
+      </td>
+    </tr>`;
     })
     .join('');
-  const tooltip = `
-<table>
+  const tooltip = `<table>
   <tbody>
-    ${rows}
+    ${tooltipLines}
   </tbody>
-</table>
-`;
+</table>`;
 
   // Determine the colour (of the first trace) by using the next unused colour in the palette unless all the colours
   // have already been used.
 
   const usedColors = new Set<string>(interactiveRuns.value.map((run) => run.color));
   const lastColor = interactiveRuns.value[interactiveRuns.value.length - 1]?.color ?? DefaultGraphPanelWidgetColor;
-  const lastColorIndex = GraphPanelWidgetPalette.indexOf(lastColor);
+  const lastColorIndex = GraphPanelWidgetPaletteColors.indexOf(lastColor);
   let color: string = DefaultGraphPanelWidgetColor;
 
-  for (let i = 1; i <= GraphPanelWidgetPalette.length; ++i) {
-    const newColor = GraphPanelWidgetPalette[(lastColorIndex + i) % GraphPanelWidgetPalette.length];
+  for (let i = 1; i <= GraphPanelWidgetPaletteColors.length; ++i) {
+    const newColor = GraphPanelWidgetPaletteColors[(lastColorIndex + i) % GraphPanelWidgetPaletteColors.length];
 
-    if (newColor && (!usedColors.has(newColor) || usedColors.size === GraphPanelWidgetPalette.length)) {
+    if (newColor && (!usedColors.has(newColor) || usedColors.size === GraphPanelWidgetPaletteColors.length)) {
       color = newColor;
 
       break;
@@ -682,7 +779,7 @@ function onAddRun(): void {
 
   interactiveRuns.value.push({
     inputParameters,
-    visible: true,
+    isVisible: true,
     data: interactiveData.value,
     color,
     tooltip,
@@ -708,7 +805,7 @@ function onToggleRun(index: number): void {
   const interactiveRun = interactiveRuns.value[index];
 
   if (interactiveRun) {
-    interactiveRun.visible = !interactiveRun.visible;
+    interactiveRun.isVisible = !interactiveRun.isVisible;
   }
 }
 
@@ -729,7 +826,55 @@ function onToggleRunColorPopover(index: number, event: MouseEvent) {
   vue.nextTick(() => {
     // Note: we do this in a next tick to ensure that the reference is available.
 
-    interactiveRunColorPopoverRefs.value[index]?.toggle(event);
+    interactiveRunColorPopovers.value[index]?.toggle(event);
+  });
+}
+
+function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): void {
+  // Update our settings and hide the dialog.
+
+  const oldCvodeMaximumStep = interactiveCvode.maximumStep();
+
+  interactiveUniformTimeCourse.setOutputStartTime(settings.simulation.startingPoint);
+  interactiveUniformTimeCourse.setOutputEndTime(settings.simulation.endingPoint);
+  interactiveUniformTimeCourse.setNumberOfSteps(
+    Math.max(
+      1,
+      Math.round(
+        (settings.simulation.endingPoint - settings.simulation.startingPoint) / settings.simulation.pointInterval
+      )
+    )
+  );
+
+  interactiveCvode.setMaximumStep(settings.solvers.cvodeMaximumStep);
+
+  interactiveUiJson.value = settings.interactive.uiJson;
+  interactiveLiveUpdatesEnabled.value = settings.miscellaneous.liveUpdates;
+  interactiveSettingsVisible.value = false;
+
+  // Validate the new UI JSON settings.
+
+  interactiveUiJsonIssues.value = locApi.validateUiJson(settings.interactive.uiJson);
+
+  if (interactiveUiJsonIssues.value.length > 0) {
+    return;
+  }
+
+  // Reinstantiate our instance in case we modified CVODE's maximum step.
+
+  if (interactiveCvode.maximumStep() !== oldCvodeMaximumStep) {
+    interactiveInstance = interactiveDocument.instantiate(); // So that we can run the simulation again.
+    interactiveInstanceTask = interactiveInstance.task(0); // So that we can retrieve our "new" simulation results.
+  }
+
+  // Update our input properties.
+
+  populateInputProperties(settings.interactive.uiJson);
+
+  // Update the interactive simulation with the new UI JSON settings.
+
+  void vue.nextTick().then(() => {
+    updateInteractiveSimulation();
   });
 }
 
@@ -738,9 +883,7 @@ function onToggleRunColorPopover(index: number, event: MouseEvent) {
 vue.onMounted(() => {
   updatePlot();
 
-  if (interactiveModeAvailable.value) {
-    updateInteractiveSimulation();
-  }
+  updateInteractiveSimulation();
 });
 
 // Various things that need to be done once we are is mounted.
@@ -762,7 +905,7 @@ vue.onMounted(() => {
     (isFocused) => {
       if (!isFocused) {
         if (interactiveRunColorPopoverIndex.value !== -1) {
-          interactiveRunColorPopoverRefs.value[interactiveRunColorPopoverIndex.value]?.hide();
+          interactiveRunColorPopovers.value[interactiveRunColorPopoverIndex.value]?.hide();
 
           interactiveRunColorPopoverIndex.value = -1;
         }
@@ -791,20 +934,31 @@ if (common.isDesktop()) {
 </script>
 
 <style scoped>
-.hint {
-  color: var(--p-text-muted-color);
+.color-swatch:hover {
+  box-shadow: 0 2px 8px var(--p-shadow-color, rgba(0, 0, 0, 0.15));
 }
 
-.invisible {
-  visibility: hidden;
+@media (prefers-color-scheme: dark) {
+  .color-swatch:hover {
+    box-shadow: 0 2px 8px var(--p-shadow-color-dark, rgba(255, 255, 255, 0.15));
+  }
+}
+
+.color-swatch-selected {
+  outline-color: var(--p-text-color);
+}
+
+.empty-state {
+  color: var(--p-text-muted-color);
+  border: 1px dashed var(--p-content-border-color);
+}
+
+.empty-state-icon {
+  font-size: 1.25rem;
 }
 
 :deep(.p-button-icon) {
   font-size: 1.5rem;
-}
-
-:deep(.p-button-icon-only) {
-  width: 2rem;
 }
 
 :deep(.p-editor-content) {
@@ -822,10 +976,39 @@ if (common.isDesktop()) {
   padding-right: 0.75rem !important;
 }
 
+:deep(.p-togglebutton:hover) {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  :deep(.p-togglebutton:hover) {
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+  }
+}
+
 .p-toolbar {
   border: none;
   border-radius: 0;
   border-bottom: 1px solid var(--p-content-border-color);
+}
+
+.run-action-button {
+  opacity: 0.75;
+}
+
+.run-action-button:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.run-card {
+  border: 1px solid var(--p-content-border-color);
+}
+
+.run-card-live {
+  border-style: dashed;
+  border-color: var(--p-primary-color);
 }
 
 :deep(.ql-editor) {
@@ -836,11 +1019,8 @@ if (common.isDesktop()) {
   cursor: default;
 }
 
-.run {
-  border-color: var(--p-content-border-color);
-}
-
-.selected-color {
-  outline: 3px solid var(--p-text-color);
+.toolbar-button:hover {
+  background-color: var(--p-surface-hover) !important;
+  transform: scale(1.15);
 }
 </style>

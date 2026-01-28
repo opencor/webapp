@@ -19,8 +19,8 @@
           <ol class="list-decimal list-inside ml-2">
             <li>
               <span class="font-bold">OpenCOR:</span> a desktop application that can be run on
-              <a href="https://en.wikipedia.org/wiki/List_of_Intel_processors">Intel</a>-based and
-              <a href="https://en.wikipedia.org/wiki/ARM_architecture_family">ARM</a>-based
+              <a href="https://en.wikipedia.org/wiki/List_of_Intel_processors" target="_blank" rel="noopener">Intel</a>-based and
+              <a href="https://en.wikipedia.org/wiki/ARM_architecture_family" target="_blank" rel="noopener">ARM</a>-based
               <a href="https://en.wikipedia.org/wiki/Microsoft_Windows" target="_blank" rel="noopener">Windows</a>,
               <a href="https://en.wikipedia.org/wiki/Linux" target="_blank" rel="noopener">Linux</a>, and
               <a href="https://en.wikipedia.org/wiki/MacOS" target="_blank" rel="noopener">macOS</a> machines; and
@@ -45,7 +45,9 @@ import { COPYRIGHT } from '../../common/constants.ts';
 import { electronApi } from '../../common/electronApi.ts';
 import * as locApi from '../../libopencor/locApi.ts';
 
-defineEmits<(event: 'close') => void>();
+defineEmits<{
+  (event: 'close'): void;
+}>();
 
 import { version } from '../../../package.json';
 </script>

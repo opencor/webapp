@@ -11,7 +11,7 @@ import * as vue from 'vue';
 
 import * as vueCommon from '../../common/vueCommon.ts';
 
-import { GraphPanelWidgetPalette } from './GraphPanelWidgetPalette.ts';
+import { GraphPanelWidgetPaletteColors } from './GraphPanelWidgetPalette.ts';
 
 export interface IGraphPanelPlotTrace {
   name: string;
@@ -91,7 +91,7 @@ function themeData(): IThemeData {
     font: {
       color: theme.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
     },
-    colorway: GraphPanelWidgetPalette,
+    colorway: GraphPanelWidgetPaletteColors,
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };

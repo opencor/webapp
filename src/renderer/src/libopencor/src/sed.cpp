@@ -41,25 +41,6 @@ napi_value sedDocumentModelCount(const Napi::CallbackInfo &pInfo)
     return Napi::Number::New(pInfo.Env(), toSedDocument(toSizeT(pInfo[0]))->modelCount());
 }
 
-void sedDocumentModelAddChange(const Napi::CallbackInfo &pInfo)
-{
-    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
-    auto model = sedDocument->model(toInt32(pInfo[1]));
-    auto changeAttribute = libOpenCOR::SedChangeAttribute::create(toString(pInfo[2]),
-                                                                  toString(pInfo[3]),
-                                                                  toString(pInfo[4]));
-
-    model->addChange(changeAttribute);
-}
-
-void sedDocumentModelRemoveAllChanges(const Napi::CallbackInfo &pInfo)
-{
-    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
-    auto model = sedDocument->model(toInt32(pInfo[1]));
-
-    model->removeAllChanges();
-}
-
 napi_value sedDocumentSimulationCount(const Napi::CallbackInfo &pInfo)
 {
     return Napi::Number::New(pInfo.Env(), toSedDocument(toSizeT(pInfo[0]))->simulationCount());
@@ -85,7 +66,30 @@ napi_value sedDocumentSimulationType(const Napi::CallbackInfo &pInfo)
     return Napi::Number::New(pInfo.Env(), 3); // libOpenCOR::SedUniformTimeCourse.
 }
 
-napi_value sedDocumentSimulationOneStepStep(const Napi::CallbackInfo &pInfo)
+// SedModel API.
+
+void sedModelAddChange(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto model = sedDocument->model(toInt32(pInfo[1]));
+    auto changeAttribute = libOpenCOR::SedChangeAttribute::create(toString(pInfo[2]),
+                                                                  toString(pInfo[3]),
+                                                                  toString(pInfo[4]));
+
+    model->addChange(changeAttribute);
+}
+
+void sedModelRemoveAllChanges(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto model = sedDocument->model(toInt32(pInfo[1]));
+
+    model->removeAllChanges();
+}
+
+// SedOneStep API.
+
+napi_value sedOneStepStep(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
     auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
@@ -94,7 +98,9 @@ napi_value sedDocumentSimulationOneStepStep(const Napi::CallbackInfo &pInfo)
     return Napi::Number::New(pInfo.Env(), oneStep->step());
 }
 
-napi_value sedDocumentSimulationUniformTimeCourseInitialTime(const Napi::CallbackInfo &pInfo)
+// SedUniformTimeCourse API.
+
+napi_value sedUniformTimeCourseInitialTime(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
     auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
@@ -103,7 +109,7 @@ napi_value sedDocumentSimulationUniformTimeCourseInitialTime(const Napi::Callbac
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->initialTime());
 }
 
-napi_value sedDocumentSimulationUniformTimeCourseOutputStartTime(const Napi::CallbackInfo &pInfo)
+napi_value sedUniformTimeCourseOutputStartTime(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
     auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
@@ -112,7 +118,7 @@ napi_value sedDocumentSimulationUniformTimeCourseOutputStartTime(const Napi::Cal
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->outputStartTime());
 }
 
-void sedDocumentSimulationUniformTimeCourseSetOutputStartTime(const Napi::CallbackInfo &pInfo)
+void sedUniformTimeCourseSetOutputStartTime(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
     auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
@@ -121,7 +127,7 @@ void sedDocumentSimulationUniformTimeCourseSetOutputStartTime(const Napi::Callba
     uniformTimeCourse->setOutputStartTime(toDouble(pInfo[2]));
 }
 
-napi_value sedDocumentSimulationUniformTimeCourseOutputEndTime(const Napi::CallbackInfo &pInfo)
+napi_value sedUniformTimeCourseOutputEndTime(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
     auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
@@ -130,7 +136,7 @@ napi_value sedDocumentSimulationUniformTimeCourseOutputEndTime(const Napi::Callb
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->outputEndTime());
 }
 
-void sedDocumentSimulationUniformTimeCourseSetOutputEndTime(const Napi::CallbackInfo &pInfo)
+void sedUniformTimeCourseSetOutputEndTime(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
     auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
@@ -139,7 +145,7 @@ void sedDocumentSimulationUniformTimeCourseSetOutputEndTime(const Napi::Callback
     uniformTimeCourse->setOutputEndTime(toDouble(pInfo[2]));
 }
 
-napi_value sedDocumentSimulationUniformTimeCourseNumberOfSteps(const Napi::CallbackInfo &pInfo)
+napi_value sedUniformTimeCourseNumberOfSteps(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
     auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
@@ -148,13 +154,34 @@ napi_value sedDocumentSimulationUniformTimeCourseNumberOfSteps(const Napi::Callb
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->numberOfSteps());
 }
 
-void sedDocumentSimulationUniformTimeCourseSetNumberOfSteps(const Napi::CallbackInfo &pInfo)
+void sedUniformTimeCourseSetNumberOfSteps(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
     auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
     auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
 
     uniformTimeCourse->setNumberOfSteps(toInt32(pInfo[2]));
+}
+
+// SolverCvode API.
+// TODO: this is only temporary until we have full support for our different solvers.
+
+napi_value solverCvodeMaximumStep(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
+    auto solver = std::dynamic_pointer_cast<libOpenCOR::SolverCvode>(simulation->odeSolver());
+
+    return Napi::Number::New(pInfo.Env(), solver->maximumStep());
+}
+
+void solverCvodeSetMaximumStep(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
+    auto solver = std::dynamic_pointer_cast<libOpenCOR::SolverCvode>(simulation->odeSolver());
+
+    solver->setMaximumStep(toDouble(pInfo[2]));
 }
 
 // SedInstance API.

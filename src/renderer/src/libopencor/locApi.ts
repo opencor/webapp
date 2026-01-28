@@ -23,24 +23,39 @@ export interface ICppLocApi {
   sedDocumentInstantiate: (documentId: number) => number;
   sedDocumentIssues: (documentId: number) => IIssue[];
   sedDocumentModelCount: (documentId: number) => number;
-  sedDocumentModelAddChange: (
+  sedDocumentSimulationCount: (documentId: number) => number;
+  sedDocumentSimulationType: (documentId: number, index: number) => number;
+
+  // SedModel API.
+
+  sedModelAddChange: (
     documentId: number,
     index: number,
     componentName: string,
     variableName: string,
     newValue: string
   ) => void;
-  sedDocumentModelRemoveAllChanges: (documentId: number, index: number) => void;
-  sedDocumentSimulationCount: (documentId: number) => number;
-  sedDocumentSimulationType: (documentId: number, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseInitialTime: (documentId: number, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseOutputStartTime: (documentId: number, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseSetOutputStartTime: (documentId: number, index: number, value: number) => void;
-  sedDocumentSimulationUniformTimeCourseOutputEndTime: (documentId: number, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseSetOutputEndTime: (documentId: number, index: number, value: number) => void;
-  sedDocumentSimulationUniformTimeCourseNumberOfSteps: (documentId: number, index: number) => number;
-  sedDocumentSimulationUniformTimeCourseSetNumberOfSteps: (documentId: number, index: number, value: number) => void;
-  sedDocumentSimulationOneStepStep: (documentId: number, index: number) => number;
+  sedModelRemoveAllChanges: (documentId: number, index: number) => void;
+
+  // SedOneStep API.
+
+  sedOneStepStep: (documentId: number, index: number) => number;
+
+  // SedUniformTimeCourse API.
+
+  sedUniformTimeCourseInitialTime: (documentId: number, index: number) => number;
+  sedUniformTimeCourseOutputStartTime: (documentId: number, index: number) => number;
+  sedUniformTimeCourseSetOutputStartTime: (documentId: number, index: number, value: number) => void;
+  sedUniformTimeCourseOutputEndTime: (documentId: number, index: number) => number;
+  sedUniformTimeCourseSetOutputEndTime: (documentId: number, index: number, value: number) => void;
+  sedUniformTimeCourseNumberOfSteps: (documentId: number, index: number) => number;
+  sedUniformTimeCourseSetNumberOfSteps: (documentId: number, index: number, value: number) => void;
+
+  // SolverCvode API.
+  // TODO: this is only temporary until we have full support for our different solvers.
+
+  solverCvodeMaximumStep: (documentId: number, index: number) => number;
+  solverCvodeSetMaximumStep: (documentId: number, index: number, value: number) => void;
 
   // SedInstance API.
 
@@ -154,7 +169,7 @@ export {
   SedDocument,
   SedInstance,
   SedInstanceTask,
-  SedSimulationUniformTimeCourse
+  SedUniformTimeCourse
 } from './locSedApi.ts';
 
 // UI JSON API.
@@ -172,7 +187,8 @@ export {
   type IUiJsonScalarInput,
   isScalarInput,
   isDiscreteInput,
-  uiJsonIssues
+  cleanUiJson,
+  validateUiJson
 } from './locUiJsonApi.ts';
 
 // Version API.

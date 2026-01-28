@@ -10,7 +10,7 @@ import process from 'node:process';
 import type { ISettings } from '../renderer/src/common/common.ts';
 import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants.ts';
 import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
-/*---OPENCOR--- Enable once our GitHub integration is fully ready.
+/* TODO: enable once our GitHub integration is fully ready.
 import {
   clearGitHubCache,
   deleteGitHubAccessToken,
@@ -214,7 +214,7 @@ electron.app
         electron.ipcMain.handle('check-for-updates', (_event, atStartup: boolean) => {
           checkForUpdates(atStartup);
         });
-        /*---OPENCOR--- Enable once our GitHub integration is fully ready.
+        /* TODO: enable once our GitHub integration is fully ready.
         electron.ipcMain.handle('clear-github-cache', async (): Promise<void> => {
           await clearGitHubCache();
         });
@@ -249,7 +249,7 @@ electron.app
         electron.ipcMain.handle('install-update-and-restart', () => {
           installUpdateAndRestart();
         });
-        /*---OPENCOR--- Enable once our GitHub integration is fully ready.
+        /* TODO: enable once our GitHub integration is fully ready.
         electron.ipcMain.handle('load-github-access-token', async (): Promise<string | null> => {
           return loadGitHubAccessToken();
         });
@@ -258,7 +258,7 @@ electron.app
           return loadSettings();
         });
         electron.ipcMain.handle('reset-all', resetAll);
-        /*---OPENCOR--- Enable once our GitHub integration is fully ready.
+        /* TODO: enable once our GitHub integration is fully ready.
         electron.ipcMain.handle('save-github-access-token', async (_event, token: string): Promise<boolean> => {
           return saveGitHubAccessToken(token);
         });

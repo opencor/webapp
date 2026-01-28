@@ -103,7 +103,7 @@ const items = [
       }
     ]
   },
-  /*---OPENCOR--- Enable the settings menu once we have settings for OpenCOR's Web app.
+  /* TODO: enable the settings menu once we have settings for OpenCOR's Web app.
   {
     label: 'Tools',
     items: [
@@ -265,7 +265,7 @@ if (common.isDesktop()) {
 
 .shortcut {
   border-color: var(--p-content-border-color);
-  background: var(--p-content-hover-background);
+  background-color: var(--p-content-hover-background);
   color: var(--p-text-muted-color);
 }
 </style>
