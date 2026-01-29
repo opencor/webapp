@@ -109,6 +109,15 @@ napi_value sedUniformTimeCourseInitialTime(const Napi::CallbackInfo &pInfo)
     return Napi::Number::New(pInfo.Env(), uniformTimeCourse->initialTime());
 }
 
+void sedUniformTimeCourseSetInitialTime(const Napi::CallbackInfo &pInfo)
+{
+    auto sedDocument = toSedDocument(toSizeT(pInfo[0]));
+    auto simulation = sedDocument->simulation(toInt32(pInfo[1]));
+    auto uniformTimeCourse = std::dynamic_pointer_cast<libOpenCOR::SedUniformTimeCourse>(simulation);
+
+    uniformTimeCourse->setInitialTime(toDouble(pInfo[2]));
+}
+
 napi_value sedUniformTimeCourseOutputStartTime(const Napi::CallbackInfo &pInfo)
 {
     auto sedDocument = toSedDocument(toSizeT(pInfo[0]));

@@ -44,6 +44,7 @@ export interface ICppLocApi {
   // SedUniformTimeCourse API.
 
   sedUniformTimeCourseInitialTime: (documentId: number, index: number) => number;
+  sedUniformTimeCourseSetInitialTime: (documentId: number, index: number, value: number) => void;
   sedUniformTimeCourseOutputStartTime: (documentId: number, index: number) => number;
   sedUniformTimeCourseSetOutputStartTime: (documentId: number, index: number, value: number) => void;
   sedUniformTimeCourseOutputEndTime: (documentId: number, index: number) => number;

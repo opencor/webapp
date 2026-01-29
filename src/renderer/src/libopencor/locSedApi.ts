@@ -299,6 +299,14 @@ export class SedUniformTimeCourse extends SedSimulation {
       : this._wasmSedUniformTimeCourse.initialTime;
   }
 
+  setInitialTime(value: number): void {
+    if (cppVersion()) {
+      _cppLocApi.sedUniformTimeCourseSetInitialTime(this._cppDocumentId, this._index, value);
+    } else {
+      this._wasmSedUniformTimeCourse.initialTime = value;
+    }
+  }
+
   outputStartTime(): number {
     return cppVersion()
       ? _cppLocApi.sedUniformTimeCourseOutputStartTime(this._cppDocumentId, this._index)
