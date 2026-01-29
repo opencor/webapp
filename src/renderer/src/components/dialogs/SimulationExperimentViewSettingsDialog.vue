@@ -39,17 +39,17 @@
               <div class="settings-form">
                 <div class="form-row">
                   <InputScientificNumber v-model="localSettings.simulation.startingPoint" class="form-field"
-                    :label="`Starting point (${localSettings.extra.voiUnit})`"
+                    :label="`Starting point (${voiUnit})`"
                     size="small"
                   />
                   <InputScientificNumber v-model="localSettings.simulation.endingPoint" class="form-field"
-                    :label="`Ending point (${localSettings.extra.voiUnit})`"
+                    :label="`Ending point (${voiUnit})`"
                     size="small"
                   />
                 </div>
                 <div class="form-row">
                   <InputScientificNumber v-model="localSettings.simulation.pointInterval" class="form-field"
-                    :label="`Point interval (${localSettings.extra.voiUnit})`"
+                    :label="`Point interval (${voiUnit})`"
                     size="small"
                   />
                   <div class="form-field self-stretch">
@@ -82,7 +82,7 @@
               <div class="settings-form">
                 <div class="form-row">
                   <InputScientificNumber v-model="localSettings.solvers.cvodeMaximumStep" class="form-field"
-                    :label="`CVODE's maximum step (${localSettings.extra.voiUnit})`"
+                    :label="`CVODE's maximum step (${voiUnit})`"
                     size="small"
                   />
                   <div class="form-field self-stretch flex items-center">
@@ -773,13 +773,11 @@ export interface ISimulationExperimentViewSettings {
   miscellaneous: {
     liveUpdates: boolean;
   };
-  extra: {
-    voiUnit: string;
-  };
 }
 
 const props = defineProps<{
   settings: ISimulationExperimentViewSettings;
+  voiUnit: string;
 }>();
 
 const emit = defineEmits<{
@@ -1121,8 +1119,7 @@ function onOk() {
     },
     miscellaneous: {
       liveUpdates: localSettings.value.miscellaneous.liveUpdates
-    },
-    extra: localSettings.value.extra
+    }
   });
 }
 

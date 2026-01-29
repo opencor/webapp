@@ -213,6 +213,7 @@
     <SimulationExperimentViewSettingsDialog
       v-model:visible="interactiveSettingsVisible"
       :settings="interactiveSettings"
+      :voiUnit="interactiveInstanceTask.voiUnit()"
       @ok="onInteractiveSettingsOk"
       @close="interactiveSettingsVisible = false"
     />
@@ -496,9 +497,6 @@ const interactiveSettings = vue.computed(() => ({
   },
   miscellaneous: {
     liveUpdates: interactiveLiveUpdatesEnabled.value
-  },
-  extra: {
-    voiUnit: interactiveInstanceTask.voiUnit()
   }
 }));
 
