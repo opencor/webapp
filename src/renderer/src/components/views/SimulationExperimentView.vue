@@ -231,6 +231,7 @@ import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@15.1.0/+esm';
 
 import * as vueusecore from '@vueuse/core';
 
+import JSZip from 'jszip';
 import * as vue from 'vue';
 
 import * as common from '../../common/common.ts';
@@ -263,6 +264,7 @@ const props = defineProps<{
   uiEnabled: boolean;
   uiJson: locApi.IUiJson;
 }>();
+const emit = defineEmits<(event: 'error', message: string) => void>();
 
 const toolbarNeeded = vue.computed(() => {
   return (props.simulationOnly && !interactiveUiJson) || !props.simulationOnly;
@@ -346,11 +348,45 @@ function onRun(): void {
 }
 
 function onDownloadCombineArchive(): void {
-  common.downloadFile(
-    common.fileName(props.file.path()).replace(/\.[^/.]+$/, '') + '.omex',
-    'Testing...',
-    'application/zip'
+  // Create and download a COMBINE archive that contains a manifest file, a CellML file, a SED-ML file, and a UI JSON
+  // file.
+
+  const zip = new JSZip();
+  const baseFileName = common.fileName(interactiveFile.path()).replace(/\.[^/.]+$/, '');
+  const modelFile = interactiveModel.file();
+
+  if (!modelFile) {
+    emit('error', 'Cannot create COMBINE archive: no model file available.');
+
+    return;
+  }
+
+  zip.file(
+    'manifest.xml',
+    `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<omexManifest xmlns="http://identifiers.org/combine.specifications/omex-manifest">
+  <content location="." format="http://identifiers.org/combine.specifications/omex"/>
+  <content location="document.sedml" format="http://identifiers.org/combine.specifications/sed-ml" master="true"/>
+  <content location="model.cellml" format="http://identifiers.org/combine.specifications/cellml"/>
+  <content location="simulation.json" format="http://purl.org/NET/mediatypes/application/json"/>
+</omexManifest>
+`
   );
+  zip.file('model.cellml', modelFile.contents());
+  zip.file('document.sedml', interactiveDocument.serialise().replace(modelFile.path(), 'model.cellml'));
+  zip.file('simulation.json', JSON.stringify(interactiveUiJson.value, null, 2));
+
+  zip
+    .generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE'
+    })
+    .then((content) => {
+      common.downloadFile(`${baseFileName}.omex`, content, 'application/zip');
+    })
+    .catch((error: unknown) => {
+      console.error('Error generating COMBINE archive:', error instanceof Error ? error.message : String(error));
+    });
 }
 
 function populateInputProperties(currentUiJson: locApi.IUiJson) {
@@ -368,7 +404,8 @@ function populateInputProperties(currentUiJson: locApi.IUiJson) {
 
 // Standard mode.
 
-const standardDocument = props.file.document();
+const standardFile = props.file;
+const standardDocument = standardFile.document();
 const standardUniformTimeCourse = standardDocument.simulation(0) as locApi.SedUniformTimeCourse;
 const standardInstance = standardDocument.instantiate();
 const standardInstanceTask = standardInstance.task(0);
@@ -380,7 +417,7 @@ const standardData = vue.ref<IGraphPanelData>({
   yAxisTitle: undefined,
   traces: []
 });
-const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
+const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`);
 
 populateParameters(standardParameters, standardInstanceTask);
 
@@ -417,7 +454,8 @@ const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
 const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
 const interactiveSettingsVisible = vue.ref<boolean>(false);
 const interactiveUiJson = vue.ref<locApi.IUiJson>(initialUiJson());
-const interactiveDocument = props.file.document();
+const interactiveFile = props.file;
+const interactiveDocument = interactiveFile.document();
 const interactiveUniformTimeCourse = interactiveDocument.simulation(0) as locApi.SedUniformTimeCourse;
 const interactiveCvode = interactiveUniformTimeCourse.cvode();
 let interactiveInstance = interactiveDocument.instantiate();

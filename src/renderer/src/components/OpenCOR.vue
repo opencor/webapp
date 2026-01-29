@@ -54,6 +54,7 @@
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :simulationOnly="!!omex"
+        @error="onError"
       />
       <OpenRemoteDialog
         v-model:visible="openRemoteVisible"
@@ -391,6 +392,18 @@ electronApi?.onUpdateCheckError((issue: string) => {
   updateErrorIssue.value = `An error occurred while checking for updates (${common.formatMessage(issue, false)}).`;
   updateErrorVisible.value = true;
 });
+
+// Handle errors.
+
+function onError(message: string): void {
+  toast.add({
+    severity: 'error',
+    group: toastId.value,
+    summary: 'Error',
+    detail: message,
+    life: TOAST_LIFE
+  });
+}
 
 // About dialog.
 

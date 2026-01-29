@@ -166,6 +166,8 @@ electron.contextBridge.exposeInMainWorld('locApi', {
   sedDocumentModelCount: (documentId: number) => loc.sedDocumentModelCount(documentId),
   sedDocumentSimulationCount: (documentId: number) => loc.sedDocumentSimulationCount(documentId),
   sedDocumentSimulationType: (documentId: number, index: number) => loc.sedDocumentSimulationType(documentId, index),
+  sedDocumentSerialise: (documentId: number) => loc.sedDocumentSerialise(documentId),
+  sedModelFilePath: (documentId: number, index: number) => loc.sedModelFilePath(documentId, index),
   sedModelAddChange: (
     documentId: number,
     index: number,
