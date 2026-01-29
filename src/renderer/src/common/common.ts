@@ -153,8 +153,18 @@ export function fileName(filePath: string): string {
   try {
     return decodeURIComponent(res);
   } catch (error: unknown) {
-    console.error('Failed to decode the file path:', res, error);
+    console.error('Failed to decode the file path:', res, formatError(error));
 
     return res;
   }
+}
+
+// A method to format an error into a string.
+
+export function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 }
