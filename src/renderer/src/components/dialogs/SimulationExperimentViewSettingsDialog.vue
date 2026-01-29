@@ -725,14 +725,6 @@
                 <i :class="showUiJsonIssuesPanel ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
               </Button>
             </div>
-            <Button
-              outlined
-              size="small"
-              @click="onDownload(localSettings.interactive.uiJson)"
-            >
-              <i class="pi pi-download mr-2"></i>
-              <span>Export JSON file</span>
-            </Button>
           </div>
         </template>
 
@@ -1080,12 +1072,6 @@ function addParameter() {
 
 function removeParameter(index: number) {
   localSettings.value.interactive.uiJson.parameters.splice(index, 1);
-}
-
-function onDownload(uiJson: locApi.IUiJson) {
-  const uiJsonString = JSON.stringify(locApi.cleanUiJson(uiJson), null, 2);
-
-  common.downloadFile('simulation.json', uiJsonString, 'application/json');
 }
 
 function resetUxSettings() {
