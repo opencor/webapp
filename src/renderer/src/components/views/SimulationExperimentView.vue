@@ -38,7 +38,7 @@
         </div>
       </template>
     </Toolbar>
-    <div v-show="!interactiveModeEnabled" class="grow h-full min-h-0">
+    <div v-if="!interactiveModeEnabled" class="grow h-full min-h-0">
       <Splitter class="border-none! h-full m-0" layout="vertical">
         <SplitterPanel :size="simulationOnly ? 100 : 89">
           <Splitter>
@@ -90,8 +90,8 @@
         </SplitterPanel>
       </Splitter>
     </div>
-    <div class="grow min-h-0">
-      <div v-show="interactiveModeEnabled" class="flex h-full">
+    <div v-else class="grow min-h-0">
+      <div class="flex h-full">
         <IssuesView v-if="interactiveUiJsonIssues.length" class="w-full m-4" :issues="interactiveUiJsonIssues" />
         <div v-else class="flex grow min-h-0">
           <div class="ml-4 mr-4 mb-4">
