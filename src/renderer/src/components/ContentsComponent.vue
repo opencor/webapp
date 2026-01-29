@@ -31,7 +31,7 @@
           <div class="flex gap-2 items-center">
             <div>
               {{
-                fileName(fileTab.file.path())
+                common.fileName(fileTab.file.path())
               }}
             </div>
             <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
@@ -112,18 +112,6 @@ vue.watch(activeFile, (newActiveFile: string) => {
 
   electronApi?.fileSelected(newActiveFile);
 });
-
-function fileName(filePath: string): string {
-  const res = filePath.split(/(\\|\/)/g).pop() || '';
-
-  try {
-    return decodeURIComponent(res);
-  } catch (error: unknown) {
-    console.error('Failed to decode the file path:', res, error);
-
-    return res;
-  }
-}
 
 function openFile(file: locApi.File): void {
   const filePath = file.path();
