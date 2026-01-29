@@ -385,7 +385,7 @@ function onDownloadCombineArchive(): void {
       common.downloadFile(`${baseFileName}.omex`, content, 'application/zip');
     })
     .catch((error: unknown) => {
-      console.error('Error generating COMBINE archive:', error instanceof Error ? error.message : String(error));
+      console.error('Error generating COMBINE archive:', common.formatError(error));
     });
 }
 
