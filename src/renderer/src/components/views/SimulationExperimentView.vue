@@ -24,6 +24,12 @@
       <template #end>
         <div :class="{ 'invisible': !interactiveModeEnabled }" class="flex gap-1">
           <Button class="p-1! toolbar-button"
+            icon="pi pi-download"
+            text severity="secondary"
+            title="Export COMBINE archive"
+            @click="onDownloadCombineArchive()"
+          />
+          <Button class="p-1! toolbar-button"
             icon="pi pi-cog"
             text severity="secondary"
             title="Settings"
@@ -337,6 +343,14 @@ function onRun(): void {
   // Run the interactive simulation.
 
   updateInteractiveSimulation(true);
+}
+
+function onDownloadCombineArchive(): void {
+  common.downloadFile(
+    common.fileName(props.file.path()).replace(/\.[^/.]+$/, '') + '.omex',
+    'Testing...',
+    'application/zip'
+  );
 }
 
 function populateInputProperties(currentUiJson: locApi.IUiJson) {
