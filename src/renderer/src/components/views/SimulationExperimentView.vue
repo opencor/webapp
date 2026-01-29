@@ -847,6 +847,7 @@ function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): v
 
   const oldCvodeMaximumStep = interactiveCvode.maximumStep();
 
+  interactiveUniformTimeCourse.setInitialTime(settings.simulation.startingPoint);
   interactiveUniformTimeCourse.setOutputStartTime(settings.simulation.startingPoint);
   interactiveUniformTimeCourse.setOutputEndTime(settings.simulation.endingPoint);
   interactiveUniformTimeCourse.setNumberOfSteps(
