@@ -30,9 +30,11 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     pExports.Set(Napi::String::New(pEnv, "sedDocumentModelCount"), Napi::Function::New(pEnv, sedDocumentModelCount));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationCount"), Napi::Function::New(pEnv, sedDocumentSimulationCount));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationType"), Napi::Function::New(pEnv, sedDocumentSimulationType));
+    pExports.Set(Napi::String::New(pEnv, "sedDocumentSerialise"), Napi::Function::New(pEnv, sedDocumentSerialise));
 
     // SedModel API.
 
+    pExports.Set(Napi::String::New(pEnv, "sedModelFilePath"), Napi::Function::New(pEnv, sedModelFilePath));
     pExports.Set(Napi::String::New(pEnv, "sedModelAddChange"), Napi::Function::New(pEnv, sedModelAddChange));
     pExports.Set(Napi::String::New(pEnv, "sedModelRemoveAllChanges"), Napi::Function::New(pEnv, sedModelRemoveAllChanges));
 

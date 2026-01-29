@@ -16,9 +16,9 @@ import {
 interface IWasmFileManagerInstance {
   files: {
     size(): number;
-    get(index: number): { fileName: string };
+    get(index: number): IWasmFile;
   };
-  unmanage(file: unknown): void;
+  unmanage(file: IWasmFile): void;
 }
 
 export interface IWasmFileManager {
@@ -45,6 +45,31 @@ class FileManager {
     return this._fileManager;
   }
 
+  file(path: string): File | null {
+    if (cppVersion()) {
+      const contents = _cppLocApi.fileContents(path);
+
+      if (contents) {
+        return new File(path, contents);
+      }
+
+      return null;
+    }
+
+    const fileManager = this.fileManager();
+    const files = fileManager.files;
+
+    for (let i = 0; i < files.size(); ++i) {
+      const file = files.get(i);
+
+      if (file.path === path) {
+        return new File(path, file.contents());
+      }
+    }
+
+    return null;
+  }
+
   unmanage(path: string): void {
     if (cppVersion()) {
       _cppLocApi.fileManagerUnmanage(path);
@@ -55,7 +80,7 @@ class FileManager {
       for (let i = 0; i < files.size(); ++i) {
         const file = files.get(i);
 
-        if (file.fileName === path) {
+        if (file.path === path) {
           fileManager.unmanage(file);
 
           break;
@@ -80,6 +105,7 @@ export enum EFileType {
 export interface IWasmFile {
   type: { value: EFileType };
   issues: IWasmIssues;
+  path: string;
   contents(): Uint8Array;
   setContents(ptr: number, length: number): void;
   childFileFromFileName(fileName: string): File | null;

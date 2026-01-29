@@ -5,6 +5,8 @@ import {
   _wasmLocApi,
   cppVersion,
   EIssueType,
+  type File,
+  fileManager,
   type IIssue,
   type IWasmFile,
   type IWasmIssues,
@@ -29,6 +31,7 @@ export interface IWasmSedDocument {
   simulationCount: number;
   simulation(index: number): IWasmSedSimulation;
   instantiate(): IWasmSedInstance;
+  serialise(): string;
 }
 
 export class SedDocument {
@@ -179,6 +182,10 @@ export class SedDocument {
   instantiate(): SedInstance {
     return new SedInstance(this._cppDocumentId, this._wasmSedDocument);
   }
+
+  serialise(): string {
+    return cppVersion() ? _cppLocApi.sedDocumentSerialise(this._cppDocumentId) : this._wasmSedDocument.serialise();
+  }
 }
 
 export interface IWasmSedChangeAttribute {
@@ -188,6 +195,7 @@ export interface IWasmSedChangeAttribute {
 }
 
 interface IWasmSedModel {
+  file: IWasmFile;
   addChange(change: IWasmSedChangeAttribute): void;
   removeAllChanges(): void;
 }
@@ -204,6 +212,12 @@ export class SedModel extends SedIndex {
     if (wasmVersion()) {
       this._wasmSedModel = wasmSedDocument.model(index);
     }
+  }
+
+  file(): File | null {
+    return fileManager.file(
+      cppVersion() ? _cppLocApi.sedModelFilePath(this._cppDocumentId, this._index) : this._wasmSedModel.file.path
+    );
   }
 
   addChange(componentName: string, variableName: string, newValue: string): void {

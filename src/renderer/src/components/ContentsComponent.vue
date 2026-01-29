@@ -52,6 +52,7 @@
             :file="fileTab.file"
             :isActiveFile="fileTab.file.path() === activeFile"
             :uiJson="fileTab.uiJson!"
+            @error="$emit('error', $event)"
           />
         </TabPanel>
       </TabPanels>
@@ -77,6 +78,7 @@ const props = defineProps<{
   simulationOnly?: boolean;
   uiEnabled: boolean;
 }>();
+defineEmits<(event: 'error', message: string) => void>();
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile });
 
 export interface IContentsComponent {
