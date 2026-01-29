@@ -13,12 +13,12 @@
     </FloatLabel>
   </div>
   <div v-else>
-    <InputScientificNumber v-model="scalarValue"
+    <InputScientificNumber v-model="value"
       :label="name"
       size="small"
       @update:model-value="inputTextValueUpdated"
     />
-    <Slider v-model="scalarValue" class="w-full mt-3"
+    <Slider v-model="value" class="w-full mt-3"
       :min="minimumValue" :max="maximumValue" :step="stepValue"
       size="small"
       @change="sliderChange"
@@ -45,17 +45,24 @@ let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
   props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
-const scalarValue = vue.ref<number>(value.value);
+
+vue.watch(
+  () => value.value,
+  (newValue) => {
+    oldValue = newValue;
+
+    if (props.possibleValues) {
+      discreteValue.value = props.possibleValues.find((pv) => pv.value === newValue);
+    }
+  },
+  { immediate: true }
+);
 
 // Some methods to handle a scalar value using an input component and a slider.
 
 function emitChange(newValue: number) {
   void vue.nextTick(() => {
     value.value = newValue;
-
-    if (!props.possibleValues) {
-      scalarValue.value = newValue;
-    }
 
     oldValue = newValue;
 
@@ -76,13 +83,7 @@ function selectChange(event: ISelectChangeEvent) {
   }
 }
 
-function inputTextValueUpdated(newValue: number | undefined) {
-  if (newValue === undefined) {
-    scalarValue.value = oldValue;
-
-    return;
-  }
-
+function inputTextValueUpdated(newValue: number) {
   if (newValue !== oldValue) {
     let constrainedValue = newValue;
 
