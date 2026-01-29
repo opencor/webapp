@@ -23,6 +23,7 @@ napi_value sedOneStepStep(const Napi::CallbackInfo &pInfo);
 // SedUniformTimeCourse API.
 
 napi_value sedUniformTimeCourseInitialTime(const Napi::CallbackInfo &pInfo);
+void sedUniformTimeCourseSetInitialTime(const Napi::CallbackInfo &pInfo);
 napi_value sedUniformTimeCourseOutputStartTime(const Napi::CallbackInfo &pInfo);
 void sedUniformTimeCourseSetOutputStartTime(const Napi::CallbackInfo &pInfo);
 napi_value sedUniformTimeCourseOutputEndTime(const Napi::CallbackInfo &pInfo);

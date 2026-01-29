@@ -177,6 +177,8 @@ electron.contextBridge.exposeInMainWorld('locApi', {
   sedOneStepStep: (documentId: number, index: number) => loc.sedOneStepStep(documentId, index),
   sedUniformTimeCourseInitialTime: (documentId: number, index: number) =>
     loc.sedUniformTimeCourseInitialTime(documentId, index),
+  sedUniformTimeCourseSetInitialTime: (documentId: number, index: number, value: number) =>
+    loc.sedUniformTimeCourseSetInitialTime(documentId, index, value),
   sedUniformTimeCourseOutputStartTime: (documentId: number, index: number) =>
     loc.sedUniformTimeCourseOutputStartTime(documentId, index),
   sedUniformTimeCourseSetOutputStartTime: (documentId: number, index: number, value: number) =>

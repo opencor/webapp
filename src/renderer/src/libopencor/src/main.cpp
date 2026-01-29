@@ -43,6 +43,7 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     // SedUniformTimeCourse API.
 
     pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseInitialTime"), Napi::Function::New(pEnv, sedUniformTimeCourseInitialTime));
+    pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseSetInitialTime"), Napi::Function::New(pEnv, sedUniformTimeCourseSetInitialTime));
     pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseOutputStartTime"), Napi::Function::New(pEnv, sedUniformTimeCourseOutputStartTime));
     pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseSetOutputStartTime"), Napi::Function::New(pEnv, sedUniformTimeCourseSetOutputStartTime));
     pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseOutputEndTime"), Napi::Function::New(pEnv, sedUniformTimeCourseOutputEndTime));
