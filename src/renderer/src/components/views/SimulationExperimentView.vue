@@ -495,7 +495,7 @@ const interactiveCompData = vue.computed(() => {
 });
 const interactiveSettings = vue.computed(() => ({
   simulation: {
-    startingPoint: interactiveUniformTimeCourse.initialTime(),
+    startingPoint: interactiveUniformTimeCourse.outputStartTime(),
     endingPoint: interactiveUniformTimeCourse.outputEndTime(),
     pointInterval:
       (interactiveUniformTimeCourse.outputEndTime() - interactiveUniformTimeCourse.outputStartTime()) /
