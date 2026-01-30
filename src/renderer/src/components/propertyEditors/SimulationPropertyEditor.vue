@@ -8,7 +8,7 @@ import * as vue from 'vue';
 import type * as locApi from '../../libopencor/locApi.ts';
 
 const props = defineProps<{
-  uniformTimeCourse: locApi.SedSimulationUniformTimeCourse;
+  uniformTimeCourse: locApi.SedUniformTimeCourse;
   instanceTask: locApi.SedInstanceTask;
 }>();
 
