@@ -1,7 +1,7 @@
 <template>
   <BaseDialog header="Interactive Mode Settings" class="w-180 h-180"
-    @keydown.prevent.enter="onOk()"
-    @cancel="onCancel()"
+    @keydown.prevent.enter="onOk"
+    @cancel="onCancel"
   >
     <div class="h-full flex flex-col">
       <Tabs v-model:value="activeTab" class="settings-tabs min-h-0">
@@ -671,7 +671,7 @@
               <span>Simulation settings are valid!</span>
             </span>
             <Button :class="{ 'invisible': !simulationSettingsIssues.length }" outlined severity="warn" size="small"
-              @click="toggleSimulationSettingsIssues($event)"
+              @click="toggleSimulationSettingsIssues"
             >
               <i class="pi pi-exclamation-triangle mr-2"></i>
               <span>{{ simulationSettingsIssues.length }} issue{{ simulationSettingsIssues.length !== 1 ? 's' : '' }}</span>
@@ -694,7 +694,7 @@
               <span>Solvers settings are valid!</span>
             </span>
             <Button :class="{ 'invisible': !solversSettingsIssues.length }" outlined severity="warn" size="small"
-              @click="toggleSolversSettingsIssues($event)"
+              @click="toggleSolversSettingsIssues"
             >
               <i class="pi pi-exclamation-triangle mr-2"></i>
               <span>{{ solversSettingsIssues.length }} issue{{ solversSettingsIssues.length !== 1 ? 's' : '' }}</span>
@@ -718,7 +718,7 @@
                 <span>Interactive settings are valid!</span>
               </span>
               <Button :class="{ 'invisible': !uiJsonIssues.length }" outlined severity="warn" size="small"
-                @click="toggleUiJsonIssues($event)"
+                @click="toggleUiJsonIssues"
               >
                 <i class="pi pi-exclamation-triangle mr-2"></i>
                 <span>{{ uiJsonIssues.length }} issue{{ uiJsonIssues.length !== 1 ? 's' : '' }}</span>

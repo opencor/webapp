@@ -7,7 +7,7 @@
             icon="pi pi-play-circle"
             text severity="secondary"
             title="Run simulation (F9)"
-            @click="onRun()"
+            @click="onRun"
           />
         </div>
       </template>
@@ -27,7 +27,7 @@
             icon="pi pi-download"
             text severity="secondary"
             title="Export COMBINE archive"
-            @click="onDownloadCombineArchive()"
+            @click="onDownloadCombineArchive"
           />
           <Button class="p-1! toolbar-button"
             icon="pi pi-cog"
@@ -120,14 +120,14 @@
                       outlined
                       size="small"
                       title="Track current run"
-                      @click="onTrackRun()"
+                      @click="onTrackRun"
                     />
                     <Button class="w-9!"
                       icon="pi pi-trash"
                       outlined severity="danger"
                       size="small"
                       title="Remove all tracked runs"
-                      @click="onRemoveAllRuns()"
+                      @click="onRemoveAllRuns"
                       :disabled="interactiveRuns.length === 1"
                     />
                   </div>
