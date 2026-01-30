@@ -25,9 +25,11 @@ export interface ICppLocApi {
   sedDocumentModelCount: (documentId: number) => number;
   sedDocumentSimulationCount: (documentId: number) => number;
   sedDocumentSimulationType: (documentId: number, index: number) => number;
+  sedDocumentSerialise: (documentId: number) => string;
 
   // SedModel API.
 
+  sedModelFilePath: (documentId: number, index: number) => string;
   sedModelAddChange: (
     documentId: number,
     index: number,
@@ -44,6 +46,7 @@ export interface ICppLocApi {
   // SedUniformTimeCourse API.
 
   sedUniformTimeCourseInitialTime: (documentId: number, index: number) => number;
+  sedUniformTimeCourseSetInitialTime: (documentId: number, index: number, value: number) => void;
   sedUniformTimeCourseOutputStartTime: (documentId: number, index: number) => number;
   sedUniformTimeCourseSetOutputStartTime: (documentId: number, index: number, value: number) => void;
   sedUniformTimeCourseOutputEndTime: (documentId: number, index: number) => number;

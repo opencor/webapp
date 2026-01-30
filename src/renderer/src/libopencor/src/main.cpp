@@ -30,9 +30,11 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     pExports.Set(Napi::String::New(pEnv, "sedDocumentModelCount"), Napi::Function::New(pEnv, sedDocumentModelCount));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationCount"), Napi::Function::New(pEnv, sedDocumentSimulationCount));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationType"), Napi::Function::New(pEnv, sedDocumentSimulationType));
+    pExports.Set(Napi::String::New(pEnv, "sedDocumentSerialise"), Napi::Function::New(pEnv, sedDocumentSerialise));
 
     // SedModel API.
 
+    pExports.Set(Napi::String::New(pEnv, "sedModelFilePath"), Napi::Function::New(pEnv, sedModelFilePath));
     pExports.Set(Napi::String::New(pEnv, "sedModelAddChange"), Napi::Function::New(pEnv, sedModelAddChange));
     pExports.Set(Napi::String::New(pEnv, "sedModelRemoveAllChanges"), Napi::Function::New(pEnv, sedModelRemoveAllChanges));
 
@@ -43,6 +45,7 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     // SedUniformTimeCourse API.
 
     pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseInitialTime"), Napi::Function::New(pEnv, sedUniformTimeCourseInitialTime));
+    pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseSetInitialTime"), Napi::Function::New(pEnv, sedUniformTimeCourseSetInitialTime));
     pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseOutputStartTime"), Napi::Function::New(pEnv, sedUniformTimeCourseOutputStartTime));
     pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseSetOutputStartTime"), Napi::Function::New(pEnv, sedUniformTimeCourseSetOutputStartTime));
     pExports.Set(Napi::String::New(pEnv, "sedUniformTimeCourseOutputEndTime"), Napi::Function::New(pEnv, sedUniformTimeCourseOutputEndTime));

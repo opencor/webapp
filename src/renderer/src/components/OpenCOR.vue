@@ -54,6 +54,7 @@
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :simulationOnly="!!omex"
+        @error="onError"
       />
       <OpenRemoteDialog
         v-model:visible="openRemoteVisible"
@@ -392,6 +393,18 @@ electronApi?.onUpdateCheckError((issue: string) => {
   updateErrorVisible.value = true;
 });
 
+// Handle errors.
+
+function onError(message: string): void {
+  toast.add({
+    severity: 'error',
+    group: toastId.value,
+    summary: 'Error',
+    detail: message,
+    life: TOAST_LIFE
+  });
+}
+
 // About dialog.
 
 const aboutVisible = vue.ref<boolean>(false);
@@ -499,7 +512,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
         void vue.nextTick(() => {
           issues.value.push({
             type: locApi.EIssueType.ERROR,
-            description: common.formatMessage(error instanceof Error ? error.message : String(error))
+            description: common.formatMessage(common.formatError(error))
           });
         });
       } else {
@@ -507,7 +520,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
           severity: 'error',
           group: toastId.value,
           summary: 'Opening a file',
-          detail: `${filePath}\n\n${common.formatMessage(error instanceof Error ? error.message : String(error))}`,
+          detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
           life: TOAST_LIFE
         });
       }

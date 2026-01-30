@@ -1,7 +1,7 @@
 <template>
   <BaseDialog header="Interactive Mode Settings" class="w-180 h-180"
-    @keydown.prevent.enter="onOk()"
-    @cancel="onCancel()"
+    @keydown.prevent.enter="onOk"
+    @cancel="onCancel"
   >
     <div class="h-full flex flex-col">
       <Tabs v-model:value="activeTab" class="settings-tabs min-h-0">
@@ -39,17 +39,17 @@
               <div class="settings-form">
                 <div class="form-row">
                   <InputScientificNumber v-model="localSettings.simulation.startingPoint" class="form-field"
-                    :label="`Starting point (${localSettings.extra.voiUnit})`"
+                    :label="`Starting point (${voiUnit})`"
                     size="small"
                   />
                   <InputScientificNumber v-model="localSettings.simulation.endingPoint" class="form-field"
-                    :label="`Ending point (${localSettings.extra.voiUnit})`"
+                    :label="`Ending point (${voiUnit})`"
                     size="small"
                   />
                 </div>
                 <div class="form-row">
                   <InputScientificNumber v-model="localSettings.simulation.pointInterval" class="form-field"
-                    :label="`Point interval (${localSettings.extra.voiUnit})`"
+                    :label="`Point interval (${voiUnit})`"
                     size="small"
                   />
                   <div class="form-field self-stretch">
@@ -82,7 +82,7 @@
               <div class="settings-form">
                 <div class="form-row">
                   <InputScientificNumber v-model="localSettings.solvers.cvodeMaximumStep" class="form-field"
-                    :label="`CVODE's maximum step (${localSettings.extra.voiUnit})`"
+                    :label="`CVODE's maximum step (${voiUnit})`"
                     size="small"
                   />
                   <div class="form-field self-stretch flex items-center">
@@ -158,7 +158,7 @@
                             <div class="card-item">
                               <div class="card-header">
                                 <div class="flex items-center gap-2">
-                                  <span class="item-badge">{{ inputIndex + 1 }}</span>
+                                  <span class="item-badge">{{ Number(inputIndex) + 1 }}</span>
                                   <span class="font-medium">{{ input.name }}</span>
                                   <Tag :value="locApi.isDiscreteInput(input) ? 'Discrete' : 'Scalar'" severity="info" size="small" />
                                 </div>
@@ -245,7 +245,7 @@
                                   </div>
                                   <div class="possible-values-list">
                                     <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possibleValue${possibleValueIndex}`" class="entry-row">
-                                      <span class="index index-secondary">{{ possibleValueIndex + 1 }}</span>
+                                      <span class="index index-secondary">{{ Number(possibleValueIndex) + 1 }}</span>
                                       <FloatLabel variant="on" class="flex-1">
                                         <InputText v-model="possibleValue.name" class="w-full" size="small" />
                                         <label>Name</label>
@@ -308,7 +308,7 @@
 
                           <div v-else class="entries-list">
                             <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="`data_${dataIndex}`" class="entry-row">
-                              <span class="index">{{ dataIndex + 1 }}</span>
+                              <span class="index">{{ Number(dataIndex) + 1 }}</span>
                               <FloatLabel variant="on" class="flex-1">
                                 <InputText v-model="data.id" class="w-full" size="small" />
                                 <label>ID</label>
@@ -375,8 +375,8 @@
                             <div class="card-item">
                               <div class="plot-card-header">
                                 <div class="flex items-center gap-2">
-                                  <span class="item-badge">{{ plotIndex + 1 }}</span>
-                                  <span class="font-medium text-sm">Plot #{{ plotIndex + 1 }}</span>
+                                  <span class="item-badge">{{ Number(plotIndex) + 1 }}</span>
+                                  <span class="font-medium text-sm">Plot #{{ Number(plotIndex) + 1 }}</span>
                                   <Tag :value="plotTraceCount(plot) + ' trace' + (plotTraceCount(plot) !== 1 ? 's' : '')" severity="info" size="small" />
                                 </div>
                                 <Button
@@ -482,7 +482,7 @@
                                         </template>
                                         <div class="entry-row entry-row-trace">
                                           <div>
-                                            <span class="index index-secondary">{{ traceIndex + 2 }}</span>
+                                            <span class="index index-secondary">{{ Number(traceIndex) + 2 }}</span>
                                           </div>
                                           <div class="w-full">
                                             <div class="mb-3">
@@ -584,7 +584,7 @@
 
                           <div v-else class="entries-list">
                             <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
-                              <span class="index">{{ parameterIndex + 1 }}</span>
+                              <span class="index">{{ Number(parameterIndex) + 1 }}</span>
                               <FloatLabel variant="on" class="flex-1">
                                 <Select v-model="parameter.name"
                                   class="w-full" panelClass="model-parameter-filter"
@@ -671,7 +671,7 @@
               <span>Simulation settings are valid!</span>
             </span>
             <Button :class="{ 'invisible': !simulationSettingsIssues.length }" outlined severity="warn" size="small"
-              @click="toggleSimulationSettingsIssues($event)"
+              @click="toggleSimulationSettingsIssues"
             >
               <i class="pi pi-exclamation-triangle mr-2"></i>
               <span>{{ simulationSettingsIssues.length }} issue{{ simulationSettingsIssues.length !== 1 ? 's' : '' }}</span>
@@ -694,7 +694,7 @@
               <span>Solvers settings are valid!</span>
             </span>
             <Button :class="{ 'invisible': !solversSettingsIssues.length }" outlined severity="warn" size="small"
-              @click="toggleSolversSettingsIssues($event)"
+              @click="toggleSolversSettingsIssues"
             >
               <i class="pi pi-exclamation-triangle mr-2"></i>
               <span>{{ solversSettingsIssues.length }} issue{{ solversSettingsIssues.length !== 1 ? 's' : '' }}</span>
@@ -718,21 +718,13 @@
                 <span>Interactive settings are valid!</span>
               </span>
               <Button :class="{ 'invisible': !uiJsonIssues.length }" outlined severity="warn" size="small"
-                @click="toggleUiJsonIssues($event)"
+                @click="toggleUiJsonIssues"
               >
                 <i class="pi pi-exclamation-triangle mr-2"></i>
                 <span>{{ uiJsonIssues.length }} issue{{ uiJsonIssues.length !== 1 ? 's' : '' }}</span>
                 <i :class="showUiJsonIssuesPanel ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
               </Button>
             </div>
-            <Button
-              outlined
-              size="small"
-              @click="onDownload(localSettings.interactive.uiJson)"
-            >
-              <i class="pi pi-download mr-2"></i>
-              <span>Export JSON file</span>
-            </Button>
           </div>
         </template>
 
@@ -773,13 +765,11 @@ export interface ISimulationExperimentViewSettings {
   miscellaneous: {
     liveUpdates: boolean;
   };
-  extra: {
-    voiUnit: string;
-  };
 }
 
 const props = defineProps<{
   settings: ISimulationExperimentViewSettings;
+  voiUnit: string;
 }>();
 
 const emit = defineEmits<{
@@ -1045,6 +1035,10 @@ function addTrace(plotIndex: number) {
 function removeTrace(plotIndex: number, traceIndex: number) {
   const plot = localSettings.value.interactive.uiJson.output.plots[plotIndex];
 
+  if (!plot) {
+    return;
+  }
+
   if (traceIndex === -1) {
     // Update the main trace to be the first additional trace and shift it out of the additional traces. If there are no
     // additional traces, just clear the main trace.
@@ -1080,12 +1074,6 @@ function removeParameter(index: number) {
   localSettings.value.interactive.uiJson.parameters.splice(index, 1);
 }
 
-function onDownload(uiJson: locApi.IUiJson) {
-  const uiJsonString = JSON.stringify(locApi.cleanUiJson(uiJson), null, 2);
-
-  common.downloadFile('simulation.json', uiJsonString, 'application/json');
-}
-
 function resetUxSettings() {
   activeTab.value = 'simulation';
   activeInteractiveTab.value = 'inputs';
@@ -1117,8 +1105,7 @@ function onOk() {
     },
     miscellaneous: {
       liveUpdates: localSettings.value.miscellaneous.liveUpdates
-    },
-    extra: localSettings.value.extra
+    }
   });
 }
 
