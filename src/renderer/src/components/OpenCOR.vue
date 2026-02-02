@@ -532,13 +532,20 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
 // Open file(s) dialog.
 
 function onChange(event: Event): void {
-  const files = (event.target as HTMLInputElement).files;
+  // Open the selected file(s).
 
-  if (files) {
-    for (const file of Array.from(files)) {
+  const input = event.target as HTMLInputElement;
+
+  if (input.files) {
+    for (const file of input.files) {
       openFile(file);
     }
   }
+
+  // Reset the input.
+  // Note: this is needed to ensure that selecting the same file(s) again will trigger the change event.
+
+  input.value = '';
 }
 
 // Drag and drop.
