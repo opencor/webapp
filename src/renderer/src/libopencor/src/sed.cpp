@@ -254,7 +254,7 @@ napi_value sedInstanceTaskVoi(const Napi::CallbackInfo &pInfo)
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->voi());
+    return doublesToNapiFloat64Array(pInfo.Env(), task->voi());
 }
 
 napi_value sedInstanceTaskStateCount(const Napi::CallbackInfo &pInfo)
@@ -286,7 +286,7 @@ napi_value sedInstanceTaskState(const Napi::CallbackInfo &pInfo)
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->state(toInt32(pInfo[2])));
+    return doublesToNapiFloat64Array(pInfo.Env(), task->state(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskRateCount(const Napi::CallbackInfo &pInfo)
@@ -318,7 +318,7 @@ napi_value sedInstanceTaskRate(const Napi::CallbackInfo &pInfo)
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->rate(toInt32(pInfo[2])));
+    return doublesToNapiFloat64Array(pInfo.Env(), task->rate(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskConstantCount(const Napi::CallbackInfo &pInfo)
@@ -350,7 +350,7 @@ napi_value sedInstanceTaskConstant(const Napi::CallbackInfo &pInfo)
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->constant(toInt32(pInfo[2])));
+    return doublesToNapiFloat64Array(pInfo.Env(), task->constant(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskComputedConstantCount(const Napi::CallbackInfo &pInfo)
@@ -382,7 +382,7 @@ napi_value sedInstanceTaskComputedConstant(const Napi::CallbackInfo &pInfo)
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->computedConstant(toInt32(pInfo[2])));
+    return doublesToNapiFloat64Array(pInfo.Env(), task->computedConstant(toInt32(pInfo[2])));
 }
 
 napi_value sedInstanceTaskAlgebraicVariableCount(const Napi::CallbackInfo &pInfo)
@@ -414,5 +414,5 @@ napi_value sedInstanceTaskAlgebraicVariable(const Napi::CallbackInfo &pInfo)
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
     auto task = sedInstance->task(toInt32(pInfo[1]));
 
-    return doublesToNapiArray(pInfo.Env(), task->algebraicVariable(toInt32(pInfo[2])));
+    return doublesToNapiFloat64Array(pInfo.Env(), task->algebraicVariable(toInt32(pInfo[2])));
 }

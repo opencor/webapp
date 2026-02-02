@@ -15,8 +15,8 @@ import { GraphPanelWidgetPaletteColors } from './GraphPanelWidgetPalette.ts';
 
 export interface IGraphPanelPlotTrace {
   name: string;
-  x: number[];
-  y: number[];
+  x: Float64Array;
+  y: Float64Array;
   color: string;
   zorder?: number;
 }
@@ -44,16 +44,19 @@ const props = withDefaults(
     showLegend: true
   }
 );
-
 const emit = defineEmits<{
   (event: 'marginsUpdated', newMargins: IGraphPanelMargins): void;
   (event: 'resetMargins'): void;
 }>();
+defineExpose({
+  resize
+});
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
 const isVisible = vue.ref(false);
 const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
+let updatingMargins = false;
 
 interface IAxisThemeData {
   zerolinecolor: string;
@@ -211,34 +214,46 @@ function compMargins(): IGraphPanelMargins {
   };
 }
 
-function updateMargins(): Promise<unknown> | undefined {
-  // Retrieve and emit our new margins.
+function updateMarginsAsync(): void {
+  // Skip if we are already updating our margins.
 
-  const newMargins = compMargins();
-
-  emit('marginsUpdated', newMargins);
-
-  // Update our margins if they have changed.
-
-  const relayoutUpdates: Record<string, number> = {};
-
-  if (!props.margins) {
-    if (margins.value.left !== newMargins.left) {
-      margins.value.left = newMargins.left;
-
-      relayoutUpdates['margin.l'] = margins.value.left;
-    }
-
-    if (margins.value.right !== newMargins.right) {
-      margins.value.right = newMargins.right;
-
-      relayoutUpdates['margin.r'] = margins.value.right;
-    }
+  if (updatingMargins) {
+    return;
   }
 
-  if (Object.keys(relayoutUpdates).length) {
-    return Plotly.relayout(mainDiv.value, relayoutUpdates);
-  }
+  updatingMargins = true;
+
+  // Use requestAnimationFrame for optimal timing (after render, before next paint).
+
+  requestAnimationFrame(() => {
+    const newMargins = compMargins();
+
+    emit('marginsUpdated', newMargins);
+
+    // Update our margins if they have changed.
+
+    const relayoutUpdates: Record<string, number> = {};
+
+    if (!props.margins) {
+      if (margins.value.left !== newMargins.left) {
+        margins.value.left = newMargins.left;
+
+        relayoutUpdates['margin.l'] = margins.value.left;
+      }
+
+      if (margins.value.right !== newMargins.right) {
+        margins.value.right = newMargins.right;
+
+        relayoutUpdates['margin.r'] = margins.value.right;
+      }
+    }
+
+    if (Object.keys(relayoutUpdates).length) {
+      Plotly.relayout(mainDiv.value, relayoutUpdates);
+    }
+
+    updatingMargins = false;
+  });
 }
 
 function updatePlot(): void {
@@ -286,7 +301,6 @@ function updatePlot(): void {
       showTips: false
     }
   )
-    .then(() => updateMargins())
     .then(() => {
       if (!isVisible.value) {
         // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
@@ -302,6 +316,10 @@ function updatePlot(): void {
           isVisible.value = true;
         });
       }
+
+      // Update our margins asynchronously after our initial render.
+
+      updateMarginsAsync();
     });
 }
 
@@ -313,19 +331,17 @@ vue.onMounted(() => {
   vue.nextTick(() => {
     // Reset our margins on double-click and relayout.
 
-    if (mainDiv.value) {
-      const plotlyElement = mainDiv.value as IPlotlyHTMLElement;
+    const plotlyElement = mainDiv.value as IPlotlyHTMLElement;
 
-      plotlyElement.on('plotly_doubleclick', () => {
+    plotlyElement.on('plotly_doubleclick', () => {
+      emit('resetMargins');
+    });
+
+    plotlyElement.on('plotly_relayout', (eventData: Partial<Plotly.Layout>) => {
+      if (eventData && (eventData['xaxis.range[0]'] || eventData['yaxis.range[0]'])) {
         emit('resetMargins');
-      });
-
-      plotlyElement.on('plotly_relayout', (eventData: Partial<Plotly.Layout>) => {
-        if (eventData && (eventData['xaxis.range[0]'] || eventData['yaxis.range[0]'])) {
-          emit('resetMargins');
-        }
-      });
-    }
+      }
+    });
   });
 });
 
@@ -368,7 +384,7 @@ vue.watch(
       })
       .then(() => {
         if (!props.margins) {
-          updateMargins();
+          updateMarginsAsync();
         }
       });
   },
@@ -383,11 +399,23 @@ vue.watch(
         Plotly.relayout(mainDiv.value, {
           showlegend: props.showLegend
         }).then(() => {
-          updateMargins();
+          updateMarginsAsync();
         });
       }
     });
   },
   { immediate: true }
 );
+
+function resize(): Promise<unknown> {
+  return Promise.resolve()
+    .then(() => {
+      if (mainDiv.value) {
+        Plotly.Plots.resize(mainDiv.value);
+      }
+    })
+    .then(() => {
+      updateMarginsAsync();
+    });
+}
 </script>

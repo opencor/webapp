@@ -444,27 +444,27 @@ export class SedInstance {
 interface IWasmSedInstanceTask {
   voiName: string;
   voiUnit: string;
-  voiAsArray: number[];
+  voiAsArray: Float64Array;
   stateCount: number;
   stateName(index: number): string;
   stateUnit(index: number): string;
-  stateAsArray(index: number): number[];
+  stateAsArray(index: number): Float64Array;
   rateCount: number;
   rateName(index: number): string;
   rateUnit(index: number): string;
-  rateAsArray(index: number): number[];
+  rateAsArray(index: number): Float64Array;
   constantCount: number;
   constantName(index: number): string;
   constantUnit(index: number): string;
-  constantAsArray(index: number): number[];
+  constantAsArray(index: number): Float64Array;
   computedConstantCount: number;
   computedConstantName(index: number): string;
   computedConstantUnit(index: number): string;
-  computedConstantAsArray(index: number): number[];
+  computedConstantAsArray(index: number): Float64Array;
   algebraicVariableCount: number;
   algebraicVariableName(index: number): string;
   algebraicVariableUnit(index: number): string;
-  algebraicVariableAsArray(index: number): number[];
+  algebraicVariableAsArray(index: number): Float64Array;
 }
 
 export class SedInstanceTask extends SedIndex {
@@ -493,7 +493,7 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.voiUnit;
   }
 
-  voi(): number[] {
+  voi(): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskVoi(this._cppInstanceId, this._index)
       : this._wasmSedInstanceTask.voiAsArray;
@@ -517,7 +517,7 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.stateUnit(index);
   }
 
-  state(index: number): number[] {
+  state(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskState(this._cppInstanceId, this._index, index)
       : this._wasmSedInstanceTask.stateAsArray(index);
@@ -541,7 +541,7 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.rateUnit(index);
   }
 
-  rate(index: number): number[] {
+  rate(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskRate(this._cppInstanceId, this._index, index)
       : this._wasmSedInstanceTask.rateAsArray(index);
@@ -565,7 +565,7 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.constantUnit(index);
   }
 
-  constant(index: number): number[] {
+  constant(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskConstant(this._cppInstanceId, this._index, index)
       : this._wasmSedInstanceTask.constantAsArray(index);
@@ -589,7 +589,7 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.computedConstantUnit(index);
   }
 
-  computedConstant(index: number): number[] {
+  computedConstant(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskComputedConstant(this._cppInstanceId, this._index, index)
       : this._wasmSedInstanceTask.computedConstantAsArray(index);
@@ -613,7 +613,7 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.algebraicVariableUnit(index);
   }
 
-  algebraicVariable(index: number): number[] {
+  algebraicVariable(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskAlgebraicVariable(this._cppInstanceId, this._index, index)
       : this._wasmSedInstanceTask.algebraicVariableAsArray(index);

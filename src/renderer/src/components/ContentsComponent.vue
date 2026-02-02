@@ -79,7 +79,14 @@ const props = defineProps<{
   uiEnabled: boolean;
 }>();
 defineEmits<(event: 'error', message: string) => void>();
-defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile });
+defineExpose({
+  openFile,
+  closeCurrentFile,
+  closeAllFiles,
+  hasFile,
+  hasFiles,
+  selectFile
+});
 
 export interface IContentsComponent {
   openFile(file: locApi.File): void;
