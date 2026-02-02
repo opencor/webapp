@@ -551,6 +551,7 @@ const interactiveSettings = vue.computed(() => ({
     liveUpdates: interactiveLiveUpdatesEnabled.value
   }
 }));
+const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interactiveSettings.value)));
 
 // Initial UI JSON content.
 
@@ -881,6 +882,21 @@ function onToggleRunColorPopover(index: number, event: MouseEvent) {
 }
 
 function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): void {
+  const newSettings = JSON.stringify(vue.toRaw(settings));
+  const settingsHaveChanges = newSettings !== interactiveOldSettings.value;
+
+  interactiveOldSettings.value = newSettings;
+
+  if (!settingsHaveChanges) {
+    interactiveSettingsVisible.value = false;
+
+    return;
+  }
+
+  // Clear all our tracked runs.
+
+  onRemoveAllRuns();
+
   // Update our settings and hide the dialog.
 
   const oldCvodeMaximumStep = interactiveCvode.maximumStep();
