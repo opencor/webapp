@@ -28,7 +28,7 @@
         "@types/crypto-js": "^4.2.2",
         "@types/node": "^25.2.0",
         "@types/plotly.js": "^3.0.9",
-        "@vitejs/plugin-vue": "^6.0.3",
+        "@vitejs/plugin-vue": "^6.0.4",
         "@vue/tsconfig": "^0.8.1",
         "@wasm-fmt/clang-format": "^21.1.8",
         "autoprefixer": "^10.4.24",
@@ -283,7 +283,7 @@
 
     "@primevue/metadata": ["@primevue/metadata@4.2.5", "", {}, "sha512-dABQ8BecGg6NRnrLx11MvmCQCFn2inUEmao8t17/Tc2wxwoXY315TaakDa5ebOdYnTG91lh+NX7SBpTH+MYIyQ=="],
 
-    "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.53", "", {}, "sha512-vENRlFU4YbrwVqNDZ7fLvy+JR1CRkyr01jhSiDpE1u6py3OMzQfztQU2jxykW3ALNxO4kSlqIDeYyD0Y9RcQeQ=="],
+    "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-rc.2", "", {}, "sha512-izyXV/v+cHiRfozX62W9htOAvwMo4/bXKDrQ+vom1L1qRuexPock/7VZDAhnpHCLNejd3NJ6hiab+tO0D44Rgw=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.57.0", "", { "os": "android", "cpu": "arm" }, "sha512-tPgXB6cDTndIe1ah7u6amCI1T0SsnlOuKgg10Xh3uizJk4e5M1JGaUMk7J4ciuAUcFpbOiNhm2XIjP9ON0dUqA=="],
 
@@ -403,7 +403,7 @@
 
     "@types/yauzl": ["@types/yauzl@2.10.3", "", { "dependencies": { "@types/node": "*" } }, "sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q=="],
 
-    "@vitejs/plugin-vue": ["@vitejs/plugin-vue@6.0.3", "", { "dependencies": { "@rolldown/pluginutils": "1.0.0-beta.53" }, "peerDependencies": { "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-0", "vue": "^3.2.25" } }, "sha512-TlGPkLFLVOY3T7fZrwdvKpjprR3s4fxRln0ORDo1VQ7HHyxJwTlrjKU3kpVWTlaAjIEuCTokmjkZnr8Tpc925w=="],
+    "@vitejs/plugin-vue": ["@vitejs/plugin-vue@6.0.4", "", { "dependencies": { "@rolldown/pluginutils": "1.0.0-rc.2" }, "peerDependencies": { "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-0", "vue": "^3.2.25" } }, "sha512-uM5iXipgYIn13UUQCZNdWkYk+sysBeA97d5mHsAoAt1u/wpN3+zxOmsVJWosuzX+IMGRzeYUNytztrYznboIkQ=="],
 
     "@vue/compiler-core": ["@vue/compiler-core@3.4.21", "", { "dependencies": { "@babel/parser": "^7.23.9", "@vue/shared": "3.4.21", "entities": "^4.5.0", "estree-walker": "^2.0.2", "source-map-js": "^1.0.2" } }, "sha512-MjXawxZf2SbZszLPYxaFCjxfibYrzr3eYbKxwpLR9EQN+oaziSu3qKVbwBERj1IFIB8OLUewxB5m/BFzi613og=="],
 

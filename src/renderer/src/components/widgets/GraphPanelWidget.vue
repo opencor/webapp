@@ -44,7 +44,6 @@ const props = withDefaults(
     showLegend: true
   }
 );
-
 const emit = defineEmits<{
   (event: 'marginsUpdated', newMargins: IGraphPanelMargins): void;
   (event: 'resetMargins'): void;
@@ -313,19 +312,17 @@ vue.onMounted(() => {
   vue.nextTick(() => {
     // Reset our margins on double-click and relayout.
 
-    if (mainDiv.value) {
-      const plotlyElement = mainDiv.value as IPlotlyHTMLElement;
+    const plotlyElement = mainDiv.value as IPlotlyHTMLElement;
 
-      plotlyElement.on('plotly_doubleclick', () => {
+    plotlyElement.on('plotly_doubleclick', () => {
+      emit('resetMargins');
+    });
+
+    plotlyElement.on('plotly_relayout', (eventData: Partial<Plotly.Layout>) => {
+      if (eventData && (eventData['xaxis.range[0]'] || eventData['yaxis.range[0]'])) {
         emit('resetMargins');
-      });
-
-      plotlyElement.on('plotly_relayout', (eventData: Partial<Plotly.Layout>) => {
-        if (eventData && (eventData['xaxis.range[0]'] || eventData['yaxis.range[0]'])) {
-          emit('resetMargins');
-        }
-      });
-    }
+      }
+    });
   });
 });
 
@@ -343,12 +340,10 @@ vue.watch(
   () => theme.useLightMode(),
   () => {
     vue.nextTick(() => {
-      if (mainDiv.value) {
-        Plotly.relayout(mainDiv.value, {
-          ...themeData(),
-          ...axesData()
-        });
-      }
+      Plotly.relayout(mainDiv.value, {
+        ...themeData(),
+        ...axesData()
+      });
     });
   },
   { immediate: true }
@@ -359,12 +354,10 @@ vue.watch(
   () => {
     vue
       .nextTick(() => {
-        if (mainDiv.value) {
-          return Plotly.relayout(mainDiv.value, {
-            'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
-            'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
-          });
-        }
+        return Plotly.relayout(mainDiv.value, {
+          'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
+          'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
+        });
       })
       .then(() => {
         if (!props.margins) {
@@ -379,13 +372,11 @@ vue.watch(
   () => props.showLegend,
   () => {
     vue.nextTick(() => {
-      if (mainDiv.value) {
-        Plotly.relayout(mainDiv.value, {
-          showlegend: props.showLegend
-        }).then(() => {
-          updateMargins();
-        });
-      }
+      Plotly.relayout(mainDiv.value, {
+        showlegend: props.showLegend
+      }).then(() => {
+        updateMargins();
+      });
     });
   },
   { immediate: true }
