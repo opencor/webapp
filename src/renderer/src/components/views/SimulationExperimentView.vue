@@ -953,7 +953,11 @@ function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): v
 
     vue.nextTick().then(() => {
       for (let i = 0; i < settings.interactive.uiJson.output.plots.length; ++i) {
-        interactiveGraphPanelRefs.value[i].resize();
+        const graphPanelRef = interactiveGraphPanelRefs.value[i];
+
+        if (graphPanelRef) {
+          graphPanelRef.resize();
+        }
       }
     });
   }

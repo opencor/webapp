@@ -359,10 +359,12 @@ vue.watch(
   () => theme.useLightMode(),
   () => {
     vue.nextTick(() => {
-      Plotly.relayout(mainDiv.value, {
-        ...themeData(),
-        ...axesData()
-      });
+      if (mainDiv.value) {
+        Plotly.relayout(mainDiv.value, {
+          ...themeData(),
+          ...axesData()
+        });
+      }
     });
   },
   { immediate: true }
@@ -373,10 +375,12 @@ vue.watch(
   () => {
     vue
       .nextTick(() => {
-        return Plotly.relayout(mainDiv.value, {
-          'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
-          'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
-        });
+        if (mainDiv.value) {
+          return Plotly.relayout(mainDiv.value, {
+            'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
+            'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
+          });
+        }
       })
       .then(() => {
         if (!props.margins) {
@@ -391,11 +395,13 @@ vue.watch(
   () => props.showLegend,
   () => {
     vue.nextTick(() => {
-      Plotly.relayout(mainDiv.value, {
-        showlegend: props.showLegend
-      }).then(() => {
-        updateMarginsAsync();
-      });
+      if (mainDiv.value) {
+        Plotly.relayout(mainDiv.value, {
+          showlegend: props.showLegend
+        }).then(() => {
+          updateMarginsAsync();
+        });
+      }
     });
   },
   { immediate: true }
@@ -403,7 +409,11 @@ vue.watch(
 
 function resize(): Promise<unknown> {
   return Promise.resolve()
-    .then(() => Plotly.Plots.resize(mainDiv.value))
+    .then(() => {
+      if (mainDiv.value) {
+        Plotly.Plots.resize(mainDiv.value);
+      }
+    })
     .then(() => {
       updateMarginsAsync();
     });
