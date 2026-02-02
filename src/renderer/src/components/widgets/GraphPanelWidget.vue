@@ -56,6 +56,7 @@ const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
 const isVisible = vue.ref(false);
 const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
+let updatingMargins = false;
 
 interface IAxisThemeData {
   zerolinecolor: string;
@@ -213,34 +214,46 @@ function compMargins(): IGraphPanelMargins {
   };
 }
 
-function updateMargins(): Promise<unknown> | undefined {
-  // Retrieve and emit our new margins.
+function updateMarginsAsync(): void {
+  // Skip if we are already updating our margins.
 
-  const newMargins = compMargins();
-
-  emit('marginsUpdated', newMargins);
-
-  // Update our margins if they have changed.
-
-  const relayoutUpdates: Record<string, number> = {};
-
-  if (!props.margins) {
-    if (margins.value.left !== newMargins.left) {
-      margins.value.left = newMargins.left;
-
-      relayoutUpdates['margin.l'] = margins.value.left;
-    }
-
-    if (margins.value.right !== newMargins.right) {
-      margins.value.right = newMargins.right;
-
-      relayoutUpdates['margin.r'] = margins.value.right;
-    }
+  if (updatingMargins) {
+    return;
   }
 
-  if (Object.keys(relayoutUpdates).length) {
-    return Plotly.relayout(mainDiv.value, relayoutUpdates);
-  }
+  updatingMargins = true;
+
+  // Use requestAnimationFrame for optimal timing (after render, before next paint).
+
+  requestAnimationFrame(() => {
+    const newMargins = compMargins();
+
+    emit('marginsUpdated', newMargins);
+
+    // Update our margins if they have changed.
+
+    const relayoutUpdates: Record<string, number> = {};
+
+    if (!props.margins) {
+      if (margins.value.left !== newMargins.left) {
+        margins.value.left = newMargins.left;
+
+        relayoutUpdates['margin.l'] = margins.value.left;
+      }
+
+      if (margins.value.right !== newMargins.right) {
+        margins.value.right = newMargins.right;
+
+        relayoutUpdates['margin.r'] = margins.value.right;
+      }
+    }
+
+    if (Object.keys(relayoutUpdates).length) {
+      Plotly.relayout(mainDiv.value, relayoutUpdates);
+    }
+
+    updatingMargins = false;
+  });
 }
 
 function updatePlot(): void {
@@ -288,7 +301,6 @@ function updatePlot(): void {
       showTips: false
     }
   )
-    .then(() => updateMargins())
     .then(() => {
       if (!isVisible.value) {
         // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
@@ -304,6 +316,10 @@ function updatePlot(): void {
           isVisible.value = true;
         });
       }
+
+      // Update our margins asynchronously after our initial render.
+
+      updateMarginsAsync();
     });
 }
 
@@ -364,7 +380,7 @@ vue.watch(
       })
       .then(() => {
         if (!props.margins) {
-          updateMargins();
+          updateMarginsAsync();
         }
       });
   },
@@ -378,7 +394,7 @@ vue.watch(
       Plotly.relayout(mainDiv.value, {
         showlegend: props.showLegend
       }).then(() => {
-        updateMargins();
+        updateMarginsAsync();
       });
     });
   },
@@ -388,6 +404,8 @@ vue.watch(
 function resize(): Promise<unknown> {
   return Promise.resolve()
     .then(() => Plotly.Plots.resize(mainDiv.value))
-    .then(() => updateMargins());
+    .then(() => {
+      updateMarginsAsync();
+    });
 }
 </script>
