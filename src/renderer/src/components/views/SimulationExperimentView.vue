@@ -682,7 +682,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
     }
   });
 
-  const parserEvaluate = (value: string): number[] => {
+  const parserEvaluate = (value: string): Float64Array => {
     // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure element-wise
     //       operations.
 

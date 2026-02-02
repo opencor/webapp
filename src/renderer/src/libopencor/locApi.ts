@@ -70,27 +70,27 @@ export interface ICppLocApi {
 
   sedInstanceTaskVoiName: (instanceId: number, index: number) => string;
   sedInstanceTaskVoiUnit: (instanceId: number, index: number) => string;
-  sedInstanceTaskVoi: (instanceId: number, index: number) => number[];
+  sedInstanceTaskVoi: (instanceId: number, index: number) => Float64Array;
   sedInstanceTaskStateCount: (instanceId: number, index: number) => number;
   sedInstanceTaskStateName: (instanceId: number, index: number, stateIndex: number) => string;
   sedInstanceTaskStateUnit: (instanceId: number, index: number, stateIndex: number) => string;
-  sedInstanceTaskState: (instanceId: number, index: number, stateIndex: number) => number[];
+  sedInstanceTaskState: (instanceId: number, index: number, stateIndex: number) => Float64Array;
   sedInstanceTaskRateCount: (instanceId: number, index: number) => number;
   sedInstanceTaskRateName: (instanceId: number, index: number, rateIndex: number) => string;
   sedInstanceTaskRateUnit: (instanceId: number, index: number, rateIndex: number) => string;
-  sedInstanceTaskRate: (instanceId: number, index: number, rateIndex: number) => number[];
+  sedInstanceTaskRate: (instanceId: number, index: number, rateIndex: number) => Float64Array;
   sedInstanceTaskConstantCount: (instanceId: number, index: number) => number;
   sedInstanceTaskConstantName: (instanceId: number, index: number, constantIndex: number) => string;
   sedInstanceTaskConstantUnit: (instanceId: number, index: number, constantIndex: number) => string;
-  sedInstanceTaskConstant: (instanceId: number, index: number, constantIndex: number) => number[];
+  sedInstanceTaskConstant: (instanceId: number, index: number, constantIndex: number) => Float64Array;
   sedInstanceTaskComputedConstantCount: (instanceId: number, index: number) => number;
   sedInstanceTaskComputedConstantName: (instanceId: number, index: number, computedConstantIndex: number) => string;
   sedInstanceTaskComputedConstantUnit: (instanceId: number, index: number, computedConstantIndex: number) => string;
-  sedInstanceTaskComputedConstant: (instanceId: number, index: number, computedConstantIndex: number) => number[];
+  sedInstanceTaskComputedConstant: (instanceId: number, index: number, computedConstantIndex: number) => Float64Array;
   sedInstanceTaskAlgebraicVariableCount: (instanceId: number, index: number) => number;
   sedInstanceTaskAlgebraicVariableName: (instanceId: number, index: number, algebraicVariableIndex: number) => string;
   sedInstanceTaskAlgebraicVariableUnit: (instanceId: number, index: number, algebraicVariableIndex: number) => string;
-  sedInstanceTaskAlgebraicVariable: (instanceId: number, index: number, algebraicVariableIndex: number) => number[];
+  sedInstanceTaskAlgebraicVariable: (instanceId: number, index: number, algebraicVariableIndex: number) => Float64Array;
 
   // Version API.
 

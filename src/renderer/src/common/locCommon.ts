@@ -178,7 +178,7 @@ export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: s
 
 // A method to retrieve the simulation data for a given name from an instance task.
 
-export function simulationData(instanceTask: locApi.SedInstanceTask, info: ISimulationDataInfo): number[] {
+export function simulationData(instanceTask: locApi.SedInstanceTask, info: ISimulationDataInfo): Float64Array {
   switch (info.type) {
     case ESimulationDataInfoType.VOI:
       return instanceTask.voi();

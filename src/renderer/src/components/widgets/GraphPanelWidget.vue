@@ -15,8 +15,8 @@ import { GraphPanelWidgetPaletteColors } from './GraphPanelWidgetPalette.ts';
 
 export interface IGraphPanelPlotTrace {
   name: string;
-  x: number[];
-  y: number[];
+  x: Float64Array;
+  y: Float64Array;
   color: string;
   zorder?: number;
 }
