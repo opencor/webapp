@@ -780,7 +780,7 @@ const emit = defineEmits<{
 const simulationSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const solversSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const uiJsonIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
-const activeTab = vue.ref('simulation');
+const activeTab = vue.ref('interactive');
 const activeInteractiveTab = vue.ref('inputs');
 const showSimulationSettingsIssuesPanel = vue.ref(false);
 const showSolversSettingsIssuesPanel = vue.ref(false);
