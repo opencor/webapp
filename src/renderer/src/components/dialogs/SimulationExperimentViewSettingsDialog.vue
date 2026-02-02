@@ -106,6 +106,10 @@
                     <i class="pi pi-sign-in mr-2"></i>Inputs
                     <span class="ml-2 badge">{{ localSettings.interactive.uiJson.input.length }}</span>
                   </Tab>
+                  <Tab value="parameters">
+                    <i class="pi pi-list mr-2"></i>Parameters
+                    <span class="ml-2 badge">{{ localSettings.interactive.uiJson.parameters.length }}</span>
+                  </Tab>
                   <Tab value="data">
                     <i class="pi pi-database mr-2"></i>Data
                     <span class="ml-2 badge">{{ localSettings.interactive.uiJson.output.data.length }}</span>
@@ -113,10 +117,6 @@
                   <Tab value="plots">
                     <i class="pi pi-chart-line mr-2"></i>Plots
                     <span class="ml-2 badge">{{ localSettings.interactive.uiJson.output.plots.length }}</span>
-                  </Tab>
-                  <Tab value="parameters">
-                    <i class="pi pi-list mr-2"></i>Parameters
-                    <span class="ml-2 badge">{{ localSettings.interactive.uiJson.parameters.length }}</span>
                   </Tab>
                 </TabList>
                 <TabPanels>
@@ -272,6 +272,85 @@
                     </div>
                   </TabPanel>
 
+                  <!-- Parameters -->
+
+                  <TabPanel value="parameters" class="h-full">
+                    <div class="h-full flex flex-col">
+                      <div class="section-header section-header-interactive">
+                        <!-- Section description -->
+
+                        <i class="pi pi-list text-primary"></i>
+                        <div>
+                          <h3 class="section-title">Parameters</h3>
+                          <p class="section-description">
+                            Configure the model parameters using the value of the input parameters.
+                          </p>
+                        </div>
+                        <div class="flex-1"></div>
+
+                        <!-- Add button -->
+
+                        <div class="flex-none">
+                          <Button
+                            icon="pi pi-plus"
+                            label="Add parameter"
+                            outlined
+                            size="small"
+                            @click="addParameter"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Parameters scroll panel -->
+
+                      <ScrollPanel class="min-h-0">
+                        <div class="flex flex-col gap-4 mt-2">
+                          <!-- Empty state -->
+
+                          <div v-if="!localSettings.interactive.uiJson.parameters.length" class="empty-state">
+                            <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
+                            <p class="text-muted-color mb-2">No parameters configured</p>
+                          </div>
+
+                          <!-- Parameter entries -->
+
+                          <div v-else class="entries-list">
+                            <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
+                              <span class="index">{{ Number(parameterIndex) + 1 }}</span>
+                              <FloatLabel variant="on" class="flex-1">
+                                <Select v-model="parameter.name"
+                                  class="w-full" panelClass="model-parameter-filter"
+                                  size="small"
+                                  editable
+                                  filter filterMode="lenient"
+                                  :options="editableModelParameters"
+                                />
+                                <label>Model parameter</label>
+                              </FloatLabel>
+                              <FloatLabel variant="on" class="flex-1">
+                                <InputText v-model="parameter.value" class="w-full" size="small"
+                                  v-tippy="{
+                                    allowHTML: true,
+                                    content: parameterValueTooltip(),
+                                    placement: 'bottom-start'
+                                  }"
+                                />
+                                <label>Value</label>
+                              </FloatLabel>
+                              <Button
+                                icon="pi pi-times"
+                                text rounded
+                                severity="secondary"
+                                size="small"
+                                @click="removeParameter(parameterIndex)"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </ScrollPanel>
+                    </div>
+                  </TabPanel>
+
                   <!-- Data -->
 
                   <TabPanel value="data" class="h-full">
@@ -346,7 +425,7 @@
                         <div>
                           <h3 class="section-title">Plots</h3>
                           <p class="section-description">
-                            Configure the plots and the corresponding traces to visualise the simulation results.
+                            Configure the plots and the corresponding traces using the available simulation data.
                           </p>
                         </div>
                         <div class="flex-1"></div>
@@ -539,85 +618,6 @@
                       </ScrollPanel>
                     </div>
                   </TabPanel>
-
-                  <!-- Parameters -->
-
-                  <TabPanel value="parameters" class="h-full">
-                    <div class="h-full flex flex-col">
-                      <div class="section-header section-header-interactive">
-                        <!-- Section description -->
-
-                        <i class="pi pi-list text-primary"></i>
-                        <div>
-                          <h3 class="section-title">Parameters</h3>
-                          <p class="section-description">
-                            Configure the model parameters using the value of the input parameters.
-                          </p>
-                        </div>
-                        <div class="flex-1"></div>
-
-                        <!-- Add button -->
-
-                        <div class="flex-none">
-                          <Button
-                            icon="pi pi-plus"
-                            label="Add parameter"
-                            outlined
-                            size="small"
-                            @click="addParameter"
-                          />
-                        </div>
-                      </div>
-
-                      <!-- Parameters scroll panel -->
-
-                      <ScrollPanel class="min-h-0">
-                        <div class="flex flex-col gap-4 mt-2">
-                          <!-- Empty state -->
-
-                          <div v-if="!localSettings.interactive.uiJson.parameters.length" class="empty-state">
-                            <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                            <p class="text-muted-color mb-2">No parameters configured</p>
-                          </div>
-
-                          <!-- Parameter entries -->
-
-                          <div v-else class="entries-list">
-                            <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
-                              <span class="index">{{ Number(parameterIndex) + 1 }}</span>
-                              <FloatLabel variant="on" class="flex-1">
-                                <Select v-model="parameter.name"
-                                  class="w-full" panelClass="model-parameter-filter"
-                                  size="small"
-                                  editable
-                                  filter filterMode="lenient"
-                                  :options="editableModelParameters"
-                                />
-                                <label>Model parameter</label>
-                              </FloatLabel>
-                              <FloatLabel variant="on" class="flex-1">
-                                <InputText v-model="parameter.value" class="w-full" size="small"
-                                  v-tippy="{
-                                    allowHTML: true,
-                                    content: parameterValueTooltip(),
-                                    placement: 'bottom-start'
-                                  }"
-                                />
-                                <label>Value</label>
-                              </FloatLabel>
-                              <Button
-                                icon="pi pi-times"
-                                text rounded
-                                severity="secondary"
-                                size="small"
-                                @click="removeParameter(parameterIndex)"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </ScrollPanel>
-                    </div>
-                  </TabPanel>
                 </TabPanels>
               </Tabs>
             </div>
@@ -780,7 +780,7 @@ const emit = defineEmits<{
 const simulationSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const solversSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const uiJsonIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
-const activeTab = vue.ref('simulation');
+const activeTab = vue.ref('interactive');
 const activeInteractiveTab = vue.ref('inputs');
 const showSimulationSettingsIssuesPanel = vue.ref(false);
 const showSolversSettingsIssuesPanel = vue.ref(false);

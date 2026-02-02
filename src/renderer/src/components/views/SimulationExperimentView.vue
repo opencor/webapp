@@ -919,7 +919,7 @@ function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): v
 
   interactiveCvode.setMaximumStep(settings.solvers.cvodeMaximumStep);
 
-  interactiveUiJson.value = settings.interactive.uiJson;
+  interactiveUiJson.value = locApi.cleanUiJson(settings.interactive.uiJson);
   interactiveLiveUpdatesEnabled.value = settings.miscellaneous.liveUpdates;
   interactiveSettingsVisible.value = false;
 
