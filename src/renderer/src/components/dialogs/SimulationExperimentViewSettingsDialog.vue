@@ -319,7 +319,7 @@
                                   size="small"
                                   editable
                                   filter filterMode="lenient"
-                                  :options="localSettings.interactive.allModelParameters"
+                                  :options="allModelParameters"
                                 />
                                 <label>Model parameter</label>
                               </FloatLabel>
@@ -591,7 +591,7 @@
                                   size="small"
                                   editable
                                   filter filterMode="lenient"
-                                  :options="localSettings.interactive.editableModelParameters"
+                                  :options="editableModelParameters"
                                 />
                                 <label>Model parameter</label>
                               </FloatLabel>
@@ -759,8 +759,6 @@ export interface ISimulationExperimentViewSettings {
   };
   interactive: {
     uiJson: locUiJsonApi.IUiJson;
-    allModelParameters: string[];
-    editableModelParameters: string[];
   };
   miscellaneous: {
     liveUpdates: boolean;
@@ -770,6 +768,8 @@ export interface ISimulationExperimentViewSettings {
 const props = defineProps<{
   settings: ISimulationExperimentViewSettings;
   voiUnit: string;
+  allModelParameters: string[];
+  editableModelParameters: string[];
 }>();
 
 const emit = defineEmits<{
@@ -1099,9 +1099,7 @@ function onOk() {
       cvodeMaximumStep: localSettings.value.solvers.cvodeMaximumStep
     },
     interactive: {
-      uiJson: localSettings.value.interactive.uiJson,
-      allModelParameters: localSettings.value.interactive.allModelParameters,
-      editableModelParameters: localSettings.value.interactive.editableModelParameters
+      uiJson: localSettings.value.interactive.uiJson
     },
     miscellaneous: {
       liveUpdates: localSettings.value.miscellaneous.liveUpdates

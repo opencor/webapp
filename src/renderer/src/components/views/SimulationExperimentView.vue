@@ -220,6 +220,8 @@
       v-model:visible="interactiveSettingsVisible"
       :settings="interactiveSettings"
       :voiUnit="interactiveInstanceTask.voiUnit()"
+      :allModelParameters="interactiveAllModelParameters"
+      :editableModelParameters="interactiveEditableModelParameters"
       @ok="onInteractiveSettingsOk"
       @close="interactiveSettingsVisible = false"
     />
@@ -543,9 +545,7 @@ const interactiveSettings = vue.computed(() => ({
     cvodeMaximumStep: interactiveCvode.maximumStep()
   },
   interactive: {
-    uiJson: interactiveUiJson.value,
-    allModelParameters: interactiveAllModelParameters.value,
-    editableModelParameters: interactiveEditableModelParameters.value
+    uiJson: interactiveUiJson.value
   },
   miscellaneous: {
     liveUpdates: interactiveLiveUpdatesEnabled.value
