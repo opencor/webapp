@@ -48,6 +48,9 @@ const emit = defineEmits<{
   (event: 'marginsUpdated', newMargins: IGraphPanelMargins): void;
   (event: 'resetMargins'): void;
 }>();
+defineExpose({
+  resize
+});
 
 const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
 const isVisible = vue.ref(false);
@@ -381,4 +384,10 @@ vue.watch(
   },
   { immediate: true }
 );
+
+function resize(): Promise<unknown> {
+  return Promise.resolve()
+    .then(() => Plotly.Plots.resize(mainDiv.value))
+    .then(() => updateMargins());
+}
 </script>

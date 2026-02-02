@@ -205,6 +205,7 @@
             <IssuesView v-show="interactiveInstanceIssues.length" class="mt-4 mr-4" style="height: calc(100% - 2rem);" :issues="interactiveInstanceIssues" />
             <GraphPanelWidget v-show="!interactiveInstanceIssues.length"
               v-for="(_plot, index) in interactiveUiJson.output.plots"
+              :ref="(element) => (interactiveGraphPanelRefs[index] = element)"
               :key="`plot_${index}`"
               class="w-full min-h-0"
               :margins="interactiveCompMargins"
@@ -242,6 +243,7 @@ import * as locApi from '../../libopencor/locApi.ts';
 import * as locSedApi from '../../libopencor/locSedApi.ts';
 
 import type { ISimulationExperimentViewSettings } from '../dialogs/SimulationExperimentViewSettingsDialog.vue';
+import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
 import type { IGraphPanelData, IGraphPanelPlotTrace, IGraphPanelMargins } from '../widgets/GraphPanelWidget.vue';
 import {
   DefaultGraphPanelWidgetColor,
@@ -486,6 +488,7 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
 ]);
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
 const interactiveRunColorPopovers = vue.ref<Record<number, IPopover | undefined>>({});
+const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
 const interactiveCompData = vue.computed(() => {
   // Combine the live data with the data from the tracked runs.
 
@@ -899,6 +902,7 @@ function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): v
 
   // Update our settings and hide the dialog.
 
+  const oldNbOfGraphPanelWidgets = interactiveUiJson.value.output.plots.length;
   const oldCvodeMaximumStep = interactiveCvode.maximumStep();
 
   interactiveUniformTimeCourse.setInitialTime(settings.simulation.startingPoint);
@@ -940,9 +944,19 @@ function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): v
 
   // Update the interactive simulation with the new UI JSON settings.
 
-  void vue.nextTick().then(() => {
-    updateInteractiveSimulation();
-  });
+  updateInteractiveSimulation();
+
+  // Resize our graph panels if the number of plots has changed.
+
+  if (interactiveUiJson.value.output.plots.length !== oldNbOfGraphPanelWidgets) {
+    interactiveGraphPanelRefs.value = {};
+
+    vue.nextTick().then(() => {
+      for (let i = 0; i < settings.interactive.uiJson.output.plots.length; ++i) {
+        interactiveGraphPanelRefs.value[i].resize();
+      }
+    });
+  }
 }
 
 // "Initialise" our standard and/or interactive modes.
