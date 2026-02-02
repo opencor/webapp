@@ -31,7 +31,7 @@
           <div class="flex gap-2 items-center">
             <div>
               {{
-                fileName(fileTab.file.path())
+                common.fileName(fileTab.file.path())
               }}
             </div>
             <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
@@ -52,6 +52,7 @@
             :file="fileTab.file"
             :isActiveFile="fileTab.file.path() === activeFile"
             :uiJson="fileTab.uiJson!"
+            @error="$emit('error', $event)"
           />
         </TabPanel>
       </TabPanels>
@@ -77,6 +78,7 @@ const props = defineProps<{
   simulationOnly?: boolean;
   uiEnabled: boolean;
 }>();
+defineEmits<(event: 'error', message: string) => void>();
 defineExpose({ openFile, closeCurrentFile, closeAllFiles, hasFile, hasFiles, selectFile });
 
 export interface IContentsComponent {
@@ -112,18 +114,6 @@ vue.watch(activeFile, (newActiveFile: string) => {
 
   electronApi?.fileSelected(newActiveFile);
 });
-
-function fileName(filePath: string): string {
-  const res = filePath.split(/(\\|\/)/g).pop() || '';
-
-  try {
-    return decodeURIComponent(res);
-  } catch (error: unknown) {
-    console.error('Failed to decode the file path:', res, error);
-
-    return res;
-  }
-}
 
 function openFile(file: locApi.File): void {
   const filePath = file.path();

@@ -7,7 +7,7 @@
             icon="pi pi-play-circle"
             text severity="secondary"
             title="Run simulation (F9)"
-            @click="onRun()"
+            @click="onRun"
           />
         </div>
       </template>
@@ -24,6 +24,12 @@
       <template #end>
         <div :class="{ 'invisible': !interactiveModeEnabled }" class="flex gap-1">
           <Button class="p-1! toolbar-button"
+            icon="pi pi-download"
+            text severity="secondary"
+            title="Export COMBINE archive"
+            @click="onDownloadCombineArchive"
+          />
+          <Button class="p-1! toolbar-button"
             icon="pi pi-cog"
             text severity="secondary"
             title="Settings"
@@ -32,7 +38,7 @@
         </div>
       </template>
     </Toolbar>
-    <div v-show="!interactiveModeEnabled" class="grow h-full min-h-0">
+    <div v-if="!interactiveModeEnabled" class="grow h-full min-h-0">
       <Splitter class="border-none! h-full m-0" layout="vertical">
         <SplitterPanel :size="simulationOnly ? 100 : 89">
           <Splitter>
@@ -84,8 +90,8 @@
         </SplitterPanel>
       </Splitter>
     </div>
-    <div class="grow min-h-0">
-      <div v-show="interactiveModeEnabled" class="flex h-full">
+    <div v-else class="grow min-h-0">
+      <div class="flex h-full">
         <IssuesView v-if="interactiveUiJsonIssues.length" class="w-full m-4" :issues="interactiveUiJsonIssues" />
         <div v-else class="flex grow min-h-0">
           <div class="ml-4 mr-4 mb-4">
@@ -114,14 +120,14 @@
                       outlined
                       size="small"
                       title="Track current run"
-                      @click="onTrackRun()"
+                      @click="onTrackRun"
                     />
                     <Button class="w-9!"
                       icon="pi pi-trash"
                       outlined severity="danger"
                       size="small"
                       title="Remove all tracked runs"
-                      @click="onRemoveAllRuns()"
+                      @click="onRemoveAllRuns"
                       :disabled="interactiveRuns.length === 1"
                     />
                   </div>
@@ -213,6 +219,7 @@
     <SimulationExperimentViewSettingsDialog
       v-model:visible="interactiveSettingsVisible"
       :settings="interactiveSettings"
+      :voiUnit="interactiveInstanceTask.voiUnit()"
       @ok="onInteractiveSettingsOk"
       @close="interactiveSettingsVisible = false"
     />
@@ -224,6 +231,7 @@ import * as mathjs from 'https://cdn.jsdelivr.net/npm/mathjs@15.1.0/+esm';
 
 import * as vueusecore from '@vueuse/core';
 
+import JSZip from 'jszip';
 import * as vue from 'vue';
 
 import * as common from '../../common/common.ts';
@@ -256,6 +264,7 @@ const props = defineProps<{
   uiEnabled: boolean;
   uiJson: locApi.IUiJson;
 }>();
+const emit = defineEmits<(event: 'error', message: string) => void>();
 
 const toolbarNeeded = vue.computed(() => {
   return (props.simulationOnly && !interactiveUiJson) || !props.simulationOnly;
@@ -338,6 +347,48 @@ function onRun(): void {
   updateInteractiveSimulation(true);
 }
 
+function onDownloadCombineArchive(): void {
+  // Create and download a COMBINE archive that contains a manifest file, a CellML file, a SED-ML file, and a UI JSON
+  // file.
+
+  const zip = new JSZip();
+  const baseFileName = common.fileName(interactiveFile.path()).replace(/\.[^/.]+$/, '');
+  const modelFile = interactiveModel.file();
+
+  if (!modelFile) {
+    emit('error', 'Cannot create COMBINE archive: no model file available.');
+
+    return;
+  }
+
+  zip.file(
+    'manifest.xml',
+    `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<omexManifest xmlns="http://identifiers.org/combine.specifications/omex-manifest">
+  <content location="." format="http://identifiers.org/combine.specifications/omex"/>
+  <content location="document.sedml" format="http://identifiers.org/combine.specifications/sed-ml" master="true"/>
+  <content location="model.cellml" format="http://identifiers.org/combine.specifications/cellml"/>
+  <content location="simulation.json" format="http://purl.org/NET/mediatypes/application/json"/>
+</omexManifest>
+`
+  );
+  zip.file('model.cellml', modelFile.contents());
+  zip.file('document.sedml', interactiveDocument.serialise().replace(modelFile.path(), 'model.cellml'));
+  zip.file('simulation.json', JSON.stringify(interactiveUiJson.value, null, 2));
+
+  zip
+    .generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE'
+    })
+    .then((content) => {
+      common.downloadFile(`${baseFileName}.omex`, content, 'application/zip');
+    })
+    .catch((error: unknown) => {
+      console.error('Error generating COMBINE archive:', common.formatError(error));
+    });
+}
+
 function populateInputProperties(currentUiJson: locApi.IUiJson) {
   interactiveInputValues.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue);
   interactiveShowInput.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true');
@@ -353,7 +404,8 @@ function populateInputProperties(currentUiJson: locApi.IUiJson) {
 
 // Standard mode.
 
-const standardDocument = props.file.document();
+const standardFile = props.file;
+const standardDocument = standardFile.document();
 const standardUniformTimeCourse = standardDocument.simulation(0) as locApi.SedUniformTimeCourse;
 const standardInstance = standardDocument.instantiate();
 const standardInstanceTask = standardInstance.task(0);
@@ -365,7 +417,7 @@ const standardData = vue.ref<IGraphPanelData>({
   yAxisTitle: undefined,
   traces: []
 });
-const standardConsoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
+const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`);
 
 populateParameters(standardParameters, standardInstanceTask);
 
@@ -402,7 +454,8 @@ const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
 const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
 const interactiveSettingsVisible = vue.ref<boolean>(false);
 const interactiveUiJson = vue.ref<locApi.IUiJson>(initialUiJson());
-const interactiveDocument = props.file.document();
+const interactiveFile = props.file;
+const interactiveDocument = interactiveFile.document();
 const interactiveUniformTimeCourse = interactiveDocument.simulation(0) as locApi.SedUniformTimeCourse;
 const interactiveCvode = interactiveUniformTimeCourse.cvode();
 let interactiveInstance = interactiveDocument.instantiate();
@@ -480,7 +533,7 @@ const interactiveCompData = vue.computed(() => {
 });
 const interactiveSettings = vue.computed(() => ({
   simulation: {
-    startingPoint: interactiveUniformTimeCourse.initialTime(),
+    startingPoint: interactiveUniformTimeCourse.outputStartTime(),
     endingPoint: interactiveUniformTimeCourse.outputEndTime(),
     pointInterval:
       (interactiveUniformTimeCourse.outputEndTime() - interactiveUniformTimeCourse.outputStartTime()) /
@@ -496,9 +549,6 @@ const interactiveSettings = vue.computed(() => ({
   },
   miscellaneous: {
     liveUpdates: interactiveLiveUpdatesEnabled.value
-  },
-  extra: {
-    voiUnit: interactiveInstanceTask.voiUnit()
   }
 }));
 
@@ -835,6 +885,7 @@ function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): v
 
   const oldCvodeMaximumStep = interactiveCvode.maximumStep();
 
+  interactiveUniformTimeCourse.setInitialTime(settings.simulation.startingPoint);
   interactiveUniformTimeCourse.setOutputStartTime(settings.simulation.startingPoint);
   interactiveUniformTimeCourse.setOutputEndTime(settings.simulation.endingPoint);
   interactiveUniformTimeCourse.setNumberOfSteps(

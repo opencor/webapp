@@ -166,6 +166,8 @@ electron.contextBridge.exposeInMainWorld('locApi', {
   sedDocumentModelCount: (documentId: number) => loc.sedDocumentModelCount(documentId),
   sedDocumentSimulationCount: (documentId: number) => loc.sedDocumentSimulationCount(documentId),
   sedDocumentSimulationType: (documentId: number, index: number) => loc.sedDocumentSimulationType(documentId, index),
+  sedDocumentSerialise: (documentId: number) => loc.sedDocumentSerialise(documentId),
+  sedModelFilePath: (documentId: number, index: number) => loc.sedModelFilePath(documentId, index),
   sedModelAddChange: (
     documentId: number,
     index: number,
@@ -177,6 +179,8 @@ electron.contextBridge.exposeInMainWorld('locApi', {
   sedOneStepStep: (documentId: number, index: number) => loc.sedOneStepStep(documentId, index),
   sedUniformTimeCourseInitialTime: (documentId: number, index: number) =>
     loc.sedUniformTimeCourseInitialTime(documentId, index),
+  sedUniformTimeCourseSetInitialTime: (documentId: number, index: number, value: number) =>
+    loc.sedUniformTimeCourseSetInitialTime(documentId, index, value),
   sedUniformTimeCourseOutputStartTime: (documentId: number, index: number) =>
     loc.sedUniformTimeCourseOutputStartTime(documentId, index),
   sedUniformTimeCourseSetOutputStartTime: (documentId: number, index: number, value: number) =>

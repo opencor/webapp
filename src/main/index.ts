@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import type { ISettings } from '../renderer/src/common/common.ts';
+import { formatError, type ISettings } from '../renderer/src/common/common.ts';
 import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants.ts';
 import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -279,13 +279,13 @@ electron.app
     });
   })
   .catch((error: unknown) => {
-    console.error('Failed to create the main window:', error);
+    console.error('Failed to create the main window:', formatError(error));
   });
 
 // Ensure that the renderer server is stopped when quitting.
 
 electron.app.on('will-quit', () => {
   stopRendererServer().catch((error: unknown) => {
-    console.error('Failed to stop the renderer server:', error);
+    console.error('Failed to stop the renderer server:', formatError(error));
   });
 });

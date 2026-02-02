@@ -8,7 +8,7 @@ import * as vue from 'vue';
 import type * as locApi from '../../libopencor/locApi.ts';
 
 const props = defineProps<{
-  uniformTimeCourse: locApi.SedSimulationUniformTimeCourse;
+  uniformTimeCourse: locApi.SedUniformTimeCourse;
   instanceTask: locApi.SedInstanceTask;
 }>();
 
@@ -36,6 +36,7 @@ const properties = vue.ref([
 
 function onPropertyUpdated(index: number, newValue: number): void {
   if (index === 0) {
+    props.uniformTimeCourse.setInitialTime(newValue);
     props.uniformTimeCourse.setOutputStartTime(newValue);
   } else if (index === 1) {
     props.uniformTimeCourse.setOutputEndTime(newValue);

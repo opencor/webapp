@@ -144,3 +144,27 @@ export function downloadFile(filename: string, content: string | Blob, type: str
 
   URL.revokeObjectURL(url);
 }
+
+// A method to get the file name from a given file path.
+
+export function fileName(filePath: string): string {
+  const res = filePath.split(/(\\|\/)/g).pop() || '';
+
+  try {
+    return decodeURIComponent(res);
+  } catch (error: unknown) {
+    console.error('Failed to decode the file path:', res, formatError(error));
+
+    return res;
+  }
+}
+
+// A method to format an error into a string.
+
+export function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}

@@ -1,4 +1,4 @@
-import { corsProxyUrl, sha256 } from '../common/common.ts';
+import { corsProxyUrl, formatError, sha256 } from '../common/common.ts';
 import * as locApi from '../libopencor/locApi.ts';
 
 import { electronApi } from './electronApi.ts';
@@ -40,7 +40,7 @@ export function file(fileFilePathOrFileContents: string | Uint8Array | File): Pr
             // the file directly otherwise we re-throw the error.
 
             if (!(error instanceof TypeError)) {
-              throw error instanceof Error ? error : new Error(String(error));
+              throw new Error(formatError(error));
             }
 
             return fetch(fileFilePathOrFileContents).then((response) => {
@@ -59,7 +59,7 @@ export function file(fileFilePathOrFileContents: string | Uint8Array | File): Pr
             resolve(new locApi.File(filePath(fileFilePathOrFileContents), fileContents));
           })
           .catch((error: unknown) => {
-            reject(error instanceof Error ? error : new Error(String(error)));
+            reject(new Error(formatError(error)));
           });
       });
     }
@@ -88,7 +88,7 @@ export function file(fileFilePathOrFileContents: string | Uint8Array | File): Pr
         resolve(new locApi.File(filePath(fileFilePathOrFileContents), fileContents));
       })
       .catch((error: unknown) => {
-        reject(error instanceof Error ? error : new Error(String(error)));
+        reject(new Error(formatError(error)));
       });
   });
 }

@@ -2,7 +2,7 @@ import electron from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
 import path from 'node:path';
 
-import { isHttpUrl, type ISettings } from '../renderer/src/common/common.ts';
+import { formatError, isHttpUrl, type ISettings } from '../renderer/src/common/common.ts';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants.ts';
 import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -34,10 +34,7 @@ export function checkForUpdates(atStartup: boolean): void {
         }
       })
       .catch((error: unknown) => {
-        MainWindow.instance?.webContents.send(
-          'update-check-error',
-          error instanceof Error ? error.message : String(error)
-        );
+        MainWindow.instance?.webContents.send('update-check-error', formatError(error));
       });
   }
 }
@@ -53,10 +50,7 @@ export function downloadAndInstallUpdate(): void {
       MainWindow.instance?.webContents.send('update-downloaded');
     })
     .catch((error: unknown) => {
-      MainWindow.instance?.webContents.send(
-        'update-download-error',
-        error instanceof Error ? error.message : String(error)
-      );
+      MainWindow.instance?.webContents.send('update-download-error', formatError(error));
     });
 }
 
@@ -329,7 +323,7 @@ export class MainWindow extends ApplicationWindow {
 
       if (isHttpUrl(details.url)) {
         electron.shell.openExternal(details.url).catch((error: unknown) => {
-          console.error(`Failed to open external URL (${details.url}):`, error);
+          console.error(`Failed to open external URL (${details.url}):`, formatError(error));
         });
       } else {
         console.warn(`Blocked attempt to open unsupported URL (${details.url}).`);
@@ -343,7 +337,7 @@ export class MainWindow extends ApplicationWindow {
     // Load the renderer URL.
 
     this.loadURL(rendererUrl).catch((error: unknown) => {
-      console.error(`Failed to load URL (${rendererUrl}):`, error);
+      console.error(`Failed to load URL (${rendererUrl}):`, formatError(error));
     });
   }
 
@@ -428,7 +422,7 @@ export class MainWindow extends ApplicationWindow {
         this.enableDisableUi(true);
       })
       .catch((error: unknown) => {
-        console.error('Failed to open file(s):', error);
+        console.error('Failed to open file(s):', formatError(error));
 
         this.enableDisableUi(true);
       });

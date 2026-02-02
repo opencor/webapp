@@ -2,13 +2,13 @@
   <BaseDialog header="Open Remote..." style="width: 39rem;">
     <div class="items-center mt-2 mb-4">
       <FloatLabel variant="on">
-        <InputText autofocus fluid v-model="url" @keyup.enter="emitOpenRemote()" />
+        <InputText autofocus fluid v-model="url" @keyup.enter="emitOpenRemote" />
         <label>URL</label>
       </FloatLabel>
     </div>
     <template #footer>
-      <Button label="Open" :disabled="!url" @click="emitOpenRemote()" />
-      <Button label="Cancel" severity="secondary" @click="emitClose()" />
+      <Button label="Open" :disabled="!url" @click="emitOpenRemote" />
+      <Button label="Cancel" severity="secondary" @click="emitClose" />
     </template>
   </BaseDialog>
 </template>
