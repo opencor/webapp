@@ -205,7 +205,7 @@
             <IssuesView v-show="interactiveInstanceIssues.length" class="mt-4 mr-4" style="height: calc(100% - 2rem);" :issues="interactiveInstanceIssues" />
             <GraphPanelWidget v-show="!interactiveInstanceIssues.length"
               v-for="(_plot, index) in interactiveUiJson.output.plots"
-              :ref="(element) => (interactiveGraphPanelRefs[index] = element)"
+              :ref="(element) => interactiveGraphPanelRef(index, element)"
               :key="`plot_${index}`"
               class="w-full min-h-0"
               :margins="interactiveCompMargins"
@@ -570,6 +570,10 @@ const interactiveSettings = vue.computed(() => ({
   }
 }));
 const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interactiveSettings.value)));
+
+function interactiveGraphPanelRef(index: number, element: vue.ComponentPublicInstance) {
+  interactiveGraphPanelRefs.value[index] = element as InstanceType<typeof GraphPanelWidget>;
+}
 
 // Initial UI JSON content.
 
