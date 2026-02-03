@@ -327,7 +327,27 @@ function onRun(): void {
 
     const simulationTime = standardInstance.run();
 
-    standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> ${common.formatTime(simulationTime)}`;
+    if (standardInstance.hasIssues()) {
+      standardInstance.issues().forEach((issue: locApi.IIssue) => {
+        const color =
+          issue.type === locApi.EIssueType.ERROR
+            ? colors.RevertedPalette.Red
+            : issue.type === locApi.EIssueType.WARNING
+              ? colors.RevertedPalette.Orange
+              : colors.RevertedPalette.Blue;
+        const issueType =
+          issue.type === locApi.EIssueType.ERROR
+            ? 'Error'
+            : issue.type === locApi.EIssueType.WARNING
+              ? 'Warning'
+              : 'Info';
+        const issueDescription = issue.description.replace('Task | ', '');
+
+        standardConsoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`;
+      });
+    } else {
+      standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.RevertedPalette.Blue};">${common.formatTime(simulationTime)}</span>`;
+    }
 
     void vue.nextTick(() => {
       const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
