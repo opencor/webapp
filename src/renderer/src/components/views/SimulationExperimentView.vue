@@ -163,7 +163,7 @@
                           >
                             <div class="flex gap-2">
                               <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
-                                v-for="(name, color) in GraphPanelWidgetPalette" :key="color"
+                                v-for="(name, color) in colors.Palette" :key="color"
                                 :style="`background-color: ${color};`"
                                 :class="{ 'color-swatch-selected': color === run.color }"
                                 :title="name"
@@ -237,6 +237,7 @@ import * as vueusecore from '@vueuse/core';
 import JSZip from 'jszip';
 import * as vue from 'vue';
 
+import * as colors from '../../common/colors.ts';
 import * as common from '../../common/common.ts';
 import * as locCommon from '../../common/locCommon.ts';
 import * as locApi from '../../libopencor/locApi.ts';
@@ -245,11 +246,6 @@ import * as locSedApi from '../../libopencor/locSedApi.ts';
 import type { ISimulationExperimentViewSettings } from '../dialogs/SimulationExperimentViewSettingsDialog.vue';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
 import type { IGraphPanelData, IGraphPanelPlotTrace, IGraphPanelMargins } from '../widgets/GraphPanelWidget.vue';
-import {
-  DefaultGraphPanelWidgetColor,
-  GraphPanelWidgetPalette,
-  GraphPanelWidgetPaletteColors
-} from '../widgets/GraphPanelWidgetPalette.ts';
 
 interface ISimulationRun {
   inputParameters: Record<string, number>;
@@ -441,7 +437,7 @@ function updatePlot() {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
         x: locCommon.simulationData(standardInstanceTask, xInfo.value),
         y: locCommon.simulationData(standardInstanceTask, yInfo.value),
-        color: DefaultGraphPanelWidgetColor
+        color: colors.DefaultColor
       }
     ]
   };
@@ -481,7 +477,7 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
     inputParameters: {},
     isVisible: true,
     data: [],
-    color: DefaultGraphPanelWidgetColor,
+    color: colors.DefaultColor,
     tooltip: '',
     isLiveRun: true
   }
@@ -516,10 +512,9 @@ const interactiveCompData = vue.computed(() => {
             trace.name +
             (interactiveRuns.value.length === 1 ? '' : interactiveRun.isLiveRun ? ' [Live]' : ` [#${runIndex}]`),
           color:
-            GraphPanelWidgetPaletteColors[
-              (GraphPanelWidgetPaletteColors.indexOf(interactiveRun.color) + traceIndex) %
-                GraphPanelWidgetPaletteColors.length
-            ] ?? DefaultGraphPanelWidgetColor,
+            colors.PaletteColors[
+              (colors.PaletteColors.indexOf(interactiveRun.color) + traceIndex) % colors.PaletteColors.length
+            ] ?? colors.DefaultColor,
           zorder: interactiveRun.isLiveRun ? 1 : undefined
         };
       });
@@ -700,7 +695,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
           name: traceName(plot.name, plot.xValue, plot.yValue),
           x: parserEvaluate(plot.xValue),
           y: parserEvaluate(plot.yValue),
-          color: DefaultGraphPanelWidgetColor
+          color: colors.DefaultColor
         }
       ];
 
@@ -709,7 +704,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
           name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
           x: parserEvaluate(additionalTrace.xValue),
           y: parserEvaluate(additionalTrace.yValue),
-          color: DefaultGraphPanelWidgetColor
+          color: colors.DefaultColor
         });
       });
 
@@ -815,14 +810,14 @@ function onTrackRun(): void {
   // have already been used.
 
   const usedColors = new Set<string>(interactiveRuns.value.map((run) => run.color));
-  const lastColor = interactiveRuns.value[interactiveRuns.value.length - 1]?.color ?? DefaultGraphPanelWidgetColor;
-  const lastColorIndex = GraphPanelWidgetPaletteColors.indexOf(lastColor);
-  let color: string = DefaultGraphPanelWidgetColor;
+  const lastColor = interactiveRuns.value[interactiveRuns.value.length - 1]?.color ?? colors.DefaultColor;
+  const lastColorIndex = colors.PaletteColors.indexOf(lastColor);
+  let color: string = colors.DefaultColor;
 
-  for (let i = 1; i <= GraphPanelWidgetPaletteColors.length; ++i) {
-    const newColor = GraphPanelWidgetPaletteColors[(lastColorIndex + i) % GraphPanelWidgetPaletteColors.length];
+  for (let i = 1; i <= colors.PaletteColors.length; ++i) {
+    const newColor = colors.PaletteColors[(lastColorIndex + i) % colors.PaletteColors.length];
 
-    if (newColor && (!usedColors.has(newColor) || usedColors.size === GraphPanelWidgetPaletteColors.length)) {
+    if (newColor && (!usedColors.has(newColor) || usedColors.size === colors.PaletteColors.length)) {
       color = newColor;
 
       break;

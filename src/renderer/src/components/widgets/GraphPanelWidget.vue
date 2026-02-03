@@ -9,9 +9,8 @@
 import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.3.1/+esm';
 import * as vue from 'vue';
 
+import * as colors from '../../common/colors.ts';
 import * as vueCommon from '../../common/vueCommon.ts';
-
-import { GraphPanelWidgetPaletteColors } from './GraphPanelWidgetPalette.ts';
 
 export interface IGraphPanelPlotTrace {
   name: string;
@@ -94,7 +93,7 @@ function themeData(): IThemeData {
     font: {
       color: theme.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
     },
-    colorway: GraphPanelWidgetPaletteColors,
+    colorway: colors.PaletteColors,
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };
