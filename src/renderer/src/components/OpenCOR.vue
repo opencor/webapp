@@ -759,6 +759,20 @@ if (props.omex) {
               window.location.search = '';
             } else if (action.value) {
               setTimeout(() => {
+                if (!action.value.startsWith(FULL_URI_SCHEME)) {
+                  toast.add({
+                    severity: 'error',
+                    group: toastId.value,
+                    summary: 'Handling an action',
+                    detail: `${action.value}\n\nThe action could not be handled.`,
+                    life: TOAST_LIFE
+                  });
+
+                  action.value = '';
+
+                  return;
+                }
+
                 handleAction(action.value.slice(FULL_URI_SCHEME.length));
 
                 action.value = '';
