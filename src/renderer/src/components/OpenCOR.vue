@@ -444,108 +444,68 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
 
   let isDataUrl = false;
 
-  locCommon
-    .zipCellmlDataUrl(fileFilePathOrFileContents)
-    .then((zipCellmlDataUriInfo: locCommon.IDataUriInfo) => {
-      if (zipCellmlDataUriInfo.res) {
-        if (zipCellmlDataUriInfo.error) {
-          toast.add({
-            severity: 'error',
-            group: toastId.value,
-            summary: 'Opening a file',
-            detail: `${zipCellmlDataUriInfo.error}`,
-            life: TOAST_LIFE
-          });
-
-          return;
-        }
-
-        isDataUrl = true;
-        fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
-      } else {
-        // Check whether we were passed a COMBINE archive data URL.
-
-        const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
-
-        if (combineArchiveDataUriInfo.res) {
-          isDataUrl = true;
-          fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
-        }
-      }
-
-      // Check whether the file is already open and if so then select it.
-
-      const filePath = locCommon.filePath(fileFilePathOrFileContents, isDataUrl);
-
-      if (contents.value?.hasFile(filePath) ?? false) {
-        contents.value?.selectFile(filePath);
+  locCommon.zipCellmlDataUrl(fileFilePathOrFileContents).then((zipCellmlDataUriInfo: locCommon.IDataUriInfo) => {
+    if (zipCellmlDataUriInfo.res) {
+      if (zipCellmlDataUriInfo.error) {
+        toast.add({
+          severity: 'error',
+          group: toastId.value,
+          summary: 'Opening a file',
+          detail: `${zipCellmlDataUriInfo.error}`,
+          life: TOAST_LIFE
+        });
 
         return;
       }
 
-      // Retrieve a locApi.File object for the given file or file path and add it to the contents.
+      isDataUrl = true;
+      fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
+    } else {
+      // Check whether we were passed a COMBINE archive data URL.
 
-      if (locCommon.isRemoteFilePath(filePath)) {
-        showLoadingModelMessage();
+      const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
+
+      if (combineArchiveDataUriInfo.res) {
+        isDataUrl = true;
+        fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
       }
+    }
 
-      locCommon
-        .file(fileFilePathOrFileContents, isDataUrl)
-        .then((file) => {
-          const fileType = file.type();
+    // Check whether the file is already open and if so then select it.
 
-          if (
-            fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
-            fileType === locApi.EFileType.UNKNOWN_FILE ||
-            fileType === locApi.EFileType.SEDML_FILE ||
-            (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
-          ) {
-            if (props.omex) {
-              void vue.nextTick(() => {
-                issues.value.push({
-                  type: locApi.EIssueType.ERROR,
-                  description:
-                    fileType === locApi.EFileType.IRRETRIEVABLE_FILE
-                      ? 'The file could not be retrieved.'
-                      : 'Only COMBINE archives are supported.'
-                });
-              });
-            } else {
-              toast.add({
-                severity: 'error',
-                group: toastId.value,
-                summary: 'Opening a file',
-                detail:
-                  filePath +
-                  '\n\n' +
-                  (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
-                    ? 'The file could not be retrieved.'
-                    : fileType === locApi.EFileType.SEDML_FILE
-                      ? 'SED-ML files are not currently supported.'
-                      : 'Only CellML files and COMBINE archives are supported.'),
-                life: TOAST_LIFE
-              });
-            }
+    const filePath = locCommon.filePath(fileFilePathOrFileContents, isDataUrl);
 
-            electronApi?.fileIssue(filePath);
-          } else {
-            contents.value?.openFile(file);
-          }
+    if (contents.value?.hasFile(filePath) ?? false) {
+      contents.value?.selectFile(filePath);
 
-          if (locCommon.isRemoteFilePath(filePath)) {
-            hideLoadingModelMessage();
-          }
-        })
-        .catch((error: unknown) => {
-          if (locCommon.isRemoteFilePath(filePath)) {
-            hideLoadingModelMessage();
-          }
+      return;
+    }
 
+    // Retrieve a locApi.File object for the given file or file path and add it to the contents.
+
+    if (locCommon.isRemoteFilePath(filePath)) {
+      showLoadingModelMessage();
+    }
+
+    locCommon
+      .file(fileFilePathOrFileContents, isDataUrl)
+      .then((file) => {
+        const fileType = file.type();
+
+        if (
+          fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
+          fileType === locApi.EFileType.UNKNOWN_FILE ||
+          fileType === locApi.EFileType.SEDML_FILE ||
+          (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
+        ) {
           if (props.omex) {
             void vue.nextTick(() => {
               issues.value.push({
                 type: locApi.EIssueType.ERROR,
-                description: common.formatMessage(common.formatError(error))
+                description:
+                  fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                    ? 'The file could not be retrieved.'
+                    : 'Only COMBINE archives are supported.'
               });
             });
           } else {
@@ -553,14 +513,52 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
               severity: 'error',
               group: toastId.value,
               summary: 'Opening a file',
-              detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
+              detail:
+                filePath +
+                '\n\n' +
+                (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                  ? 'The file could not be retrieved.'
+                  : fileType === locApi.EFileType.SEDML_FILE
+                    ? 'SED-ML files are not currently supported.'
+                    : 'Only CellML files and COMBINE archives are supported.'),
               life: TOAST_LIFE
             });
           }
 
           electronApi?.fileIssue(filePath);
-        });
-    });
+        } else {
+          contents.value?.openFile(file);
+        }
+
+        if (locCommon.isRemoteFilePath(filePath)) {
+          hideLoadingModelMessage();
+        }
+      })
+      .catch((error: unknown) => {
+        if (locCommon.isRemoteFilePath(filePath)) {
+          hideLoadingModelMessage();
+        }
+
+        if (props.omex) {
+          void vue.nextTick(() => {
+            issues.value.push({
+              type: locApi.EIssueType.ERROR,
+              description: common.formatMessage(common.formatError(error))
+            });
+          });
+        } else {
+          toast.add({
+            severity: 'error',
+            group: toastId.value,
+            summary: 'Opening a file',
+            detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
+            life: TOAST_LIFE
+          });
+        }
+
+        electronApi?.fileIssue(filePath);
+      });
+  });
 }
 
 // Open file(s) dialog.
