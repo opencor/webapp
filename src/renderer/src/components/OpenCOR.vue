@@ -789,6 +789,12 @@ if (props.omex) {
               action.value = window.location.search.substring(1);
 
               window.location.search = '';
+
+              if (window.location.hash) {
+                action.value += window.location.hash.substring(1);
+
+                window.location.hash = '';
+              }
             } else if (action.value) {
               setTimeout(() => {
                 if (!action.value.startsWith(FULL_URI_SCHEME)) {
