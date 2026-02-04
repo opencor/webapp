@@ -443,7 +443,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
           severity: 'error',
           group: toastId.value,
           summary: 'Opening a file',
-          detail: `${zipCellmlDataUriInfo.error}`,
+          detail: zipCellmlDataUriInfo.error,
           life: TOAST_LIFE
         });
 
@@ -458,6 +458,18 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
       const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
 
       if (combineArchiveDataUriInfo.res) {
+        if (combineArchiveDataUriInfo.error) {
+          toast.add({
+            severity: 'error',
+            group: toastId.value,
+            summary: 'Opening a file',
+            detail: combineArchiveDataUriInfo.error,
+            life: TOAST_LIFE
+          });
+
+          return;
+        }
+
         omexDataUrlCounter = ++globalOmexDataUrlCounter;
         fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
       }
