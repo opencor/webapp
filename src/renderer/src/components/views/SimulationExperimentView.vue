@@ -163,7 +163,7 @@
                           >
                             <div class="flex gap-2">
                               <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
-                                v-for="(name, color) in colors.Palette" :key="color"
+                                v-for="(name, color) in colors.PALETTE" :key="color"
                                 :style="`background-color: ${color};`"
                                 :class="{ 'color-swatch-selected': color === run.color }"
                                 :title="name"
@@ -331,10 +331,10 @@ function onRun(): void {
       standardInstance.issues().forEach((issue: locApi.IIssue) => {
         const color =
           issue.type === locApi.EIssueType.ERROR
-            ? colors.RevertedPalette.Red
+            ? colors.REVERTED_PALETTE.Red
             : issue.type === locApi.EIssueType.WARNING
-              ? colors.RevertedPalette.Orange
-              : colors.RevertedPalette.Blue;
+              ? colors.REVERTED_PALETTE.Orange
+              : colors.REVERTED_PALETTE.Blue;
         const issueType =
           issue.type === locApi.EIssueType.ERROR
             ? 'Error'
@@ -346,7 +346,7 @@ function onRun(): void {
         standardConsoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`;
       });
     } else {
-      standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.RevertedPalette.Blue};">${common.formatTime(simulationTime)}</span>`;
+      standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>`;
     }
 
     void vue.nextTick(() => {
@@ -457,7 +457,7 @@ function updatePlot() {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
         x: locCommon.simulationData(standardInstanceTask, xInfo.value),
         y: locCommon.simulationData(standardInstanceTask, yInfo.value),
-        color: colors.DefaultColor
+        color: colors.DEFAULT_COLOR
       }
     ]
   };
@@ -497,7 +497,7 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
     inputParameters: {},
     isVisible: true,
     data: [],
-    color: colors.DefaultColor,
+    color: colors.DEFAULT_COLOR,
     tooltip: '',
     isLiveRun: true
   }
@@ -532,9 +532,9 @@ const interactiveCompData = vue.computed(() => {
             trace.name +
             (interactiveRuns.value.length === 1 ? '' : interactiveRun.isLiveRun ? ' [Live]' : ` [#${runIndex}]`),
           color:
-            colors.PaletteColors[
-              (colors.PaletteColors.indexOf(interactiveRun.color) + traceIndex) % colors.PaletteColors.length
-            ] ?? colors.DefaultColor,
+            colors.PALETTE_COLORS[
+              (colors.PALETTE_COLORS.indexOf(interactiveRun.color) + traceIndex) % colors.PALETTE_COLORS.length
+            ] ?? colors.DEFAULT_COLOR,
           zorder: interactiveRun.isLiveRun ? 1 : undefined
         };
       });
@@ -715,7 +715,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
           name: traceName(plot.name, plot.xValue, plot.yValue),
           x: parserEvaluate(plot.xValue),
           y: parserEvaluate(plot.yValue),
-          color: colors.DefaultColor
+          color: colors.DEFAULT_COLOR
         }
       ];
 
@@ -724,7 +724,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
           name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
           x: parserEvaluate(additionalTrace.xValue),
           y: parserEvaluate(additionalTrace.yValue),
-          color: colors.DefaultColor
+          color: colors.DEFAULT_COLOR
         });
       });
 
@@ -830,14 +830,14 @@ function onTrackRun(): void {
   // have already been used.
 
   const usedColors = new Set<string>(interactiveRuns.value.map((run) => run.color));
-  const lastColor = interactiveRuns.value[interactiveRuns.value.length - 1]?.color ?? colors.DefaultColor;
-  const lastColorIndex = colors.PaletteColors.indexOf(lastColor);
-  let color: string = colors.DefaultColor;
+  const lastColor = interactiveRuns.value[interactiveRuns.value.length - 1]?.color ?? colors.DEFAULT_COLOR;
+  const lastColorIndex = colors.PALETTE_COLORS.indexOf(lastColor);
+  let color: string = colors.DEFAULT_COLOR;
 
-  for (let i = 1; i <= colors.PaletteColors.length; ++i) {
-    const newColor = colors.PaletteColors[(lastColorIndex + i) % colors.PaletteColors.length];
+  for (let i = 1; i <= colors.PALETTE_COLORS.length; ++i) {
+    const newColor = colors.PALETTE_COLORS[(lastColorIndex + i) % colors.PALETTE_COLORS.length];
 
-    if (newColor && (!usedColors.has(newColor) || usedColors.size === colors.PaletteColors.length)) {
+    if (newColor && (!usedColors.has(newColor) || usedColors.size === colors.PALETTE_COLORS.length)) {
       color = newColor;
 
       break;

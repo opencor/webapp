@@ -93,7 +93,7 @@ function themeData(): IThemeData {
     font: {
       color: theme.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
     },
-    colorway: colors.PaletteColors,
+    colorway: colors.PALETTE_COLORS,
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };
