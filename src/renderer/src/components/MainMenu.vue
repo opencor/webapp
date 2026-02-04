@@ -44,7 +44,6 @@ const emit = defineEmits<{
   (event: 'open'): void;
   (event: 'openRemote'): void;
   (event: 'openSampleLorenz'): void;
-  (event: 'openSampleInteractiveLorenz'): void;
   (event: 'settings'): void;
 }>();
 const isWindowsOrLinux = common.isWindows() || common.isLinux();
@@ -75,12 +74,6 @@ const items = [
             label: 'Lorenz',
             command: () => {
               emit('openSampleLorenz');
-            }
-          },
-          {
-            label: 'Interactive Lorenz',
-            command: () => {
-              emit('openSampleInteractiveLorenz');
             }
           }
         ]

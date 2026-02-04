@@ -31,7 +31,6 @@
         @open="onOpenMenu"
         @openRemote="onOpenRemoteMenu"
         @openSampleLorenz="onOpenSampleLorenzMenu"
-        @openSampleInteractiveLorenz="onOpenSampleInteractiveLorenzMenu"
         @close="onCloseMenu"
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
@@ -666,20 +665,6 @@ electronApi?.onOpenSampleLorenz(() => {
 });
 
 function onOpenSampleLorenzMenu(): void {
-  if (props.omex) {
-    return;
-  }
-
-  openFile('https://github.com/opencor/webapp/raw/refs/heads/main/tests/models/lorenz.omex');
-}
-
-// Open sample interactive Lorenz.
-
-electronApi?.onOpenSampleInteractiveLorenz(() => {
-  onOpenSampleInteractiveLorenzMenu();
-});
-
-function onOpenSampleInteractiveLorenzMenu(): void {
   if (props.omex) {
     return;
   }
