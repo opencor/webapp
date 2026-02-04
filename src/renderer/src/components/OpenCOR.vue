@@ -428,10 +428,12 @@ function onSettingsMenu(): void {
 
 // Open a file.
 
+let globalDataUrlCounter = 0;
+
 function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void {
   // Check whether we were passed a ZIP-CellML data URL.
 
-  let isDataUrl = false;
+  let dataUrlCounter = 0;
 
   locCommon.zipCellmlDataUrl(fileFilePathOrFileContents).then((zipCellmlDataUriInfo: locCommon.IDataUriInfo) => {
     if (zipCellmlDataUriInfo.res) {
@@ -447,7 +449,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
         return;
       }
 
-      isDataUrl = true;
+      dataUrlCounter = ++globalDataUrlCounter;
       fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
     } else {
       // Check whether we were passed a COMBINE archive data URL.
@@ -455,14 +457,14 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
       const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
 
       if (combineArchiveDataUriInfo.res) {
-        isDataUrl = true;
+        dataUrlCounter = ++globalDataUrlCounter;
         fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
       }
     }
 
     // Check whether the file is already open and if so then select it.
 
-    const filePath = locCommon.filePath(fileFilePathOrFileContents, isDataUrl);
+    const filePath = locCommon.filePath(fileFilePathOrFileContents, dataUrlCounter);
 
     if (contents.value?.hasFile(filePath) ?? false) {
       contents.value?.selectFile(filePath);
@@ -477,7 +479,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
     }
 
     locCommon
-      .file(fileFilePathOrFileContents, isDataUrl)
+      .file(fileFilePathOrFileContents, dataUrlCounter)
       .then((file) => {
         const fileType = file.type();
 

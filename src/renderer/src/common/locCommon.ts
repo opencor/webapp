@@ -162,9 +162,9 @@ export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://');
 }
 
-export function filePath(fileFilePathOrFileContents: string | Uint8Array | File, isDataUrl: boolean): string {
-  return isDataUrl
-    ? `Data URL`
+export function filePath(fileFilePathOrFileContents: string | Uint8Array | File, dataUrlCounter: number): string {
+  return dataUrlCounter
+    ? `Data URL ${dataUrlCounter}`
     : fileFilePathOrFileContents instanceof File
       ? electronApi
         ? electronApi.filePath(fileFilePathOrFileContents)
@@ -174,7 +174,7 @@ export function filePath(fileFilePathOrFileContents: string | Uint8Array | File,
         : sha256(fileFilePathOrFileContents);
 }
 
-export function file(fileFilePathOrFileContents: string | Uint8Array | File, isDataUrl: boolean): Promise<locApi.File> {
+export function file(fileFilePathOrFileContents: string | Uint8Array | File, dataUrlCounter: number): Promise<locApi.File> {
   if (typeof fileFilePathOrFileContents === 'string') {
     if (isRemoteFilePath(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
@@ -211,7 +211,7 @@ export function file(fileFilePathOrFileContents: string | Uint8Array | File, isD
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer);
 
-            resolve(new locApi.File(filePath(fileFilePathOrFileContents, isDataUrl), fileContents));
+            resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileContents));
           })
           .catch((error: unknown) => {
             reject(new Error(formatError(error)));
@@ -221,7 +221,7 @@ export function file(fileFilePathOrFileContents: string | Uint8Array | File, isD
 
     return new Promise((resolve, reject) => {
       if (electronApi) {
-        resolve(new locApi.File(filePath(fileFilePathOrFileContents, isDataUrl)));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter)));
       } else {
         reject(new Error('Local files cannot be opened.'));
       }
@@ -230,7 +230,7 @@ export function file(fileFilePathOrFileContents: string | Uint8Array | File, isD
 
   if (fileFilePathOrFileContents instanceof Uint8Array) {
     return new Promise((resolve) => {
-      resolve(new locApi.File(filePath(fileFilePathOrFileContents, isDataUrl), fileFilePathOrFileContents));
+      resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileFilePathOrFileContents));
     });
   }
 
@@ -240,7 +240,7 @@ export function file(fileFilePathOrFileContents: string | Uint8Array | File, isD
       .then((arrayBuffer) => {
         const fileContents = new Uint8Array(arrayBuffer);
 
-        resolve(new locApi.File(filePath(fileFilePathOrFileContents, isDataUrl), fileContents));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileContents));
       })
       .catch((error: unknown) => {
         reject(new Error(formatError(error)));
