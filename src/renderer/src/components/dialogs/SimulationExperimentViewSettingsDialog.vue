@@ -243,7 +243,11 @@
                                       @click="addPossibleValue(inputIndex)"
                                     />
                                   </div>
-                                  <div class="possible-values-list">
+                                  <div v-if="!input.possibleValues.length" class="empty-state empty-state-tight">
+                                    <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
+                                    <p class="text-muted-color mb-2">No possible values configured</p>
+                                  </div>
+                                  <div v-else class="possible-values-list">
                                     <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possibleValue${possibleValueIndex}`" class="entry-row">
                                       <span class="index index-secondary">{{ Number(possibleValueIndex) + 1 }}</span>
                                       <FloatLabel variant="on" class="flex-1">
@@ -1189,6 +1193,10 @@ function toggleUiJsonIssues(event: Event) {
   justify-content: center;
   padding: 2rem;
   text-align: center;
+}
+
+.empty-state-tight {
+  padding: 0;
 }
 
 .entries-list {
