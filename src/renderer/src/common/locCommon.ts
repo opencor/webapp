@@ -2,7 +2,7 @@ import JSZip from 'jszip';
 
 import * as locApi from '../libopencor/locApi.ts';
 
-import { corsProxyUrl, formatError, formatMessage, sha256 } from './common.ts';
+import { corsProxyUrl, formatError, formatMessage, OMEX_PREFIX, sha256 } from './common.ts';
 import { electronApi } from './electronApi.ts';
 
 // Some file-related methods.
@@ -12,10 +12,6 @@ export interface IDataUriInfo {
   fileName?: string;
   data?: Uint8Array;
   error?: string;
-}
-
-export function isDataUrlOmexFileName(fileName: string): boolean {
-  return fileName.startsWith('OMEX #');
 }
 
 function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: string): IDataUriInfo {
@@ -168,7 +164,7 @@ export function filePath(
   return dataUrlFileName
     ? dataUrlFileName
     : dataUrlCounter
-      ? `OMEX #${dataUrlCounter}`
+      ? `${OMEX_PREFIX}${dataUrlCounter}`
       : fileFilePathOrFileContents instanceof File
         ? electronApi
           ? electronApi.filePath(fileFilePathOrFileContents)

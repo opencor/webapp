@@ -2,10 +2,9 @@ import electron from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
 import path from 'node:path';
 
-import { formatError, isHttpUrl, type ISettings } from '../renderer/src/common/common.ts';
+import { formatError, isDataUrlOmexFileName, isHttpUrl, type ISettings } from '../renderer/src/common/common.ts';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants.ts';
 import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
-import { isDataUrlOmexFileName } from '../renderer/src/common/locCommon.ts';
 /* TODO: enable once our GitHub integration is fully ready.
 import { deleteGitHubAccessToken } from '../renderer/src/common/gitHubIntegration';
 */
