@@ -243,7 +243,11 @@
                                       @click="addPossibleValue(inputIndex)"
                                     />
                                   </div>
-                                  <div class="possible-values-list">
+                                  <div v-if="!input.possibleValues.length" class="empty-state empty-state-tight">
+                                    <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
+                                    <p class="text-muted-color mb-2">No possible values configured</p>
+                                  </div>
+                                  <div v-else class="possible-values-list">
                                     <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possibleValue${possibleValueIndex}`" class="entry-row">
                                       <span class="index index-secondary">{{ Number(possibleValueIndex) + 1 }}</span>
                                       <FloatLabel variant="on" class="flex-1">
@@ -777,11 +781,14 @@ const emit = defineEmits<{
   (event: 'ok', settings: ISimulationExperimentViewSettings): void;
 }>();
 
+const DEFAULT_TAB = 'interactive';
+const DEFAULT_INTERACTIVE_TAB = 'inputs';
+
 const simulationSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const solversSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const uiJsonIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
-const activeTab = vue.ref('interactive');
-const activeInteractiveTab = vue.ref('inputs');
+const activeTab = vue.ref(DEFAULT_TAB);
+const activeInteractiveTab = vue.ref(DEFAULT_INTERACTIVE_TAB);
 const showSimulationSettingsIssuesPanel = vue.ref(false);
 const showSolversSettingsIssuesPanel = vue.ref(false);
 const showUiJsonIssuesPanel = vue.ref(false);
@@ -927,8 +934,7 @@ function addInput() {
     name: 'New input',
     defaultValue: 0,
     minimumValue: 0,
-    maximumValue: 1,
-    stepValue: 0.1
+    maximumValue: 10
   });
 }
 
@@ -945,7 +951,7 @@ function toggleInputType(index: number, type: string) {
 
   const baseInput = {
     name: input.name,
-    defaultValue: input.defaultValue,
+    defaultValue: 0,
     id: input.id,
     visible: input.visible
   };
@@ -962,8 +968,7 @@ function toggleInputType(index: number, type: string) {
     localSettings.value.interactive.uiJson.input[index] = {
       ...baseInput,
       minimumValue: 0,
-      maximumValue: 1,
-      stepValue: 0.1
+      maximumValue: 10
     };
   }
 }
@@ -1075,8 +1080,8 @@ function removeParameter(index: number) {
 }
 
 function resetUxSettings() {
-  activeTab.value = 'simulation';
-  activeInteractiveTab.value = 'inputs';
+  activeTab.value = DEFAULT_TAB;
+  activeInteractiveTab.value = DEFAULT_INTERACTIVE_TAB;
 
   showSimulationSettingsIssuesPanel.value = false;
   showUiJsonIssuesPanel.value = false;
@@ -1188,6 +1193,10 @@ function toggleUiJsonIssues(event: Event) {
   justify-content: center;
   padding: 2rem;
   text-align: center;
+}
+
+.empty-state-tight {
+  padding: 0;
 }
 
 .entries-list {

@@ -109,12 +109,6 @@ export function enableDisableMainMenu(enable: boolean): void {
           click: () => {
             mainWindow?.webContents.send('open-sample-lorenz');
           }
-        },
-        {
-          label: 'Interactive Lorenz',
-          click: () => {
-            mainWindow?.webContents.send('open-sample-interactive-lorenz');
-          }
         }
       ]
     });

@@ -88,10 +88,6 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
     electron.ipcRenderer.on('open-sample-lorenz', () => {
       callback();
     }),
-  onOpenSampleInteractiveLorenz: (callback: () => void) =>
-    electron.ipcRenderer.on('open-sample-interactive-lorenz', () => {
-      callback();
-    }),
   onClose: (callback: () => void) =>
     electron.ipcRenderer.on('close', () => {
       callback();
