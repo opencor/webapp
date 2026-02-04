@@ -37,7 +37,7 @@
     "libopencor": "cmake-js build -B Release -O ./dist/libOpenCOR",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "release": "electron-builder",
-    "release:local": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --publish=never",
+    "release:local": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.notarize=false --publish=never",
     "start": "electron-vite preview",
     "start:web": "bun build:web && cd ./src/renderer && vite preview",
     "version:new": "bun src/renderer/scripts/version.js"
