@@ -214,6 +214,7 @@ const toast = useToast();
 
 const locApiInitialised = vue.ref(false);
 const loadingOpencorMessageVisible = vue.ref<boolean>(false);
+const loadingModelMessageVisible = vue.ref<boolean>(false);
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 if (!window.locApi) {
@@ -319,18 +320,6 @@ const hasFiles = vue.computed(() => {
 vue.watch(hasFiles, (newHasFiles: boolean) => {
   electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles);
 });
-
-// Loading model.
-
-const loadingModelMessageVisible = vue.ref<boolean>(false);
-
-function showLoadingModelMessage(): void {
-  loadingModelMessageVisible.value = true;
-}
-
-function hideLoadingModelMessage(): void {
-  loadingModelMessageVisible.value = false;
-}
 
 // Auto update.
 
@@ -439,42 +428,113 @@ function onSettingsMenu(): void {
 
 // Open a file.
 
+let globalDataUrlCounter = 0;
+
 function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void {
-  // Check whether the file is already open and if so then select it.
+  // Check whether we were passed a ZIP-CellML data URL.
 
-  const filePath = locCommon.filePath(fileFilePathOrFileContents);
+  let dataUrlCounter = 0;
 
-  if (contents.value?.hasFile(filePath) ?? false) {
-    contents.value?.selectFile(filePath);
+  locCommon.zipCellmlDataUrl(fileFilePathOrFileContents).then((zipCellmlDataUriInfo: locCommon.IDataUriInfo) => {
+    if (zipCellmlDataUriInfo.res) {
+      if (zipCellmlDataUriInfo.error) {
+        toast.add({
+          severity: 'error',
+          group: toastId.value,
+          summary: 'Opening a file',
+          detail: `${zipCellmlDataUriInfo.error}`,
+          life: TOAST_LIFE
+        });
 
-    return;
-  }
+        return;
+      }
 
-  // Retrieve a locApi.File object for the given file or file path and add it to the contents.
+      dataUrlCounter = ++globalDataUrlCounter;
+      fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
+    } else {
+      // Check whether we were passed a COMBINE archive data URL.
 
-  if (locCommon.isRemoteFilePath(filePath)) {
-    showLoadingModelMessage();
-  }
+      const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
 
-  locCommon
-    .file(fileFilePathOrFileContents)
-    .then((file) => {
-      const fileType = file.type();
+      if (combineArchiveDataUriInfo.res) {
+        dataUrlCounter = ++globalDataUrlCounter;
+        fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
+      }
+    }
 
-      if (
-        fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
-        fileType === locApi.EFileType.UNKNOWN_FILE ||
-        fileType === locApi.EFileType.SEDML_FILE ||
-        (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
-      ) {
+    // Check whether the file is already open and if so then select it.
+
+    const filePath = locCommon.filePath(fileFilePathOrFileContents, dataUrlCounter);
+
+    if (contents.value?.hasFile(filePath) ?? false) {
+      contents.value?.selectFile(filePath);
+
+      return;
+    }
+
+    // Retrieve a locApi.File object for the given file or file path and add it to the contents.
+
+    if (locCommon.isRemoteFilePath(filePath)) {
+      loadingModelMessageVisible.value = true;
+    }
+
+    locCommon
+      .file(fileFilePathOrFileContents, dataUrlCounter)
+      .then((file) => {
+        const fileType = file.type();
+
+        if (
+          fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
+          fileType === locApi.EFileType.UNKNOWN_FILE ||
+          fileType === locApi.EFileType.SEDML_FILE ||
+          (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
+        ) {
+          if (props.omex) {
+            void vue.nextTick(() => {
+              issues.value.push({
+                type: locApi.EIssueType.ERROR,
+                description:
+                  fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                    ? 'The file could not be retrieved.'
+                    : 'Only COMBINE archives are supported.'
+              });
+            });
+          } else {
+            toast.add({
+              severity: 'error',
+              group: toastId.value,
+              summary: 'Opening a file',
+              detail:
+                filePath +
+                '\n\n' +
+                (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                  ? 'The file could not be retrieved.'
+                  : fileType === locApi.EFileType.SEDML_FILE
+                    ? 'SED-ML files are not currently supported.'
+                    : 'Only CellML files and COMBINE archives are supported.'),
+              life: TOAST_LIFE
+            });
+          }
+
+          electronApi?.fileIssue(filePath);
+        } else {
+          contents.value?.openFile(file);
+        }
+
+        if (locCommon.isRemoteFilePath(filePath)) {
+          loadingModelMessageVisible.value = false;
+        }
+      })
+      .catch((error: unknown) => {
+        if (locCommon.isRemoteFilePath(filePath)) {
+          loadingModelMessageVisible.value = false;
+        }
+
         if (props.omex) {
           void vue.nextTick(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
-              description:
-                fileType === locApi.EFileType.IRRETRIEVABLE_FILE
-                  ? 'The file could not be retrieved.'
-                  : 'Only COMBINE archives are supported.'
+              description: common.formatMessage(common.formatError(error))
             });
           });
         } else {
@@ -482,51 +542,14 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
             severity: 'error',
             group: toastId.value,
             summary: 'Opening a file',
-            detail:
-              filePath +
-              '\n\n' +
-              (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
-                ? 'The file could not be retrieved.'
-                : fileType === locApi.EFileType.SEDML_FILE
-                  ? 'SED-ML files are not currently supported.'
-                  : 'Only CellML files and COMBINE archives are supported.'),
+            detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
             life: TOAST_LIFE
           });
         }
 
         electronApi?.fileIssue(filePath);
-      } else {
-        contents.value?.openFile(file);
-      }
-
-      if (locCommon.isRemoteFilePath(filePath)) {
-        hideLoadingModelMessage();
-      }
-    })
-    .catch((error: unknown) => {
-      if (locCommon.isRemoteFilePath(filePath)) {
-        hideLoadingModelMessage();
-      }
-
-      if (props.omex) {
-        void vue.nextTick(() => {
-          issues.value.push({
-            type: locApi.EIssueType.ERROR,
-            description: common.formatMessage(common.formatError(error))
-          });
-        });
-      } else {
-        toast.add({
-          severity: 'error',
-          group: toastId.value,
-          summary: 'Opening a file',
-          detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
-          life: TOAST_LIFE
-        });
-      }
-
-      electronApi?.fileIssue(filePath);
-    });
+      });
+  });
 }
 
 // Open file(s) dialog.
@@ -754,9 +777,24 @@ if (props.omex) {
             const action = vueusecore.useStorage('action', '');
 
             if (window.location.search) {
+              // Retrieve the action from the URL.
+
               action.value = window.location.search.substring(1);
 
-              window.location.search = '';
+              if (window.location.hash) {
+                action.value += window.location.hash.substring(1);
+              }
+
+              // Ensure that the URL is cleaned up.
+
+              window.history.replaceState({}, document.title, window.location.pathname);
+
+              // Force a reload to complete the two-phase action handling:
+              //  1) On the first load, we extract the action from the URL and store it in localStorage.
+              //  2) After we have reloaded (with a clean URL), the `else if (action.value)` branch below reads and
+              //     processes the stored action.
+
+              window.location.reload();
             } else if (action.value) {
               setTimeout(() => {
                 if (!action.value.startsWith(FULL_URI_SCHEME)) {
@@ -820,7 +858,7 @@ async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
         severity: 'warn',
         group: toastId.value,
         summary: 'Removing GitHub access token',
-        detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+        detail: common.formatMessage(common.formatError(error)),
         life: TOAST_LIFE
       });
     }
@@ -882,7 +920,7 @@ async function saveGitHubAccessToken(accessToken: string): Promise<void> {
       severity: 'warn',
       group: toastId.value,
       summary: 'Remembering GitHub access token',
-      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE
     });
   }
@@ -927,7 +965,7 @@ async function onDisconnectFromGitHub(): Promise<void> {
       severity: 'error',
       group: toastId.value,
       summary: 'GitHub sign-out',
-      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE
     });
   } finally {
@@ -970,7 +1008,7 @@ async function onGitHubButtonClick(): Promise<void> {
       severity: 'error',
       group: toastId.value,
       summary: 'GitHub sign-in',
-      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE
     });
   } finally {

@@ -738,7 +738,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
     interactiveInstanceIssues.value = [
       {
         type: locApi.EIssueType.ERROR,
-        description: `An error occurred while evaluating the plot expressions (${common.formatMessage(error instanceof Error ? error.message : String(error), false)}).`
+        description: `An error occurred while evaluating the plot expressions (${common.formatMessage(common.formatError(error), false)}).`
       },
       {
         type: locApi.EIssueType.INFORMATION,
