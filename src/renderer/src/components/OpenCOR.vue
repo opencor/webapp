@@ -214,6 +214,7 @@ const toast = useToast();
 
 const locApiInitialised = vue.ref(false);
 const loadingOpencorMessageVisible = vue.ref<boolean>(false);
+const loadingModelMessageVisible = vue.ref<boolean>(false);
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 if (!window.locApi) {
@@ -319,18 +320,6 @@ const hasFiles = vue.computed(() => {
 vue.watch(hasFiles, (newHasFiles: boolean) => {
   electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles);
 });
-
-// Loading model.
-
-const loadingModelMessageVisible = vue.ref<boolean>(false);
-
-function showLoadingModelMessage(): void {
-  loadingModelMessageVisible.value = true;
-}
-
-function hideLoadingModelMessage(): void {
-  loadingModelMessageVisible.value = false;
-}
 
 // Auto update.
 
@@ -484,7 +473,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
     // Retrieve a locApi.File object for the given file or file path and add it to the contents.
 
     if (locCommon.isRemoteFilePath(filePath)) {
-      showLoadingModelMessage();
+      loadingModelMessageVisible.value = true;
     }
 
     locCommon
@@ -531,12 +520,12 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
         }
 
         if (locCommon.isRemoteFilePath(filePath)) {
-          hideLoadingModelMessage();
+          loadingModelMessageVisible.value = false;
         }
       })
       .catch((error: unknown) => {
         if (locCommon.isRemoteFilePath(filePath)) {
-          hideLoadingModelMessage();
+          loadingModelMessageVisible.value = false;
         }
 
         if (props.omex) {
