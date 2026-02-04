@@ -2,7 +2,7 @@ import JSZip from 'jszip';
 
 import * as locApi from '../libopencor/locApi.ts';
 
-import { corsProxyUrl, formatError, formatMessage, sha256 } from './common.ts';
+import { corsProxyUrl, formatError, formatMessage, OMEX_PREFIX, sha256 } from './common.ts';
 import { electronApi } from './electronApi.ts';
 
 // Some file-related methods.
@@ -26,7 +26,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   // Check whether we have a data URL of the given MIME type.
 
   const prefix = `data:${mimeType};base64,`;
-  const res = dataUrl.startsWith(prefix);
+  const res = dataUrl.startsWith(`#${prefix}`) || dataUrl.startsWith(prefix);
 
   if (!res) {
     return {
@@ -37,7 +37,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   let decodedData: string;
 
   try {
-    decodedData = atob(dataUrl.slice(prefix.length));
+    decodedData = atob(dataUrl.slice(prefix.length + (dataUrl.startsWith('#') ? 1 : 0)));
   } catch (error: unknown) {
     return {
       res: true,
@@ -164,7 +164,7 @@ export function filePath(
   return dataUrlFileName
     ? dataUrlFileName
     : dataUrlCounter
-      ? `OMEX #${dataUrlCounter}`
+      ? `${OMEX_PREFIX}${dataUrlCounter}`
       : fileFilePathOrFileContents instanceof File
         ? electronApi
           ? electronApi.filePath(fileFilePathOrFileContents)

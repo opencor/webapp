@@ -45,6 +45,14 @@ export function enableDisableMainMenu(enable: boolean): void {
   electronApi?.enableDisableMainMenu(enable);
 }
 
+// A method to determine whether a given file name indicates a data URL OMEX file.
+
+export const OMEX_PREFIX = 'OMEX #';
+
+export function isDataUrlOmexFileName(fileName: string): boolean {
+  return fileName.startsWith(OMEX_PREFIX);
+}
+
 // A method to determine whether a given URL is an HTTP or HTTPS URL.
 
 export function isHttpUrl(url: string): boolean {

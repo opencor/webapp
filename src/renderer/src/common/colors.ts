@@ -1,6 +1,6 @@
 // Various colours (from Plotly).
 
-export const Palette: Record<string, string> = {
+export const PALETTE: Record<string, string> = {
   '#4e79a7': 'Blue',
   '#f28e2b': 'Orange',
   '#e15759': 'Red',
@@ -13,9 +13,9 @@ export const Palette: Record<string, string> = {
   '#bab0ac': 'Gray'
 };
 
-export const RevertedPalette: Record<string, string> = Object.fromEntries(
-  Object.entries(Palette).map(([hex, name]) => [name, hex])
+export const REVERTED_PALETTE: Record<string, string> = Object.fromEntries(
+  Object.entries(PALETTE).map(([hex, name]) => [name, hex])
 );
 
-export const PaletteColors = Object.keys(Palette);
-export const DefaultColor = '#4e79a7'; // Default colour (blue)
+export const PALETTE_COLORS = Object.keys(PALETTE);
+export const DEFAULT_COLOR = '#4e79a7'; // Default colour (blue)
