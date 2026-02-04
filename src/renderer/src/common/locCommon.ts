@@ -9,9 +9,9 @@ import { electronApi } from './electronApi.ts';
 
 export interface IDataUriInfo {
   res: boolean;
-  fileName: string | null;
-  data: Uint8Array | null;
-  error: string | null;
+  fileName?: string;
+  data?: Uint8Array;
+  error?: string;
 }
 
 function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: string): IDataUriInfo {
@@ -19,10 +19,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
 
   if (dataUrl instanceof Uint8Array || dataUrl instanceof File) {
     return {
-      res: false,
-      fileName: null,
-      data: null,
-      error: null
+      res: false
     };
   }
 
@@ -33,10 +30,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
 
   if (!res) {
     return {
-      res: false,
-      fileName: null,
-      data: null,
-      error: null
+      res: false
     };
   }
 
@@ -47,8 +41,6 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   } catch (error: unknown) {
     return {
       res: true,
-      fileName: null,
-      data: null,
       error: `The data URL contains invalid Base64 encoding (${formatMessage(formatError(error), false)}).`
     };
   }
@@ -64,17 +56,13 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   ) {
     return {
       res: true,
-      fileName: null,
-      data: null,
       error: `The data URL of MIME type ${mimeType} does not contain a ZIP file.`
     };
   }
 
   return {
     res: true,
-    fileName: null,
-    data,
-    error: null
+    data
   };
 }
 
@@ -85,7 +73,7 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
   const zipDataUrl = zipDataFromDataUrl(dataUrl, mimeType);
 
   if (zipDataUrl.res) {
-    if (zipDataUrl.data === null) {
+    if (!zipDataUrl.data) {
       return zipDataUrl;
     }
 
@@ -102,8 +90,6 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
       if (fileNames.length !== 1) {
         return {
           res: true,
-          fileName: null,
-          data: null,
           error: `The data URL of MIME type ${mimeType} does not contain exactly one (CellML) file.`
         };
       }
@@ -116,8 +102,6 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
       if (!file || file.dir) {
         return {
           res: true,
-          fileName: null,
-          data: null,
           error: `The data URL of MIME type ${mimeType} does not contain a valid file.`
         };
       }
@@ -126,15 +110,12 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
 
       return {
         res: true,
-        fileName: fileName,
-        data: await file.async('uint8array'),
-        error: null
+        fileName,
+        data: await file.async('uint8array')
       };
     } catch (error: unknown) {
       return {
         res: true,
-        fileName: null,
-        data: null,
         error: `The data URL of MIME type ${mimeType} contains an invalid ZIP file (${formatMessage(formatError(error), false)}).`
       };
     }
@@ -143,10 +124,7 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
   // Not a data URL for a zipped CellML file.
 
   return {
-    res: false,
-    fileName: null,
-    data: null,
-    error: null
+    res: false
   };
 }
 
@@ -157,25 +135,20 @@ export function combineArchiveDataUrl(dataUrl: string | Uint8Array | File): IDat
   const zipDataUrl = zipDataFromDataUrl(dataUrl, mimeType);
 
   if (zipDataUrl.res) {
-    if (zipDataUrl.data === null) {
+    if (!zipDataUrl.data) {
       return zipDataUrl;
     }
 
     return {
       res: true,
-      fileName: null,
-      data: zipDataUrl.data,
-      error: null
+      data: zipDataUrl.data
     };
   }
 
   // Not a data URL for a COMBINE archive.
 
   return {
-    res: false,
-    fileName: null,
-    data: null,
-    error: null
+    res: false
   };
 }
 
@@ -185,7 +158,7 @@ export function isRemoteFilePath(filePath: string): boolean {
 
 export function filePath(
   fileFilePathOrFileContents: string | Uint8Array | File,
-  dataUrlFileName: string | null,
+  dataUrlFileName: string,
   dataUrlCounter: number
 ): string {
   return dataUrlFileName
@@ -203,7 +176,7 @@ export function filePath(
 
 export function file(
   fileFilePathOrFileContents: string | Uint8Array | File,
-  dataUrlFileName: string | null,
+  dataUrlFileName: string,
   dataUrlCounter: number
 ): Promise<locApi.File> {
   if (typeof fileFilePathOrFileContents === 'string') {
