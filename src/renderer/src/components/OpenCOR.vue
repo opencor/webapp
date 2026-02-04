@@ -856,7 +856,7 @@ async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
         severity: 'warn',
         group: toastId.value,
         summary: 'Removing GitHub access token',
-        detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+        detail: common.formatMessage(common.formatError(error)),
         life: TOAST_LIFE
       });
     }
@@ -918,7 +918,7 @@ async function saveGitHubAccessToken(accessToken: string): Promise<void> {
       severity: 'warn',
       group: toastId.value,
       summary: 'Remembering GitHub access token',
-      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE
     });
   }
@@ -963,7 +963,7 @@ async function onDisconnectFromGitHub(): Promise<void> {
       severity: 'error',
       group: toastId.value,
       summary: 'GitHub sign-out',
-      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE
     });
   } finally {
@@ -1006,7 +1006,7 @@ async function onGitHubButtonClick(): Promise<void> {
       severity: 'error',
       group: toastId.value,
       summary: 'GitHub sign-in',
-      detail: common.formatMessage(error instanceof Error ? error.message : String(error)),
+      detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE
     });
   } finally {

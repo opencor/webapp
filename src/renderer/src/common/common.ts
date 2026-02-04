@@ -102,6 +102,16 @@ export function formatTime(time: number): string {
   return res;
 }
 
+// A method to format an error into a string.
+
+export function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}
+
 // A method to format a message, i.e. make sure that it starts with a capital letter and ends with a period, or not.
 
 export function formatMessage(message: string, selfContained: boolean = true): string {
@@ -157,14 +167,4 @@ export function fileName(filePath: string): string {
 
     return res;
   }
-}
-
-// A method to format an error into a string.
-
-export function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
 }
