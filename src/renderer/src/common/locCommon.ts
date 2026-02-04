@@ -9,8 +9,9 @@ import { electronApi } from './electronApi.ts';
 
 export interface IDataUriInfo {
   res: boolean;
-  data: Uint8Array | null;
-  error: string | null;
+  fileName?: string;
+  data?: Uint8Array;
+  error?: string;
 }
 
 function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: string): IDataUriInfo {
@@ -18,9 +19,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
 
   if (dataUrl instanceof Uint8Array || dataUrl instanceof File) {
     return {
-      res: false,
-      data: null,
-      error: null
+      res: false
     };
   }
 
@@ -31,9 +30,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
 
   if (!res) {
     return {
-      res: false,
-      data: null,
-      error: null
+      res: false
     };
   }
 
@@ -44,7 +41,6 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   } catch (error: unknown) {
     return {
       res: true,
-      data: null,
       error: `The data URL contains invalid Base64 encoding (${formatMessage(formatError(error), false)}).`
     };
   }
@@ -60,15 +56,13 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   ) {
     return {
       res: true,
-      data: null,
       error: `The data URL of MIME type ${mimeType} does not contain a ZIP file.`
     };
   }
 
   return {
     res: true,
-    data,
-    error: null
+    data
   };
 }
 
@@ -79,7 +73,7 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
   const zipDataUrl = zipDataFromDataUrl(dataUrl, mimeType);
 
   if (zipDataUrl.res) {
-    if (zipDataUrl.data === null) {
+    if (!zipDataUrl.data) {
       return zipDataUrl;
     }
 
@@ -96,7 +90,6 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
       if (fileNames.length !== 1) {
         return {
           res: true,
-          data: null,
           error: `The data URL of MIME type ${mimeType} does not contain exactly one (CellML) file.`
         };
       }
@@ -109,7 +102,6 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
       if (!file || file.dir) {
         return {
           res: true,
-          data: null,
           error: `The data URL of MIME type ${mimeType} does not contain a valid file.`
         };
       }
@@ -118,13 +110,12 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
 
       return {
         res: true,
-        data: await file.async('uint8array'),
-        error: null
+        fileName,
+        data: await file.async('uint8array')
       };
     } catch (error: unknown) {
       return {
         res: true,
-        data: null,
         error: `The data URL of MIME type ${mimeType} contains an invalid ZIP file (${formatMessage(formatError(error), false)}).`
       };
     }
@@ -133,9 +124,7 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
   // Not a data URL for a zipped CellML file.
 
   return {
-    res: false,
-    data: null,
-    error: null
+    res: false
   };
 }
 
@@ -146,23 +135,20 @@ export function combineArchiveDataUrl(dataUrl: string | Uint8Array | File): IDat
   const zipDataUrl = zipDataFromDataUrl(dataUrl, mimeType);
 
   if (zipDataUrl.res) {
-    if (zipDataUrl.data === null) {
+    if (!zipDataUrl.data) {
       return zipDataUrl;
     }
 
     return {
       res: true,
-      data: zipDataUrl.data,
-      error: null
+      data: zipDataUrl.data
     };
   }
 
   // Not a data URL for a COMBINE archive.
 
   return {
-    res: false,
-    data: null,
-    error: null
+    res: false
   };
 }
 
@@ -170,20 +156,27 @@ export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://');
 }
 
-export function filePath(fileFilePathOrFileContents: string | Uint8Array | File, dataUrlCounter: number): string {
-  return dataUrlCounter
-    ? `Data URL ${dataUrlCounter}`
-    : fileFilePathOrFileContents instanceof File
-      ? electronApi
-        ? electronApi.filePath(fileFilePathOrFileContents)
-        : fileFilePathOrFileContents.name
-      : typeof fileFilePathOrFileContents === 'string'
-        ? fileFilePathOrFileContents
-        : sha256(fileFilePathOrFileContents);
+export function filePath(
+  fileFilePathOrFileContents: string | Uint8Array | File,
+  dataUrlFileName: string,
+  dataUrlCounter: number
+): string {
+  return dataUrlFileName
+    ? dataUrlFileName
+    : dataUrlCounter
+      ? `OMEX #${dataUrlCounter}`
+      : fileFilePathOrFileContents instanceof File
+        ? electronApi
+          ? electronApi.filePath(fileFilePathOrFileContents)
+          : fileFilePathOrFileContents.name
+        : typeof fileFilePathOrFileContents === 'string'
+          ? fileFilePathOrFileContents
+          : sha256(fileFilePathOrFileContents);
 }
 
 export function file(
   fileFilePathOrFileContents: string | Uint8Array | File,
+  dataUrlFileName: string,
   dataUrlCounter: number
 ): Promise<locApi.File> {
   if (typeof fileFilePathOrFileContents === 'string') {
@@ -222,7 +215,9 @@ export function file(
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer);
 
-            resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileContents));
+            resolve(
+              new locApi.File(filePath(fileFilePathOrFileContents, dataUrlFileName, dataUrlCounter), fileContents)
+            );
           })
           .catch((error: unknown) => {
             reject(new Error(formatError(error)));
@@ -232,7 +227,7 @@ export function file(
 
     return new Promise((resolve, reject) => {
       if (electronApi) {
-        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter)));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlFileName, dataUrlCounter)));
       } else {
         reject(new Error('Local files cannot be opened.'));
       }
@@ -241,7 +236,12 @@ export function file(
 
   if (fileFilePathOrFileContents instanceof Uint8Array) {
     return new Promise((resolve) => {
-      resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileFilePathOrFileContents));
+      resolve(
+        new locApi.File(
+          filePath(fileFilePathOrFileContents, dataUrlFileName, dataUrlCounter),
+          fileFilePathOrFileContents
+        )
+      );
     });
   }
 
@@ -251,7 +251,7 @@ export function file(
       .then((arrayBuffer) => {
         const fileContents = new Uint8Array(arrayBuffer);
 
-        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileContents));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlFileName, dataUrlCounter), fileContents));
       })
       .catch((error: unknown) => {
         reject(new Error(formatError(error)));

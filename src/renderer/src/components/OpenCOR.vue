@@ -428,12 +428,13 @@ function onSettingsMenu(): void {
 
 // Open a file.
 
-let globalDataUrlCounter = 0;
+let globalOmexDataUrlCounter = 0;
 
 function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void {
   // Check whether we were passed a ZIP-CellML data URL.
 
-  let dataUrlCounter = 0;
+  let cellmlDataUrlFileName: string = '';
+  let omexDataUrlCounter: number = 0;
 
   locCommon.zipCellmlDataUrl(fileFilePathOrFileContents).then((zipCellmlDataUriInfo: locCommon.IDataUriInfo) => {
     if (zipCellmlDataUriInfo.res) {
@@ -442,14 +443,14 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
           severity: 'error',
           group: toastId.value,
           summary: 'Opening a file',
-          detail: `${zipCellmlDataUriInfo.error}`,
+          detail: zipCellmlDataUriInfo.error,
           life: TOAST_LIFE
         });
 
         return;
       }
 
-      dataUrlCounter = ++globalDataUrlCounter;
+      cellmlDataUrlFileName = zipCellmlDataUriInfo.fileName as string;
       fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
     } else {
       // Check whether we were passed a COMBINE archive data URL.
@@ -457,14 +458,26 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
       const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
 
       if (combineArchiveDataUriInfo.res) {
-        dataUrlCounter = ++globalDataUrlCounter;
+        if (combineArchiveDataUriInfo.error) {
+          toast.add({
+            severity: 'error',
+            group: toastId.value,
+            summary: 'Opening a file',
+            detail: combineArchiveDataUriInfo.error,
+            life: TOAST_LIFE
+          });
+
+          return;
+        }
+
+        omexDataUrlCounter = ++globalOmexDataUrlCounter;
         fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
       }
     }
 
     // Check whether the file is already open and if so then select it.
 
-    const filePath = locCommon.filePath(fileFilePathOrFileContents, dataUrlCounter);
+    const filePath = locCommon.filePath(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
 
     if (contents.value?.hasFile(filePath) ?? false) {
       contents.value?.selectFile(filePath);
@@ -479,7 +492,7 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
     }
 
     locCommon
-      .file(fileFilePathOrFileContents, dataUrlCounter)
+      .file(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter)
       .then((file) => {
         const fileType = file.type();
 
