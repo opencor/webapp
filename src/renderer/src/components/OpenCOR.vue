@@ -786,15 +786,21 @@ if (props.omex) {
             const action = vueusecore.useStorage('action', '');
 
             if (window.location.search) {
-              action.value = window.location.search.substring(1);
+              // Retrieve the action from the URL.
 
-              window.location.search = '';
+              action.value = window.location.search.substring(1);
 
               if (window.location.hash) {
                 action.value += window.location.hash.substring(1);
-
-                window.location.hash = '';
               }
+
+              // Ensure that the URL is cleaned up.
+
+              window.history.replaceState({}, document.title, window.location.pathname);
+
+              // Force a reload to ensure that any other parameters in the URL are cleared up.
+
+              window.location.reload();
             } else if (action.value) {
               setTimeout(() => {
                 if (!action.value.startsWith(FULL_URI_SCHEME)) {
