@@ -9,6 +9,7 @@ import { electronApi } from './electronApi.ts';
 
 export interface IDataUriInfo {
   res: boolean;
+  fileName: string | null;
   data: Uint8Array | null;
   error: string | null;
 }
@@ -19,6 +20,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   if (dataUrl instanceof Uint8Array || dataUrl instanceof File) {
     return {
       res: false,
+      fileName: null,
       data: null,
       error: null
     };
@@ -32,6 +34,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   if (!res) {
     return {
       res: false,
+      fileName: null,
       data: null,
       error: null
     };
@@ -44,6 +47,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   } catch (error: unknown) {
     return {
       res: true,
+      fileName: null,
       data: null,
       error: `The data URL contains invalid Base64 encoding (${formatMessage(formatError(error), false)}).`
     };
@@ -60,6 +64,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   ) {
     return {
       res: true,
+      fileName: null,
       data: null,
       error: `The data URL of MIME type ${mimeType} does not contain a ZIP file.`
     };
@@ -67,6 +72,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
 
   return {
     res: true,
+    fileName: null,
     data,
     error: null
   };
@@ -96,6 +102,7 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
       if (fileNames.length !== 1) {
         return {
           res: true,
+          fileName: null,
           data: null,
           error: `The data URL of MIME type ${mimeType} does not contain exactly one (CellML) file.`
         };
@@ -109,6 +116,7 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
       if (!file || file.dir) {
         return {
           res: true,
+          fileName: null,
           data: null,
           error: `The data URL of MIME type ${mimeType} does not contain a valid file.`
         };
@@ -118,12 +126,14 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
 
       return {
         res: true,
+        fileName: fileName,
         data: await file.async('uint8array'),
         error: null
       };
     } catch (error: unknown) {
       return {
         res: true,
+        fileName: null,
         data: null,
         error: `The data URL of MIME type ${mimeType} contains an invalid ZIP file (${formatMessage(formatError(error), false)}).`
       };
@@ -134,6 +144,7 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
 
   return {
     res: false,
+    fileName: null,
     data: null,
     error: null
   };
@@ -152,6 +163,7 @@ export function combineArchiveDataUrl(dataUrl: string | Uint8Array | File): IDat
 
     return {
       res: true,
+      fileName: null,
       data: zipDataUrl.data,
       error: null
     };
@@ -161,6 +173,7 @@ export function combineArchiveDataUrl(dataUrl: string | Uint8Array | File): IDat
 
   return {
     res: false,
+    fileName: null,
     data: null,
     error: null
   };
@@ -170,20 +183,27 @@ export function isRemoteFilePath(filePath: string): boolean {
   return filePath.startsWith('http://') || filePath.startsWith('https://');
 }
 
-export function filePath(fileFilePathOrFileContents: string | Uint8Array | File, dataUrlCounter: number): string {
-  return dataUrlCounter
-    ? `Data URL ${dataUrlCounter}`
-    : fileFilePathOrFileContents instanceof File
-      ? electronApi
-        ? electronApi.filePath(fileFilePathOrFileContents)
-        : fileFilePathOrFileContents.name
-      : typeof fileFilePathOrFileContents === 'string'
-        ? fileFilePathOrFileContents
-        : sha256(fileFilePathOrFileContents);
+export function filePath(
+  fileFilePathOrFileContents: string | Uint8Array | File,
+  dataUrlFileName: string | null,
+  dataUrlCounter: number
+): string {
+  return dataUrlFileName
+    ? dataUrlFileName
+    : dataUrlCounter
+      ? `OMEX #${dataUrlCounter}`
+      : fileFilePathOrFileContents instanceof File
+        ? electronApi
+          ? electronApi.filePath(fileFilePathOrFileContents)
+          : fileFilePathOrFileContents.name
+        : typeof fileFilePathOrFileContents === 'string'
+          ? fileFilePathOrFileContents
+          : sha256(fileFilePathOrFileContents);
 }
 
 export function file(
   fileFilePathOrFileContents: string | Uint8Array | File,
+  dataUrlFileName: string | null,
   dataUrlCounter: number
 ): Promise<locApi.File> {
   if (typeof fileFilePathOrFileContents === 'string') {
@@ -222,7 +242,9 @@ export function file(
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer);
 
-            resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileContents));
+            resolve(
+              new locApi.File(filePath(fileFilePathOrFileContents, dataUrlFileName, dataUrlCounter), fileContents)
+            );
           })
           .catch((error: unknown) => {
             reject(new Error(formatError(error)));
@@ -232,7 +254,7 @@ export function file(
 
     return new Promise((resolve, reject) => {
       if (electronApi) {
-        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter)));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlFileName, dataUrlCounter)));
       } else {
         reject(new Error('Local files cannot be opened.'));
       }
@@ -241,7 +263,12 @@ export function file(
 
   if (fileFilePathOrFileContents instanceof Uint8Array) {
     return new Promise((resolve) => {
-      resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileFilePathOrFileContents));
+      resolve(
+        new locApi.File(
+          filePath(fileFilePathOrFileContents, dataUrlFileName, dataUrlCounter),
+          fileFilePathOrFileContents
+        )
+      );
     });
   }
 
@@ -251,7 +278,7 @@ export function file(
       .then((arrayBuffer) => {
         const fileContents = new Uint8Array(arrayBuffer);
 
-        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlCounter), fileContents));
+        resolve(new locApi.File(filePath(fileFilePathOrFileContents, dataUrlFileName, dataUrlCounter), fileContents));
       })
       .catch((error: unknown) => {
         reject(new Error(formatError(error)));
