@@ -14,6 +14,10 @@ export interface IDataUriInfo {
   error?: string;
 }
 
+export function isDataUrlOmexFileName(fileName: string): boolean {
+  return fileName.startsWith('OMEX #');
+}
+
 function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: string): IDataUriInfo {
   // Make sure that we have a string data URL.
 

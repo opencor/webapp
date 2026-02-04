@@ -5,6 +5,7 @@ import path from 'node:path';
 import { formatError, isHttpUrl, type ISettings } from '../renderer/src/common/common.ts';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants.ts';
 import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
+import { isDataUrlOmexFileName } from '../renderer/src/common/locCommon.ts';
 /* TODO: enable once our GitHub integration is fully ready.
 import { deleteGitHubAccessToken } from '../renderer/src/common/gitHubIntegration';
 */
@@ -88,6 +89,12 @@ export function clearRecentFiles(): void {
 }
 
 export function fileClosed(filePath: string): void {
+  // Make sure that the file is not a COMBINE archive that was opened using a data URL.
+
+  if (isDataUrlOmexFileName(filePath)) {
+    return;
+  }
+
   recentFilePaths.unshift(filePath);
   recentFilePaths = recentFilePaths.slice(0, 10);
 
@@ -266,9 +273,17 @@ export class MainWindow extends ApplicationWindow {
         electronConf.set('app.files.recent', recentFilePaths);
 
         // Opened files and selected file.
+        // Note: make sure that no data URL OMEX file is to be reopened or selected.
 
-        electronConf.set('app.files.opened', openedFilePaths);
-        electronConf.set('app.files.selected', selectedFilePath);
+        const actualOpenedFilePaths = openedFilePaths.filter((filePath) => !isDataUrlOmexFileName(filePath));
+        let actualSelectedFilePath = selectedFilePath;
+
+        if (selectedFilePath && isDataUrlOmexFileName(selectedFilePath)) {
+          actualSelectedFilePath = actualOpenedFilePaths[0] || null;
+        }
+
+        electronConf.set('app.files.opened', actualOpenedFilePaths);
+        electronConf.set('app.files.selected', actualSelectedFilePath);
       }
     });
 
