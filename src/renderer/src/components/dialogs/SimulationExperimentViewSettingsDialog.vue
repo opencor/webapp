@@ -777,11 +777,14 @@ const emit = defineEmits<{
   (event: 'ok', settings: ISimulationExperimentViewSettings): void;
 }>();
 
+const DEFAULT_TAB = 'interactive';
+const DEFAULT_INTERACTIVE_TAB = 'inputs';
+
 const simulationSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const solversSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const uiJsonIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
-const activeTab = vue.ref('interactive');
-const activeInteractiveTab = vue.ref('inputs');
+const activeTab = vue.ref(DEFAULT_TAB);
+const activeInteractiveTab = vue.ref(DEFAULT_INTERACTIVE_TAB);
 const showSimulationSettingsIssuesPanel = vue.ref(false);
 const showSolversSettingsIssuesPanel = vue.ref(false);
 const showUiJsonIssuesPanel = vue.ref(false);
@@ -927,8 +930,7 @@ function addInput() {
     name: 'New input',
     defaultValue: 0,
     minimumValue: 0,
-    maximumValue: 1,
-    stepValue: 0.1
+    maximumValue: 10
   });
 }
 
@@ -945,7 +947,7 @@ function toggleInputType(index: number, type: string) {
 
   const baseInput = {
     name: input.name,
-    defaultValue: input.defaultValue,
+    defaultValue: 0,
     id: input.id,
     visible: input.visible
   };
@@ -962,8 +964,7 @@ function toggleInputType(index: number, type: string) {
     localSettings.value.interactive.uiJson.input[index] = {
       ...baseInput,
       minimumValue: 0,
-      maximumValue: 1,
-      stepValue: 0.1
+      maximumValue: 10
     };
   }
 }
@@ -1075,8 +1076,8 @@ function removeParameter(index: number) {
 }
 
 function resetUxSettings() {
-  activeTab.value = 'simulation';
-  activeInteractiveTab.value = 'inputs';
+  activeTab.value = DEFAULT_TAB;
+  activeInteractiveTab.value = DEFAULT_INTERACTIVE_TAB;
 
   showSimulationSettingsIssuesPanel.value = false;
   showUiJsonIssuesPanel.value = false;
