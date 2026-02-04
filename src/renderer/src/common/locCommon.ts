@@ -26,7 +26,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   // Check whether we have a data URL of the given MIME type.
 
   const prefix = `data:${mimeType};base64,`;
-  const res = dataUrl.startsWith(prefix);
+  const res = dataUrl.startsWith(`#${prefix}`) || dataUrl.startsWith(prefix);
 
   if (!res) {
     return {
@@ -37,7 +37,7 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
   let decodedData: string;
 
   try {
-    decodedData = atob(dataUrl.slice(prefix.length));
+    decodedData = atob(dataUrl.slice(prefix.length + (dataUrl.startsWith('#') ? 1 : 0)));
   } catch (error: unknown) {
     return {
       res: true,

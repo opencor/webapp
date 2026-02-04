@@ -795,7 +795,7 @@ if (props.omex) {
               action.value = window.location.search.substring(1);
 
               if (window.location.hash) {
-                action.value += window.location.hash.substring(1);
+                action.value += window.location.hash;
               }
 
               // Ensure that the URL is cleaned up.
