@@ -2,7 +2,7 @@ import JSZip from 'jszip';
 
 import * as locApi from '../libopencor/locApi.ts';
 
-import { corsProxyUrl, formatError, sha256 } from './common.ts';
+import { corsProxyUrl, formatError, formatMessage, sha256 } from './common.ts';
 import { electronApi } from './electronApi.ts';
 
 // Some file-related methods.
@@ -37,7 +37,19 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
     };
   }
 
-  const data = Uint8Array.from(atob(dataUrl.slice(prefix.length)), (c) => c.charCodeAt(0));
+  let decodedData: string;
+
+  try {
+    decodedData = atob(dataUrl.slice(prefix.length));
+  } catch (error: unknown) {
+    return {
+      res: true,
+      data: null,
+      error: `The data URL contains invalid Base64 encoding (${formatMessage(formatError(error), false)}).`
+    };
+  }
+
+  const data = Uint8Array.from(decodedData, (c) => c.charCodeAt(0));
 
   if (
     data.length < 4 ||
