@@ -85,41 +85,49 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
 
     // Unzip the data.
 
-    const jsZip = new JSZip();
-    const zip = await jsZip.loadAsync(zipDataUrl.data);
+    try {
+      const jsZip = new JSZip();
+      const zip = await jsZip.loadAsync(zipDataUrl.data);
 
-    // Make sure that the ZIP file contains only one file.
+      // Make sure that the ZIP file contains only one file.
 
-    const fileNames = Object.keys(zip.files);
+      const fileNames = Object.keys(zip.files);
 
-    if (fileNames.length !== 1) {
+      if (fileNames.length !== 1) {
+        return {
+          res: true,
+          data: null,
+          error: `The data URL of MIME type ${mimeType} does not contain exactly one (CellML) file.`
+        };
+      }
+
+      // Retrieve the CellML file.
+
+      const fileName = fileNames[0] as string;
+      const file = zip.files[fileName];
+
+      if (!file || file.dir) {
+        return {
+          res: true,
+          data: null,
+          error: `The data URL of MIME type ${mimeType} does not contain a valid file.`
+        };
+      }
+
+      // Return the CellML file data.
+
+      return {
+        res: true,
+        data: await file.async('uint8array'),
+        error: null
+      };
+    } catch (error: unknown) {
       return {
         res: true,
         data: null,
-        error: `The data URL of MIME type ${mimeType} does not contain exactly one (CellML) file.`
+        error: `The data URL of MIME type ${mimeType} contains an invalid ZIP file (${formatMessage(formatError(error), false)}).`
       };
     }
-
-    // Retrieve the CellML file.
-
-    const fileName = fileNames[0] as string;
-    const file = zip.files[fileName];
-
-    if (!file || file.dir) {
-      return {
-        res: true,
-        data: null,
-        error: `The data URL of MIME type ${mimeType} does not contain a valid file.`
-      };
-    }
-
-    // Return the CellML file data.
-
-    return {
-      res: true,
-      data: await file.async('uint8array'),
-      error: null
-    };
   }
 
   // Not a data URL for a zipped CellML file.
@@ -174,7 +182,10 @@ export function filePath(fileFilePathOrFileContents: string | Uint8Array | File,
         : sha256(fileFilePathOrFileContents);
 }
 
-export function file(fileFilePathOrFileContents: string | Uint8Array | File, dataUrlCounter: number): Promise<locApi.File> {
+export function file(
+  fileFilePathOrFileContents: string | Uint8Array | File,
+  dataUrlCounter: number
+): Promise<locApi.File> {
   if (typeof fileFilePathOrFileContents === 'string') {
     if (isRemoteFilePath(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
