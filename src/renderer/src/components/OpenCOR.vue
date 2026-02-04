@@ -787,7 +787,10 @@ if (props.omex) {
 
               window.history.replaceState({}, document.title, window.location.pathname);
 
-              // Force a reload to ensure that any other parameters in the URL are cleared up.
+              // Force a reload to complete the two-phase action handling:
+              //  1) On the first load, we extract the action from the URL and store it in localStorage.
+              //  2) After we have reloaded (with a clean URL), the `else if (action.value)` branch below reads and
+              //     processes the stored action.
 
               window.location.reload();
             } else if (action.value) {
