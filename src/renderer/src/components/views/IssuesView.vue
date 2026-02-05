@@ -45,7 +45,7 @@
               <i :class="issueIcon(issue.type)"></i>
             </div>
             <div class="issue-content flex-1 min-w-0">
-              <span class="issue-description text-[0.8125rem] select-text">{{ issue.description }}</span>
+              <span v-html="issue.description" class="issue-description text-[0.8125rem] select-text"></span>
             </div>
           </div>
           <div v-if="extraSpace" class="h-2"></div>

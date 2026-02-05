@@ -675,19 +675,39 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
 
   // Update the SED-ML document.
 
+  const informationIssue: locApi.IIssue = {
+    type: locApi.EIssueType.INFORMATION,
+    description:
+      'Please check the <em>Interactive mode</em> settings (click on the <i class="pi pi-cog"></i> icon in the top-right corner) and try again.'
+  };
+
   interactiveModel.removeAllChanges();
+  interactiveInstanceIssues.value = [];
 
   interactiveUiJson.value.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/');
 
     if (componentVariableNames[0] && componentVariableNames[1]) {
-      interactiveModel.addChange(
-        componentVariableNames[0],
-        componentVariableNames[1],
-        String(evaluateValue(parameter.value))
-      );
+      try {
+        interactiveModel.addChange(
+          componentVariableNames[0],
+          componentVariableNames[1],
+          String(evaluateValue(parameter.value))
+        );
+      } catch (error: unknown) {
+        interactiveInstanceIssues.value.push({
+          type: locApi.EIssueType.ERROR,
+          description: `An error occurred while applying parameter change for ${parameter.name} (${common.formatMessage(common.formatError(error), false)}).`
+        });
+      }
     }
   });
+
+  if (interactiveInstanceIssues.value.length) {
+    interactiveInstanceIssues.value.push(informationIssue);
+
+    return;
+  }
 
   // Reset our interactive margins.
 
@@ -701,8 +721,6 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
     interactiveInstanceIssues.value = interactiveInstance.issues();
 
     return;
-  } else {
-    interactiveInstanceIssues.value = [];
   }
 
   const parser = interactiveMath.parser();
@@ -756,10 +774,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
         type: locApi.EIssueType.ERROR,
         description: `An error occurred while evaluating the plot expressions (${common.formatMessage(common.formatError(error), false)}).`
       },
-      {
-        type: locApi.EIssueType.INFORMATION,
-        description: 'Please check the interactive settings and try again.'
-      }
+      informationIssue
     ];
   }
 }
