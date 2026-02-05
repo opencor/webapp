@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="Interactive Mode Settings" class="w-180 h-180"
+  <BaseDialog header="Interactive Mode Settings" class="w-210 h-180"
     @keydown.prevent.enter="onOk"
     @cancel="onCancel"
   >
@@ -102,16 +102,16 @@
             <div class="h-full flex flex-col">
               <Tabs v-model:value="activeInteractiveTab" class="min-h-0">
                 <TabList class="mb-2">
-                  <Tab value="inputs">
-                    <i class="pi pi-sign-in mr-2"></i>Inputs
+                  <Tab value="modelInputs">
+                    <i class="pi pi-sign-in mr-2"></i>Model inputs
                     <span class="ml-2 badge">{{ localSettings.interactive.uiJson.input.length }}</span>
                   </Tab>
-                  <Tab value="parameters">
-                    <i class="pi pi-list mr-2"></i>Parameters
+                  <Tab value="modelParameters">
+                    <i class="pi pi-list mr-2"></i>Model parameters
                     <span class="ml-2 badge">{{ localSettings.interactive.uiJson.parameters.length }}</span>
                   </Tab>
-                  <Tab value="data">
-                    <i class="pi pi-database mr-2"></i>Data
+                  <Tab value="simulationData">
+                    <i class="pi pi-database mr-2"></i>Simulation data
                     <span class="ml-2 badge">{{ localSettings.interactive.uiJson.output.data.length }}</span>
                   </Tab>
                   <Tab value="plots">
@@ -122,21 +122,21 @@
                 <TabPanels>
                   <!-- Inputs -->
 
-                  <TabPanel value="inputs" class="h-full">
+                  <TabPanel value="modelInputs" class="h-full">
                     <div class="h-full flex flex-col">
                       <div class="section-header section-header-interactive">
                         <i class="pi pi-sliders-h text-primary"></i>
                         <div>
-                          <h3 class="section-title">Inputs</h3>
+                          <h3 class="section-title">Model inputs</h3>
                           <p class="section-description">
-                            Configure the inputs that a user can modify and that will be available to set the model parameters.
+                            Configure the model inputs that a user can modify and that will be available to set the model parameters.
                           </p>
                         </div>
                         <div class="flex-1"></div>
                         <div class="flex-none">
                           <Button
                             icon="pi pi-plus"
-                            label="Add input"
+                            label="Add model input"
                             outlined
                             size="small"
                             @click="addInput"
@@ -149,10 +149,10 @@
 
                           <div v-if="!localSettings.interactive.uiJson.input.length" class="empty-state">
                             <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                            <p class="text-muted-color mb-2">No inputs configured</p>
+                            <p class="text-muted-color mb-2">No model inputs configured</p>
                           </div>
 
-                          <!-- Input cards -->
+                          <!-- Model input cards -->
 
                           <div v-for="(input, inputIndex) in localSettings.interactive.uiJson.input" :key="`input_${inputIndex}`">
                             <div class="card-item">
@@ -211,7 +211,7 @@
                                   </FloatLabel>
                                 </div>
 
-                                <!-- Scalar input fields -->
+                                <!-- Scalar model input fields -->
 
                                 <div v-if="locApi.isScalarInput(input)" class="form-row">
                                   <InputScientificNumber v-model="input.minimumValue" class="form-field"
@@ -229,7 +229,7 @@
                                   />
                                 </div>
 
-                                <!-- Discrete input fields -->
+                                <!-- Discrete model input fields -->
 
                                 <div v-if="locApi.isDiscreteInput(input)">
                                   <div class="flex items-center justify-between mb-2">
@@ -276,18 +276,18 @@
                     </div>
                   </TabPanel>
 
-                  <!-- Parameters -->
+                  <!-- Model parameters -->
 
-                  <TabPanel value="parameters" class="h-full">
+                  <TabPanel value="modelParameters" class="h-full">
                     <div class="h-full flex flex-col">
                       <div class="section-header section-header-interactive">
                         <!-- Section description -->
 
                         <i class="pi pi-list text-primary"></i>
                         <div>
-                          <h3 class="section-title">Parameters</h3>
+                          <h3 class="section-title">Model parameters</h3>
                           <p class="section-description">
-                            Configure the model parameters using the value of the input parameters.
+                            Configure the model parameters using the value of the model inputs.
                           </p>
                         </div>
                         <div class="flex-1"></div>
@@ -297,7 +297,7 @@
                         <div class="flex-none">
                           <Button
                             icon="pi pi-plus"
-                            label="Add parameter"
+                            label="Add model parameter"
                             outlined
                             size="small"
                             @click="addParameter"
@@ -305,7 +305,7 @@
                         </div>
                       </div>
 
-                      <!-- Parameters scroll panel -->
+                      <!-- Model parameters scroll panel -->
 
                       <ScrollPanel class="min-h-0">
                         <div class="flex flex-col gap-4 mt-2">
@@ -313,10 +313,10 @@
 
                           <div v-if="!localSettings.interactive.uiJson.parameters.length" class="empty-state">
                             <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                            <p class="text-muted-color mb-2">No parameters configured</p>
+                            <p class="text-muted-color mb-2">No model parameters configured</p>
                           </div>
 
-                          <!-- Parameter entries -->
+                          <!-- Model parameter entries -->
 
                           <div v-else class="entries-list">
                             <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
@@ -355,26 +355,26 @@
                     </div>
                   </TabPanel>
 
-                  <!-- Data -->
+                  <!-- Simulation data -->
 
-                  <TabPanel value="data" class="h-full">
+                  <TabPanel value="simulationData" class="h-full">
                     <div class="h-full flex flex-col">
                       <div class="section-header section-header-interactive">
                         <i class="pi pi-database text-primary"></i>
                         <div>
-                          <h3 class="section-title">Data</h3>
+                          <h3 class="section-title">Simulation data</h3>
                           <p class="section-description">
-                            Configure the data to be retrieved from the simulation and that will be available for plotting.
+                            Configure the simulation data to be retrieved and that will be available for plotting.
                           </p>
                         </div>
                         <div class="flex-1"></div>
                         <div class="flex-none">
                           <Button
                             icon="pi pi-plus"
-                            label="Add data"
+                            label="Add simulation data"
                             outlined
                             size="small"
-                            @click="addData"
+                            @click="addSimulationData"
                           />
                         </div>
                       </div>
@@ -384,10 +384,10 @@
 
                           <div v-if="!localSettings.interactive.uiJson.output.data.length" class="empty-state">
                             <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                            <p class="text-muted-color mb-2">No data configured</p>
+                            <p class="text-muted-color mb-2">No simulation data configured</p>
                           </div>
 
-                          <!-- Data entries -->
+                          <!-- Simulation data entries -->
 
                           <div v-else class="entries-list">
                             <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="`data_${dataIndex}`" class="entry-row">
@@ -411,7 +411,7 @@
                                 text rounded
                                 severity="secondary"
                                 size="small"
-                                @click="removeData(dataIndex)"
+                                @click="removeSimulationData(dataIndex)"
                               />
                             </div>
                           </div>
@@ -645,7 +645,7 @@
                       <i class="pi pi-sync"></i>
                       <span class="font-medium">Live Updates</span>
                     </div>
-                    <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when input parameters change</p>
+                    <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when model inputs change</p>
                   </div>
                   <ToggleSwitch v-model="localSettings.miscellaneous.liveUpdates" />
                 </div>
@@ -782,7 +782,7 @@ const emit = defineEmits<{
 }>();
 
 const DEFAULT_TAB = 'interactive';
-const DEFAULT_INTERACTIVE_TAB = 'inputs';
+const DEFAULT_INTERACTIVE_TAB = 'modelInputs';
 
 const simulationSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const solversSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
@@ -900,18 +900,18 @@ function xyParameterValueTooltip(value: string, idType: string, idPrefix: string
   return `
     You can provide the value of the ${value} using an algebraic expression that includes ${idType} IDs.<br />
     <br />
-    For example, to set the ${value} to be the ${idType} with ID <code>${idPrefix}_0</code>, use <code>${idPrefix}_0</code>.<br />
+    For example, to set the ${value} to be the ${idType} with ID <code>${idPrefix}_1</code>, use <code>${idPrefix}_1</code>.<br />
     <br />
-    You can also use mathematical functions and operators in the expression (e.g., <code>2 * ${idPrefix}_0 + sin(${idPrefix}_1)</code>).
+    You can also use mathematical functions and operators in the expression (e.g., <code>2 * ${idPrefix}_1 + sin(${idPrefix}_2)</code>).
   `;
 }
 
 function xyValueTooltip(xAxis: boolean): string {
-  return xyParameterValueTooltip(`${xAxis ? 'X' : 'Y'} axis`, 'data', 'data');
+  return xyParameterValueTooltip(`${xAxis ? 'X' : 'Y'} axis`, 'simulation data', 'simulation_data');
 }
 
 function parameterValueTooltip(): string {
-  return xyParameterValueTooltip('model parameter', 'input parameter', 'input');
+  return xyParameterValueTooltip('model parameter', 'model input', 'model_input');
 }
 
 function traceName(plot: locApi.IUiJsonOutputPlot, traceIndex: number): string {
@@ -930,8 +930,8 @@ function traceName(plot: locApi.IUiJsonOutputPlot, traceIndex: number): string {
 
 function addInput() {
   localSettings.value.interactive.uiJson.input.push({
-    id: `input_${localSettings.value.interactive.uiJson.input.length}`,
-    name: 'New input',
+    id: `model_input_${localSettings.value.interactive.uiJson.input.length + 1}`,
+    name: `Model input #${localSettings.value.interactive.uiJson.input.length + 1}`,
     defaultValue: 0,
     minimumValue: 0,
     maximumValue: 10
@@ -994,14 +994,14 @@ function removePossibleValue(inputIndex: number, possibleValueIndex: number) {
   }
 }
 
-function addData() {
+function addSimulationData() {
   localSettings.value.interactive.uiJson.output.data.push({
     id: `data_${localSettings.value.interactive.uiJson.output.data.length}`,
     name: 'component/variable'
   });
 }
 
-function removeData(index: number) {
+function removeSimulationData(index: number) {
   localSettings.value.interactive.uiJson.output.data.splice(index, 1);
 }
 
