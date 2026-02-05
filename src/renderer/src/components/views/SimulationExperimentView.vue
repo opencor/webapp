@@ -92,8 +92,12 @@
     </div>
     <div v-else class="grow min-h-0">
       <div class="flex h-full">
-        <div v-if="uiJson === undefined">
-          COUCOU !
+        <div v-if="interactiveUiJsonEmpty" class="flex flex-col items-center justify-center grow">
+          <i class="pi pi-info-circle text-[1.5rem]! text-muted-color mb-3"></i>
+          <p class="text-muted-color text-center">
+            The <em>Interactive mode</em> needs to be configured.<br />
+            Please click on the <i class="pi pi-cog"></i> icon in the top-right corner.
+          </p>
         </div>
         <IssuesView v-else-if="interactiveUiJsonIssues.length" class="w-full m-4" :issues="interactiveUiJsonIssues" />
         <div v-else class="flex grow min-h-0">
@@ -477,6 +481,14 @@ const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
 const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
 const interactiveSettingsVisible = vue.ref<boolean>(false);
 const interactiveUiJson = vue.ref<locApi.IUiJson>(initialUiJson());
+const interactiveUiJsonEmpty = vue.computed(() => {
+  return (
+    interactiveUiJson.value.input.length === 0 &&
+    interactiveUiJson.value.output.data.length === 0 &&
+    interactiveUiJson.value.output.plots.length === 0 &&
+    interactiveUiJson.value.parameters.length === 0
+  );
+});
 const interactiveFile = props.file;
 const interactiveDocument = interactiveFile.document();
 const interactiveUniformTimeCourse = interactiveDocument.simulation(0) as locApi.SedUniformTimeCourse;
