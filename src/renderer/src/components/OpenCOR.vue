@@ -11,9 +11,10 @@
       :group="toastId"
       :pt:root:style="{ position: 'absolute' }"
     />
-    <BackgroundComponent v-show="(loadingOpencorMessageVisible || loadingModelMessageVisible) && omex" />
-    <BlockingMessageComponent message="Loading OpenCOR..." v-show="loadingOpencorMessageVisible" />
-    <BlockingMessageComponent message="Loading model..." v-show="loadingModelMessageVisible" />
+    <BackgroundComponent v-show="compBackgroundVisible" />
+    <BlockingMessageComponent v-show="loadingOpencorMessageVisible" message="Loading OpenCOR..." />
+    <BlockingMessageComponent v-show="loadingModelMessageVisible" message="Loading model..." />
+    <BlockingMessageComponent v-show="progressMessageVisible" :message="progressMessageMessage" :progress="progressMessageProgress" />
     <IssuesView v-if="issues.length" class="m-4" style="height: calc(100% - 2rem);" :issues="issues" />
     <div v-else class="h-full flex flex-col"
       @dragenter="onDragEnter"
@@ -166,6 +167,7 @@ const compBlockUiEnabled = vue.computed(() => {
     !electronUiEnabled.value ||
     loadingOpencorMessageVisible.value ||
     loadingModelMessageVisible.value ||
+    progressMessageVisible.value ||
     connectingToGitHub.value
   );
 });
@@ -173,6 +175,38 @@ const compBlockUiEnabled = vue.computed(() => {
 const compUiEnabled = vue.computed(() => {
   return !compBlockUiEnabled.value && !isDialogActive.value;
 });
+
+// Provide access to our progress message features.
+
+export interface IProgressMessage {
+  show: (message: string) => void;
+  update: (percent: number) => void;
+  hide: () => void;
+}
+
+const show = (message: string): void => {
+  progressMessageMessage.value = message;
+  progressMessageProgress.value = 0;
+  progressMessageVisible.value = true;
+};
+
+const update = (percent: number): void => {
+  progressMessageProgress.value = percent;
+};
+
+const hide = (): void => {
+  progressMessageVisible.value = false;
+};
+
+vue.provide('progressMessage', {
+  show,
+  update,
+  hide
+});
+
+const progressMessageVisible = vue.ref<boolean>(false);
+const progressMessageMessage = vue.ref<string>('');
+const progressMessageProgress = vue.ref<number>(0);
 
 // Get the current Vue app instance to use some PrimeVue plugins and VueTippy.
 
@@ -212,6 +246,12 @@ const toast = useToast();
 //       OpenCOR's Web app.
 
 const locApiInitialised = vue.ref(false);
+const compBackgroundVisible = vue.computed(() => {
+  return (
+    (loadingOpencorMessageVisible.value || loadingModelMessageVisible.value || progressMessageVisible.value) &&
+    !!props.omex
+  );
+});
 const loadingOpencorMessageVisible = vue.ref<boolean>(false);
 const loadingModelMessageVisible = vue.ref<boolean>(false);
 
