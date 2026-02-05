@@ -227,6 +227,7 @@
     <SimulationExperimentViewSettingsDialog
       v-model:visible="interactiveSettingsVisible"
       :settings="interactiveSettings"
+      :voiName="interactiveInstanceTask.voiName()"
       :voiUnit="interactiveInstanceTask.voiUnit()"
       :allModelParameters="interactiveAllModelParameters"
       :editableModelParameters="interactiveEditableModelParameters"
