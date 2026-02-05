@@ -148,8 +148,8 @@
                           <!-- Empty state -->
 
                           <div v-if="!localSettings.interactive.uiJson.input.length" class="empty-state">
-                            <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                            <p class="text-muted-color mb-2">No model inputs configured</p>
+                            <i class="pi pi-info-circle empty-state-icon"></i>
+                            <p class="text-muted-color mb-2">No model inputs are configured.</p>
                           </div>
 
                           <!-- Model input cards -->
@@ -244,8 +244,8 @@
                                     />
                                   </div>
                                   <div v-if="!input.possibleValues.length" class="empty-state empty-state-tight">
-                                    <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                                    <p class="text-muted-color mb-2">No possible values configured</p>
+                                    <i class="pi pi-info-circle empty-state-icon"></i>
+                                    <p class="text-muted-color mb-2">No possible values are configured.</p>
                                   </div>
                                   <div v-else class="possible-values-list">
                                     <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possibleValue${possibleValueIndex}`" class="entry-row">
@@ -312,8 +312,8 @@
                           <!-- Empty state -->
 
                           <div v-if="!localSettings.interactive.uiJson.parameters.length" class="empty-state">
-                            <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                            <p class="text-muted-color mb-2">No model parameters configured</p>
+                            <i class="pi pi-info-circle empty-state-icon"></i>
+                            <p class="text-muted-color mb-2">No model parameters are configured.</p>
                           </div>
 
                           <!-- Model parameter entries -->
@@ -383,8 +383,8 @@
                           <!-- Empty state -->
 
                           <div v-if="!localSettings.interactive.uiJson.output.data.length" class="empty-state">
-                            <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                            <p class="text-muted-color mb-2">No simulation data configured</p>
+                            <i class="pi pi-info-circle empty-state-icon"></i>
+                            <p class="text-muted-color mb-2">No simulation data is configured.</p>
                           </div>
 
                           <!-- Simulation data entries -->
@@ -448,8 +448,8 @@
                           <!-- Empty state -->
 
                           <div v-if="!localSettings.interactive.uiJson.output.plots.length" class="empty-state">
-                            <i class="pi pi-inbox text-4xl text-muted-color mb-3"></i>
-                            <p class="text-muted-color mb-2">No plots configured</p>
+                            <i class="pi pi-info-circle empty-state-icon"></i>
+                            <p class="text-muted-color mb-2">No plots are configured.</p>
                           </div>
 
                           <!-- Plot entries -->
@@ -1193,6 +1193,12 @@ function toggleUiJsonIssues(event: Event) {
   justify-content: center;
   padding: 2rem;
   text-align: center;
+}
+
+.empty-state-icon {
+  font-size: 1.5rem;
+  color: var(--p-text-muted-color);
+  margin-bottom: 0.75rem;
 }
 
 .empty-state-tight {
