@@ -68,7 +68,8 @@ import * as vue from 'vue';
 import * as common from '../common/common.ts';
 import { electronApi } from '../common/electronApi.ts';
 import * as locApi from '../libopencor/locApi.ts';
-export interface IFileTab {
+
+interface IFileTab {
   file: locApi.File;
   uiJson?: locApi.IUiJson;
 }

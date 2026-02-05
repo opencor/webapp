@@ -92,7 +92,14 @@
     </div>
     <div v-else class="grow min-h-0">
       <div class="flex h-full">
-        <IssuesView v-if="interactiveUiJsonIssues.length" class="w-full m-4" :issues="interactiveUiJsonIssues" />
+        <div v-if="interactiveUiJsonEmpty" class="flex flex-col items-center justify-center grow">
+          <i class="pi pi-info-circle text-[1.5rem]! text-muted-color mb-3"></i>
+          <p class="text-muted-color text-center">
+            The <em>Interactive mode</em> needs to be configured.<br />
+            Please click on the <i class="pi pi-cog"></i> icon in the top-right corner.
+          </p>
+        </div>
+        <IssuesView v-else-if="interactiveUiJsonIssues.length" class="w-full m-4" :issues="interactiveUiJsonIssues" />
         <div v-else class="flex grow min-h-0">
           <div class="ml-4 mr-4 mb-4">
             <ScrollPanel class="h-full">
@@ -220,6 +227,7 @@
     <SimulationExperimentViewSettingsDialog
       v-model:visible="interactiveSettingsVisible"
       :settings="interactiveSettings"
+      :voiName="interactiveInstanceTask.voiName()"
       :voiUnit="interactiveInstanceTask.voiUnit()"
       :allModelParameters="interactiveAllModelParameters"
       :editableModelParameters="interactiveEditableModelParameters"
@@ -474,6 +482,14 @@ const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
 const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
 const interactiveSettingsVisible = vue.ref<boolean>(false);
 const interactiveUiJson = vue.ref<locApi.IUiJson>(initialUiJson());
+const interactiveUiJsonEmpty = vue.computed(() => {
+  return (
+    interactiveUiJson.value.input.length === 0 &&
+    interactiveUiJson.value.output.data.length === 0 &&
+    interactiveUiJson.value.output.plots.length === 0 &&
+    interactiveUiJson.value.parameters.length === 0
+  );
+});
 const interactiveFile = props.file;
 const interactiveDocument = interactiveFile.document();
 const interactiveUniformTimeCourse = interactiveDocument.simulation(0) as locApi.SedUniformTimeCourse;
@@ -659,19 +675,39 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
 
   // Update the SED-ML document.
 
+  const informationIssue: locApi.IIssue = {
+    type: locApi.EIssueType.INFORMATION,
+    description:
+      'Please check the <em>Interactive mode</em> settings (click on the <i class="pi pi-cog"></i> icon in the top-right corner) and try again.'
+  };
+
   interactiveModel.removeAllChanges();
+  interactiveInstanceIssues.value = [];
 
   interactiveUiJson.value.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
     const componentVariableNames = parameter.name.split('/');
 
     if (componentVariableNames[0] && componentVariableNames[1]) {
-      interactiveModel.addChange(
-        componentVariableNames[0],
-        componentVariableNames[1],
-        String(evaluateValue(parameter.value))
-      );
+      try {
+        interactiveModel.addChange(
+          componentVariableNames[0],
+          componentVariableNames[1],
+          String(evaluateValue(parameter.value))
+        );
+      } catch (error: unknown) {
+        interactiveInstanceIssues.value.push({
+          type: locApi.EIssueType.ERROR,
+          description: `An error occurred while applying parameter change for ${parameter.name} (${common.formatMessage(common.formatError(error), false)}).`
+        });
+      }
     }
   });
+
+  if (interactiveInstanceIssues.value.length) {
+    interactiveInstanceIssues.value.push(informationIssue);
+
+    return;
+  }
 
   // Reset our interactive margins.
 
@@ -685,8 +721,6 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
     interactiveInstanceIssues.value = interactiveInstance.issues();
 
     return;
-  } else {
-    interactiveInstanceIssues.value = [];
   }
 
   const parser = interactiveMath.parser();
@@ -740,10 +774,7 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
         type: locApi.EIssueType.ERROR,
         description: `An error occurred while evaluating the plot expressions (${common.formatMessage(common.formatError(error), false)}).`
       },
-      {
-        type: locApi.EIssueType.INFORMATION,
-        description: 'Please check the interactive settings and try again.'
-      }
+      informationIssue
     ];
   }
 }
