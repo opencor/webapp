@@ -92,7 +92,10 @@
     </div>
     <div v-else class="grow min-h-0">
       <div class="flex h-full">
-        <IssuesView v-if="interactiveUiJsonIssues.length" class="w-full m-4" :issues="interactiveUiJsonIssues" />
+        <div v-if="uiJson === undefined">
+          COUCOU !
+        </div>
+        <IssuesView v-else-if="interactiveUiJsonIssues.length" class="w-full m-4" :issues="interactiveUiJsonIssues" />
         <div v-else class="flex grow min-h-0">
           <div class="ml-4 mr-4 mb-4">
             <ScrollPanel class="h-full">
