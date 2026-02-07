@@ -645,7 +645,7 @@
                       <i class="pi pi-sync"></i>
                       <span class="font-medium">Live Updates</span>
                     </div>
-                    <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when simulation inputs change</p>
+                    <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when simulation inputs change.</p>
                   </div>
                   <ToggleSwitch v-model="localSettings.miscellaneous.liveUpdates" />
                 </div>
