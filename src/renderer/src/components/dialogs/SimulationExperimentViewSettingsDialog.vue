@@ -771,6 +771,7 @@ export interface ISimulationExperimentViewSettings {
 
 const props = defineProps<{
   settings: ISimulationExperimentViewSettings;
+  voiId: string;
   voiName: string;
   voiUnit: string;
   allModelParameters: string[];
@@ -884,7 +885,6 @@ const uiJsonIssues = vue.computed(() => {
 
   return validateUiJson(localSettings.value.interactive.uiJson);
 });
-const voiNameId = props.voiName.split('/').slice(-1)[0];
 
 function plotTraceCount(plot: locApi.IUiJsonOutputPlot): number {
   return 1 + (plot.additionalTraces?.length ?? 0);
@@ -998,8 +998,8 @@ function removePossibleValue(inputIndex: number, possibleValueIndex: number) {
 
 function addSimulationData() {
   localSettings.value.interactive.uiJson.output.data.push({
-    id: voiNameId,
-    name: props.voiName
+    id: `simulation_data`,
+    name: 'component/variable'
   });
 }
 
@@ -1012,7 +1012,7 @@ function addPlot() {
     localSettings.value.interactive.uiJson.output.plots.push({
       name: '',
       xAxisTitle: '',
-      xValue: voiNameId,
+      xValue: props.voiId,
       yAxisTitle: '',
       yValue: 'y_id',
       additionalTraces: []
@@ -1033,7 +1033,7 @@ function addTrace(plotIndex: number) {
     }
 
     plot.additionalTraces.push({
-      xValue: voiNameId,
+      xValue: props.voiId,
       yValue: 'y_id'
     });
   }
@@ -1058,7 +1058,7 @@ function removeTrace(plotIndex: number, traceIndex: number) {
       plot.yValue = firstAdditionalTrace.yValue;
     } else {
       plot.name = undefined;
-      plot.xValue = voiNameId;
+      plot.xValue = props.voiId;
       plot.yValue = 'y_id';
     }
 
