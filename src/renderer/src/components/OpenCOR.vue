@@ -249,7 +249,7 @@ const locApiInitialised = vue.ref(false);
 const compBackgroundVisible = vue.computed(() => {
   return (
     (loadingOpencorMessageVisible.value || loadingModelMessageVisible.value || progressMessageVisible.value) &&
-    props.omex
+    !!props.omex
   );
 });
 const loadingOpencorMessageVisible = vue.ref<boolean>(false);

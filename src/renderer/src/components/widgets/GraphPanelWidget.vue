@@ -272,91 +272,102 @@ async function exportToCsv(): Promise<void> {
     progressMessage.show('Exporting data to CSV...');
   }
 
-  // Allow the UI to update before actually starting the export to CSV.
+  let successfulExport: boolean = true;
 
-  await common.sleep(SHORT_DELAY);
+  try {
+    // Allow the UI to update before actually starting the export to CSV.
 
-  // Perform the export itself.
-  // Note: to efficiently export to CSV, we build an array of CSV lines and only join them together at the end. This is
-  //       much more efficient than concatenating strings together repeatedly.
+    await common.sleep(SHORT_DELAY);
 
-  const csvLines: string[] = [];
+    // Perform the export itself.
+    // Note: to efficiently export to CSV, we build an array of CSV lines and only join them together at the end. This is
+    //       much more efficient than concatenating strings together repeatedly.
 
-  // Headers.
+    const csvLines: string[] = [];
 
-  const allXValuesEqual = props.data.traces.every((trace) => trace.xValue === firstTrace.xValue);
-  const headerParts: string[] = [allXValuesEqual ? firstTrace.xValue : 'X'];
+    // Headers.
 
-  props.data.traces.forEach((trace) => {
-    headerParts.push(trace.name.replace(/<[^>]*>|,/g, '') || trace.yValue);
-    // Note: we remove any HTML tags and commas to ensure the CSV is well-formed.
-  });
+    const allXValuesEqual = props.data.traces.every((trace) => trace.xValue === firstTrace.xValue);
+    const headerParts: string[] = [allXValuesEqual ? firstTrace.xValue : 'X'];
 
-  csvLines.push(headerParts.join(','));
+    props.data.traces.forEach((trace) => {
+      headerParts.push(trace.name.replace(/<[^>]*>|,/g, '') || trace.yValue);
+      // Note: we remove any HTML tags and commas to ensure the CSV is well-formed.
+    });
 
-  // Data rows: collect all unique X values and build value maps.
+    csvLines.push(headerParts.join(','));
 
-  const allXValues = new Set<number>();
-  const traceMaps = props.data.traces.map((trace) => {
-    const map = new Map<number, number>();
+    // Data rows: collect all unique X values and build value maps.
 
-    for (let i = 0; i < trace.x.length; ++i) {
-      const xValue = trace.x[i];
-      const yValue = trace.y[i];
+    const allXValues = new Set<number>();
+    const traceMaps = props.data.traces.map((trace) => {
+      const map = new Map<number, number>();
 
-      if (xValue !== undefined && yValue !== undefined) {
-        allXValues.add(xValue);
+      for (let i = 0; i < trace.x.length; ++i) {
+        const xValue = trace.x[i];
+        const yValue = trace.y[i];
 
-        map.set(xValue, yValue);
+        if (xValue !== undefined && yValue !== undefined) {
+          allXValues.add(xValue);
+
+          map.set(xValue, yValue);
+        }
+      }
+
+      return map;
+    });
+
+    // Process the rows and update the progress message at regular intervals to keep the UI responsive.
+
+    const sortedXValues = Array.from(allXValues).sort((a, b) => a - b);
+    const chunkSize = Math.max(1, Math.floor(0.01 * sortedXValues.length));
+    const percentPerRow = 100 / sortedXValues.length;
+    let processedRows = 0;
+
+    for (const sortedXValue of sortedXValues) {
+      const rowParts: string[] = [String(sortedXValue)];
+
+      props.data.traces.forEach((_trace, traceIndex) => {
+        const yValue = traceMaps[traceIndex]?.get(sortedXValue);
+
+        rowParts.push(yValue !== undefined ? String(yValue) : '');
+      });
+
+      csvLines.push(rowParts.join(','));
+
+      ++processedRows;
+
+      if (progressMessage && (processedRows % chunkSize === 0 || processedRows === sortedXValues.length)) {
+        progressMessage.update(Math.floor(percentPerRow * processedRows));
+
+        await common.sleep(NO_DELAY);
       }
     }
 
-    return map;
-  });
+    // Make sure that we show 100% before finishing.
 
-  // Process the rows and update the progress message at regular intervals to keep the UI responsive.
-
-  const sortedXValues = Array.from(allXValues).sort((a, b) => a - b);
-  const chunkSize = Math.max(1, Math.floor(0.01 * sortedXValues.length));
-  const percentPerRow = 100 / sortedXValues.length;
-  let processedRows = 0;
-
-  for (const sortedXValue of sortedXValues) {
-    const rowParts: string[] = [String(sortedXValue)];
-
-    props.data.traces.forEach((_trace, traceIndex) => {
-      const yValue = traceMaps[traceIndex]?.get(sortedXValue);
-
-      rowParts.push(yValue !== undefined ? String(yValue) : '');
-    });
-
-    csvLines.push(rowParts.join(','));
-
-    ++processedRows;
-
-    if (progressMessage && (processedRows % chunkSize === 0 || processedRows === sortedXValues.length)) {
-      progressMessage.update(Math.floor(percentPerRow * processedRows));
-
-      await common.sleep(NO_DELAY);
+    if (progressMessage) {
+      progressMessage.update(100);
     }
-  }
 
-  // Make sure that we show 100% before finishing.
+    // Create and download the CSV file.
 
-  if (progressMessage) {
-    progressMessage.update(100);
-  }
+    common.downloadFile('data.csv', csvLines.join('\n'), 'text/csv;charset=utf-8;');
+  } catch (error: unknown) {
+    successfulExport = false;
 
-  // Create and download the CSV file.
+    console.error('Failed to export to CSV:', common.formatError(error));
+  } finally {
+    // Hide the progress message. If the export succeeded then delay briefly so that the user can see that we reached
+    // 100%. Otherwise, hide immediately to avoid blocking the UI unnecessarily.
 
-  common.downloadFile('data.csv', csvLines.join('\n'), 'text/csv;charset=utf-8;');
+    if (progressMessage) {
+      if (successfulExport) {
+        await common.sleep(LONG_DELAY);
+      }
 
-  // Hide the progress message after a short delay so that the user has time to see that we reached 100%.
-
-  if (progressMessage) {
-    await common.sleep(LONG_DELAY);
-
-    progressMessage.hide();
+      progressMessage.hide();
+    }
   }
 }
 
