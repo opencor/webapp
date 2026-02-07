@@ -415,55 +415,47 @@ function themeData(): IThemeData {
   };
 }
 
-interface IAxesData {
-  xaxis: {
-    tickangle: number;
-    automargin: boolean;
-    title: {
-      font: {
-        size: number;
-      };
-      text?: string;
-      standoff: number;
-    };
+interface IAxesDataAxis {
+  automargin: boolean;
+  tickangle: number;
+  tickfont: {
+    size: number;
   };
-  yaxis: {
-    tickangle: number;
-    automargin: boolean;
-    title: {
-      font: {
-        size: number;
-      };
-      text?: string;
-      standoff: number;
-    };
+  title: {
+    standoff: number;
+    text?: string;
   };
 }
 
+interface IAxesData {
+  xaxis: IAxesDataAxis;
+  yaxis: IAxesDataAxis;
+}
+
 function axesData(): IAxesData {
-  const axisTitleFontSize = 10;
+  const axisTickFontSize = 10;
 
   return {
     xaxis: {
-      tickangle: 0,
       automargin: true,
+      tickangle: 0,
+      tickfont: {
+        size: axisTickFontSize
+      },
       title: {
-        font: {
-          size: axisTitleFontSize
-        },
-        text: props.data.xAxisTitle,
-        standoff: 8
+        standoff: 8,
+        text: props.data.xAxisTitle
       }
     },
     yaxis: {
-      tickangle: 0,
       automargin: true,
+      tickangle: 0,
+      tickfont: {
+        size: axisTickFontSize
+      },
       title: {
-        font: {
-          size: axisTitleFontSize
-        },
-        text: props.data.yAxisTitle,
-        standoff: 8
+        standoff: 8,
+        text: props.data.yAxisTitle
       }
     }
   };

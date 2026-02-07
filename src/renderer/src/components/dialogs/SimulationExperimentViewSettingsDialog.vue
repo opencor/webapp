@@ -102,8 +102,8 @@
             <div class="h-full flex flex-col">
               <Tabs v-model:value="activeInteractiveTab" class="min-h-0">
                 <TabList class="mb-2">
-                  <Tab value="modelInputs">
-                    <i class="pi pi-sign-in mr-2"></i>Model inputs
+                  <Tab value="simulationInputs">
+                    <i class="pi pi-sign-in mr-2"></i>Simulation inputs
                     <span class="ml-2 badge">{{ localSettings.interactive.uiJson.input.length }}</span>
                   </Tab>
                   <Tab value="modelParameters">
@@ -122,21 +122,21 @@
                 <TabPanels>
                   <!-- Inputs -->
 
-                  <TabPanel value="modelInputs" class="h-full">
+                  <TabPanel value="simulationInputs" class="h-full">
                     <div class="h-full flex flex-col">
                       <div class="section-header section-header-interactive">
                         <i class="pi pi-sliders-h text-primary"></i>
                         <div>
-                          <h3 class="section-title">Model inputs</h3>
+                          <h3 class="section-title">Simulation inputs</h3>
                           <p class="section-description">
-                            Configure the model inputs that a user can modify and that will be available to set the model parameters.
+                            Configure the simulation inputs that a user can modify and that will be available to set the model parameters.
                           </p>
                         </div>
                         <div class="flex-1"></div>
                         <div class="flex-none">
                           <Button
                             icon="pi pi-plus"
-                            label="Add model input"
+                            label="Add simulation input"
                             outlined
                             size="small"
                             @click="addInput"
@@ -149,10 +149,10 @@
 
                           <div v-if="!localSettings.interactive.uiJson.input.length" class="empty-state">
                             <i class="pi pi-info-circle empty-state-icon"></i>
-                            <p class="text-muted-color mb-2">No model inputs are configured.</p>
+                            <p class="text-muted-color mb-2">No simulation inputs are configured.</p>
                           </div>
 
-                          <!-- Model input cards -->
+                          <!-- Simulation input cards -->
 
                           <div v-for="(input, inputIndex) in localSettings.interactive.uiJson.input" :key="`input_${inputIndex}`">
                             <div class="card-item">
@@ -287,7 +287,7 @@
                         <div>
                           <h3 class="section-title">Model parameters</h3>
                           <p class="section-description">
-                            Configure the model parameters using the value of the model inputs.
+                            Configure the model parameters using the value of the simulation inputs.
                           </p>
                         </div>
                         <div class="flex-1"></div>
@@ -645,7 +645,7 @@
                       <i class="pi pi-sync"></i>
                       <span class="font-medium">Live Updates</span>
                     </div>
-                    <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when model inputs change</p>
+                    <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when simulation inputs change.</p>
                   </div>
                   <ToggleSwitch v-model="localSettings.miscellaneous.liveUpdates" />
                 </div>
@@ -771,6 +771,7 @@ export interface ISimulationExperimentViewSettings {
 
 const props = defineProps<{
   settings: ISimulationExperimentViewSettings;
+  voiId: string;
   voiName: string;
   voiUnit: string;
   allModelParameters: string[];
@@ -783,7 +784,7 @@ const emit = defineEmits<{
 }>();
 
 const DEFAULT_TAB = 'interactive';
-const DEFAULT_INTERACTIVE_TAB = 'modelInputs';
+const DEFAULT_INTERACTIVE_TAB = 'simulationInputs';
 
 const simulationSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
 const solversSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
@@ -884,7 +885,6 @@ const uiJsonIssues = vue.computed(() => {
 
   return validateUiJson(localSettings.value.interactive.uiJson);
 });
-const voiNameId = props.voiName.split('/').slice(-1)[0];
 
 function plotTraceCount(plot: locApi.IUiJsonOutputPlot): number {
   return 1 + (plot.additionalTraces?.length ?? 0);
@@ -998,8 +998,8 @@ function removePossibleValue(inputIndex: number, possibleValueIndex: number) {
 
 function addSimulationData() {
   localSettings.value.interactive.uiJson.output.data.push({
-    id: voiNameId,
-    name: props.voiName
+    id: `simulation_data`,
+    name: 'component/variable'
   });
 }
 
@@ -1012,7 +1012,7 @@ function addPlot() {
     localSettings.value.interactive.uiJson.output.plots.push({
       name: '',
       xAxisTitle: '',
-      xValue: voiNameId,
+      xValue: props.voiId,
       yAxisTitle: '',
       yValue: 'y_id',
       additionalTraces: []
@@ -1033,7 +1033,7 @@ function addTrace(plotIndex: number) {
     }
 
     plot.additionalTraces.push({
-      xValue: voiNameId,
+      xValue: props.voiId,
       yValue: 'y_id'
     });
   }
@@ -1058,7 +1058,7 @@ function removeTrace(plotIndex: number, traceIndex: number) {
       plot.yValue = firstAdditionalTrace.yValue;
     } else {
       plot.name = undefined;
-      plot.xValue = voiNameId;
+      plot.xValue = props.voiId;
       plot.yValue = 'y_id';
     }
 

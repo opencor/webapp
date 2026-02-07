@@ -227,7 +227,8 @@
     <SimulationExperimentViewSettingsDialog
       v-model:visible="interactiveSettingsVisible"
       :settings="interactiveSettings"
-      :voiName="interactiveInstanceTask.voiName()"
+      :voiId="interactiveVoiId"
+      :voiName="interactiveVoiName"
       :voiUnit="interactiveInstanceTask.voiUnit()"
       :allModelParameters="interactiveAllModelParameters"
       :editableModelParameters="interactiveEditableModelParameters"
@@ -483,15 +484,6 @@ interface IPopover {
 const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
 const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
 const interactiveSettingsVisible = vue.ref<boolean>(false);
-const interactiveUiJson = vue.ref<locApi.IUiJson>(initialUiJson());
-const interactiveUiJsonEmpty = vue.computed(() => {
-  return (
-    interactiveUiJson.value.input.length === 0 &&
-    interactiveUiJson.value.output.data.length === 0 &&
-    interactiveUiJson.value.output.plots.length === 0 &&
-    interactiveUiJson.value.parameters.length === 0
-  );
-});
 const interactiveFile = props.file;
 const interactiveDocument = interactiveFile.document();
 const interactiveUniformTimeCourse = interactiveDocument.simulation(0) as locApi.SedUniformTimeCourse;
@@ -500,6 +492,28 @@ let interactiveInstance = interactiveDocument.instantiate();
 let interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveAllModelParameters = vue.ref<string[]>([]);
 const interactiveEditableModelParameters = vue.ref<string[]>([]);
+const interactiveVoiName = vue.ref(interactiveInstanceTask.voiName());
+const interactiveVoiId = vue.ref(interactiveVoiName.value.split('/')[1]);
+const interactiveUiJson = vue.ref<locApi.IUiJson>(initialUiJson());
+const interactiveUiJsonEmpty = vue.computed(() => {
+  if (
+    interactiveUiJson.value.input.length === 0 &&
+    interactiveUiJson.value.output.plots.length === 0 &&
+    interactiveUiJson.value.parameters.length === 0
+  ) {
+    if (interactiveUiJson.value.output.data.length === 0) {
+      return true;
+    }
+
+    if (interactiveUiJson.value.output.data.length === 1) {
+      const data = interactiveUiJson.value.output.data[0];
+
+      return data.id === interactiveVoiId.value && data.name === interactiveVoiName.value;
+    }
+  }
+
+  return false;
+});
 const interactiveMath = mathjs.create(mathjs.all ?? {}, {});
 const interactiveModel = interactiveDocument.model(0);
 const interactiveData = vue.ref<IGraphPanelData[]>([]);
@@ -596,10 +610,17 @@ function initialUiJson(): locApi.IUiJson {
     return JSON.parse(JSON.stringify(props.uiJson));
   }
 
+  // No UI JSON provided, so we create a default one with the VOI as a default simulation data.
+
   return {
     input: [],
     output: {
-      data: [],
+      data: [
+        {
+          id: interactiveVoiId.value,
+          name: interactiveVoiName.value
+        }
+      ],
       plots: []
     },
     parameters: []
