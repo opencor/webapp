@@ -42,6 +42,11 @@
     "start:web": "bun build:web && cd ./src/renderer && vite preview",
     "version:new": "bun src/renderer/scripts/version.js"
   },
+  "bun": {
+    "overrides": {
+      "vue": "3.4.21"
+    }
+  },
   "peerDependencies": {
     "vue": "3.4.21"
   },
