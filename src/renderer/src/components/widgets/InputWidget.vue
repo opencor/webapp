@@ -19,7 +19,7 @@
       @update:model-value="inputTextValueUpdated"
     />
     <Slider v-model="value" class="w-full mt-3"
-      :min="minimumValue" :max="maximumValue" :step="stepValue"
+      :min="minimumValue" :max="maximumValue" :step="compStepValue"
       size="small"
       @change="sliderChange"
     />
@@ -45,6 +45,17 @@ let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
   props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
+const compStepValue = vue.computed(() => {
+  if (props.stepValue !== undefined) {
+    return props.stepValue;
+  }
+
+  if (props.maximumValue !== undefined && props.minimumValue !== undefined) {
+    return 0.01 * (props.maximumValue - props.minimumValue);
+  }
+
+  return 1;
+});
 
 vue.watch(
   () => value.value,
