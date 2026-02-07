@@ -413,7 +413,7 @@ function onDownloadCombineArchive(): void {
       common.downloadFile(`${baseFileName}.omex`, content, 'application/zip');
     })
     .catch((error: unknown) => {
-      console.error('Error generating COMBINE archive:', common.formatError(error));
+      console.error('Failed to generate COMBINE archive:', common.formatError(error));
     });
 }
 
@@ -463,7 +463,9 @@ function updatePlot() {
     traces: [
       {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
+        xValue: standardXParameter.value,
         x: locCommon.simulationData(standardInstanceTask, xInfo.value),
+        yValue: standardYParameter.value,
         y: locCommon.simulationData(standardInstanceTask, yInfo.value),
         color: colors.DEFAULT_COLOR
       }
@@ -747,7 +749,9 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
       const traces: IGraphPanelPlotTrace[] = [
         {
           name: traceName(plot.name, plot.xValue, plot.yValue),
+          xValue: plot.xValue,
           x: parserEvaluate(plot.xValue),
+          yValue: plot.yValue,
           y: parserEvaluate(plot.yValue),
           color: colors.DEFAULT_COLOR
         }
@@ -756,7 +760,9 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
       plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
         traces.push({
           name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
+          xValue: additionalTrace.xValue,
           x: parserEvaluate(additionalTrace.xValue),
+          yValue: additionalTrace.yValue,
           y: parserEvaluate(additionalTrace.yValue),
           color: colors.DEFAULT_COLOR
         });

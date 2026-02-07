@@ -1,20 +1,32 @@
 <template>
   <div class="flex flex-row h-full" :class="isVisible ? 'visible' : 'invisible'">
     <div v-if="showMarker" class="w-0.75 bg-primary" />
-    <div ref="mainDiv" class="grow h-full" />
+    <div ref="mainDiv" class="grow h-full" @contextmenu="onContextMenu" />
+    <ContextMenu ref="contextMenu" :model="contextMenuItems" />
   </div>
 </template>
 
 <script setup lang="ts">
 import Plotly from 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.3.1/+esm';
+
+import ContextMenu from 'primevue/contextmenu';
+import type { MenuItem } from 'primevue/menuitem';
 import * as vue from 'vue';
 
 import * as colors from '../../common/colors.ts';
+import * as common from '../../common/common.ts';
+import { LONG_DELAY, NO_DELAY, SHORT_DELAY } from '../../common/constants.ts';
 import * as vueCommon from '../../common/vueCommon.ts';
+
+import type { IProgressMessage } from '../OpenCOR.vue';
+
+const CONTEXT_MENU_EVENT: string = 'graph-panel-context-menu-open';
 
 export interface IGraphPanelPlotTrace {
   name: string;
+  xValue: string;
   x: Float64Array;
+  yValue: string;
   y: Float64Array;
   color: string;
   zorder?: number;
@@ -51,11 +63,304 @@ defineExpose({
   resize
 });
 
-const mainDiv = vue.ref<InstanceType<typeof Element> | null>(null);
+const instanceId = Symbol('GraphPanelWidget');
+const mainDiv = vue.ref<HTMLElement | null>(null);
 const isVisible = vue.ref(false);
 const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
+const contextMenu = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 let updatingMargins = false;
+const progressMessage = vue.inject<IProgressMessage>('progressMessage');
+
+// Context menu functionality.
+
+const contextMenuItems = vue.computed<MenuItem[]>(() => [
+  {
+    icon: 'pi pi-search-plus',
+    label: 'Zoom In',
+    command: () => zoomIn()
+  },
+  {
+    icon: 'pi pi-search-minus',
+    label: 'Zoom Out',
+    command: () => zoomOut()
+  },
+  {
+    icon: 'pi pi-refresh',
+    label: 'Reset Zoom',
+    command: () => resetZoom()
+  },
+  {
+    separator: true
+  },
+  {
+    icon: 'pi pi-copy',
+    label: 'Copy to Clipboard',
+    command: () => copyToClipboard()
+  },
+  {
+    icon: 'pi pi-chart-line',
+    label: 'Export Plot',
+    items: [
+      {
+        icon: 'pi pi-file',
+        label: 'Export to JPEG',
+        command: () => exportToImage('jpeg')
+      },
+      {
+        icon: 'pi pi-file',
+        label: 'Export to PNG',
+        command: () => exportToImage('png')
+      },
+      {
+        icon: 'pi pi-file',
+        label: 'Export to SVG',
+        command: () => exportToImage('svg')
+      },
+      {
+        icon: 'pi pi-file',
+        label: 'Export to WebP',
+        command: () => exportToImage('webp')
+      }
+    ]
+  },
+  {
+    separator: true
+  },
+  {
+    label: 'Export Data to CSV',
+    icon: 'pi pi-download',
+    command: () => exportToCsv()
+  }
+]);
+
+function onContextMenu(event: MouseEvent): void {
+  event.preventDefault();
+
+  window.dispatchEvent(
+    new CustomEvent(CONTEXT_MENU_EVENT, {
+      detail: {
+        sourceId: instanceId
+      }
+    })
+  );
+
+  contextMenu.value?.show(event);
+}
+
+function zoomIn(): void {
+  if (!mainDiv.value) {
+    return;
+  }
+
+  const layout = (mainDiv.value as unknown as { layout?: Partial<Plotly.Layout> }).layout;
+
+  if (!layout?.xaxis?.range || !layout?.yaxis?.range) {
+    return;
+  }
+
+  const xRange = layout.xaxis.range as [number, number];
+  const yRange = layout.yaxis.range as [number, number];
+
+  const xCenter = 0.5 * (xRange[0] + xRange[1]);
+  const yCenter = 0.5 * (yRange[0] + yRange[1]);
+  const xSpan = 0.5 * (xRange[1] - xRange[0]);
+  const ySpan = 0.5 * (yRange[1] - yRange[0]);
+
+  Plotly.relayout(mainDiv.value, {
+    'xaxis.range': [xCenter - 0.5 * xSpan, xCenter + 0.5 * xSpan],
+    'yaxis.range': [yCenter - 0.5 * ySpan, yCenter + 0.5 * ySpan]
+  });
+
+  emit('resetMargins');
+}
+
+function zoomOut(): void {
+  if (!mainDiv.value) {
+    return;
+  }
+
+  const layout = (mainDiv.value as unknown as { layout?: Partial<Plotly.Layout> }).layout;
+
+  if (!layout?.xaxis?.range || !layout?.yaxis?.range) {
+    return;
+  }
+
+  const xRange = layout.xaxis.range as [number, number];
+  const yRange = layout.yaxis.range as [number, number];
+
+  const xCenter = 0.5 * (xRange[0] + xRange[1]);
+  const yCenter = 0.5 * (yRange[0] + yRange[1]);
+  const xSpan = 0.5 * (xRange[1] - xRange[0]);
+  const ySpan = 0.5 * (yRange[1] - yRange[0]);
+
+  Plotly.relayout(mainDiv.value, {
+    'xaxis.range': [xCenter - 2 * xSpan, xCenter + 2 * xSpan],
+    'yaxis.range': [yCenter - 2 * ySpan, yCenter + 2 * ySpan]
+  });
+
+  emit('resetMargins');
+}
+
+function resetZoom(): void {
+  if (!mainDiv.value) {
+    return;
+  }
+
+  Plotly.relayout(mainDiv.value, {
+    'xaxis.autorange': true,
+    'yaxis.autorange': true
+  });
+
+  emit('resetMargins');
+}
+
+async function copyToClipboard(): Promise<void> {
+  if (!mainDiv.value) {
+    return;
+  }
+
+  try {
+    const imageData = await Plotly.toImage(mainDiv.value, {
+      format: 'png',
+      width: mainDiv.value.clientWidth,
+      height: mainDiv.value.clientHeight
+    });
+
+    const binaryData = atob(imageData.split(',')[1]);
+    const array = Uint8Array.from(binaryData, (c) => c.charCodeAt(0));
+
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'image/png': new Blob([array], { type: 'image/png' })
+      })
+    ]);
+  } catch (error: unknown) {
+    console.error('Failed to copy to clipboard:', common.formatError(error));
+  }
+}
+
+async function exportToImage(format: 'jpeg' | 'png' | 'svg' | 'webp'): Promise<void> {
+  if (!mainDiv.value) {
+    return;
+  }
+
+  try {
+    await Plotly.downloadImage(mainDiv.value, {
+      format: format,
+      width: mainDiv.value.clientWidth,
+      height: mainDiv.value.clientHeight,
+      filename: 'plot'
+    });
+  } catch (error: unknown) {
+    console.error('Failed to export image:', common.formatError(error));
+  }
+}
+
+async function exportToCsv(): Promise<void> {
+  // Make sure that we have at least one trace to export.
+
+  const firstTrace = props.data.traces[0];
+
+  if (!firstTrace) {
+    return;
+  }
+
+  // Show the progress message.
+
+  if (progressMessage) {
+    progressMessage.show('Exporting data to CSV...');
+  }
+
+  // Allow the UI to update before actually starting the export to CSV.
+
+  await common.sleep(SHORT_DELAY);
+
+  // Perform the export itself.
+  // Note: to efficiently export to CSV, we build an array of CSV lines and only join them together at the end. This is
+  //       much more efficient than concatenating strings together repeatedly.
+
+  const csvLines: string[] = [];
+
+  // Headers.
+
+  const allXValuesEqual = props.data.traces.every((trace) => trace.xValue === firstTrace.xValue);
+  const headerParts: string[] = [allXValuesEqual ? firstTrace.xValue : 'X'];
+
+  props.data.traces.forEach((trace) => {
+    headerParts.push(trace.name.replace(/<[^>]*>|,/g, '') || trace.yValue);
+    // Note: we remove any HTML tags and commas to ensure the CSV is well-formed.
+  });
+
+  csvLines.push(headerParts.join(','));
+
+  // Data rows: collect all unique X values and build value maps.
+
+  const allXValues = new Set<number>();
+  const traceMaps = props.data.traces.map((trace) => {
+    const map = new Map<number, number>();
+
+    for (let i = 0; i < trace.x.length; ++i) {
+      const xValue = trace.x[i];
+      const yValue = trace.y[i];
+
+      if (xValue !== undefined && yValue !== undefined) {
+        allXValues.add(xValue);
+
+        map.set(xValue, yValue);
+      }
+    }
+
+    return map;
+  });
+
+  // Process the rows and update the progress message at regular intervals to keep the UI responsive.
+
+  const sortedXValues = Array.from(allXValues).sort((a, b) => a - b);
+  const chunkSize = Math.max(1, Math.floor(0.01 * sortedXValues.length));
+  const percentPerRow = 100 / sortedXValues.length;
+  let processedRows = 0;
+
+  for (const sortedXValue of sortedXValues) {
+    const rowParts: string[] = [String(sortedXValue)];
+
+    props.data.traces.forEach((_trace, traceIndex) => {
+      const yValue = traceMaps[traceIndex]?.get(sortedXValue);
+
+      rowParts.push(yValue !== undefined ? String(yValue) : '');
+    });
+
+    csvLines.push(rowParts.join(','));
+
+    ++processedRows;
+
+    if (progressMessage && (processedRows % chunkSize === 0 || processedRows === sortedXValues.length)) {
+      progressMessage.update(Math.floor(percentPerRow * processedRows));
+
+      await common.sleep(NO_DELAY);
+    }
+  }
+
+  // Make sure that we show 100% before finishing.
+
+  if (progressMessage) {
+    progressMessage.update(100);
+  }
+
+  // Create and download the CSV file.
+
+  common.downloadFile('data.csv', csvLines.join('\n'), 'text/csv;charset=utf-8;');
+
+  // Hide the progress message after a short delay so that the user has time to see that we reached 100%.
+
+  if (progressMessage) {
+    await common.sleep(LONG_DELAY);
+
+    progressMessage.hide();
+  }
+}
+
+// Plotly theme and layout data generation.
 
 interface IAxisThemeData {
   zerolinecolor: string;
@@ -326,7 +631,22 @@ interface IPlotlyHTMLElement extends HTMLElement {
   on(event: string, callback: (...args: unknown[]) => void): void;
 }
 
+const handleContextMenu = (event: Event): void => {
+  // Hide our context menu if the event was dispatched by another instance of the Graph Panel widget. This ensures that
+  // only one context menu is open at any given time.
+
+  const detail = (event as CustomEvent<{ sourceId?: symbol }>)?.detail;
+
+  if (!detail || detail.sourceId === instanceId) {
+    return;
+  }
+
+  contextMenu.value?.hide?.();
+};
+
 vue.onMounted(() => {
+  window.addEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
+
   vue.nextTick(() => {
     // Reset our margins on double-click and relayout.
 
@@ -342,6 +662,10 @@ vue.onMounted(() => {
       }
     });
   });
+});
+
+vue.onUnmounted(() => {
+  window.removeEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
 });
 
 vue.watch(

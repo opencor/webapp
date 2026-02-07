@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20260205.2",
+  "version": "0.20260207.0",
   "scripts": {
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -51,6 +51,11 @@
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
     "version:new": "bun scripts/version.js"
+  },
+  "bun": {
+    "overrides": {
+      "vue": "3.4.21"
+    }
   },
   "peerDependencies": {
     "vue": "3.4.21"
@@ -75,12 +80,12 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/vite": "^4.1.18",
     "@types/crypto-js": "^4.2.2",
-    "@types/node": "^25.2.0",
+    "@types/node": "^25.2.1",
     "@types/plotly.js": "^3.0.9",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.24",
-    "esbuild": "^0.27.2",
+    "esbuild": "^0.27.3",
     "stylelint": "^17.1.1",
     "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4.1.18",
