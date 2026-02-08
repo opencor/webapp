@@ -52,9 +52,7 @@ const checkForUpdates = async (): Promise<boolean> => {
     updateAvailable.value = isNewer;
 
     return isNewer;
-  } catch (error) {
-    console.error('Failed to check for updates:', error);
-
+  } catch (_error: unknown) {
     updateAvailable.value = false;
     latestVersion.value = '';
 
