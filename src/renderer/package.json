@@ -41,7 +41,7 @@
   },
   "version": "0.20260209.0",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && bun scripts/generate.version.js",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
     "clean": "bun scripts/clean.js",
     "dependencies:update": "cd ../.. && bun clean && bun update -i && bun install && bun clean && cd src/renderer && bun clean && bun update -i && bun install && bun clean",
