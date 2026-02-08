@@ -103,7 +103,7 @@
         <div v-else class="flex grow min-h-0">
           <div class="ml-4 mr-4 mb-4">
             <ScrollPanel class="h-full">
-              <Fieldset legend="Input parameters">
+              <Fieldset legend="Simulation inputs">
                 <InputWidget
                   v-for="(input, index) in interactiveUiJson.input"
                   v-model="interactiveInputValues[index]!"
@@ -845,7 +845,7 @@ function onTrackRun(): void {
     }
   });
 
-  // Compute the tooltip for this run, keeping in mind that some input parameters may not be visible.
+  // Compute the tooltip for this run, keeping in mind that some simulation inputs may not be visible.
 
   const tooltipLines = interactiveUiJson.value.input
     .map((input, index) => ({
