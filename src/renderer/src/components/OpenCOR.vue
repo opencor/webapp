@@ -125,6 +125,7 @@ import { electronApi } from '../common/electronApi.ts';
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 */
 import * as locCommon from '../common/locCommon.ts';
+import * as version from '../common/version.ts';
 import * as vueCommon from '../common/vueCommon.ts';
 import type IContentsComponent from '../components/ContentsComponent.vue';
 import * as locApi from '../libopencor/locApi.ts';
@@ -262,6 +263,10 @@ if (!window.locApi) {
   vue.watch(locApiInitialised, (newLocApiInitialised: boolean) => {
     if (newLocApiInitialised) {
       loadingOpencorMessageVisible.value = false;
+
+      // We are now officially loaded, so start checking for a newer version of OpenCOR.
+
+      version.startCheck();
     }
   });
 }

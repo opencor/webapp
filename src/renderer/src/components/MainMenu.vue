@@ -1,5 +1,5 @@
 <template>
-  <Menubar ref="menuBar" :model="items">
+  <Menubar ref="menuBar" :id="props.id" :model="items">
     <template #item="{ item, props }">
       <a v-bind="props.action">
         <div class="p-menubar-item-label">{{ item.label }}</div>
@@ -20,7 +20,23 @@
         </div>
       </a>
     </template>
+    <template #end>
+      <button v-if="updateAvailable" class="update-link flex mr-1 text-xs px-1.5 py-0.5 cursor-pointer rounded-sm border border-transparent bg-transparent"
+        type="button" title="Click to reload and update"
+        @click="onUpdateClick"
+      >
+        New version available!
+      </button>
+    </template>
   </Menubar>
+
+  <YesNoQuestionDialog
+    v-model:visible="updateConfirmVisible"
+    title="Update Available..."
+    :question="'Version ' + latestVersion + ' is available. Do you want to reload and update now?'"
+    @yes="onUpdate"
+    @no="updateConfirmVisible = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -30,8 +46,10 @@ import type Menubar from 'primevue/menubar';
 import * as vue from 'vue';
 
 import * as common from '../common/common.ts';
+import * as version from '../common/version.ts';
 
 const props = defineProps<{
+  id?: string;
   isActive: boolean;
   hasFiles: boolean;
   uiEnabled: boolean;
@@ -46,6 +64,7 @@ const emit = defineEmits<{
   (event: 'openSampleLorenz'): void;
   (event: 'settings'): void;
 }>();
+
 const isWindowsOrLinux = common.isWindows() || common.isLinux();
 const isMacOs = common.isMacOs();
 
@@ -136,6 +155,22 @@ const items = [
     ]
   }
 ];
+
+// Handle the click on the update link button by showing a Yes/No dialog.
+
+const updateConfirmVisible = vue.ref(false);
+const updateAvailable = version.updateAvailable;
+const latestVersion = version.latestVersion;
+
+const onUpdateClick = () => {
+  updateConfirmVisible.value = true;
+};
+
+const onUpdate = () => {
+  updateConfirmVisible.value = false;
+
+  version.reloadApp();
+};
 
 // A few things that can only be done when the component is mounted.
 
@@ -260,5 +295,14 @@ if (common.isDesktop()) {
   border-color: var(--p-content-border-color);
   background-color: var(--p-content-hover-background);
   color: var(--p-text-muted-color);
+}
+
+.update-link {
+  color: var(--p-primary-color);
+}
+
+.update-link:hover {
+  background-color: var(--p-content-hover-background);
+  border-color: var(--p-content-border-color);
 }
 </style>
