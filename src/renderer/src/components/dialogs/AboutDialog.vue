@@ -2,7 +2,7 @@
   <BaseDialog header=" " class="w-169">
     <div class="space-y-7">
       <div class="text-center">
-        <div class="text-3xl font-bold">OpenCOR {{ version }}</div>
+        <div class="text-3xl font-bold">OpenCOR {{ currentVersion }}</div>
         <div v-if="electronApi" class="text-xl italic font-bold">{{ electronApi.operatingSystem() }}</div>
         <div class="text-sm italic">Copyright {{ COPYRIGHT }}</div>
       </div>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import packageJson from '../../../package.json' with { type: 'json' };
+import { currentVersion } from '../../common/version.ts';
 
 import { COPYRIGHT } from '../../common/constants.ts';
 
@@ -49,6 +49,4 @@ import { electronApi } from '../../common/electronApi.ts';
 import * as locApi from '../../libopencor/locApi.ts';
 
 defineEmits<(event: 'close') => void>();
-
-const { version } = packageJson;
 </script>
