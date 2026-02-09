@@ -4,7 +4,7 @@ import packageJson from '../../package.json' with { type: 'json' };
 
 import { electronApi } from './electronApi.ts';
 
-const { version } = packageJson;
+const { version: currentVersion } = packageJson;
 
 // State to track whether an update is available and the latest version.
 
@@ -47,7 +47,7 @@ const checkForUpdates = async (): Promise<boolean> => {
 
     // Compare versions.
 
-    const isNewer = isNewerVersion(latestVersion.value, version);
+    const isNewer = isNewerVersion(latestVersion.value, currentVersion);
 
     updateAvailable.value = isNewer;
 
@@ -117,4 +117,4 @@ const reloadApp = (): void => {
 
 // Export the version checking functions and state.
 
-export { latestVersion, reloadApp, startCheck, updateAvailable };
+export { currentVersion, latestVersion, reloadApp, startCheck, updateAvailable };

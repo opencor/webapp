@@ -5,7 +5,7 @@
       src="../assets/logo.svg"
     />
     <div class="absolute bottom-1 left-2 text-xs text-neutral-400 dark:text-neutral-600">Copyright {{ COPYRIGHT }}</div>
-    <div class="absolute bottom-1 right-2 text-xs text-neutral-400 dark:text-neutral-600">Version {{ version }}</div>
+    <div class="absolute bottom-1 right-2 text-xs text-neutral-400 dark:text-neutral-600">Version {{ currentVersion }}</div>
   </div>
 </template>
 
@@ -18,11 +18,9 @@
  *  - Height: 257.92px + 8px = 266.92px.
  */
 
-import packageJson from '../../package.json' with { type: 'json' };
+import { currentVersion } from '../common/version.ts';
 
 import { COPYRIGHT } from '../common/constants.ts';
-
-const { version } = packageJson;
 </script>
 
 <style scoped>
