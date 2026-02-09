@@ -42,13 +42,13 @@ const props = withDefaults(
 const columnWidth = `width: calc(100% / ${props.hasUnits ? '3' : '2'});`;
 const emit = defineEmits<(event: 'propertyUpdated', index: number, newValue: number) => void>();
 
-function onCellEditComplete(event: DataTableCellEditCompleteEvent): void {
+const onCellEditComplete = (event: DataTableCellEditCompleteEvent): void => {
   const { data, newValue, field } = event;
 
   data[field] = newValue;
 
   emit('propertyUpdated', event.index, event.newValue);
-}
+};
 </script>
 
 <style scoped>

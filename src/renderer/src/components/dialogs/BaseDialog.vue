@@ -32,7 +32,7 @@ let dialogElement: HTMLElement | null = null;
 let containerElement: HTMLElement | null | undefined = null;
 let mutationObserver: MutationObserver | null = null;
 
-function checkDialogPosition() {
+const checkDialogPosition = () => {
   if (dialogElement instanceof HTMLElement && containerElement instanceof HTMLElement) {
     const dialogRect = dialogElement.getBoundingClientRect();
     const containerRect = containerElement.getBoundingClientRect();
@@ -40,9 +40,9 @@ function checkDialogPosition() {
     dialogElement.style.top = `${String(Math.max(Math.min(dialogRect.top, containerRect.bottom - dialogRect.height), containerRect.top))}px`;
     dialogElement.style.left = `${String(Math.max(Math.min(dialogRect.left, containerRect.right - dialogRect.width), containerRect.left))}px`;
   }
-}
+};
 
-function onShow() {
+const onShow = () => {
   incrementDialogs();
 
   enableDisableMainMenu(false);
@@ -61,9 +61,9 @@ function onShow() {
       checkDialogPosition();
     }
   });
-}
+};
 
-function onHide() {
+const onHide = () => {
   decrementDialogs();
 
   enableDisableMainMenu(true);
@@ -77,7 +77,7 @@ function onHide() {
       mutationObserver = null;
     }
   });
-}
+};
 </script>
 
 <script lang="ts">
@@ -93,7 +93,7 @@ interface IDialogState {
   decrementDialogs: () => void;
 }
 
-export function provideDialogState(): IDialogState {
+export const provideDialogState = (): IDialogState => {
   const activeDialogs = vue.ref(0);
   const isDialogActive = vue.computed(() => activeDialogs.value > 0);
 
@@ -115,9 +115,9 @@ export function provideDialogState(): IDialogState {
   vue.provide(DialogStateKey, state);
 
   return state;
-}
+};
 
-export function useDialogState(): IDialogState {
+export const useDialogState = (): IDialogState => {
   const state = vue.inject<IDialogState>(DialogStateKey);
 
   if (!state) {

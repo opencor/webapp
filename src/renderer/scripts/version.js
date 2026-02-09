@@ -35,13 +35,13 @@ const version = `${majorVersion}.${minorVersion}.${patchVersion}`;
 
 // Update our package.json files.
 
-function updatePackageJsonFile(filePath) {
+const updatePackageJsonFile = (filePath) => {
   const contents = JSON.parse(fs.readFileSync(filePath));
 
   contents.version = version;
 
   fs.writeFileSync(filePath, `${JSON.stringify(contents, null, 2)}\n`);
-}
+};
 
 // Perform the updates.
 

@@ -11,7 +11,7 @@ let disabledMenu: electron.Menu | null = null;
 let recentFilePaths: string[] = [];
 let hasFiles = false;
 
-export function enableDisableMainMenu(enable: boolean): void {
+export const enableDisableMainMenu = (enable: boolean): void => {
   // Build our menu, if needed.
 
   if (enable && enabledMenu) {
@@ -290,9 +290,9 @@ export function enableDisableMainMenu(enable: boolean): void {
 
     electron.Menu.setApplicationMenu(enable ? enabledMenu : disabledMenu);
   }
-}
+};
 
-export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): void {
+export const enableDisableFileCloseAndCloseAllMenuItems = (enable: boolean): void => {
   if (enabledMenu) {
     hasFiles = enable;
 
@@ -304,11 +304,11 @@ export function enableDisableFileCloseAndCloseAllMenuItems(enable: boolean): voi
       fileCloseAllMenu.enabled = hasFiles;
     }
   }
-}
+};
 
-export function updateReopenMenu(filePaths: string[]): void {
+export const updateReopenMenu = (filePaths: string[]): void => {
   enabledMenu = null;
   recentFilePaths = filePaths;
 
   enableDisableMainMenu(true);
-}
+};

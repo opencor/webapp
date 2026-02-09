@@ -59,6 +59,19 @@ const emit = defineEmits<{
   (event: 'marginsUpdated', newMargins: IGraphPanelMargins): void;
   (event: 'resetMargins'): void;
 }>();
+
+const resize = (): Promise<unknown> => {
+  return Promise.resolve()
+    .then(() => {
+      if (mainDiv.value) {
+        Plotly.Plots.resize(mainDiv.value);
+      }
+    })
+    .then(() => {
+      updateMarginsAsync();
+    });
+};
+
 defineExpose({
   resize
 });
@@ -134,7 +147,7 @@ const contextMenuItems = vue.computed<MenuItem[]>(() => [
   }
 ]);
 
-function onContextMenu(event: MouseEvent): void {
+const onContextMenu = (event: MouseEvent): void => {
   event.preventDefault();
 
   window.dispatchEvent(
@@ -146,9 +159,9 @@ function onContextMenu(event: MouseEvent): void {
   );
 
   contextMenu.value?.show(event);
-}
+};
 
-function zoomIn(): void {
+const zoomIn = (): void => {
   if (!mainDiv.value) {
     return;
   }
@@ -173,9 +186,9 @@ function zoomIn(): void {
   });
 
   emit('resetMargins');
-}
+};
 
-function zoomOut(): void {
+const zoomOut = (): void => {
   if (!mainDiv.value) {
     return;
   }
@@ -200,9 +213,9 @@ function zoomOut(): void {
   });
 
   emit('resetMargins');
-}
+};
 
-function resetZoom(): void {
+const resetZoom = (): void => {
   if (!mainDiv.value) {
     return;
   }
@@ -213,9 +226,9 @@ function resetZoom(): void {
   });
 
   emit('resetMargins');
-}
+};
 
-async function copyToClipboard(): Promise<void> {
+const copyToClipboard = async (): Promise<void> => {
   if (!mainDiv.value) {
     return;
   }
@@ -238,9 +251,9 @@ async function copyToClipboard(): Promise<void> {
   } catch (error: unknown) {
     console.error('Failed to copy to clipboard:', common.formatError(error));
   }
-}
+};
 
-async function exportToImage(format: 'jpeg' | 'png' | 'svg' | 'webp'): Promise<void> {
+const exportToImage = async (format: 'jpeg' | 'png' | 'svg' | 'webp'): Promise<void> => {
   if (!mainDiv.value) {
     return;
   }
@@ -255,9 +268,9 @@ async function exportToImage(format: 'jpeg' | 'png' | 'svg' | 'webp'): Promise<v
   } catch (error: unknown) {
     console.error('Failed to export image:', common.formatError(error));
   }
-}
+};
 
-async function exportToCsv(): Promise<void> {
+const exportToCsv = async (): Promise<void> => {
   // Make sure that we have at least one trace to export.
 
   const firstTrace = props.data.traces[0];
@@ -369,7 +382,7 @@ async function exportToCsv(): Promise<void> {
       progressMessage.hide();
     }
   }
-}
+};
 
 // Plotly theme and layout data generation.
 
@@ -390,10 +403,10 @@ interface IThemeData {
   yaxis: IAxisThemeData;
 }
 
-function themeData(): IThemeData {
+const themeData = (): IThemeData => {
   // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 
-  function axisThemeData(): IAxisThemeData {
+  const axisThemeData = (): IAxisThemeData => {
     return {
       zerolinecolor: theme.useLightMode() ? '#94a3b8' : '#71717a', // --p-surface-400 / --p-surface-500
       gridcolor: theme.useLightMode() ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
@@ -401,7 +414,7 @@ function themeData(): IThemeData {
         gridcolor: theme.useLightMode() ? '#f1f5f9' : '#27272a' // --p-surface-100 / --p-surface-800
       }
     };
-  }
+  };
 
   return {
     paper_bgcolor: theme.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
@@ -413,7 +426,7 @@ function themeData(): IThemeData {
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };
-}
+};
 
 interface IAxesDataAxis {
   automargin: boolean;
@@ -432,7 +445,7 @@ interface IAxesData {
   yaxis: IAxesDataAxis;
 }
 
-function axesData(): IAxesData {
+const axesData = (): IAxesData => {
   const axisTickFontSize = 10;
 
   return {
@@ -459,17 +472,17 @@ function axesData(): IAxesData {
       }
     }
   };
-}
+};
 
-function resolvedMargin(propValue: number | undefined, compValue: number): number {
+const resolvedMargin = (propValue: number | undefined, compValue: number): number => {
   if (propValue !== undefined) {
     return propValue;
   }
 
   return compValue === -1 ? 0 : compValue;
-}
+};
 
-function compMargins(): IGraphPanelMargins {
+const compMargins = (): IGraphPanelMargins => {
   // Retrieve the width of the Y ticks.
 
   const yTicks = mainDiv.value?.querySelectorAll('.ytick text');
@@ -519,9 +532,9 @@ function compMargins(): IGraphPanelMargins {
     left: leftMargin ? Math.ceil(leftMargin + 5) : 0,
     right: rightMargin ? Math.ceil(rightMargin + 5) : 0
   };
-}
+};
 
-function updateMarginsAsync(): void {
+const updateMarginsAsync = (): void => {
   // Skip if we are already updating our margins.
 
   if (updatingMargins) {
@@ -561,9 +574,9 @@ function updateMarginsAsync(): void {
 
     updatingMargins = false;
   });
-}
+};
 
-function updatePlot(): void {
+const updatePlot = (): void => {
   // Reset our margins if they are not overridden.
 
   if (!props.margins) {
@@ -628,7 +641,7 @@ function updatePlot(): void {
 
       updateMarginsAsync();
     });
-}
+};
 
 interface IPlotlyHTMLElement extends HTMLElement {
   on(event: string, callback: (...args: unknown[]) => void): void;
@@ -732,16 +745,4 @@ vue.watch(
   },
   { immediate: true }
 );
-
-function resize(): Promise<unknown> {
-  return Promise.resolve()
-    .then(() => {
-      if (mainDiv.value) {
-        Plotly.Plots.resize(mainDiv.value);
-      }
-    })
-    .then(() => {
-      updateMarginsAsync();
-    });
-}
 </script>

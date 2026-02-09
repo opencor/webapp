@@ -886,19 +886,19 @@ const uiJsonIssues = vue.computed(() => {
   return validateUiJson(localSettings.value.interactive.uiJson);
 });
 
-function plotTraceCount(plot: locApi.IUiJsonOutputPlot): number {
+const plotTraceCount = (plot: locApi.IUiJsonOutputPlot): number => {
   return 1 + (plot.additionalTraces?.length ?? 0);
-}
+};
 
-function traceNameTooltip(): string {
+const traceNameTooltip = (): string => {
   return `
     You can provide a name for the trace or leave it empty to have a name generated automatically as follows: <strong>&lt;Y value&gt; <i>vs.</i> &lt;X value&gt;</strong>.<br />
     <br />
     If you provide a name, you can use HTML tags for formatting (e.g., <code>&lt;em&gt;I&lt;sub&gt;Na&lt;/sub&gt;&lt;/em&gt;</code> will render as <em>I<sub>Na</sub></em>).
   `;
-}
+};
 
-function xyParameterValueTooltip(value: string, idType: string, idPrefix: string): string {
+const xyParameterValueTooltip = (value: string, idType: string, idPrefix: string): string => {
   return `
     You can provide the value of the ${value} using an algebraic expression that includes ${idType} IDs.<br />
     <br />
@@ -906,20 +906,24 @@ function xyParameterValueTooltip(value: string, idType: string, idPrefix: string
     <br />
     You can also use mathematical functions and operators in the expression (e.g., <code>2 * ${idPrefix}_1 + sin(${idPrefix}_2)</code>).
   `;
-}
+};
 
-function xyValueTooltip(xAxis: boolean): string {
+const xyValueTooltip = (xAxis: boolean): string => {
   return xyParameterValueTooltip(`${xAxis ? 'X' : 'Y'} axis`, 'simulation data', 'simulation_data');
-}
+};
 
-function parameterValueTooltip(): string {
+const parameterValueTooltip = (): string => {
   return xyParameterValueTooltip('model parameter', 'model input', 'model_input');
-}
+};
 
-function traceName(plot: locApi.IUiJsonOutputPlot, traceIndex: number): string {
-  function actualTraceName(name: string | undefined, xValue: string | undefined, yValue: string | undefined): string {
+const traceName = (plot: locApi.IUiJsonOutputPlot, traceIndex: number): string => {
+  const actualTraceName = (
+    name: string | undefined,
+    xValue: string | undefined,
+    yValue: string | undefined
+  ): string => {
     return name || (xValue && yValue ? `${yValue} <i>vs.</i> ${xValue}` : '???');
-  }
+  };
 
   if (traceIndex === -1) {
     return actualTraceName(plot.name, plot.xValue, plot.yValue);
@@ -928,9 +932,9 @@ function traceName(plot: locApi.IUiJsonOutputPlot, traceIndex: number): string {
   const additionalTrace = plot.additionalTraces?.[traceIndex];
 
   return actualTraceName(additionalTrace?.name, additionalTrace?.xValue, additionalTrace?.yValue);
-}
+};
 
-function addInput() {
+const addInput = () => {
   localSettings.value.interactive.uiJson.input.push({
     id: `model_input_${localSettings.value.interactive.uiJson.input.length + 1}`,
     name: `Model input #${localSettings.value.interactive.uiJson.input.length + 1}`,
@@ -938,13 +942,13 @@ function addInput() {
     minimumValue: 0,
     maximumValue: 10
   });
-}
+};
 
-function removeInput(index: number) {
+const removeInput = (index: number) => {
   localSettings.value.interactive.uiJson.input.splice(index, 1);
-}
+};
 
-function toggleInputType(index: number, type: string) {
+const toggleInputType = (index: number, type: string) => {
   const input = localSettings.value.interactive.uiJson.input[index];
 
   if (!input) {
@@ -973,9 +977,9 @@ function toggleInputType(index: number, type: string) {
       maximumValue: 10
     };
   }
-}
+};
 
-function addPossibleValue(inputIndex: number) {
+const addPossibleValue = (inputIndex: number) => {
   const input = localSettings.value.interactive.uiJson.input[inputIndex];
 
   if (input && locApi.isDiscreteInput(input)) {
@@ -986,28 +990,28 @@ function addPossibleValue(inputIndex: number) {
       value: maxValue + 1
     });
   }
-}
+};
 
-function removePossibleValue(inputIndex: number, possibleValueIndex: number) {
+const removePossibleValue = (inputIndex: number, possibleValueIndex: number) => {
   const input = localSettings.value.interactive.uiJson.input[inputIndex];
 
   if (input && locApi.isDiscreteInput(input)) {
     input.possibleValues.splice(possibleValueIndex, 1);
   }
-}
+};
 
-function addSimulationData() {
+const addSimulationData = () => {
   localSettings.value.interactive.uiJson.output.data.push({
     id: `simulation_data`,
     name: 'component/variable'
   });
-}
+};
 
-function removeSimulationData(index: number) {
+const removeSimulationData = (index: number) => {
   localSettings.value.interactive.uiJson.output.data.splice(index, 1);
-}
+};
 
-function addPlot() {
+const addPlot = () => {
   if (localSettings.value.interactive.uiJson.output.plots.length < 9) {
     localSettings.value.interactive.uiJson.output.plots.push({
       name: '',
@@ -1018,13 +1022,13 @@ function addPlot() {
       additionalTraces: []
     });
   }
-}
+};
 
-function removePlot(index: number) {
+const removePlot = (index: number) => {
   localSettings.value.interactive.uiJson.output.plots.splice(index, 1);
-}
+};
 
-function addTrace(plotIndex: number) {
+const addTrace = (plotIndex: number) => {
   const plot = localSettings.value.interactive.uiJson.output.plots[plotIndex];
 
   if (plot) {
@@ -1037,9 +1041,9 @@ function addTrace(plotIndex: number) {
       yValue: 'y_id'
     });
   }
-}
+};
 
-function removeTrace(plotIndex: number, traceIndex: number) {
+const removeTrace = (plotIndex: number, traceIndex: number) => {
   const plot = localSettings.value.interactive.uiJson.output.plots[plotIndex];
 
   if (!plot) {
@@ -1068,28 +1072,28 @@ function removeTrace(plotIndex: number, traceIndex: number) {
   if (traceIndex >= 0 && plot.additionalTraces && plot.additionalTraces.length > 0) {
     plot.additionalTraces.splice(traceIndex, 1);
   }
-}
+};
 
-function addParameter() {
+const addParameter = () => {
   localSettings.value.interactive.uiJson.parameters.push({
     name: 'component/variable',
     value: 'input_id'
   });
-}
+};
 
-function removeParameter(index: number) {
+const removeParameter = (index: number) => {
   localSettings.value.interactive.uiJson.parameters.splice(index, 1);
-}
+};
 
-function resetUxSettings() {
+const resetUxSettings = () => {
   activeTab.value = DEFAULT_TAB;
   activeInteractiveTab.value = DEFAULT_INTERACTIVE_TAB;
 
   showSimulationSettingsIssuesPanel.value = false;
   showUiJsonIssuesPanel.value = false;
-}
+};
 
-function onOk() {
+const onOk = () => {
   // Reset our UX settings.
 
   resetUxSettings();
@@ -1112,9 +1116,9 @@ function onOk() {
       liveUpdates: localSettings.value.miscellaneous.liveUpdates
     }
   });
-}
+};
 
-function onCancel() {
+const onCancel = () => {
   // Reset our local settings to the original settings and close the dialog.
 
   localSettings.value = JSON.parse(JSON.stringify(props.settings));
@@ -1126,25 +1130,25 @@ function onCancel() {
   // Close the dialog.
 
   emit('close');
-}
+};
 
-function toggleSimulationSettingsIssues(event: Event) {
+const toggleSimulationSettingsIssues = (event: Event) => {
   simulationSettingsIssuesPopup.value?.toggle(event);
 
   showSimulationSettingsIssuesPanel.value = !showSimulationSettingsIssuesPanel.value;
-}
+};
 
-function toggleSolversSettingsIssues(event: Event) {
+const toggleSolversSettingsIssues = (event: Event) => {
   solversSettingsIssuesPopup.value?.toggle(event);
 
   showSolversSettingsIssuesPanel.value = !showSolversSettingsIssuesPanel.value;
-}
+};
 
-function toggleUiJsonIssues(event: Event) {
+const toggleUiJsonIssues = (event: Event) => {
   uiJsonIssuesPopup.value?.toggle(event);
 
   showUiJsonIssuesPanel.value = !showUiJsonIssuesPanel.value;
-}
+};
 </script>
 
 <style scoped>

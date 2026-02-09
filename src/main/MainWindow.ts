@@ -18,7 +18,7 @@ import type { SplashScreenWindow } from './SplashScreenWindow.ts';
 autoUpdater.autoDownload = false;
 autoUpdater.logger = null;
 
-export function checkForUpdates(atStartup: boolean): void {
+export const checkForUpdates = (atStartup: boolean): void => {
   // Check for updates, if requested and if OpenCOR is packaged.
 
   if (isPackaged() && electronConf.get('settings.general.checkForUpdatesAtStartup')) {
@@ -37,13 +37,13 @@ export function checkForUpdates(atStartup: boolean): void {
         MainWindow.instance?.webContents.send('update-check-error', formatError(error));
       });
   }
-}
+};
 
 autoUpdater.on('download-progress', (info: ProgressInfo) => {
   MainWindow.instance?.webContents.send('update-download-progress', info.percent);
 });
 
-export function downloadAndInstallUpdate(): void {
+export const downloadAndInstallUpdate = (): void => {
   autoUpdater
     .downloadUpdate()
     .then(() => {
@@ -52,23 +52,23 @@ export function downloadAndInstallUpdate(): void {
     .catch((error: unknown) => {
       MainWindow.instance?.webContents.send('update-download-error', formatError(error));
     });
-}
+};
 
-export function installUpdateAndRestart(): void {
+export const installUpdateAndRestart = (): void => {
   autoUpdater.quitAndInstall(true, true);
-}
+};
 
-export function loadSettings(): ISettings {
+export const loadSettings = (): ISettings => {
   return electronConf.get('settings');
-}
+};
 
-export function saveSettings(settings: ISettings): void {
+export const saveSettings = (settings: ISettings): void => {
   electronConf.set('settings', settings);
-}
+};
 
 let _resetAll = false;
 
-export function resetAll(): void {
+export const resetAll = (): void => {
   _resetAll = true;
 
   /* TODO: enable once our GitHub integration is fully ready.
@@ -77,17 +77,17 @@ export function resetAll(): void {
 
   electron.app.relaunch();
   electron.app.quit();
-}
+};
 
 let recentFilePaths: string[] = [];
 
-export function clearRecentFiles(): void {
+export const clearRecentFiles = (): void => {
   recentFilePaths = [];
 
   updateReopenMenu(recentFilePaths);
-}
+};
 
-export function fileClosed(filePath: string): void {
+export const fileClosed = (filePath: string): void => {
   // Make sure that the file is not a COMBINE archive that was opened using a data URL.
 
   if (isDataUrlOmexFileName(filePath)) {
@@ -98,15 +98,15 @@ export function fileClosed(filePath: string): void {
   recentFilePaths = recentFilePaths.slice(0, 10);
 
   updateReopenMenu(recentFilePaths);
-}
+};
 
-export function fileIssue(filePath: string): void {
+export const fileIssue = (filePath: string): void => {
   recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath);
 
   updateReopenMenu(recentFilePaths);
-}
+};
 
-export function fileOpened(filePath: string): void {
+export const fileOpened = (filePath: string): void => {
   recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath);
 
   updateReopenMenu(recentFilePaths);
@@ -116,23 +116,23 @@ export function fileOpened(filePath: string): void {
   // are no more files to reopen.
 
   MainWindow.instance?.reopenFilePathsAndSelectFilePath();
-}
+};
 
 let openedFilePaths: string[] = [];
 
-export function filesOpened(filePaths: string[]): void {
+export const filesOpened = (filePaths: string[]): void => {
   openedFilePaths = filePaths;
 
   if (!filePaths.length) {
     selectedFilePath = null;
   }
-}
+};
 
 let selectedFilePath: string | null = null;
 
-export function fileSelected(filePath: string): void {
+export const fileSelected = (filePath: string): void => {
   selectedFilePath = filePath;
-}
+};
 
 export class MainWindow extends ApplicationWindow {
   // Properties.
@@ -299,7 +299,7 @@ export class MainWindow extends ApplicationWindow {
     // so that the OAuth flow can proceed.
 
     this.webContents.setWindowOpenHandler((details) => {
-      function isFirebaseOauthPopup(url: string): boolean {
+      const isFirebaseOauthPopup = (url: string): boolean => {
         try {
           const parsedUrl = new URL(url);
 
@@ -311,7 +311,7 @@ export class MainWindow extends ApplicationWindow {
         } catch {
           return false;
         }
-      }
+      };
 
       if (isFirebaseOauthPopup(details.url)) {
         return {
