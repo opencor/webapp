@@ -18,7 +18,7 @@
 
           <ol class="list-decimal list-inside ml-2">
             <li>
-              <span class="font-bold">OpenCOR:</span> a desktop application that can be run on
+              <span class="font-bold"><a href="https://github.com/opencor/webapp/releases/latest" target="_blank" rel="noopener">OpenCOR</a>:</span> a desktop application that can be run on
               <a href="https://en.wikipedia.org/wiki/List_of_Intel_processors" target="_blank" rel="noopener">Intel</a>-based and
               <a href="https://en.wikipedia.org/wiki/ARM_architecture_family" target="_blank" rel="noopener">ARM</a>-based
               <a href="https://en.wikipedia.org/wiki/Microsoft_Windows" target="_blank" rel="noopener">Windows</a>,
@@ -26,7 +26,7 @@
               <a href="https://en.wikipedia.org/wiki/MacOS" target="_blank" rel="noopener">macOS</a> machines; and
             </li>
             <li>
-              <span class="font-bold">OpenCOR's Web app:</span> a
+              <span class="font-bold"><a href="https://opencor.ws/app" target="_blank" rel="noopener">OpenCOR's Web app</a>:</span> a
               <a href="https://en.wikipedia.org/wiki/Web_application" target="_blank" rel="noopener">Web app</a> that
               can be run on a Web browser.
             </li>
