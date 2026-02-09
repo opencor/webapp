@@ -191,7 +191,7 @@ vue.onMounted(() => {
 
     // Close the menu when clicking clicking on the menubar but outside of the main menu items.
 
-    function onClick(event: MouseEvent) {
+    const onClick = (event: MouseEvent) => {
       const target = event.target as Node;
 
       if (
@@ -201,7 +201,7 @@ vue.onMounted(() => {
       ) {
         menuBar.value?.hide();
       }
-    }
+    };
 
     document.addEventListener('click', onClick);
 

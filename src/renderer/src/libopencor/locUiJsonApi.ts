@@ -65,15 +65,15 @@ export interface IUiJsonParameter {
   value: string;
 }
 
-export function isScalarInput(input: IUiJsonInput): input is IUiJsonScalarInput {
+export const isScalarInput = (input: IUiJsonInput): input is IUiJsonScalarInput => {
   return 'maximumValue' in input && 'minimumValue' in input;
-}
+};
 
-export function isDiscreteInput(input: IUiJsonInput): input is IUiJsonDiscreteInput {
+export const isDiscreteInput = (input: IUiJsonInput): input is IUiJsonDiscreteInput => {
   return 'possibleValues' in input;
-}
+};
 
-export function cleanUiJson(uiJson: IUiJson): IUiJson {
+export const cleanUiJson = (uiJson: IUiJson): IUiJson => {
   const cleanUiJsonRec = (value: unknown): unknown => {
     if (value === undefined || value === null || (typeof value === 'string' && value === '')) {
       return undefined;
@@ -101,9 +101,9 @@ export function cleanUiJson(uiJson: IUiJson): IUiJson {
   };
 
   return cleanUiJsonRec(uiJson) as IUiJson;
-}
+};
 
-export function validateUiJson(uiJson: IUiJson | undefined): IIssue[] {
+export const validateUiJson = (uiJson: IUiJson | undefined): IIssue[] => {
   // Make sure that we have some UI JSON.
 
   if (!uiJson) {
@@ -542,4 +542,4 @@ export function validateUiJson(uiJson: IUiJson | undefined): IIssue[] {
   }
 
   return res;
-}
+};

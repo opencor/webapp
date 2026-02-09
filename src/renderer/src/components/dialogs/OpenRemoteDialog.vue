@@ -22,7 +22,7 @@ const emit = defineEmits<{
 }>();
 const url = vue.ref<string>('');
 
-function emitOpenRemote(): void {
+const emitOpenRemote = (): void => {
   if (!url.value) {
     return;
   }
@@ -30,11 +30,11 @@ function emitOpenRemote(): void {
   emit('openRemote', decodeURI(url.value));
 
   emitClose();
-}
+};
 
-function emitClose(): void {
+const emitClose = (): void => {
   url.value = '';
 
   emit('close');
-}
+};
 </script>

@@ -71,7 +71,7 @@ vue.watch(
 
 // Some methods to handle a scalar value using an input component and a slider.
 
-function emitChange(newValue: number) {
+const emitChange = (newValue: number) => {
   void vue.nextTick(() => {
     value.value = newValue;
 
@@ -79,7 +79,7 @@ function emitChange(newValue: number) {
 
     emits('change', props.name, newValue);
   });
-}
+};
 
 interface ISelectChangeEvent {
   value: {
@@ -88,13 +88,13 @@ interface ISelectChangeEvent {
   };
 }
 
-function selectChange(event: ISelectChangeEvent) {
+const selectChange = (event: ISelectChangeEvent) => {
   if (event.value.value !== oldValue) {
     emitChange(event.value.value);
   }
-}
+};
 
-function inputTextValueUpdated(newValue: number) {
+const inputTextValueUpdated = (newValue: number) => {
   if (newValue !== oldValue) {
     let constrainedValue = newValue;
 
@@ -108,13 +108,13 @@ function inputTextValueUpdated(newValue: number) {
 
     emitChange(constrainedValue);
   }
-}
+};
 
-function sliderChange(newValue: number | number[]) {
+const sliderChange = (newValue: number | number[]) => {
   const valueToEmit = Array.isArray(newValue) ? newValue[0] : newValue;
 
   if (valueToEmit !== undefined && valueToEmit !== oldValue) {
     emitChange(valueToEmit);
   }
-}
+};
 </script>

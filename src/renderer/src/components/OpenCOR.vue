@@ -150,9 +150,9 @@ const octokit = vue.ref<Octokit | null>(null);
 
 // Keep track of which instance of OpenCOR is currently active.
 
-function activateInstance(): void {
+const activateInstance = (): void => {
   activeInstanceUid.value = String(crtInstance?.uid);
-}
+};
 
 const compIsActive = vue.computed(() => {
   return activeInstanceUid.value === String(crtInstance?.uid);
@@ -312,10 +312,10 @@ electronApi?.onAction((action: string) => {
   handleAction(action);
 });
 
-function handleAction(action: string): void {
-  function isAction(actionName: string, expectedActionName: string): boolean {
+const handleAction = (action: string): void => {
+  const isAction = (actionName: string, expectedActionName: string): boolean => {
     return actionName.localeCompare(expectedActionName, undefined, { sensitivity: 'base' }) === 0;
-  }
+  };
 
   const index = action.indexOf('/');
   const actionName = index !== -1 ? action.substring(0, index) : action;
@@ -345,7 +345,7 @@ function handleAction(action: string): void {
       });
     }
   }
-}
+};
 
 // Enable/disable the UI from Electron.
 
@@ -375,10 +375,10 @@ const updateErrorVisible = vue.ref<boolean>(false);
 const updateErrorTitle = vue.ref<string>('');
 const updateErrorIssue = vue.ref<string>('');
 
-function onUpdateErrorDialogClose(): void {
+const onUpdateErrorDialogClose = (): void => {
   updateErrorVisible.value = false;
   updateDownloadProgressVisible.value = false;
-}
+};
 
 const updateAvailableVisible = vue.ref<boolean>(false);
 const updateDownloadProgressVisible = vue.ref<boolean>(false);
@@ -390,13 +390,13 @@ electronApi?.onUpdateAvailable((version: string) => {
   updateVersion.value = version;
 });
 
-function onDownloadAndInstall(): void {
+const onDownloadAndInstall = (): void => {
   updateDownloadPercent.value = 0; // Just to be on the safe side.
   updateDownloadProgressVisible.value = true;
   updateAvailableVisible.value = false;
 
   electronApi?.downloadAndInstallUpdate();
-}
+};
 
 electronApi?.onUpdateDownloadError((issue: string) => {
   updateErrorTitle.value = 'Downloading Update...';
@@ -428,7 +428,7 @@ electronApi?.onUpdateCheckError((issue: string) => {
 
 // Handle errors.
 
-function onError(message: string): void {
+const onError = (message: string): void => {
   toast.add({
     severity: 'error',
     group: toastId.value,
@@ -436,7 +436,7 @@ function onError(message: string): void {
     detail: message,
     life: TOAST_LIFE
   });
-}
+};
 
 // About dialog.
 
@@ -446,13 +446,13 @@ electronApi?.onAbout(() => {
   onAboutMenu();
 });
 
-function onAboutMenu(): void {
+const onAboutMenu = (): void => {
   if (props.omex) {
     return;
   }
 
   aboutVisible.value = true;
-}
+};
 
 // Settings dialog.
 
@@ -462,19 +462,19 @@ electronApi?.onSettings(() => {
   onSettingsMenu();
 });
 
-function onSettingsMenu(): void {
+const onSettingsMenu = (): void => {
   if (props.omex) {
     return;
   }
 
   settingsVisible.value = true;
-}
+};
 
 // Open a file.
 
 let globalOmexDataUrlCounter = 0;
 
-function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void {
+const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void => {
   // Check whether we were passed a ZIP-CellML data URL.
 
   let cellmlDataUrlFileName: string = '';
@@ -607,11 +607,11 @@ function openFile(fileFilePathOrFileContents: string | Uint8Array | File): void 
         electronApi?.fileIssue(filePath);
       });
   });
-}
+};
 
 // Open file(s) dialog.
 
-function onChange(event: Event): void {
+const onChange = (event: Event): void => {
   // Open the selected file(s).
 
   const input = event.target as HTMLInputElement;
@@ -626,21 +626,21 @@ function onChange(event: Event): void {
   // Note: this is needed to ensure that selecting the same file(s) again will trigger the change event.
 
   input.value = '';
-}
+};
 
 // Drag and drop.
 
 const dragAndDropCounter = vue.ref<number>(0);
 
-function onDragEnter(): void {
+const onDragEnter = (): void => {
   if (!compUiEnabled.value || props.omex) {
     return;
   }
 
   dragAndDropCounter.value += 1;
-}
+};
 
-function onDrop(event: DragEvent): void {
+const onDrop = (event: DragEvent): void => {
   if (!dragAndDropCounter.value) {
     return;
   }
@@ -654,15 +654,15 @@ function onDrop(event: DragEvent): void {
       openFile(file);
     }
   }
-}
+};
 
-function onDragLeave(): void {
+const onDragLeave = (): void => {
   if (!dragAndDropCounter.value) {
     return;
   }
 
   dragAndDropCounter.value -= 1;
-}
+};
 
 // Open.
 
@@ -670,13 +670,13 @@ electronApi?.onOpen((filePath: string) => {
   openFile(filePath);
 });
 
-function onOpenMenu(): void {
+const onOpenMenu = (): void => {
   if (props.omex) {
     return;
   }
 
   files.value?.click();
-}
+};
 
 // Open remote.
 
@@ -686,22 +686,22 @@ electronApi?.onOpenRemote(() => {
   openRemoteVisible.value = true;
 });
 
-function onOpenRemoteMenu(): void {
+const onOpenRemoteMenu = (): void => {
   if (props.omex) {
     return;
   }
 
   openRemoteVisible.value = true;
-}
+};
 
-function onOpenRemote(url: string): void {
+const onOpenRemote = (url: string): void => {
   // Note: no matter whether this is OpenCOR or OpenCOR's Web app, we always retrieve the file contents of a remote
   //       file. We could, in OpenCOR, rely on libOpenCOR to retrieve it for us, but this would block the UI. To
   //       retrieve the file here means that it is done asynchronously, which in turn means that the UI is not blocked
   //       and that we can show a spinning wheel to indicate that something is happening.
 
   openFile(url);
-}
+};
 
 // Open sample Lorenz.
 
@@ -709,13 +709,13 @@ electronApi?.onOpenSampleLorenz(() => {
   onOpenSampleLorenzMenu();
 });
 
-function onOpenSampleLorenzMenu(): void {
+const onOpenSampleLorenzMenu = (): void => {
   if (props.omex) {
     return;
   }
 
   openFile('https://github.com/opencor/webapp/raw/refs/heads/main/tests/models/ui/lorenz.omex');
-}
+};
 
 // Close.
 
@@ -723,13 +723,13 @@ electronApi?.onClose(() => {
   onCloseMenu();
 });
 
-function onCloseMenu(): void {
+const onCloseMenu = (): void => {
   if (props.omex) {
     return;
   }
 
   contents.value?.closeCurrentFile();
-}
+};
 
 // Close all.
 
@@ -737,13 +737,13 @@ electronApi?.onCloseAll(() => {
   onCloseAllMenu();
 });
 
-function onCloseAllMenu(): void {
+const onCloseAllMenu = (): void => {
   if (props.omex) {
     return;
   }
 
   contents.value?.closeAllFiles();
-}
+};
 
 // Reset all.
 
@@ -753,9 +753,9 @@ electronApi?.onResetAll(() => {
   resetAllVisible.value = true;
 });
 
-function onResetAll(): void {
+const onResetAll = (): void => {
   electronApi?.resetAll();
-}
+};
 
 // Select.
 
@@ -886,7 +886,7 @@ vue.watch(compBlockUiEnabled, (newCompBlockUiEnabled: boolean) => {
 
 const disconnectFromGitHubVisible = vue.ref<boolean>(false);
 
-async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
+const deleteGitHubAccessToken = async (silent: boolean = false): Promise<void> => {
   if (!electronApi) {
     return;
   }
@@ -906,10 +906,10 @@ async function deleteGitHubAccessToken(silent: boolean = false): Promise<void> {
       });
     }
   }
-}
+};
 
 /* TODO: enable once our GitHub integration is fully ready.
-async function loadGitHubAccessToken(): Promise<void> {
+const loadGitHubAccessToken = async (): Promise<void> => {
   if (!electronApi || props.omex || !firebaseConfig) {
     return;
   }
@@ -939,9 +939,9 @@ async function loadGitHubAccessToken(): Promise<void> {
   } finally {
     connectingToGitHub.value = false;
   }
-}
+};
 
-async function saveGitHubAccessToken(accessToken: string): Promise<void> {
+const saveGitHubAccessToken = async (accessToken: string): Promise<void> => {
   if (!electronApi) {
     return;
   }
@@ -967,9 +967,9 @@ async function saveGitHubAccessToken(accessToken: string): Promise<void> {
       life: TOAST_LIFE
     });
   }
-}
+};
 
-async function checkGitHubAccessToken(accessToken: string): Promise<void> {
+const checkGitHubAccessToken = async (accessToken: string): Promise<void> => {
   const client = new Octokit({ auth: accessToken });
   const user = await client.rest.users.getAuthenticated();
 
@@ -990,9 +990,9 @@ async function checkGitHubAccessToken(accessToken: string): Promise<void> {
   } catch (error: unknown) {
     console.warn(`Failed to retrieve repositories for user ${user.data.login}:`, error);
   }
-}
+};
 
-async function onDisconnectFromGitHub(): Promise<void> {
+const onDisconnectFromGitHub = async (): Promise<void> => {
   try {
     await firebase.auth().signOut();
 
@@ -1014,9 +1014,9 @@ async function onDisconnectFromGitHub(): Promise<void> {
   } finally {
     disconnectFromGitHubVisible.value = false;
   }
-}
+};
 
-async function onGitHubButtonClick(): Promise<void> {
+const onGitHubButtonClick = async (): Promise<void> => {
   if (octokit.value) {
     disconnectFromGitHubVisible.value = true;
 

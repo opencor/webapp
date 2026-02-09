@@ -14,7 +14,7 @@ export interface IDataUriInfo {
   error?: string;
 }
 
-function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: string): IDataUriInfo {
+const zipDataFromDataUrl = (dataUrl: string | Uint8Array | File, mimeType: string): IDataUriInfo => {
   // Make sure that we have a string data URL.
 
   if (dataUrl instanceof Uint8Array || dataUrl instanceof File) {
@@ -64,9 +64,9 @@ function zipDataFromDataUrl(dataUrl: string | Uint8Array | File, mimeType: strin
     res: true,
     data
   };
-}
+};
 
-export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Promise<IDataUriInfo> {
+export const zipCellmlDataUrl = async (dataUrl: string | Uint8Array | File): Promise<IDataUriInfo> => {
   // Try to retrieve a CellML file from the given data URL.
 
   const mimeType = 'application/x.vnd.zip-cellml+zip';
@@ -126,9 +126,9 @@ export async function zipCellmlDataUrl(dataUrl: string | Uint8Array | File): Pro
   return {
     res: false
   };
-}
+};
 
-export function combineArchiveDataUrl(dataUrl: string | Uint8Array | File): IDataUriInfo {
+export const combineArchiveDataUrl = (dataUrl: string | Uint8Array | File): IDataUriInfo => {
   // Try to retrieve a COMBINE archive from the given data URL.
 
   const mimeType = 'application/zip';
@@ -150,17 +150,17 @@ export function combineArchiveDataUrl(dataUrl: string | Uint8Array | File): IDat
   return {
     res: false
   };
-}
+};
 
-export function isRemoteFilePath(filePath: string): boolean {
+export const isRemoteFilePath = (filePath: string): boolean => {
   return filePath.startsWith('http://') || filePath.startsWith('https://');
-}
+};
 
-export function filePath(
+export const filePath = (
   fileFilePathOrFileContents: string | Uint8Array | File,
   dataUrlFileName: string,
   dataUrlCounter: number
-): string {
+): string => {
   return dataUrlFileName
     ? dataUrlFileName
     : dataUrlCounter
@@ -172,13 +172,13 @@ export function filePath(
         : typeof fileFilePathOrFileContents === 'string'
           ? fileFilePathOrFileContents
           : sha256(fileFilePathOrFileContents);
-}
+};
 
-export function file(
+export const file = (
   fileFilePathOrFileContents: string | Uint8Array | File,
   dataUrlFileName: string,
   dataUrlCounter: number
-): Promise<locApi.File> {
+): Promise<locApi.File> => {
   if (typeof fileFilePathOrFileContents === 'string') {
     if (isRemoteFilePath(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
@@ -257,7 +257,7 @@ export function file(
         reject(new Error(formatError(error)));
       });
   });
-}
+};
 
 // A method to retrieve the simulation data information for a given name from an instance task.
 
@@ -276,7 +276,7 @@ export interface ISimulationDataInfo {
   index: number;
 }
 
-export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: string): ISimulationDataInfo {
+export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: string): ISimulationDataInfo => {
   if (!name) {
     return {
       type: ESimulationDataInfoType.UNKNOWN,
@@ -340,11 +340,11 @@ export function simulationDataInfo(instanceTask: locApi.SedInstanceTask, name: s
     type: ESimulationDataInfoType.UNKNOWN,
     index: -1
   };
-}
+};
 
 // A method to retrieve the simulation data for a given name from an instance task.
 
-export function simulationData(instanceTask: locApi.SedInstanceTask, info: ISimulationDataInfo): Float64Array {
+export const simulationData = (instanceTask: locApi.SedInstanceTask, info: ISimulationDataInfo): Float64Array => {
   switch (info.type) {
     case ESimulationDataInfoType.VOI:
       return instanceTask.voi();
@@ -361,4 +361,4 @@ export function simulationData(instanceTask: locApi.SedInstanceTask, info: ISimu
     default:
       return [];
   }
-}
+};

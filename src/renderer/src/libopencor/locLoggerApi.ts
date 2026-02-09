@@ -21,7 +21,7 @@ export interface IWasmIssues {
   get(index: number): IWasmIssue;
 }
 
-export function wasmIssuesToIssues(wasmIssues: IWasmIssues): IIssue[] {
+export const wasmIssuesToIssues = (wasmIssues: IWasmIssues): IIssue[] => {
   const res = [];
 
   for (let i = 0; i < wasmIssues.size(); ++i) {
@@ -34,4 +34,4 @@ export function wasmIssuesToIssues(wasmIssues: IWasmIssues): IIssue[] {
   }
 
   return res;
-}
+};

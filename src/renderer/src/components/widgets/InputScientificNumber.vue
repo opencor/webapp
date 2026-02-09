@@ -25,9 +25,9 @@ const emit = defineEmits<(event: 'update:modelValue', value: number | undefined)
 const internalValue = vue.ref<string>('');
 const isEditing = vue.ref<boolean>(false);
 
-function updateInternalValue(value: number | undefined) {
+const updateInternalValue = (value: number | undefined) => {
   internalValue.value = value !== undefined ? String(value) : '';
-}
+};
 
 vue.watch(
   () => props.modelValue,
@@ -39,12 +39,12 @@ vue.watch(
   { immediate: true }
 );
 
-function onUpdateModelValue(value: string) {
+const onUpdateModelValue = (value: string) => {
   isEditing.value = true;
   internalValue.value = value;
-}
+};
 
-function onPaste(event: ClipboardEvent) {
+const onPaste = (event: ClipboardEvent) => {
   const clipboardData = event.clipboardData ?? (window as unknown as { clipboardData?: DataTransfer }).clipboardData;
 
   if (!clipboardData) {
@@ -95,9 +95,9 @@ function onPaste(event: ClipboardEvent) {
   const newValue = internalValue.value.slice(0, selectionStart) + toInsert + internalValue.value.slice(selectionEnd);
 
   onUpdateModelValue(newValue);
-}
+};
 
-function parseAndEmit() {
+const parseAndEmit = () => {
   isEditing.value = false;
 
   if (internalValue.value === '') {
@@ -121,13 +121,13 @@ function parseAndEmit() {
   updateInternalValue(parsedValue);
 
   emit('update:modelValue', parsedValue);
-}
+};
 
-function onBlur() {
+const onBlur = () => {
   parseAndEmit();
-}
+};
 
-function onKeydownEnter(event: KeyboardEvent) {
+const onKeydownEnter = (event: KeyboardEvent) => {
   (event.target as HTMLInputElement).blur();
-}
+};
 </script>

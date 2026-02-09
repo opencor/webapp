@@ -80,14 +80,6 @@ const props = defineProps<{
   uiEnabled: boolean;
 }>();
 defineEmits<(event: 'error', message: string) => void>();
-defineExpose({
-  openFile,
-  closeCurrentFile,
-  closeAllFiles,
-  hasFile,
-  hasFiles,
-  selectFile
-});
 
 export interface IContentsComponent {
   openFile(file: locApi.File): void;
@@ -112,18 +104,37 @@ const filePaths = vue.computed(() => {
   return res;
 });
 
-vue.watch(filePaths, (newFilePaths: string[]) => {
-  electronApi?.filesOpened(newFilePaths);
-});
+// Some methods to handle files and file tabs.
 
-vue.watch(activeFile, (newActiveFile: string) => {
-  // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
-  //       people know that a file has been selected.
+const hasFile = (filePath: string): boolean => {
+  return fileTabs.value.find((fileTab) => fileTab.file.path() === filePath) !== undefined;
+};
 
-  electronApi?.fileSelected(newActiveFile);
-});
+const hasFiles = (): boolean => {
+  return fileTabs.value.length > 0;
+};
 
-function openFile(file: locApi.File): void {
+const selectFile = (filePath: string): void => {
+  activeFile.value = filePath;
+};
+
+const selectNextFile = (): void => {
+  const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
+
+  if (fileTabIndex !== -1) {
+    selectFile(fileTabs.value[(fileTabIndex + 1) % fileTabs.value.length].file.path());
+  }
+};
+
+const selectPreviousFile = (): void => {
+  const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
+
+  if (fileTabIndex !== -1) {
+    selectFile(fileTabs.value[(fileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length].file.path());
+  }
+};
+
+const openFile = (file: locApi.File): void => {
   const filePath = file.path();
   const prevActiveFile = activeFile.value;
 
@@ -135,41 +146,9 @@ function openFile(file: locApi.File): void {
   });
 
   electronApi?.fileOpened(filePath);
-}
+};
 
-function hasFile(filePath: string): boolean {
-  return fileTabs.value.find((fileTab) => fileTab.file.path() === filePath) !== undefined;
-}
-
-function hasFiles(): boolean {
-  return fileTabs.value.length > 0;
-}
-
-function selectFile(filePath: string): void {
-  activeFile.value = filePath;
-}
-
-function selectNextFile(): void {
-  const crtFileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
-  const nextFileTabIndex = (crtFileTabIndex + 1) % fileTabs.value.length;
-  const nextFileTab = fileTabs.value[nextFileTabIndex];
-
-  if (nextFileTab) {
-    selectFile(nextFileTab.file.path());
-  }
-}
-
-function selectPreviousFile(): void {
-  const crtFileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
-  const nextFileTabIndex = (crtFileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length;
-  const nextFileTab = fileTabs.value[nextFileTabIndex];
-
-  if (nextFileTab) {
-    selectFile(nextFileTab.file.path());
-  }
-}
-
-function closeFile(filePath: string): void {
+const closeFile = (filePath: string): void => {
   locApi.fileManager.unmanage(filePath);
 
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath);
@@ -185,17 +164,39 @@ function closeFile(filePath: string): void {
   }
 
   electronApi?.fileClosed(filePath);
-}
+};
 
-function closeCurrentFile(): void {
+const closeCurrentFile = (): void => {
   closeFile(activeFile.value);
-}
+};
 
-function closeAllFiles(): void {
+const closeAllFiles = (): void => {
   while (fileTabs.value.length) {
     closeCurrentFile();
   }
-}
+};
+
+defineExpose({
+  openFile,
+  closeCurrentFile,
+  closeAllFiles,
+  hasFile,
+  hasFiles,
+  selectFile
+});
+
+// Some watchers to let people know about changes to the opened files and the selected file.
+
+vue.watch(filePaths, (newFilePaths: string[]) => {
+  electronApi?.filesOpened(newFilePaths);
+});
+
+vue.watch(activeFile, (newActiveFile: string) => {
+  // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
+  //       people know that a file has been selected.
+
+  electronApi?.fileSelected(newActiveFile);
+});
 
 // Various things that need to be done once we are mounted.
 

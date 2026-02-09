@@ -133,7 +133,7 @@ export interface IWasmLocApi {
 export let _cppLocApi = {} as ICppLocApi;
 export let _wasmLocApi = {} as IWasmLocApi;
 
-export async function initialiseLocApi() {
+export const initialiseLocApi = async () => {
   // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
   if (window.locApi) {
     // We are running OpenCOR, so libOpenCOR can be accessed using window.locApi.
@@ -155,7 +155,7 @@ export async function initialiseLocApi() {
       console.error("Failed to load libOpenCOR's WebAssembly module:", error);
     }
   }
-}
+};
 
 // Logger API.
 

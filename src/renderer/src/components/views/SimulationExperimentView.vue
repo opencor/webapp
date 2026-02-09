@@ -283,14 +283,14 @@ const toolbarId = vue.ref('simulationExperimentViewToolbar');
 const editorId = vue.ref('simulationExperimentViewEditor');
 const liveUpdatesCheckboxId = vue.ref('simulationExperimentViewLiveUpdatesCheckbox');
 
-function populateParameters(
+const populateParameters = (
   parameters: vue.Ref<string[]>,
   instanceTask: locSedApi.SedInstanceTask,
   onlyEditableModelParameters = false
-): void {
-  function addParameter(param: string): void {
+): void => {
+  const addParameter = (param: string): void => {
     parameters.value.push(param);
-  }
+  };
 
   if (!onlyEditableModelParameters) {
     addParameter(instanceTask.voiName());
@@ -323,11 +323,11 @@ function populateParameters(
   // Sort the parameters alphabetically.
 
   parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
-}
+};
 
 // Event handlers.
 
-function onRun(): void {
+const onRun = (): void => {
   // Run either the standard or interactive simulation.
 
   if (!interactiveModeEnabled.value) {
@@ -374,9 +374,9 @@ function onRun(): void {
   // Run the interactive simulation.
 
   updateInteractiveSimulation(true);
-}
+};
 
-function onDownloadCombineArchive(): void {
+const onDownloadCombineArchive = (): void => {
   // Create and download a COMBINE archive that contains a manifest file, a CellML file, a SED-ML file, and a UI JSON
   // file.
 
@@ -416,9 +416,9 @@ function onDownloadCombineArchive(): void {
     .catch((error: unknown) => {
       console.error('Failed to generate COMBINE archive:', common.formatError(error));
     });
-}
+};
 
-function populateInputProperties(currentUiJson: locApi.IUiJson) {
+const populateInputProperties = (currentUiJson: locApi.IUiJson) => {
   interactiveInputValues.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue);
   interactiveShowInput.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true');
 
@@ -429,7 +429,7 @@ function populateInputProperties(currentUiJson: locApi.IUiJson) {
   currentUiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
   });
-}
+};
 
 // Standard mode.
 
@@ -450,14 +450,14 @@ const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`)
 
 populateParameters(standardParameters, standardInstanceTask);
 
-function traceName(name: string | undefined, xValue: string, yValue: string): string {
+const traceName = (name: string | undefined, xValue: string, yValue: string): string => {
   return name ?? `${yValue} <i>vs.</i> ${xValue}`;
-}
+};
 
 const xInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value));
 const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value));
 
-function updatePlot() {
+const updatePlot = () => {
   standardData.value = {
     xAxisTitle: standardXParameter.value,
     yAxisTitle: standardYParameter.value,
@@ -472,7 +472,7 @@ function updatePlot() {
       }
     ]
   };
-}
+};
 
 // Interactive mode.
 
@@ -494,7 +494,23 @@ const interactiveAllModelParameters = vue.ref<string[]>([]);
 const interactiveEditableModelParameters = vue.ref<string[]>([]);
 const interactiveVoiName = vue.ref(interactiveInstanceTask.voiName());
 const interactiveVoiId = vue.ref(interactiveVoiName.value.split('/')[1]);
-const interactiveUiJson = vue.ref<locApi.IUiJson>(initialUiJson());
+const interactiveUiJson = vue.ref<locApi.IUiJson>(
+  props.uiJson
+    ? JSON.parse(JSON.stringify(props.uiJson))
+    : {
+        input: [],
+        output: {
+          data: [
+            {
+              id: interactiveVoiId.value,
+              name: interactiveVoiName.value
+            }
+          ],
+          plots: []
+        },
+        parameters: []
+      }
+);
 const interactiveUiJsonEmpty = vue.computed(() => {
   if (
     interactiveUiJson.value.input.length === 0 &&
@@ -603,30 +619,6 @@ const interactiveSettings = vue.computed(() => ({
 }));
 const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interactiveSettings.value)));
 
-// Initial UI JSON content.
-
-function initialUiJson(): locApi.IUiJson {
-  if (props.uiJson) {
-    return JSON.parse(JSON.stringify(props.uiJson));
-  }
-
-  // No UI JSON provided, so we create a default one with the VOI as a default simulation data.
-
-  return {
-    input: [],
-    output: {
-      data: [
-        {
-          id: interactiveVoiId.value,
-          name: interactiveVoiName.value
-        }
-      ],
-      plots: []
-    },
-    parameters: []
-  };
-}
-
 // Populate our model parameters.
 
 populateParameters(interactiveAllModelParameters, interactiveInstanceTask);
@@ -672,7 +664,7 @@ interactiveMath.import(
   { override: true }
 );
 
-function evaluateValue(value: string): mathjs.MathType {
+const evaluateValue = (value: string): mathjs.MathType => {
   const parser = interactiveMath.parser();
   let index = -1;
 
@@ -681,9 +673,9 @@ function evaluateValue(value: string): mathjs.MathType {
   });
 
   return parser.evaluate(value);
-}
+};
 
-function updateInteractiveSimulation(forceUpdate: boolean = false): void {
+const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
   // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
   if (interactiveUiJsonIssues.value.length || (!interactiveLiveUpdatesEnabled.value && !forceUpdate)) {
@@ -804,11 +796,11 @@ function updateInteractiveSimulation(forceUpdate: boolean = false): void {
       informationIssue
     ];
   }
-}
+};
 
 // Interactive mode's margins-related event handlers.
 
-function onMarginsUpdated(plotId: string, newMargins: IGraphPanelMargins): void {
+const onMarginsUpdated = (plotId: string, newMargins: IGraphPanelMargins): void => {
   interactiveMargins[plotId] = newMargins;
 
   const margins = Object.values(interactiveMargins);
@@ -823,16 +815,16 @@ function onMarginsUpdated(plotId: string, newMargins: IGraphPanelMargins): void 
     left: Math.max(...margins.map((margin) => margin.left)),
     right: Math.max(...margins.map((margin) => margin.right))
   };
-}
+};
 
-function onResetMargins() {
+const onResetMargins = () => {
   interactiveMargins = {};
   interactiveCompMargins.value = undefined;
-}
+};
 
 // Interactive mode's runs-related event handlers
 
-function onTrackRun(): void {
+const onTrackRun = (): void => {
   // Create a new run from the live run.
 
   const inputParameters: Record<string, number> = {};
@@ -912,21 +904,21 @@ function onTrackRun(): void {
     tooltip,
     isLiveRun: false
   });
-}
+};
 
-function onRemoveRun(index: number): void {
+const onRemoveRun = (index: number): void => {
   // Remove the given run.
 
   interactiveRuns.value.splice(index, 1);
-}
+};
 
-function onRemoveAllRuns(): void {
+const onRemoveAllRuns = (): void => {
   // Remove all the runs except the live run.
 
   interactiveRuns.value.splice(1);
-}
+};
 
-function onToggleRun(index: number): void {
+const onToggleRun = (index: number): void => {
   // Toggle the visibility of the given run.
 
   const interactiveRun = interactiveRuns.value[index];
@@ -934,17 +926,17 @@ function onToggleRun(index: number): void {
   if (interactiveRun) {
     interactiveRun.isVisible = !interactiveRun.isVisible;
   }
-}
+};
 
-function onRunColorChange(index: number, color: string) {
+const onRunColorChange = (index: number, color: string) => {
   const interactiveRun = interactiveRuns.value[index];
 
   if (interactiveRun) {
     interactiveRun.color = color;
   }
-}
+};
 
-function onToggleRunColorPopover(index: number, event: MouseEvent) {
+const onToggleRunColorPopover = (index: number, event: MouseEvent) => {
   // Note: interactiveRunColorPopoverIndex is only used to ensure that the active popover gets properly hidden when the
   //       window loses focus as a result of switching tabs (see onMounted below).
 
@@ -955,9 +947,9 @@ function onToggleRunColorPopover(index: number, event: MouseEvent) {
 
     interactiveRunColorPopovers.value[index]?.toggle(event);
   });
-}
+};
 
-function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): void {
+const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): void => {
   const newSettings = JSON.stringify(vue.toRaw(settings));
   const settingsHaveChanges = newSettings !== interactiveOldSettings.value;
 
@@ -1034,7 +1026,7 @@ function onInteractiveSettingsOk(settings: ISimulationExperimentViewSettings): v
       }
     });
   }
-}
+};
 
 // "Initialise" our standard and/or interactive modes.
 

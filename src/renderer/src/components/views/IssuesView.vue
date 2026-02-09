@@ -92,7 +92,7 @@ const severityClass = vue.computed(() => {
   return 'information';
 });
 
-function issueSeverityClass(type: locApi.EIssueType): string {
+const issueSeverityClass = (type: locApi.EIssueType): string => {
   switch (type) {
     case locApi.EIssueType.ERROR:
       return 'severity-error';
@@ -101,9 +101,9 @@ function issueSeverityClass(type: locApi.EIssueType): string {
     default: // locApi.EIssueType.INFORMATION.
       return 'severity-information';
   }
-}
+};
 
-function issueIcon(type: locApi.EIssueType): string {
+const issueIcon = (type: locApi.EIssueType): string => {
   switch (type) {
     case locApi.EIssueType.ERROR:
       return 'pi pi-times-circle';
@@ -112,7 +112,7 @@ function issueIcon(type: locApi.EIssueType): string {
     default: // locApi.EIssueType.INFORMATION.
       return 'pi pi-info-circle';
   }
-}
+};
 </script>
 
 <style scoped>
