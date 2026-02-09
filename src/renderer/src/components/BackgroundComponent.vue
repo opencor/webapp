@@ -18,9 +18,11 @@
  *  - Height: 257.92px + 8px = 266.92px.
  */
 
-import { version } from '../../package.json';
+import packageJson from '../../package.json' with { type: 'json' };
 
 import { COPYRIGHT } from '../common/constants.ts';
+
+const { version } = packageJson;
 </script>
 
 <style scoped>
