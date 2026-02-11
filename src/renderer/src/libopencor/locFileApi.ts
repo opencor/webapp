@@ -107,7 +107,7 @@ export interface IWasmFile {
   issues: IWasmIssues;
   path: string;
   contents(): Uint8Array;
-  setContents(ptr: number, length: number): void;
+  setContents(contents: Uint8Array): void;
   childFileFromFileName(fileName: string): File | null;
 }
 
@@ -126,13 +126,7 @@ export class File {
     } else if (contents) {
       this._wasmFile = vue.markRaw(new _wasmLocApi.File(path));
 
-      const heapContentsPtr = _wasmLocApi._malloc(contents.length);
-
-      new Uint8Array(_wasmLocApi.HEAPU8.buffer, heapContentsPtr, contents.length).set(contents);
-
-      this._wasmFile.setContents(heapContentsPtr, contents.length);
-
-      _wasmLocApi._free(heapContentsPtr);
+      this._wasmFile.setContents(contents);
 
       this._issues = wasmIssuesToIssues(this._wasmFile.issues);
     } else {
