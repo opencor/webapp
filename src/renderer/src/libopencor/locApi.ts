@@ -1,4 +1,4 @@
-import { corsProxyUrl } from '../common/common.ts';
+import { corsProxyUrl, formatError } from '../common/common.ts';
 
 import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.ts';
 import type { IIssue } from './locLoggerApi.ts';
@@ -151,8 +151,8 @@ export const initialiseLocApi = async () => {
       ).default;
 
       _wasmLocApi = (await libOpenCOR()) as IWasmLocApi;
-    } catch (error) {
-      console.error("Failed to load libOpenCOR's WebAssembly module:", error);
+    } catch (error: unknown) {
+      console.error('Failed to load libOpenCOR:', formatError(error));
     }
   }
 };
