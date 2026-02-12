@@ -528,7 +528,7 @@ const interactiveUiJsonEmpty = vue.computed(() => {
 
   return false;
 });
-const interactiveMath = common.mathJs.create(common.mathJs.all ?? {}, {});
+const interactiveMath = common.mathJs.create(common.mathJs.all, {});
 const interactiveModel = interactiveDocument.model(0);
 const interactiveData = vue.ref<IGraphPanelData[]>([]);
 let interactiveMargins: Record<string, IGraphPanelMargins> = {};
