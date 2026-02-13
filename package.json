@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20260213.0",
+  "version": "0.20260214.0",
   "scripts": {
     "archive:web": "bun src/renderer/scripts/archive.web.js",
     "build": "electron-vite build",
@@ -87,7 +87,8 @@
     "electron-vite": "^5.0.0",
     "esbuild": "^0.27.3",
     "node-addon-api": "^8.5.0",
-    "stylelint": "^17.2.0",
+    "rollup-plugin-visualizer": "^6.0.5",
+    "stylelint": "^17.3.0",
     "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4.1.18",
     "tailwindcss-primeui": "^0.6.1",
