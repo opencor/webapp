@@ -61,7 +61,6 @@
     "primevue": "4.2.5",
     "quill": "^2.0.3",
     "systeminformation": "^5.30.7",
-    "ua-parser-js": "^2.0.9",
     "vue": "3.4.21",
     "vue-tippy": "^6.7.1",
     "xxhash-wasm": "^1.1.0"

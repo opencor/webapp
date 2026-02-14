@@ -1,5 +1,4 @@
-import { UAParser } from 'ua-parser-js';
-import xxhash from "xxhash-wasm";
+import xxhash from 'xxhash-wasm';
 
 import { electronApi } from './electronApi.ts';
 
@@ -14,23 +13,55 @@ export interface ISettings {
 }
 
 // Some methods to determine the operating system, whether the application is running on a mobile device, etc.
+// Note: the order of the checks in osName() is important. For instance, we need to check for "iPhone" before checking
+//       for "Mac" since the user agent of iPhones contains both "iPhone" and "Mac".
 
-const uaParser = new UAParser();
+const osName = (): string => {
+  try {
+    const userAgent = window.navigator.userAgent;
+
+    if (/Android/i.test(userAgent)) {
+      return 'Android';
+    }
+
+    if (/iPhone|iPad|iPod/i.test(userAgent)) {
+      return 'iOS';
+    }
+
+    if (/Windows/i.test(userAgent)) {
+      return 'Windows';
+    }
+
+    if (/Linux/i.test(userAgent)) {
+      return 'Linux';
+    }
+
+    if (/Mac/i.test(userAgent)) {
+      return 'macOS';
+    }
+
+    return 'Unknown';
+  } catch {
+    return 'Unknown';
+  }
+};
 
 export const isWindows = (): boolean => {
-  return uaParser.getOS().name === 'Windows';
+  return osName() === 'Windows';
 };
 
 export const isLinux = (): boolean => {
-  return uaParser.getOS().name === 'Linux';
+  return osName() === 'Linux';
 };
 
 export const isMacOs = (): boolean => {
-  return uaParser.getOS().name === 'macOS';
+  return osName() === 'macOS';
 };
 
 export const isDesktop = (): boolean => {
-  return uaParser.getOS().name === 'Windows' || uaParser.getOS().name === 'Linux' || uaParser.getOS().name === 'macOS';
+  const currentOSName = osName();
+
+  return currentOSName === 'Windows' || currentOSName === 'Linux' || currentOSName === 'macOS';
 };
 
 // A method to determine whether the Ctrl or Cmd key is pressed, depending on the operating system.
