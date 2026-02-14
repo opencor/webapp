@@ -5,6 +5,7 @@ import vuePlugin from '@vitejs/plugin-vue';
 import * as electronVite from 'electron-vite';
 import path from 'node:path';
 import vitePlugin from 'unplugin-vue-components/vite';
+import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 
 export default electronVite.defineConfig({
   main: {
@@ -37,6 +38,10 @@ export default electronVite.defineConfig({
       vuePlugin(),
       vitePlugin({
         resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
+      }),
+      visualizerPlugin({
+        filename: 'dist/stats.html',
+        gzipSize: true
       })
     ],
     server: {
