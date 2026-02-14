@@ -1,5 +1,5 @@
-import SHA256 from 'crypto-js/sha256';
 import { UAParser } from 'ua-parser-js';
+import xxhash from "xxhash-wasm";
 
 import { electronApi } from './electronApi.ts';
 
@@ -71,10 +71,12 @@ export const corsProxyUrl = (url: string): string => {
   return `https://cors-proxy.opencor.workers.dev/?url=${url}`;
 };
 
-// A method to return the SHA-256 hash of some data.
+// A method to compute the XXH64 hash of some given data.
 
-export const sha256 = (data: string | Uint8Array): string => {
-  return SHA256(data).toString();
+const { h64Raw } = await xxhash();
+
+export const xxh64 = (data: Uint8Array): string => {
+  return h64Raw(data).toString(16).padStart(16, '0');
 };
 
 // A method to format a given number of milliseconds into a string.

@@ -2,7 +2,7 @@ import JSZip from 'jszip';
 
 import * as locApi from '../libopencor/locApi.ts';
 
-import { corsProxyUrl, formatError, formatMessage, OMEX_PREFIX, sha256 } from './common.ts';
+import { corsProxyUrl, formatError, formatMessage, OMEX_PREFIX, xxh64 } from './common.ts';
 import { electronApi } from './electronApi.ts';
 
 // Some file-related methods.
@@ -171,7 +171,7 @@ export const filePath = (
           : fileFilePathOrFileContents.name
         : typeof fileFilePathOrFileContents === 'string'
           ? fileFilePathOrFileContents
-          : sha256(fileFilePathOrFileContents);
+          : xxh64(fileFilePathOrFileContents);
 };
 
 export const file = (
