@@ -34,6 +34,18 @@ export default electronVite.defineConfig({
     plugins: [
       // Note: this must be in sync with src/renderer/vite.config.ts.
 
+      {
+        // Plugin to strip unneeded PrimeIcons files.
+
+        name: 'strip-unneeded-primeicons-files',
+        generateBundle(_options, bundle) {
+          for (const fileName of Object.keys(bundle)) {
+            if (fileName.includes('assets/primeicons') && /\.(eot|svg|ttf|woff)$/.test(fileName)) {
+              delete bundle[fileName];
+            }
+          }
+        }
+      },
       tailwindcssPlugin(),
       vuePlugin(),
       vitePlugin({

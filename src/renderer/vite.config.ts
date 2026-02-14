@@ -28,28 +28,23 @@ export default vite.defineConfig({
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
 
-    tailwindcssPlugin(),
-    vuePlugin(),
-    vitePlugin({
-      resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
-    }),
-    // Plugin: strip legacy font files (eot, svg) from the production bundle.
-    // We keep woff2/woff/ttf but remove eot/svg to reduce bundle size.
     {
-      name: 'strip-primeicons-legacy-fonts',
+      // Plugin to strip unneeded PrimeIcons files.
+
+      name: 'strip-unneeded-primeicons-files',
       generateBundle(_options, bundle) {
         for (const fileName of Object.keys(bundle)) {
-          if (
-            fileName.endsWith('assets/primeicons.eot') ||
-            fileName.endsWith('assets/primeicons.svg') ||
-            fileName.endsWith('assets/primeicons.ttf') ||
-            fileName.endsWith('assets/primeicons.woff')
-          ) {
+          if (fileName.includes('assets/primeicons') && /\.(eot|svg|ttf|woff)$/.test(fileName)) {
             delete bundle[fileName];
           }
         }
       }
     },
+    tailwindcssPlugin(),
+    vuePlugin(),
+    vitePlugin({
+      resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
+    }),
     visualizerPlugin({
       filename: 'dist/stats.html',
       gzipSize: true
