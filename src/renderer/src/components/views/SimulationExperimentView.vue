@@ -378,7 +378,7 @@ const onDownloadCombineArchive = (): void => {
   // Create and download a COMBINE archive that contains a manifest file, a CellML file, a SED-ML file, and a UI JSON
   // file.
 
-  const zip = new JSZip();
+  const jsZip = new JSZip();
   const baseFileName = common.fileName(interactiveFile.path()).replace(/\.[^/.]+$/, '');
   const modelFile = interactiveModel.file();
 
@@ -388,7 +388,7 @@ const onDownloadCombineArchive = (): void => {
     return;
   }
 
-  zip.file(
+  jsZip.file(
     'manifest.xml',
     `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
 <omexManifest xmlns="http://identifiers.org/combine.specifications/omex-manifest">
@@ -399,11 +399,11 @@ const onDownloadCombineArchive = (): void => {
 </omexManifest>
 `
   );
-  zip.file('model.cellml', modelFile.contents());
-  zip.file('document.sedml', interactiveDocument.serialise().replace(modelFile.path(), 'model.cellml'));
-  zip.file('simulation.json', JSON.stringify(interactiveUiJson.value, null, 2));
+  jsZip.file('model.cellml', modelFile.contents());
+  jsZip.file('document.sedml', interactiveDocument.serialise().replace(modelFile.path(), 'model.cellml'));
+  jsZip.file('simulation.json', JSON.stringify(interactiveUiJson.value, null, 2));
 
-  zip
+  jsZip
     .generateAsync({
       type: 'blob',
       compression: 'DEFLATE'
