@@ -33,6 +33,23 @@ export default vite.defineConfig({
     vitePlugin({
       resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     }),
+    // Plugin: strip legacy font files (eot, svg) from the production bundle.
+    // We keep woff2/woff/ttf but remove eot/svg to reduce bundle size.
+    {
+      name: 'strip-primeicons-legacy-fonts',
+      generateBundle(_options, bundle) {
+        for (const fileName of Object.keys(bundle)) {
+          if (
+            fileName.endsWith('assets/primeicons.eot') ||
+            fileName.endsWith('assets/primeicons.svg') ||
+            fileName.endsWith('assets/primeicons.ttf') ||
+            fileName.endsWith('assets/primeicons.woff')
+          ) {
+            delete bundle[fileName];
+          }
+        }
+      }
+    },
     visualizerPlugin({
       filename: 'dist/stats.html',
       gzipSize: true

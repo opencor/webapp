@@ -118,6 +118,7 @@ import 'tippy.js/dist/tippy.css';
 import type { IOpenCORProps } from '../../index.ts';
 
 import '../assets/app.css';
+import '../assets/primeicons-assets.ts';
 import * as common from '../common/common.ts';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
 import { electronApi } from '../common/electronApi.ts';
