@@ -251,6 +251,7 @@ const jsonSchemaInitialised = vue.ref<boolean>(false);
 const jsZipInitialised = vue.ref<boolean>(false);
 const mathJsInitialised = vue.ref<boolean>(false);
 const plotlyJsInitialised = vue.ref<boolean>(false);
+const xxhashInitialised = vue.ref<boolean>(false);
 const compBackgroundVisible = vue.computed(() => {
   return (
     (initialisingOpencorMessageVisible.value || loadingModelMessageVisible.value || progressMessageVisible.value) &&
@@ -264,11 +265,12 @@ const compOpencorInitialised = vue.computed(() => {
     jsonSchemaInitialised.value &&
     jsZipInitialised.value &&
     mathJsInitialised.value &&
-    plotlyJsInitialised.value
+    plotlyJsInitialised.value &&
+    xxhashInitialised.value
   );
 });
 const compInitialisingOpencorMessageProgress = vue.computed(() => {
-  const total = 5;
+  const total = 6;
   let count = 0;
 
   if (locApiInitialised.value) {
@@ -287,6 +289,10 @@ const compInitialisingOpencorMessageProgress = vue.computed(() => {
     count += 1;
   }
   if (plotlyJsInitialised.value) {
+    count += 1;
+  }
+
+  if (xxhashInitialised.value) {
     count += 1;
   }
 
@@ -350,6 +356,15 @@ void common
   .importPlotlyJs()
   .then(() => {
     plotlyJsInitialised.value = true;
+  })
+  .catch((error: unknown) => {
+    initialisationError(error);
+  });
+
+void common
+  .initialiseXxhash()
+  .then(() => {
+    xxhashInitialised.value = true;
   })
   .catch((error: unknown) => {
     initialisationError(error);

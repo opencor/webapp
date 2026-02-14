@@ -104,10 +104,14 @@ export const corsProxyUrl = (url: string): string => {
 
 // A method to compute the XXH64 hash of some given data.
 
-const { h64Raw } = await xxhash();
+let _xxhash: Awaited<ReturnType<typeof xxhash>>;
+
+export const initialiseXxhash = async (): Promise<void> => {
+  _xxhash = await xxhash();
+};
 
 export const xxh64 = (data: Uint8Array): string => {
-  return h64Raw(data).toString(16).padStart(16, '0');
+  return _xxhash.h64Raw(data).toString(16).padStart(16, '0');
 };
 
 // A method to format a given number of milliseconds into a string.
