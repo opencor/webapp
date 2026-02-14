@@ -8,7 +8,6 @@
     <span class="block text-center text-[1.5rem]">{{ message }}</span>
     <ProgressBar v-if="progress !== undefined" class="w-79 h-1! mt-4"
       :value="progress"
-      mode="determinate"
       :showValue="false"
       :pt="{
         value: {
