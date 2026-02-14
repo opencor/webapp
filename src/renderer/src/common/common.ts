@@ -220,12 +220,12 @@ export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-// Import jsonschema lazily.
+// Initialise jsonschema lazily.
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
 export let jsonSchema: any = null;
 
-export const importJsonSchema = async (): Promise<void> => {
+export const initialiseJsonSchema = async (): Promise<void> => {
   try {
     const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/jsonschema@latest/+esm');
 
@@ -238,12 +238,12 @@ export const importJsonSchema = async (): Promise<void> => {
   }
 };
 
-// Import JSZip lazily.
+// Initialise JSZip lazily.
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
 export let jsZip: any = null;
 
-export const importJsZip = async (): Promise<void> => {
+export const initialiseJsZip = async (): Promise<void> => {
   try {
     const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/jszip@latest/+esm');
 
@@ -256,12 +256,12 @@ export const importJsZip = async (): Promise<void> => {
   }
 };
 
-// Import Math.js lazily.
+// Initialise Math.js lazily.
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
 export let mathJs: any = null;
 
-export const importMathJs = async (): Promise<void> => {
+export const initialiseMathJs = async (): Promise<void> => {
   try {
     const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/mathjs@latest/+esm');
 
@@ -274,12 +274,12 @@ export const importMathJs = async (): Promise<void> => {
   }
 };
 
-// Import Plotly.js lazily.
+// Initialise Plotly.js lazily.
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
 export let plotlyJs: any = null;
 
-export const importPlotlyJs = async (): Promise<void> => {
+export const initialisePlotlyJs = async (): Promise<void> => {
   try {
     const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@latest/+esm');
 
@@ -292,13 +292,13 @@ export const importPlotlyJs = async (): Promise<void> => {
   }
 };
 
-// Import VueTippy lazily.
+// Initialise VueTippy lazily.
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
 export let vueTippy: any = null;
 let vueTippyCssInjected = false;
 
-export const importVueTippy = async (): Promise<void> => {
+export const initialiseVueTippy = async (): Promise<void> => {
   try {
     const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/vue-tippy@latest/+esm');
 

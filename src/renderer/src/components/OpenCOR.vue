@@ -328,7 +328,7 @@ void locApi
   });
 
 void common
-  .importJsonSchema()
+  .initialiseJsonSchema()
   .then(() => {
     jsonSchemaInitialised.value = true;
   })
@@ -337,7 +337,7 @@ void common
   });
 
 void common
-  .importJsZip()
+  .initialiseJsZip()
   .then(() => {
     jsZipInitialised.value = true;
   })
@@ -346,7 +346,7 @@ void common
   });
 
 void common
-  .importMathJs()
+  .initialiseMathJs()
   .then(() => {
     mathJsInitialised.value = true;
   })
@@ -355,7 +355,7 @@ void common
   });
 
 void common
-  .importPlotlyJs()
+  .initialisePlotlyJs()
   .then(() => {
     plotlyJsInitialised.value = true;
   })
@@ -364,7 +364,7 @@ void common
   });
 
 void common
-  .importVueTippy()
+  .initialiseVueTippy()
   .then(() => {
     vueTippyInitialised.value = true;
   })
