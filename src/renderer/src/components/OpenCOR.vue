@@ -247,6 +247,7 @@ const toast = useToast();
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 const locApiInitialised = vue.ref<boolean>(!!window.locApi);
+const jsZipInitialised = vue.ref<boolean>(false);
 const mathJsInitialised = vue.ref<boolean>(false);
 const plotlyJsInitialised = vue.ref<boolean>(false);
 const compBackgroundVisible = vue.computed(() => {
@@ -257,15 +258,20 @@ const compBackgroundVisible = vue.computed(() => {
 });
 const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
 const compOpencorInitialised = vue.computed(() => {
-  return locApiInitialised.value && mathJsInitialised.value && plotlyJsInitialised.value;
+  return locApiInitialised.value && jsZipInitialised.value && mathJsInitialised.value && plotlyJsInitialised.value;
 });
 const compInitialisingOpencorMessageProgress = vue.computed(() => {
-  const total = 3;
+  const total = 4;
   let count = 0;
 
   if (locApiInitialised.value) {
     count += 1;
   }
+
+  if (jsZipInitialised.value) {
+    count += 1;
+  }
+
   if (mathJsInitialised.value) {
     count += 1;
   }
@@ -297,6 +303,15 @@ void locApi
   .initialiseLocApi()
   .then(() => {
     locApiInitialised.value = true;
+  })
+  .catch((error: unknown) => {
+    initialisationError(error);
+  });
+
+void common
+  .importJsZip()
+  .then(() => {
+    jsZipInitialised.value = true;
   })
   .catch((error: unknown) => {
     initialisationError(error);

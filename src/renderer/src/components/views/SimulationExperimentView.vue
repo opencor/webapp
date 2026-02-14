@@ -241,7 +241,6 @@
 <script setup lang="ts">
 import * as vueusecore from '@vueuse/core';
 
-import JSZip from 'jszip';
 import * as vue from 'vue';
 
 import * as colors from '../../common/colors.ts';
@@ -378,7 +377,7 @@ const onDownloadCombineArchive = (): void => {
   // Create and download a COMBINE archive that contains a manifest file, a CellML file, a SED-ML file, and a UI JSON
   // file.
 
-  const jsZip = new JSZip();
+  const jsZip = new common.jsZip();
   const baseFileName = common.fileName(interactiveFile.path()).replace(/\.[^/.]+$/, '');
   const modelFile = interactiveModel.file();
 

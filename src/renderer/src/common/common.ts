@@ -216,6 +216,24 @@ export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+// Import JSZip lazily.
+
+// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
+export let jsZip: any = null;
+
+export const importJsZip = async (): Promise<void> => {
+  try {
+    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/jszip@latest/+esm');
+
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
+    jsZip = (module as any).default ?? module;
+  } catch (error: unknown) {
+    console.error('Failed to import JSZip:', formatError(error));
+
+    throw error;
+  }
+};
+
 // Import Math.js lazily.
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
