@@ -76,7 +76,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
   electronApi?.enableDisableMainMenu(enable);
 };
 
-// A method to determine whether a given file name indicates a data URL OMEX file.
+// A method to determine whether a file name indicates a data URL OMEX file.
 
 export const OMEX_PREFIX = 'OMEX #';
 
@@ -84,7 +84,7 @@ export const isDataUrlOmexFileName = (fileName: string): boolean => {
   return fileName.startsWith(OMEX_PREFIX);
 };
 
-// A method to determine whether a given URL is an HTTP or HTTPS URL.
+// A method to determine whether a URL is an HTTP or HTTPS URL.
 
 export const isHttpUrl = (url: string): boolean => {
   try {
@@ -96,13 +96,13 @@ export const isHttpUrl = (url: string): boolean => {
   }
 };
 
-// A method to get the CORS proxy URL for a given URL.
+// A method to get the CORS proxy URL for a URL.
 
 export const corsProxyUrl = (url: string): string => {
   return `https://cors-proxy.opencor.workers.dev/?url=${url}`;
 };
 
-// A method to compute the XXH64 hash of some given data.
+// A method to compute the XXH64 value of some data.
 
 let _xxhash: Awaited<ReturnType<typeof xxhash>>;
 
@@ -114,7 +114,7 @@ export const xxh64 = (data: Uint8Array): string => {
   return _xxhash.h64Raw(data).toString(16).padStart(16, '0');
 };
 
-// A method to format a given number of milliseconds into a string.
+// A method to format a number of milliseconds into a string.
 
 export const formatTime = (time: number): string => {
   const ms = Math.floor(time % 1000);
@@ -181,7 +181,7 @@ export const isDivisible = (a: number, b: number): boolean => {
   return Number.isInteger(a / b);
 };
 
-// A method to trigger a browser download for a given file.
+// A method to trigger a browser download for a file.
 
 export const downloadFile = (filename: string, content: string | Blob, type: string): void => {
   const link = document.createElement('a');
@@ -200,7 +200,7 @@ export const downloadFile = (filename: string, content: string | Blob, type: str
   URL.revokeObjectURL(url);
 };
 
-// A method to get the file name from a given file path.
+// A method to get the file name from a file path.
 
 export const fileName = (filePath: string): string => {
   const res = filePath.split(/(\\|\/)/g).pop() || '';
@@ -214,7 +214,7 @@ export const fileName = (filePath: string): string => {
   }
 };
 
-// A method to sleep for a given number of milliseconds.
+// A method to sleep for a number of milliseconds.
 
 export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
