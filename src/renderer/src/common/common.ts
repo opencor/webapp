@@ -216,6 +216,24 @@ export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+// Import jsonschema lazily.
+
+// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
+export let jsonSchema: any = null;
+
+export const importJsonSchema = async (): Promise<void> => {
+  try {
+    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/jsonschema@latest/+esm');
+
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
+    jsonSchema = (module as any).default ?? module;
+  } catch (error: unknown) {
+    console.error('Failed to import jsonschema:', formatError(error));
+
+    throw error;
+  }
+};
+
 // Import JSZip lazily.
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type

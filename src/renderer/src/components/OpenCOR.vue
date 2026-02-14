@@ -247,6 +247,7 @@ const toast = useToast();
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 const locApiInitialised = vue.ref<boolean>(!!window.locApi);
+const jsonSchemaInitialised = vue.ref<boolean>(false);
 const jsZipInitialised = vue.ref<boolean>(false);
 const mathJsInitialised = vue.ref<boolean>(false);
 const plotlyJsInitialised = vue.ref<boolean>(false);
@@ -258,13 +259,23 @@ const compBackgroundVisible = vue.computed(() => {
 });
 const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
 const compOpencorInitialised = vue.computed(() => {
-  return locApiInitialised.value && jsZipInitialised.value && mathJsInitialised.value && plotlyJsInitialised.value;
+  return (
+    locApiInitialised.value &&
+    jsonSchemaInitialised.value &&
+    jsZipInitialised.value &&
+    mathJsInitialised.value &&
+    plotlyJsInitialised.value
+  );
 });
 const compInitialisingOpencorMessageProgress = vue.computed(() => {
-  const total = 4;
+  const total = 5;
   let count = 0;
 
   if (locApiInitialised.value) {
+    count += 1;
+  }
+
+  if (jsonSchemaInitialised.value) {
     count += 1;
   }
 
@@ -303,6 +314,15 @@ void locApi
   .initialiseLocApi()
   .then(() => {
     locApiInitialised.value = true;
+  })
+  .catch((error: unknown) => {
+    initialisationError(error);
+  });
+
+void common
+  .importJsonSchema()
+  .then(() => {
+    jsonSchemaInitialised.value = true;
   })
   .catch((error: unknown) => {
     initialisationError(error);
