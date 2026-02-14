@@ -223,7 +223,7 @@ export let mathJs: any = null;
 
 export const importMathJs = async (): Promise<void> => {
   try {
-    const module = await import('https://cdn.jsdelivr.net/npm/mathjs@latest/+esm');
+    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/mathjs@latest/+esm');
 
     // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
     mathJs = (module as any).default ?? module;
@@ -241,7 +241,7 @@ export let plotlyJs: any = null;
 
 export const importPlotlyJs = async (): Promise<void> => {
   try {
-    const module = await import('https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@latest/+esm');
+    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@latest/+esm');
 
     // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
     plotlyJs = (module as any).default ?? module;
