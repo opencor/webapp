@@ -86,7 +86,7 @@
           </Splitter>
         </SplitterPanel>
         <SplitterPanel v-if="!simulationOnly" :size="11">
-          <Editor :id="editorId" class="border-none h-full" :readonly="true" v-model="standardConsoleContents" />
+          <div :id="editorId" class="h-full console overflow-y-auto px-2 py-1 leading-[1.42] text-[13px]" aria-readonly="true" v-html="standardConsoleContents"></div>
         </SplitterPanel>
       </Splitter>
     </div>
@@ -357,7 +357,7 @@ const onRun = (): void => {
     }
 
     void vue.nextTick(() => {
-      const consoleElement = document.getElementById(editorId.value)?.getElementsByClassName('ql-editor')[0];
+      const consoleElement = document.getElementById(editorId.value);
 
       if (consoleElement) {
         consoleElement.scrollTop = consoleElement.scrollHeight;
@@ -1100,6 +1100,10 @@ if (common.isDesktop()) {
   outline-color: var(--p-text-color);
 }
 
+.console {
+  font-family: Helvetica, Arial, sans-serif;
+}
+
 .empty-state {
   color: var(--p-text-muted-color);
   border: 1px dashed var(--p-content-border-color);
@@ -1161,14 +1165,6 @@ if (common.isDesktop()) {
 .run-card-live {
   border-style: dashed;
   border-color: var(--p-primary-color);
-}
-
-:deep(.ql-editor) {
-  padding: 0.25rem 0.5rem;
-}
-
-:deep(.ql-editor > *) {
-  cursor: default;
 }
 
 .toolbar-button:hover {
