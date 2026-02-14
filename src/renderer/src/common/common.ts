@@ -220,114 +220,98 @@ export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-// Initialise jsonschema lazily.
+// A method to create a lazy initialiser for a module, which imports the module and optionally its CSS.
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-export let jsonSchema: any = null;
+type Module = any;
 
-export const initialiseJsonSchema = async (): Promise<void> => {
-  try {
-    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/jsonschema@latest/+esm');
+const createLazyInitialiser = (url: string, assign: (mod: Module) => void, name: string, cssUrl?: string) => {
+  return async (): Promise<void> => {
+    try {
+      const module = await import(/* @vite-ignore */ url);
 
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-    jsonSchema = (module as any).default ?? module;
-  } catch (error: unknown) {
-    console.error('Failed to import jsonschema:', formatError(error));
+      assign((module as Module).default ?? module);
 
-    throw error;
-  }
+      // Fetch any CSS for the module and inject it into the page if we haven't already done so.
+
+      if (cssUrl) {
+        const response = await fetch(/* @vite-ignore */ cssUrl, { mode: 'cors' });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load ${name ?? 'stylesheet'}: ${response.statusText}`);
+        }
+
+        const style = document.createElement('style');
+
+        style.textContent = await response.text();
+
+        document.head.appendChild(style);
+      }
+    } catch (error: unknown) {
+      console.error(`Failed to import ${name ?? url}:`, formatError(error));
+
+      throw error;
+    }
+  };
 };
+
+// Initialise jsonschema lazily.
+
+export let jsonSchema: Module = null;
+
+export const initialiseJsonSchema = createLazyInitialiser(
+  'https://cdn.jsdelivr.net/npm/jsonschema@latest/+esm',
+  (mod: Module) => {
+    jsonSchema = mod;
+  },
+  'jsonschema'
+);
 
 // Initialise JSZip lazily.
 
-// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-export let jsZip: any = null;
+export let jsZip: Module = null;
 
-export const initialiseJsZip = async (): Promise<void> => {
-  try {
-    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/jszip@latest/+esm');
-
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-    jsZip = (module as any).default ?? module;
-  } catch (error: unknown) {
-    console.error('Failed to import JSZip:', formatError(error));
-
-    throw error;
-  }
-};
+export const initialiseJsZip = createLazyInitialiser(
+  'https://cdn.jsdelivr.net/npm/jszip@latest/+esm',
+  (mod: Module) => {
+    jsZip = mod;
+  },
+  'JSZip'
+);
 
 // Initialise Math.js lazily.
 
-// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-export let mathJs: any = null;
+export let mathJs: Module = null;
 
-export const initialiseMathJs = async (): Promise<void> => {
-  try {
-    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/mathjs@latest/+esm');
-
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-    mathJs = (module as any).default ?? module;
-  } catch (error: unknown) {
-    console.error('Failed to import Math.js:', formatError(error));
-
-    throw error;
-  }
-};
+export const initialiseMathJs = createLazyInitialiser(
+  'https://cdn.jsdelivr.net/npm/mathjs@latest/+esm',
+  (mod: Module) => {
+    mathJs = mod;
+  },
+  'Math.js'
+);
 
 // Initialise Plotly.js lazily.
 
-// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-export let plotlyJs: any = null;
+export let plotlyJs: Module = null;
 
-export const initialisePlotlyJs = async (): Promise<void> => {
-  try {
-    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@latest/+esm');
+export const initialisePlotlyJs = createLazyInitialiser(
+  'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@latest/+esm',
+  (mod: Module) => {
+    plotlyJs = mod;
+  },
+  'Plotly.js'
+);
 
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-    plotlyJs = (module as any).default ?? module;
-  } catch (error: unknown) {
-    console.error('Failed to import Plotly.js:', formatError(error));
+// Initialise VueTippy lazily (also injects its CSS once).
 
-    throw error;
-  }
-};
+export let vueTippy: Module = null;
 
-// Initialise VueTippy lazily.
-
-// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-export let vueTippy: any = null;
-let vueTippyCssInjected = false;
-
-export const initialiseVueTippy = async (): Promise<void> => {
-  try {
-    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/vue-tippy@latest/+esm');
-
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-    vueTippy = (module as any).default ?? module;
-
-    // Fetch the VueTippy stylesheet and inject it into OpenCOR.
-
-    if (!vueTippyCssInjected) {
-      const response = await fetch(
-        /* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/tippy.js@latest/dist/tippy.css',
-        { mode: 'cors' }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to load VueTippy's CSS: ${response.statusText}`);
-      }
-
-      const style = document.createElement('style');
-
-      style.textContent = await response.text();
-
-      document.head.appendChild(style);
-
-      vueTippyCssInjected = true;
-    }
-  } catch (error: unknown) {
-    console.error('Failed to import VueTippy:', formatError(error));
-
-    throw error;
-  }
-};
+export const initialiseVueTippy = createLazyInitialiser(
+  'https://cdn.jsdelivr.net/npm/vue-tippy@latest/+esm',
+  (mod: Module) => {
+    vueTippy = mod;
+  },
+  'VueTippy',
+  'https://cdn.jsdelivr.net/npm/tippy.js@latest/dist/tippy.css'
+);
