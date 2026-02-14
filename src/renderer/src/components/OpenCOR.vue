@@ -239,7 +239,7 @@ vueCommon.useTheme().setTheme(props.theme);
 
 const toast = useToast();
 
-// Asynchronously initialise our libOpenCOR API.
+// Initialise OpenCOR's external dependencies.
 
 // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
 const locApiInitialised = vue.ref<boolean>(!!window.locApi);
@@ -380,6 +380,8 @@ void common
   .catch((error: unknown) => {
     initialisationError(error);
   });
+
+// Finish initialising OpenCOR.
 
 vue.watch(compOpencorInitialised, async (newCompOpencorInitialised: boolean) => {
   if (newCompOpencorInitialised) {
