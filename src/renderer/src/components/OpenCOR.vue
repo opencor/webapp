@@ -112,8 +112,6 @@ import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
-import vueTippy from 'vue-tippy';
-import 'tippy.js/dist/tippy.css';
 
 import type { IOpenCORProps } from '../../index.ts';
 
@@ -152,11 +150,11 @@ const octokit = vue.ref<Octokit | null>(null);
 // Keep track of which instance of OpenCOR is currently active.
 
 const activateInstance = (): void => {
-  activeInstanceUid.value = String(crtInstance?.uid);
+  activeInstanceUid.value = crtInstanceUid;
 };
 
 const compIsActive = vue.computed(() => {
-  return activeInstanceUid.value === String(crtInstance?.uid);
+  return activeInstanceUid.value === crtInstanceUid;
 });
 
 // Determine whether the component UI should be blocked/enabled.
@@ -210,15 +208,15 @@ const progressMessageVisible = vue.ref<boolean>(false);
 const progressMessageMessage = vue.ref<string>('');
 const progressMessageProgress = vue.ref<number>(0);
 
-// Get the current Vue app instance to use some PrimeVue plugins and VueTippy.
+// Get the current Vue app instance to use some PrimeVue plugins.
 
 const crtInstance = vue.getCurrentInstance();
+const crtInstanceUid = String(crtInstance?.uid);
+const crtVueAppInstance = crtInstance?.appContext.app || null;
 
-if (crtInstance) {
-  const app = crtInstance.appContext.app;
-
-  if (!app.config.globalProperties.$primevue) {
-    app.use(primeVueConfig as unknown as vue.Plugin, {
+if (crtVueAppInstance) {
+  if (!crtVueAppInstance.config.globalProperties.$primevue) {
+    crtVueAppInstance.use(primeVueConfig as unknown as vue.Plugin, {
       theme: {
         preset: primeVueAuraTheme,
         options: {
@@ -228,15 +226,13 @@ if (crtInstance) {
     });
   }
 
-  if (!app.config.globalProperties.$confirm) {
-    app.use(primeVueConfirmationService as unknown as vue.Plugin);
+  if (!crtVueAppInstance.config.globalProperties.$confirm) {
+    crtVueAppInstance.use(primeVueConfirmationService as unknown as vue.Plugin);
   }
 
-  if (!app.config.globalProperties.$toast) {
-    app.use(primeVueToastService as unknown as vue.Plugin);
+  if (!crtVueAppInstance.config.globalProperties.$toast) {
+    crtVueAppInstance.use(primeVueToastService as unknown as vue.Plugin);
   }
-
-  app.use(vueTippy);
 }
 
 vueCommon.useTheme().setTheme(props.theme);
@@ -251,6 +247,7 @@ const jsonSchemaInitialised = vue.ref<boolean>(false);
 const jsZipInitialised = vue.ref<boolean>(false);
 const mathJsInitialised = vue.ref<boolean>(false);
 const plotlyJsInitialised = vue.ref<boolean>(false);
+const vueTippyInitialised = vue.ref<boolean>(false);
 const xxhashInitialised = vue.ref<boolean>(false);
 const compBackgroundVisible = vue.computed(() => {
   return (
@@ -266,11 +263,12 @@ const compOpencorInitialised = vue.computed(() => {
     jsZipInitialised.value &&
     mathJsInitialised.value &&
     plotlyJsInitialised.value &&
+    vueTippyInitialised.value &&
     xxhashInitialised.value
   );
 });
 const compInitialisingOpencorMessageProgress = vue.computed(() => {
-  const total = 6;
+  const total = 7;
   let count = 0;
 
   if (locApiInitialised.value) {
@@ -289,6 +287,10 @@ const compInitialisingOpencorMessageProgress = vue.computed(() => {
     count += 1;
   }
   if (plotlyJsInitialised.value) {
+    count += 1;
+  }
+
+  if (vueTippyInitialised.value) {
     count += 1;
   }
 
@@ -362,6 +364,15 @@ void common
   });
 
 void common
+  .importVueTippy()
+  .then(() => {
+    vueTippyInitialised.value = true;
+  })
+  .catch((error: unknown) => {
+    initialisationError(error);
+  });
+
+void common
   .initialiseXxhash()
   .then(() => {
     xxhashInitialised.value = true;
@@ -372,12 +383,21 @@ void common
 
 vue.watch(compOpencorInitialised, async (newCompOpencorInitialised: boolean) => {
   if (newCompOpencorInitialised) {
-    // OpenCOR is now fully initialised, so we can hide the loading message (after a long delay to give the user a
-    // chance to see that the loading has reached 100%) and then check for updates.
+    // OpenCOR is now fully initialised, so we can finalise a few things, namely let the current Vue app instance use
+    // VueTippy.
+
+    if (crtVueAppInstance) {
+      crtVueAppInstance.use(common.vueTippy);
+    }
+
+    // Now, we can hide the loading message (but after a long delay so that the user gets a chance to see that the
+    // initialisation has reached 100%).
 
     await common.sleep(LONG_DELAY);
 
     initialisingOpencorMessageVisible.value = false;
+
+    // We are all done, so let's start checking for a new version of OpenCOR.
 
     version.startCheck();
   }
@@ -878,8 +898,8 @@ vue.onMounted(() => {
 
   // Customise our IDs.
 
-  toastId.value = `opencorToast${String(crtInstance?.uid)}`;
-  mainMenuId.value = `opencorMainMenu${String(crtInstance?.uid)}`;
+  toastId.value = `opencorToast${crtInstanceUid}`;
+  mainMenuId.value = `opencorMainMenu${crtInstanceUid}`;
 
   // Make ourselves the active instance.
 

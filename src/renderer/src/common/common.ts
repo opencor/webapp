@@ -291,3 +291,43 @@ export const importPlotlyJs = async (): Promise<void> => {
     throw error;
   }
 };
+
+// Import VueTippy lazily.
+
+// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
+export let vueTippy: any = null;
+let vueTippyCssInjected = false;
+
+export const importVueTippy = async (): Promise<void> => {
+  try {
+    const module = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/vue-tippy@latest/+esm');
+
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
+    vueTippy = (module as any).default ?? module;
+
+    // Fetch the VueTippy stylesheet and inject it into OpenCOR.
+
+    if (!vueTippyCssInjected) {
+      const response = await fetch(
+        /* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/tippy.js@latest/dist/tippy.css',
+        { mode: 'cors' }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to load VueTippy's CSS: ${response.statusText}`);
+      }
+
+      const style = document.createElement('style');
+
+      style.textContent = await response.text();
+
+      document.head.appendChild(style);
+
+      vueTippyCssInjected = true;
+    }
+  } catch (error: unknown) {
+    console.error('Failed to import VueTippy:', formatError(error));
+
+    throw error;
+  }
+};
