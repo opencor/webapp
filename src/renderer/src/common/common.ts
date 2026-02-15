@@ -264,7 +264,7 @@ const createLazyInitialiser = (url: string, assign: (module: Module) => void, na
 export let jsonSchema: Module = null;
 
 export const initialiseJsonSchema = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/jsonschema@latest/+esm',
+  'https://cdn.jsdelivr.net/npm/jsonschema@1.5.0/+esm',
   (module: Module) => {
     jsonSchema = module;
   },
@@ -276,7 +276,7 @@ export const initialiseJsonSchema = createLazyInitialiser(
 export let jsZip: Module = null;
 
 export const initialiseJsZip = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/jszip@latest/+esm',
+  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm',
   (module: Module) => {
     jsZip = module;
   },
@@ -288,7 +288,7 @@ export const initialiseJsZip = createLazyInitialiser(
 export let mathJs: Module = null;
 
 export const initialiseMathJs = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/mathjs@latest/+esm',
+  'https://cdn.jsdelivr.net/npm/mathjs@15.1.1/+esm',
   (module: Module) => {
     mathJs = module;
   },
@@ -300,7 +300,7 @@ export const initialiseMathJs = createLazyInitialiser(
 export let plotlyJs: Module = null;
 
 export const initialisePlotlyJs = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@latest/+esm',
+  'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.3.1/+esm',
   (module: Module) => {
     plotlyJs = module;
   },
@@ -312,10 +312,10 @@ export const initialisePlotlyJs = createLazyInitialiser(
 export let vueTippy: Module = null;
 
 export const initialiseVueTippy = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/vue-tippy@latest/+esm',
+  'https://cdn.jsdelivr.net/npm/vue-tippy@6.7.1/+esm',
   (module: Module) => {
     vueTippy = module;
   },
   'VueTippy',
-  'https://cdn.jsdelivr.net/npm/tippy.js@latest/dist/tippy.css'
+  'https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy.css'
 );
