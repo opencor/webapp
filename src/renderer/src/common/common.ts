@@ -225,7 +225,9 @@ export const sleep = (ms: number): Promise<void> => {
 // biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
 type Module = any;
 
-const createLazyInitialiser = (url: string, assign: (mod: Module) => void, name: string, cssUrl?: string) => {
+const injectedCss = new Set<string>();
+
+const createLazyInitialiser = (url: string, assign: (module: Module) => void, name: string, cssUrl?: string) => {
   return async (): Promise<void> => {
     try {
       const module = await import(/* @vite-ignore */ url);
@@ -234,7 +236,7 @@ const createLazyInitialiser = (url: string, assign: (mod: Module) => void, name:
 
       // Fetch any CSS for the module and inject it into the page if we haven't already done so.
 
-      if (cssUrl) {
+      if (cssUrl && !injectedCss.has(cssUrl)) {
         const response = await fetch(/* @vite-ignore */ cssUrl, { mode: 'cors' });
 
         if (!response.ok) {
@@ -246,6 +248,8 @@ const createLazyInitialiser = (url: string, assign: (mod: Module) => void, name:
         style.textContent = await response.text();
 
         document.head.appendChild(style);
+
+        injectedCss.add(cssUrl);
       }
     } catch (error: unknown) {
       console.error(`Failed to import ${name ?? url}:`, formatError(error));
@@ -261,8 +265,8 @@ export let jsonSchema: Module = null;
 
 export const initialiseJsonSchema = createLazyInitialiser(
   'https://cdn.jsdelivr.net/npm/jsonschema@latest/+esm',
-  (mod: Module) => {
-    jsonSchema = mod;
+  (module: Module) => {
+    jsonSchema = module;
   },
   'jsonschema'
 );
@@ -273,8 +277,8 @@ export let jsZip: Module = null;
 
 export const initialiseJsZip = createLazyInitialiser(
   'https://cdn.jsdelivr.net/npm/jszip@latest/+esm',
-  (mod: Module) => {
-    jsZip = mod;
+  (module: Module) => {
+    jsZip = module;
   },
   'JSZip'
 );
@@ -285,8 +289,8 @@ export let mathJs: Module = null;
 
 export const initialiseMathJs = createLazyInitialiser(
   'https://cdn.jsdelivr.net/npm/mathjs@latest/+esm',
-  (mod: Module) => {
-    mathJs = mod;
+  (module: Module) => {
+    mathJs = module;
   },
   'Math.js'
 );
@@ -297,8 +301,8 @@ export let plotlyJs: Module = null;
 
 export const initialisePlotlyJs = createLazyInitialiser(
   'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@latest/+esm',
-  (mod: Module) => {
-    plotlyJs = mod;
+  (module: Module) => {
+    plotlyJs = module;
   },
   'Plotly.js'
 );
@@ -309,8 +313,8 @@ export let vueTippy: Module = null;
 
 export const initialiseVueTippy = createLazyInitialiser(
   'https://cdn.jsdelivr.net/npm/vue-tippy@latest/+esm',
-  (mod: Module) => {
-    vueTippy = mod;
+  (module: Module) => {
+    vueTippy = module;
   },
   'VueTippy',
   'https://cdn.jsdelivr.net/npm/tippy.js@latest/dist/tippy.css'
