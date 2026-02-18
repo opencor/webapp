@@ -32,6 +32,7 @@
         @close="onCloseMenu"
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
+        @updateAvailable="onUpdateAvailable"
       />
       <!-- TODO: enable once our GitHub integration is fully ready.
       <div v-if="firebaseConfig && !omex">
@@ -58,11 +59,11 @@
           @ok="onUpdateErrorDialogClose"
         />
         <YesNoQuestionDialog
-          v-model:visible="updateAvailableVisible"
+          v-model:visible="desktopUpdateAvailableVisible"
           title="Check for Updates..."
           :question="'Version ' + updateVersion + ' is available. Do you want to download it and install it?'"
           @yes="onDownloadAndInstall"
-          @no="updateAvailableVisible = false"
+          @no="desktopUpdateAvailableVisible = false"
         />
         <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
         <OkMessageDialog
@@ -94,6 +95,10 @@
         <AboutDialog
           v-model:visible="aboutVisible"
           @close="aboutVisible = false"
+        />
+        <UpdateAvailableDialog
+          v-model:visible="webUpdateAvailableVisible"
+          @close="webUpdateAvailableVisible = false"
         />
       </div>
     </div>
@@ -512,20 +517,20 @@ const onUpdateErrorDialogClose = (): void => {
   updateDownloadProgressVisible.value = false;
 };
 
-const updateAvailableVisible = vue.ref<boolean>(false);
+const desktopUpdateAvailableVisible = vue.ref<boolean>(false);
 const updateDownloadProgressVisible = vue.ref<boolean>(false);
 const updateVersion = vue.ref<string>('');
 const updateDownloadPercent = vue.ref<number>(0);
 
 electronApi?.onUpdateAvailable((version: string) => {
-  updateAvailableVisible.value = true;
+  desktopUpdateAvailableVisible.value = true;
   updateVersion.value = version;
 });
 
 const onDownloadAndInstall = (): void => {
   updateDownloadPercent.value = 0; // Just to be on the safe side.
   updateDownloadProgressVisible.value = true;
-  updateAvailableVisible.value = false;
+  desktopUpdateAvailableVisible.value = false;
 
   electronApi?.downloadAndInstallUpdate();
 };
@@ -600,6 +605,14 @@ const onSettingsMenu = (): void => {
   }
 
   settingsVisible.value = true;
+};
+
+// Update available dialog.
+
+const webUpdateAvailableVisible = vue.ref(false);
+
+const onUpdateAvailable = () => {
+  webUpdateAvailableVisible.value = true;
 };
 
 // Open a file.
@@ -972,15 +985,7 @@ if (props.omex) {
               window.location.reload();
             } else if (action.value) {
               setTimeout(() => {
-                if (action.value.startsWith('forceReload=')) {
-                  // This action (parameter in fact) is used with a timestamp as an argument to force OpenCOR to reload
-                  // (following an update) without getting an error toast. So, we do nothing here and we just let the
-                  // reload to happen.
-                  // Note: the reload is triggered by the URL change that we do in reloadApp() in version.ts. This is
-                  //       done to bypass the cache and ensure that the latest version of OpenCOR is loaded. When the
-                  //       reload happens, the URL contains the forceReload action with a timestamp argument, but since
-                  //       we are reloading anyway, we can just ignore it and not show an error toast.
-                } else if (action.value.startsWith(FULL_URI_SCHEME)) {
+                if (action.value.startsWith(FULL_URI_SCHEME)) {
                   handleAction(action.value.slice(FULL_URI_SCHEME.length));
                 } else {
                   toast.add({
