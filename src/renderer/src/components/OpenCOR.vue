@@ -937,8 +937,8 @@ vue.onMounted(() => {
 // carry on as normal (i.e. the whole OpenCOR UI will be shown).
 
 if (props.omex) {
-  vue.watch(compOpencorInitialised, (newCompOpencorInitialised: boolean) => {
-    if (newCompOpencorInitialised && props.omex) {
+  vue.watch(initialisingOpencorMessageVisible, (newInitialisingOpencorMessageVisible: boolean) => {
+    if (!newInitialisingOpencorMessageVisible && props.omex) {
       openFile(props.omex);
     }
   });
@@ -958,8 +958,8 @@ if (props.omex) {
         // Handle the action passed to our Web app, if any.
         // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
-        vue.watch(compOpencorInitialised, (newCompOpencorInitialised: boolean) => {
-          if (newCompOpencorInitialised) {
+        vue.watch(initialisingOpencorMessageVisible, (newInitialisingOpencorMessageVisible: boolean) => {
+          if (!newInitialisingOpencorMessageVisible) {
             const action = vueusecore.useStorage('action', '');
 
             if (window.location.search) {
