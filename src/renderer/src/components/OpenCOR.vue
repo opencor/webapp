@@ -48,55 +48,52 @@
         />
       </div>
       -->
-      <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="compInitialisingOpencorMessageProgress" />
-      <BlockingMessageComponent v-show="loadingModelMessageVisible" message="Loading model..." />
-      <BlockingMessageComponent v-show="progressMessageVisible" :message="progressMessageMessage" :progress="progressMessageProgress" />
-      <OkMessageDialog
-        v-model:visible="updateErrorVisible"
-        :title="updateErrorTitle"
-        :message="updateErrorIssue"
-        @ok="onUpdateErrorDialogClose"
-      />
-      <YesNoQuestionDialog
-        v-model:visible="desktopUpdateAvailableVisible"
-        title="Check for Updates..."
-        :question="'Version ' + updateVersion + ' is available. Do you want to download it and install it?'"
-        @yes="onDownloadAndInstall"
-        @no="desktopUpdateAvailableVisible = false"
-      />
-      <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible" :percent="updateDownloadPercent" />
-      <OkMessageDialog
-        v-model:visible="updateNotAvailableVisible"
-        title="Check for Updates..."
-        message="No updates are available at this time."
-        @ok="updateNotAvailableVisible = false"
-      />
       <ContentsComponent ref="contents" class="grow min-h-0"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :simulationOnly="!!omex"
         @error="onError"
       />
-      <OpenRemoteDialog
-        v-model:visible="openRemoteVisible"
+      <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="compInitialisingOpencorMessageProgress" />
+      <BlockingMessageComponent v-show="loadingModelMessageVisible" message="Loading model..." />
+      <BlockingMessageComponent v-show="progressMessageVisible" :message="progressMessageMessage" :progress="progressMessageProgress" />
+      <OkMessageDialog v-model:visible="updateErrorVisible"
+        :title="updateErrorTitle"
+        :message="updateErrorIssue"
+        @ok="onUpdateErrorDialogClose"
+      />
+      <YesNoQuestionDialog v-model:visible="desktopUpdateAvailableVisible"
+        title="Check for Updates..."
+        :question="'Version ' + updateVersion + ' is available. Do you want to download it and install it?'"
+        @yes="onDownloadAndInstall"
+        @no="desktopUpdateAvailableVisible = false"
+      />
+      <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible"
+        :percent="updateDownloadPercent"
+      />
+      <OkMessageDialog v-model:visible="updateNotAvailableVisible"
+        title="Check for Updates..."
+        message="No updates are available at this time."
+        @ok="updateNotAvailableVisible = false"
+      />
+      <OpenRemoteDialog v-model:visible="openRemoteVisible"
         @openRemote="onOpenRemote"
         @close="openRemoteVisible = false"
       />
-      <SettingsDialog v-model:visible="settingsVisible" @close="settingsVisible = false" />
-      <YesNoQuestionDialog
-        v-model:visible="resetAllVisible"
+      <SettingsDialog v-model:visible="settingsVisible"
+        @close="settingsVisible = false"
+      />
+      <YesNoQuestionDialog v-model:visible="resetAllVisible"
         title="Reset All..."
         question="You are about to reset all of your settings. Do you want to proceed?"
         severity="danger"
         @yes="onResetAll"
         @no="resetAllVisible = false"
       />
-      <AboutDialog
-        v-model:visible="aboutVisible"
+      <AboutDialog v-model:visible="aboutVisible"
         @close="aboutVisible = false"
       />
-      <UpdateAvailableDialog
-        v-model:visible="webUpdateAvailableVisible"
+      <UpdateAvailableDialog v-model:visible="webUpdateAvailableVisible"
         @close="webUpdateAvailableVisible = false"
       />
     </div>
