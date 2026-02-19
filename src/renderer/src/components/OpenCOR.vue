@@ -1018,6 +1018,7 @@ vue.watch(compBlockUiEnabled, (newCompBlockUiEnabled: boolean) => {
   }
 });
 
+/* TODO: enable once our GitHub integration is fully ready.
 // GitHub integration.
 
 const disconnectFromGitHubVisible = vue.ref<boolean>(false);
@@ -1044,7 +1045,6 @@ const deleteGitHubAccessToken = async (silent: boolean = false): Promise<void> =
   }
 };
 
-/* TODO: enable once our GitHub integration is fully ready.
 const loadGitHubAccessToken = async (): Promise<void> => {
   if (!electronApi || props.omex || !firebaseConfig) {
     return;
