@@ -39,9 +39,9 @@ vue.watch(
   { immediate: true }
 );
 
-const onUpdateModelValue = (value: string) => {
+const onUpdateModelValue = (value: string | undefined) => {
   isEditing.value = true;
-  internalValue.value = value;
+  internalValue.value = value ?? '';
 };
 
 const onPaste = (event: ClipboardEvent) => {

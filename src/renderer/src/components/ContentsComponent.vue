@@ -120,17 +120,20 @@ const selectFile = (filePath: string): void => {
 
 const selectNextFile = (): void => {
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
+  const fileTabName = fileTabs.value[(fileTabIndex + 1) % fileTabs.value.length]?.file.path() || '';
 
-  if (fileTabIndex !== -1) {
-    selectFile(fileTabs.value[(fileTabIndex + 1) % fileTabs.value.length].file.path());
+  if (fileTabName !== '') {
+    selectFile(fileTabName);
   }
 };
 
 const selectPreviousFile = (): void => {
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
+  const fileTabName =
+    fileTabs.value[(fileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length]?.file.path() || '';
 
-  if (fileTabIndex !== -1) {
-    selectFile(fileTabs.value[(fileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length].file.path());
+  if (fileTabName !== '') {
+    selectFile(fileTabName);
   }
 };
 
