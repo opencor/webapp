@@ -1,5 +1,5 @@
-import xxhash from 'xxhash-wasm';
-
+import * as cache from './cache.ts';
+import * as dependencies from './dependencies.ts';
 import { electronApi } from './electronApi.ts';
 
 // Some interfaces.
@@ -104,14 +104,8 @@ export const corsProxyUrl = (url: string): string => {
 
 // A method to compute the XXH64 value of some data.
 
-let _xxhash: Awaited<ReturnType<typeof xxhash>>;
-
-export const initialiseXxhash = async (): Promise<void> => {
-  _xxhash = await xxhash();
-};
-
 export const xxh64 = (data: Uint8Array): string => {
-  return _xxhash.h64Raw(data).toString(16).padStart(16, '0');
+  return dependencies._xxhash.h64Raw(data).toString(16).padStart(16, '0');
 };
 
 // A method to format a number of milliseconds into a string.
@@ -220,102 +214,169 @@ export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-// A method to create a lazy initialiser for a module, which imports the module and optionally its CSS.
+// A method to retrieve the size of a remote file, if possible.
 
-// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-type Module = any;
+export const remoteFileSize = async (url: string): Promise<number> => {
+  // Check the cache first.
 
-const injectedCss = new Set<string>();
+  try {
+    const size = await cache.remoteFileSize(url);
 
-const createLazyInitialiser = (url: string, assign: (module: Module) => void, name: string, cssUrl?: string) => {
-  return async (): Promise<void> => {
-    try {
-      const module = await import(/* @vite-ignore */ url);
-
-      assign((module as Module).default ?? module);
-
-      // Fetch any CSS for the module and inject it into the page if we haven't already done so.
-
-      if (cssUrl && !injectedCss.has(cssUrl)) {
-        const response = await fetch(/* @vite-ignore */ cssUrl, { mode: 'cors' });
-
-        if (!response.ok) {
-          throw new Error(`Failed to load ${name ?? 'stylesheet'}: ${response.statusText}`);
-        }
-
-        const style = document.createElement('style');
-
-        style.textContent = await response.text();
-
-        document.head.appendChild(style);
-
-        injectedCss.add(cssUrl);
-      }
-    } catch (error: unknown) {
-      console.error(`Failed to import ${name ?? url}:`, formatError(error));
-
-      throw error;
+    if (size !== undefined) {
+      return size;
     }
-  };
+  } catch {}
+
+  // Try a HEAD request first to get the content-length header.
+
+  try {
+    const head = await fetch(url, { method: 'HEAD' });
+    const contentLength = head.headers.get('content-length');
+
+    if (head.ok && contentLength && /^\d+$/.test(contentLength)) {
+      const size = Number(contentLength);
+
+      await cache.setRemoteFileSize(url, size);
+
+      return size;
+    }
+  } catch {}
+
+  // If that doesn't work, try a GET request with a Range header to get the content-range header.
+
+  try {
+    const res = await fetch(url, { headers: { Range: 'bytes=0-0' } });
+    const contentRange = res.headers.get('content-range');
+    const match = contentRange?.match(/\/(\d+)$/);
+
+    if (res.ok && match) {
+      const size = Number(match[1]);
+
+      await cache.setRemoteFileSize(url, size);
+
+      return size;
+    }
+  } catch {}
+
+  const size = 0; // Unknown size.
+
+  await cache.setRemoteFileSize(url, size);
+
+  return size;
 };
 
-// Initialise jsonschema lazily.
+// A method to download a remote file and track the progress of the download.
 
-export let jsonSchema: Module = null;
+export const downloadRemoteFile = async (url: string, onProgress: (percent: number) => void): Promise<Uint8Array> => {
+  // Check the cache first.
 
-export const initialiseJsonSchema = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/jsonschema@1.5.0/+esm',
-  (module: Module) => {
-    jsonSchema = module;
-  },
-  'jsonschema'
-);
+  try {
+    const data = await cache.remoteFile(url);
 
-// Initialise JSZip lazily.
+    if (data) {
+      for (let percent = 0; percent <= 100; ++percent) {
+        await sleep(1);
 
-export let jsZip: Module = null;
+        onProgress(percent);
+      }
 
-export const initialiseJsZip = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm',
-  (module: Module) => {
-    jsZip = module;
-  },
-  'JSZip'
-);
+      return data;
+    }
+  } catch {}
 
-// Initialise Math.js lazily.
+  // Download the file in chunks and track the progress.
 
-export let mathJs: Module = null;
+  const res = await fetch(url);
 
-export const initialiseMathJs = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/mathjs@15.1.1/+esm',
-  (module: Module) => {
-    mathJs = module;
-  },
-  'Math.js'
-);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} was returned while trying to download ${url}.`);
+  }
 
-// Initialise Plotly.js lazily.
+  if (!res.body) {
+    throw new Error('ReadableStream is not supported in this browser.');
+  }
 
-export let plotlyJs: Module = null;
+  // Start with 0% progress.
 
-export const initialisePlotlyJs = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.3.1/+esm',
-  (module: Module) => {
-    plotlyJs = module;
-  },
-  'Plotly.js'
-);
+  onProgress(0);
 
-// Initialise VueTippy lazily (also injects its CSS once).
+  // Try to get the total size of the file from the content-length header or the cache, if possible, to be able to
+  // compute the progress. If not, we'll just show 0% until the download is complete and then show 100%.
 
-export let vueTippy: Module = null;
+  let totalNbOfBytes = 0;
+  const contentLength = res.headers.get('content-length');
 
-export const initialiseVueTippy = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/vue-tippy@6.7.1/+esm',
-  (module: Module) => {
-    vueTippy = module;
-  },
-  'VueTippy',
-  'https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy.css'
-);
+  if (contentLength && /^\d+$/.test(contentLength)) {
+    totalNbOfBytes = Number(contentLength);
+
+    await cache.setRemoteFileSize(url, totalNbOfBytes);
+  } else {
+    totalNbOfBytes = await remoteFileSize(url);
+  }
+
+  // Read the response body in chunks and track the progress.
+
+  const reader = res.body.getReader();
+  let oldPercent = 0;
+  let crtNbOfBytes = 0;
+  const buffer = totalNbOfBytes ? new Uint8Array(totalNbOfBytes) : undefined;
+  const chunks: Uint8Array[] = buffer ? [] : [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    if (!value) {
+      continue;
+    }
+
+    if (buffer) {
+      buffer.set(value, crtNbOfBytes);
+    } else {
+      chunks.push(value);
+    }
+
+    crtNbOfBytes += value.length;
+
+    if (totalNbOfBytes) {
+      const percent = Math.floor((100 * crtNbOfBytes) / totalNbOfBytes);
+
+      if (percent > oldPercent) {
+        oldPercent = percent;
+
+        onProgress(percent);
+      }
+    }
+  }
+
+  if (!totalNbOfBytes) {
+    onProgress(100);
+  }
+
+  let data: Uint8Array;
+
+  if (buffer) {
+    data = crtNbOfBytes === totalNbOfBytes ? buffer : buffer.subarray(0, crtNbOfBytes);
+  } else {
+    let offset = 0;
+
+    data = new Uint8Array(crtNbOfBytes);
+
+    for (const chunk of chunks) {
+      data.set(chunk, offset);
+
+      offset += chunk.length;
+    }
+  }
+
+  // Try to cache the remote file.
+
+  try {
+    await cache.setRemoteFile(url, data);
+  } catch {}
+
+  return data;
+};

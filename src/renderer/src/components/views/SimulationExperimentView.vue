@@ -245,6 +245,7 @@ import * as vue from 'vue';
 
 import * as colors from '../../common/colors.ts';
 import * as common from '../../common/common.ts';
+import * as dependencies from '../../common/dependencies.ts';
 import * as locCommon from '../../common/locCommon.ts';
 import * as locApi from '../../libopencor/locApi.ts';
 import * as locSedApi from '../../libopencor/locSedApi.ts';
@@ -377,7 +378,7 @@ const onDownloadCombineArchive = (): void => {
   // Create and download a COMBINE archive that contains a manifest file, a CellML file, a SED-ML file, and a UI JSON
   // file.
 
-  const jsZip = new common.jsZip();
+  const jsZip = new dependencies._jsZip();
   const baseFileName = common.fileName(interactiveFile.path()).replace(/\.[^/.]+$/, '');
   const modelFile = interactiveModel.file();
 
@@ -527,7 +528,7 @@ const interactiveUiJsonEmpty = vue.computed(() => {
 
   return false;
 });
-const interactiveMath = common.mathJs.create(common.mathJs.all, {});
+const interactiveMath = dependencies._mathJs.create(dependencies._mathJs.all, {});
 const interactiveModel = interactiveDocument.model(0);
 const interactiveData = vue.ref<IGraphPanelData[]>([]);
 let interactiveMargins: Record<string, IGraphPanelMargins> = {};
