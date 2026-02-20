@@ -357,6 +357,6 @@ export const simulationData = (instanceTask: locApi.SedInstanceTask, info: ISimu
     case ESimulationDataInfoType.ALGEBRAIC:
       return instanceTask.algebraicVariable(info.index);
     default:
-      return [];
+      return new Float64Array();
   }
 };

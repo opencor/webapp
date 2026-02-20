@@ -407,7 +407,7 @@ const onDownloadCombineArchive = (): void => {
       type: 'blob',
       compression: 'DEFLATE'
     })
-    .then((content) => {
+    .then((content: Blob) => {
       common.downloadFile(`${baseFileName}.omex`, content, 'application/zip');
     })
     .catch((error: unknown) => {
@@ -490,7 +490,7 @@ let interactiveInstanceTask = interactiveInstance.task(0);
 const interactiveAllModelParameters = vue.ref<string[]>([]);
 const interactiveEditableModelParameters = vue.ref<string[]>([]);
 const interactiveVoiName = vue.ref(interactiveInstanceTask.voiName());
-const interactiveVoiId = vue.ref(interactiveVoiName.value.split('/')[1]);
+const interactiveVoiId = vue.ref(interactiveVoiName.value.split('/')[1] ?? '');
 const interactiveUiJson = vue.ref<locApi.IUiJson>(
   props.uiJson
     ? JSON.parse(JSON.stringify(props.uiJson))
@@ -521,7 +521,7 @@ const interactiveUiJsonEmpty = vue.computed(() => {
     if (interactiveUiJson.value.output.data.length === 1) {
       const data = interactiveUiJson.value.output.data[0];
 
-      return data.id === interactiveVoiId.value && data.name === interactiveVoiName.value;
+      return data && data.id === interactiveVoiId.value && data.name === interactiveVoiName.value;
     }
   }
 

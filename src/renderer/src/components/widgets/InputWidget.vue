@@ -94,8 +94,8 @@ const selectChange = (event: ISelectChangeEvent) => {
   }
 };
 
-const inputTextValueUpdated = (newValue: number) => {
-  if (newValue !== oldValue) {
+const inputTextValueUpdated = (newValue: number | undefined) => {
+  if (newValue !== undefined && newValue !== oldValue) {
     let constrainedValue = newValue;
 
     if (props.minimumValue !== undefined && constrainedValue < props.minimumValue) {
