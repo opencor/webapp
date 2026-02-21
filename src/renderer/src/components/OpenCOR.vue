@@ -690,7 +690,7 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
           (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
         ) {
           if (props.omex) {
-            void vue.nextTick(() => {
+            vue.nextTick(() => {
               issues.value.push({
                 type: locApi.EIssueType.ERROR,
                 description:
@@ -731,7 +731,7 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
         }
 
         if (props.omex) {
-          void vue.nextTick(() => {
+          vue.nextTick(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
               description: common.formatMessage(common.formatError(error))
@@ -780,7 +780,7 @@ const onDragEnter = (): void => {
     return;
   }
 
-  dragAndDropCounter.value += 1;
+  ++dragAndDropCounter.value;
 };
 
 const onDrop = (event: DragEvent): void => {

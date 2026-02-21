@@ -355,7 +355,7 @@ const onRun = (): void => {
       standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>`;
     }
 
-    void vue.nextTick(() => {
+    vue.nextTick(() => {
       const consoleElement = document.getElementById(editorId.value);
 
       if (consoleElement) {
