@@ -121,7 +121,7 @@ import type { IOpenCORProps } from '../../index.ts';
 import '../assets/app.css';
 import '../assets/primeicons-assets.ts';
 import * as common from '../common/common.ts';
-import { FULL_URI_SCHEME, NO_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
+import { FULL_URI_SCHEME, LONG_DELAY, NO_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
 import * as dependencies from '../common/dependencies.ts';
 import { electronApi } from '../common/electronApi.ts';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -316,7 +316,10 @@ vue.watch(
         crtGlobalProperties[vueTippyInstalledFlag] = true;
       }
 
-      // Now, we can hide our initialisation message.
+      // Now, we can hide the loading message (but after a long delay so that the user gets a chance to see that the
+      // initialisation has reached 100%).
+
+      await common.sleep(LONG_DELAY);
 
       initialisingOpencorMessageVisible.value = false;
 

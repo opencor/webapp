@@ -274,7 +274,7 @@ export const downloadRemoteFile = async (url: string, onProgress: (percent: numb
     const data = await cache.remoteFile(url);
 
     if (data) {
-      for (let percent = 0; percent <= 100; ++percent) {
+      for (let percent = 0; percent <= 100; percent += 2) {
         await sleep(1);
 
         onProgress(percent);
