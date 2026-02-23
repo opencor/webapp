@@ -11,7 +11,7 @@ import * as locApi from '../libopencor/locApi.ts';
 type ExternalDependency = {
   name: string;
   url: string;
-  assign: (module: dependencies.Module) => void;
+  set: (module: dependencies.Module) => void;
   cssUrl?: string;
 };
 
@@ -19,45 +19,42 @@ const externalDependencies: ExternalDependency[] = [
   {
     name: 'jsonschema',
     url: 'https://cdn.jsdelivr.net/npm/jsonschema@1.5.0/+esm',
-    assign: (m) => dependencies.setJsonSchema(m)
+    set: (m) => dependencies.setJsonSchema(m)
   },
   {
     name: 'JSZip',
     url: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm',
-    assign: (m) => dependencies.setJsZip(m)
+    set: (m) => dependencies.setJsZip(m)
   },
   {
     name: 'Math.js',
     url: 'https://cdn.jsdelivr.net/npm/mathjs@15.1.1/+esm',
-    assign: (m) => dependencies.setMathJs(m)
+    set: (m) => dependencies.setMathJs(m)
   },
   {
     name: 'Plotly.js',
     url: 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.4.0/+esm',
-    assign: (m) => dependencies.setPlotlyJs(m)
+    set: (m) => dependencies.setPlotlyJs(m)
   },
   {
     name: 'VueTippy',
     url: 'https://cdn.jsdelivr.net/npm/vue-tippy@6.7.1/+esm',
-    assign: (m) => dependencies.setVueTippy(m),
+    set: (m) => dependencies.setVueTippy(m),
     cssUrl: 'https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy.css'
   }
 ];
 
 // Some variables to keep track of the initialisation progress.
-// Note: the 3 initial steps are to download libOpenCOR's WASM, import it, and then instantiate it. Then, we have one
-//       step per external dependency, except VueTippy which has two steps (one for the JS and one for the CSS).
+// Note: the 2 initial steps are to import libOpenCOR's WASM and to instantiate it. Then, we have one or two steps per
+//       external dependency, depending on whether it has an associated CSS file or not.
 
 const crtNbOfSteps = vue.ref<number>(0);
-const totalNbOfSteps = electronApi
-  ? 0
-  : 3 + externalDependencies.reduce((acc, dep) => acc + (dep.url ? 1 : 0) + (dep.cssUrl ? 1 : 0), 0);
+const totalNbOfSteps =
+  (electronApi ? 0 : 2) + externalDependencies.reduce((acc, dep) => acc + (dep.url ? 1 : 0) + (dep.cssUrl ? 1 : 0), 0);
 
 // Retrieve the version of libOpenCOR that is to be used. Two options:
 //  - OpenCOR: libOpenCOR can be accessed using window.locApi, which references our C++ API.
 //  - OpenCOR's Web app: libOpenCOR can be accessed using our WebAssembly module.
-
-const initialiseLocApiProgress = vue.ref<number>(0);
 
 export const initialiseLocApi = async (): Promise<void> => {
   // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
@@ -70,57 +67,44 @@ export const initialiseLocApi = async (): Promise<void> => {
     // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
 
     try {
-      const data = await common.downloadRemoteFile(
-        'https://unpkg.com/@opencor/libopencor@0.20260211.0/dist/libopencor.js',
-        (percent: number) => {
-          initialiseLocApiProgress.value = percent;
-        }
-      );
+      const libOpenCOR = (
+        await import(
+          /* @vite-ignore */ common.corsProxyUrl(
+            'https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20260211.0.js'
+          )
+        )
+      ).default;
 
-      const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/javascript' });
-      const url = URL.createObjectURL(blob);
+      ++crtNbOfSteps.value;
 
-      try {
-        const module = await import(/* @vite-ignore */ url);
+      locApi.setWasmLocApi(await libOpenCOR());
 
-        ++crtNbOfSteps.value;
-
-        const libOpenCOR = module.default as () => Promise<locApi.IWasmLocApi>;
-        const loc = await libOpenCOR();
-
-        ++crtNbOfSteps.value;
-
-        locApi.setWasmLocApi(loc);
-      } catch (error: unknown) {
-        console.error('Failed to load libOpenCOR:', common.formatError(error));
-
-        throw error;
-      } finally {
-        URL.revokeObjectURL(url);
-      }
+      ++crtNbOfSteps.value;
     } catch (error: unknown) {
-      console.error('Failed to download libOpenCOR:', common.formatError(error));
+      console.error('Failed to load libOpenCOR:', common.formatError(error));
 
       throw error;
     }
   }
 };
 
-// A method to create a lazy initialiser for a module, which imports the module and optionally its CSS.
+// A method to create a lazy initialiser, which imports an external dependency and optionally its CSS.
 
 const injectedCss = new Set<string>();
 
 const createLazyInitialiser = (
   name: string,
   url: string,
-  assign: (module: dependencies.Module) => void,
+  set: (module: dependencies.Module) => void,
   cssUrl?: string
 ) => {
   return async (): Promise<void> => {
     try {
+      // Import the exteral dependency and set it.
+
       const module = await import(/* @vite-ignore */ url);
 
-      assign((module as dependencies.Module).default ?? module);
+      set((module as dependencies.Module).default ?? module);
 
       ++crtNbOfSteps.value;
 
@@ -153,7 +137,7 @@ const createLazyInitialiser = (
   };
 };
 
-// Initialise libOpenCOR and then our external dependencies.
+// A method to handle any error that occurs during initialisation.
 
 const initialisationError = (error: unknown): void => {
   if (!issues.value.length) {
@@ -171,6 +155,8 @@ const initialisationError = (error: unknown): void => {
   failed.value = true;
 };
 
+// Initialise libOpenCOR and then our external dependencies.
+
 initialiseLocApi().catch((error: unknown) => {
   initialisationError(error);
 });
@@ -179,7 +165,7 @@ for (const externalDependency of externalDependencies) {
   createLazyInitialiser(
     externalDependency.name,
     externalDependency.url,
-    externalDependency.assign,
+    externalDependency.set,
     externalDependency.cssUrl
   )().catch((error: unknown) => {
     initialisationError(error);
@@ -194,5 +180,5 @@ export const done = vue.computed(() => {
 export const failed = vue.ref<boolean>(false);
 export const issues = vue.ref<locApi.IIssue[]>([]);
 export const progress = vue.computed(() => {
-  return Math.round((100 * (crtNbOfSteps.value + 0.01 * initialiseLocApiProgress.value)) / totalNbOfSteps);
+  return Math.round((100 * crtNbOfSteps.value) / totalNbOfSteps);
 });
