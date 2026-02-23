@@ -43,7 +43,7 @@ class Settings {
 
   load(): void {
     if (electronApi) {
-      void electronApi.loadSettings().then((settings: ISettings) => {
+      electronApi.loadSettings().then((settings: ISettings) => {
         this._settings = settings;
 
         this.emitInitialised();

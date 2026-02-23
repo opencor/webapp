@@ -1,5 +1,3 @@
-import { corsProxyUrl, formatError } from '../common/common.ts';
-
 import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.ts';
 import type { IIssue } from './locLoggerApi.ts';
 import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi.ts';
@@ -126,37 +124,17 @@ export interface IWasmLocApi {
   versionString: () => string;
 }
 
-// Retrieve the version of libOpenCOR that is to be used. Two options:
-//  - OpenCOR: libOpenCOR can be accessed using window.locApi, which references our C++ API.
-//  - OpenCOR's Web app: libOpenCOR can be accessed using our WebAssembly module.
+// The C++ or WASM version of libOpenCOR that is to be used.
 
 export let _cppLocApi = {} as ICppLocApi;
 export let _wasmLocApi = {} as IWasmLocApi;
 
-export const initialiseLocApi = async (): Promise<void> => {
-  // @ts-expect-error (window.locApi may or may not be defined which is why we test it)
-  if (window.locApi) {
-    // We are running OpenCOR, so libOpenCOR can be accessed using window.locApi.
+export const setCppLocApi = (api: ICppLocApi): void => {
+  _cppLocApi = api;
+};
 
-    // @ts-expect-error (window.locApi is defined)
-    _cppLocApi = window.locApi;
-  } else {
-    // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
-
-    try {
-      const libOpenCOR = (
-        await import(
-          /* @vite-ignore */ corsProxyUrl('https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20260211.0.js')
-        )
-      ).default;
-
-      _wasmLocApi = (await libOpenCOR()) as IWasmLocApi;
-    } catch (error: unknown) {
-      console.error('Failed to load libOpenCOR:', formatError(error));
-
-      throw error;
-    }
-  }
+export const setWasmLocApi = (api: IWasmLocApi): void => {
+  _wasmLocApi = api;
 };
 
 // Logger API.

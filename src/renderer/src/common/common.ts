@@ -1,5 +1,4 @@
-import xxhash from 'xxhash-wasm';
-
+import * as dependencies from './dependencies.ts';
 import { electronApi } from './electronApi.ts';
 
 // Some interfaces.
@@ -104,14 +103,8 @@ export const corsProxyUrl = (url: string): string => {
 
 // A method to compute the XXH64 value of some data.
 
-let _xxhash: Awaited<ReturnType<typeof xxhash>>;
-
-export const initialiseXxhash = async (): Promise<void> => {
-  _xxhash = await xxhash();
-};
-
 export const xxh64 = (data: Uint8Array): string => {
-  return _xxhash.h64Raw(data).toString(16).padStart(16, '0');
+  return dependencies._xxhash.h64Raw(data).toString(16).padStart(16, '0');
 };
 
 // A method to format a number of milliseconds into a string.
@@ -219,103 +212,3 @@ export const fileName = (filePath: string): string => {
 export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
-
-// A method to create a lazy initialiser for a module, which imports the module and optionally its CSS.
-
-// biome-ignore lint/suspicious/noExplicitAny: dynamic import requires any type
-type Module = any;
-
-const injectedCss = new Set<string>();
-
-const createLazyInitialiser = (url: string, assign: (module: Module) => void, name: string, cssUrl?: string) => {
-  return async (): Promise<void> => {
-    try {
-      const module = await import(/* @vite-ignore */ url);
-
-      assign((module as Module).default ?? module);
-
-      // Fetch any CSS for the module and inject it into the page if we haven't already done so.
-
-      if (cssUrl && !injectedCss.has(cssUrl)) {
-        const response = await fetch(/* @vite-ignore */ cssUrl, { mode: 'cors' });
-
-        if (!response.ok) {
-          throw new Error(`Failed to load ${name ?? 'stylesheet'}: ${response.statusText}`);
-        }
-
-        const style = document.createElement('style');
-
-        style.textContent = await response.text();
-
-        document.head.appendChild(style);
-
-        injectedCss.add(cssUrl);
-      }
-    } catch (error: unknown) {
-      console.error(`Failed to import ${name ?? url}:`, formatError(error));
-
-      throw error;
-    }
-  };
-};
-
-// Initialise jsonschema lazily.
-
-export let jsonSchema: Module = null;
-
-export const initialiseJsonSchema = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/jsonschema@1.5.0/+esm',
-  (module: Module) => {
-    jsonSchema = module;
-  },
-  'jsonschema'
-);
-
-// Initialise JSZip lazily.
-
-export let jsZip: Module = null;
-
-export const initialiseJsZip = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm',
-  (module: Module) => {
-    jsZip = module;
-  },
-  'JSZip'
-);
-
-// Initialise Math.js lazily.
-
-export let mathJs: Module = null;
-
-export const initialiseMathJs = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/mathjs@15.1.1/+esm',
-  (module: Module) => {
-    mathJs = module;
-  },
-  'Math.js'
-);
-
-// Initialise Plotly.js lazily.
-
-export let plotlyJs: Module = null;
-
-export const initialisePlotlyJs = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.3.1/+esm',
-  (module: Module) => {
-    plotlyJs = module;
-  },
-  'Plotly.js'
-);
-
-// Initialise VueTippy lazily (also injects its CSS once).
-
-export let vueTippy: Module = null;
-
-export const initialiseVueTippy = createLazyInitialiser(
-  'https://cdn.jsdelivr.net/npm/vue-tippy@6.7.1/+esm',
-  (module: Module) => {
-    vueTippy = module;
-  },
-  'VueTippy',
-  'https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy.css'
-);

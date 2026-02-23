@@ -1,6 +1,7 @@
 import * as locApi from '../libopencor/locApi.ts';
 
 import * as common from './common.ts';
+import * as dependencies from './dependencies.ts';
 import { electronApi } from './electronApi.ts';
 
 // Some file-related methods.
@@ -78,7 +79,7 @@ export const zipCellmlDataUrl = async (dataUrl: string | Uint8Array | File): Pro
     // Unzip the data.
 
     try {
-      const jsZip = new common.jsZip();
+      const jsZip = new dependencies._jsZip();
       const zip = await jsZip.loadAsync(zipDataUrl.data);
 
       // Make sure that the ZIP file contains only one file.

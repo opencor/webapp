@@ -72,7 +72,7 @@ vue.watch(
 // Some methods to handle a scalar value using an input component and a slider.
 
 const emitChange = (newValue: number) => {
-  void vue.nextTick(() => {
+  vue.nextTick(() => {
     value.value = newValue;
 
     oldValue = newValue;

@@ -47,7 +47,7 @@ const onShow = () => {
 
   enableDisableMainMenu(false);
 
-  void vue.nextTick(() => {
+  vue.nextTick(() => {
     dialogElement = document.querySelector('.p-dialog');
     containerElement = dialogElement?.closest('[data-pc-section="mask"]');
 
@@ -70,7 +70,7 @@ const onHide = () => {
 
   emit('cancel');
 
-  void vue.nextTick(() => {
+  vue.nextTick(() => {
     if (mutationObserver) {
       mutationObserver.disconnect();
 

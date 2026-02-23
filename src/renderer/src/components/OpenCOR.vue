@@ -1,6 +1,6 @@
 <template>
   <BlockUI ref="blockUi" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
-    :blocked="compBlockUiEnabled"
+    :blocked="blockUiBlocked"
     @click="activateInstance"
     @focus="activateInstance"
     @focusin="activateInstance"
@@ -12,7 +12,7 @@
       :pt:root:style="{ position: 'absolute' }"
     />
     <BackgroundComponent v-show="compBackgroundVisible" />
-    <IssuesView v-if="issues.length" class="m-4" style="height: calc(100% - 2rem);" :issues="issues" />
+    <IssuesView v-if="compIssues.length" class="m-4" style="height: calc(100% - 2rem);" :issues="compIssues" />
     <div v-else class="h-full flex flex-col"
       @dragenter="onDragEnter"
       @dragover.prevent
@@ -54,7 +54,7 @@
         :simulationOnly="!!omex"
         @error="onError"
       />
-      <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="compInitialisingOpencorMessageProgress" />
+      <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
       <BlockingMessageComponent v-show="loadingModelMessageVisible" message="Loading model..." />
       <BlockingMessageComponent v-show="progressMessageVisible" :message="progressMessageMessage" :progress="progressMessageProgress" />
       <OkMessageDialog v-model:visible="updateErrorVisible"
@@ -104,6 +104,8 @@
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
+import * as vue from 'vue';
+
 /* TODO: enable once our GitHub integration is fully ready.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
@@ -113,18 +115,19 @@ import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
-import * as vue from 'vue';
 
 import type { IOpenCORProps } from '../../index.ts';
 
 import '../assets/app.css';
 import '../assets/primeicons-assets.ts';
 import * as common from '../common/common.ts';
-import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
+import { FULL_URI_SCHEME, LONG_DELAY, NO_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
+import * as dependencies from '../common/dependencies.ts';
 import { electronApi } from '../common/electronApi.ts';
 /* TODO: enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 */
+import * as initialisation from '../common/initialisation.ts';
 import * as locCommon from '../common/locCommon.ts';
 import * as version from '../common/version.ts';
 import * as vueCommon from '../common/vueCommon.ts';
@@ -144,11 +147,16 @@ const mainMenuId = vue.ref('opencorMainMenu');
 const files = vue.ref<HTMLElement | null>(null);
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
+const compIssues = vue.computed(() => {
+  return [...initialisation.issues.value, ...issues.value];
+});
 const activeInstanceUid = vueCommon.activeInstanceUid();
 const connectingToGitHub = vue.ref<boolean>(false);
 /* TODO: enable once our GitHub integration is fully ready.
 const octokit = vue.ref<Octokit | null>(null);
 */
+const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
+const loadingModelMessageVisible = vue.ref<boolean>(false);
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -158,6 +166,14 @@ const activateInstance = (): void => {
 
 const compIsActive = vue.computed(() => {
   return activeInstanceUid.value === crtInstanceUid;
+});
+
+// Enable/disable the UI from Electron.
+
+const electronUiEnabled = vue.ref<boolean>(true);
+
+electronApi?.onEnableDisableUi((enable: boolean) => {
+  electronUiEnabled.value = enable;
 });
 
 // Determine whether the component UI should be blocked/enabled.
@@ -182,10 +198,48 @@ const compUiEnabled = vue.computed(() => {
   return !compBlockUiEnabled.value && !isDialogActive.value;
 });
 
+// Block/unblock the UI with "no" (i.e. a bit of a) delay to ensure that it doesn't happen too quickly (e.g., when
+// loading a model from a COMBINE archive, we don't want the UI to be blocked for a split second while the file is
+// being processed and the Simulation Experiment view is being shown in isolation).
+
+const blockUiBlocked = vue.ref<boolean>(true);
+let blockUiBlockedTimeoutId: number | undefined;
+
+vue.watch(
+  compBlockUiEnabled,
+  (newCompBlockUiEnabled: boolean) => {
+    if (blockUiBlockedTimeoutId !== undefined) {
+      window.clearTimeout(blockUiBlockedTimeoutId);
+    }
+
+    blockUiBlockedTimeoutId = window.setTimeout(() => {
+      blockUiBlocked.value = newCompBlockUiEnabled;
+
+      blockUiBlockedTimeoutId = undefined;
+    }, NO_DELAY);
+  },
+  { immediate: true }
+);
+
+vue.onUnmounted(() => {
+  if (blockUiBlockedTimeoutId !== undefined) {
+    window.clearTimeout(blockUiBlockedTimeoutId);
+  }
+});
+
 // Determine whether to show the main menu or not.
 
 const showMainMenu = vue.computed(() => {
   return !electronApi && !props.omex;
+});
+
+// Determine whether the background should be visible.
+
+const compBackgroundVisible = vue.computed(() => {
+  return (
+    (initialisingOpencorMessageVisible.value || loadingModelMessageVisible.value || progressMessageVisible.value) &&
+    !!props.omex
+  );
 });
 
 // Provide access to our progress message features.
@@ -210,7 +264,7 @@ const hide = (): void => {
   progressMessageVisible.value = false;
 };
 
-vue.provide('progressMessage', {
+vue.provide<IProgressMessage>('progressMessage', {
   show,
   update,
   hide
@@ -251,171 +305,48 @@ vueCommon.useTheme().setTheme(props.theme);
 
 const toast = useToast();
 
-// Initialise OpenCOR's external dependencies.
-
-// @ts-expect-error (window.locApi may or may not be defined which is why we test it)
-const locApiInitialised = vue.ref<boolean>(!!window.locApi);
-const jsonSchemaInitialised = vue.ref<boolean>(false);
-const jsZipInitialised = vue.ref<boolean>(false);
-const mathJsInitialised = vue.ref<boolean>(false);
-const plotlyJsInitialised = vue.ref<boolean>(false);
-const vueTippyInitialised = vue.ref<boolean>(false);
-const xxhashInitialised = vue.ref<boolean>(false);
-const compBackgroundVisible = vue.computed(() => {
-  return (
-    (initialisingOpencorMessageVisible.value || loadingModelMessageVisible.value || progressMessageVisible.value) &&
-    !!props.omex
-  );
-});
-const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
-const compOpencorInitialised = vue.computed(() => {
-  return (
-    locApiInitialised.value &&
-    jsonSchemaInitialised.value &&
-    jsZipInitialised.value &&
-    mathJsInitialised.value &&
-    plotlyJsInitialised.value &&
-    vueTippyInitialised.value &&
-    xxhashInitialised.value
-  );
-});
-const compInitialisingOpencorMessageProgress = vue.computed(() => {
-  const total = 7;
-  let count = 0;
-
-  if (locApiInitialised.value) {
-    count += 1;
-  }
-
-  if (jsonSchemaInitialised.value) {
-    count += 1;
-  }
-
-  if (jsZipInitialised.value) {
-    count += 1;
-  }
-
-  if (mathJsInitialised.value) {
-    count += 1;
-  }
-  if (plotlyJsInitialised.value) {
-    count += 1;
-  }
-
-  if (vueTippyInitialised.value) {
-    count += 1;
-  }
-
-  if (xxhashInitialised.value) {
-    count += 1;
-  }
-
-  return Math.round((100 * count) / total);
-});
-const loadingModelMessageVisible = vue.ref<boolean>(false);
-
-const initialisationError = (error: unknown): void => {
-  if (!issues.value.length) {
-    issues.value.push({
-      type: locApi.EIssueType.INFORMATION,
-      description: 'An error occurred while initialising OpenCOR. Please check your setup and reload the page.'
-    });
-  }
-
-  issues.value.splice(Math.max(0, issues.value.length - 1), 0, {
-    type: locApi.EIssueType.ERROR,
-    description: common.formatMessage(common.formatError(error))
-  });
-
-  initialisingOpencorMessageVisible.value = false;
-};
-
-void locApi
-  .initialiseLocApi()
-  .then(() => {
-    locApiInitialised.value = true;
-  })
-  .catch((error: unknown) => {
-    initialisationError(error);
-  });
-
-void common
-  .initialiseJsonSchema()
-  .then(() => {
-    jsonSchemaInitialised.value = true;
-  })
-  .catch((error: unknown) => {
-    initialisationError(error);
-  });
-
-void common
-  .initialiseJsZip()
-  .then(() => {
-    jsZipInitialised.value = true;
-  })
-  .catch((error: unknown) => {
-    initialisationError(error);
-  });
-
-void common
-  .initialiseMathJs()
-  .then(() => {
-    mathJsInitialised.value = true;
-  })
-  .catch((error: unknown) => {
-    initialisationError(error);
-  });
-
-void common
-  .initialisePlotlyJs()
-  .then(() => {
-    plotlyJsInitialised.value = true;
-  })
-  .catch((error: unknown) => {
-    initialisationError(error);
-  });
-
-void common
-  .initialiseVueTippy()
-  .then(() => {
-    vueTippyInitialised.value = true;
-  })
-  .catch((error: unknown) => {
-    initialisationError(error);
-  });
-
-void common
-  .initialiseXxhash()
-  .then(() => {
-    xxhashInitialised.value = true;
-  })
-  .catch((error: unknown) => {
-    initialisationError(error);
-  });
-
 // Finish initialising OpenCOR.
 
-vue.watch(compOpencorInitialised, async (newCompOpencorInitialised: boolean) => {
-  if (newCompOpencorInitialised) {
-    // OpenCOR is now fully initialised, so we can finalise a few things, namely let the current Vue app instance use
-    // VueTippy.
+const crtGlobalProperties = crtVueAppInstance?.config.globalProperties as Record<string, unknown> | undefined;
+const vueTippyInstalledFlag = 'opencorVueTippyInstalled';
 
-    if (crtVueAppInstance) {
-      crtVueAppInstance.use(common.vueTippy);
+vue.watch(
+  initialisation.done,
+  async (newInitialisationDone: boolean) => {
+    if (newInitialisationDone) {
+      // OpenCOR is now fully initialised, so we can finalise a few things, namely let the current Vue app instance use
+      // VueTippy.
+
+      if (crtVueAppInstance && crtGlobalProperties && !crtGlobalProperties[vueTippyInstalledFlag]) {
+        crtVueAppInstance.use(dependencies._vueTippy);
+
+        crtGlobalProperties[vueTippyInstalledFlag] = true;
+      }
+
+      // Now, we can hide the loading message (but after a long delay so that the user gets a chance to see that the
+      // initialisation has reached 100%).
+
+      await common.sleep(LONG_DELAY);
+
+      initialisingOpencorMessageVisible.value = false;
+
+      // We are all done, so let's start checking for a new version of OpenCOR.
+
+      version.startCheck();
     }
+  },
+  { immediate: true }
+);
 
-    // Now, we can hide the loading message (but after a long delay so that the user gets a chance to see that the
-    // initialisation has reached 100%).
-
-    await common.sleep(LONG_DELAY);
-
-    initialisingOpencorMessageVisible.value = false;
-
-    // We are all done, so let's start checking for a new version of OpenCOR.
-
-    version.startCheck();
-  }
-});
+vue.watch(
+  initialisation.failed,
+  (newInitialisationFailed: boolean) => {
+    if (newInitialisationFailed) {
+      initialisingOpencorMessageVisible.value = false;
+    }
+  },
+  { immediate: true }
+);
 
 /* TODO: enable once our GitHub integration is fully ready.
 // Initialise Firebase.
@@ -488,14 +419,6 @@ const handleAction = (action: string): void => {
     }
   }
 };
-
-// Enable/disable the UI from Electron.
-
-const electronUiEnabled = vue.ref<boolean>(true);
-
-electronApi?.onEnableDisableUi((enable: boolean) => {
-  electronUiEnabled.value = enable;
-});
 
 // Enable/disable some menu items.
 
@@ -681,7 +604,9 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
 
     // Retrieve a locApi.File object for the given file or file path and add it to the contents.
 
-    if (locCommon.isRemoteFilePath(filePath)) {
+    const isRemoteFilePath = locCommon.isRemoteFilePath(filePath);
+
+    if (isRemoteFilePath) {
       loadingModelMessageVisible.value = true;
     }
 
@@ -697,7 +622,7 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
           (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
         ) {
           if (props.omex) {
-            void vue.nextTick(() => {
+            vue.nextTick(() => {
               issues.value.push({
                 type: locApi.EIssueType.ERROR,
                 description:
@@ -727,18 +652,10 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
         } else {
           contents.value?.openFile(file);
         }
-
-        if (locCommon.isRemoteFilePath(filePath)) {
-          loadingModelMessageVisible.value = false;
-        }
       })
       .catch((error: unknown) => {
-        if (locCommon.isRemoteFilePath(filePath)) {
-          loadingModelMessageVisible.value = false;
-        }
-
         if (props.omex) {
-          void vue.nextTick(() => {
+          vue.nextTick(() => {
             issues.value.push({
               type: locApi.EIssueType.ERROR,
               description: common.formatMessage(common.formatError(error))
@@ -755,6 +672,11 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
         }
 
         electronApi?.fileIssue(filePath);
+      })
+      .finally(() => {
+        if (isRemoteFilePath) {
+          loadingModelMessageVisible.value = false;
+        }
       });
   });
 };
@@ -787,7 +709,7 @@ const onDragEnter = (): void => {
     return;
   }
 
-  dragAndDropCounter.value += 1;
+  ++dragAndDropCounter.value;
 };
 
 const onDrop = (event: DragEvent): void => {
@@ -1038,22 +960,6 @@ if (props.omex) {
     }, SHORT_DELAY);
   });
 }
-
-// Ensure that our BlockUI mask is removed when the UI is enabled.
-// Note: this is a workaround for a PrimeVue BlockUI issue when handling an action passed to our Web app.
-
-vue.watch(compBlockUiEnabled, (newCompBlockUiEnabled: boolean) => {
-  if (!newCompBlockUiEnabled) {
-    setTimeout(() => {
-      const blockUiElement = blockUi.value?.$el as HTMLElement;
-      const maskElement = blockUiElement.querySelector('.p-blockui-mask');
-
-      if (maskElement && maskElement.parentElement === blockUiElement) {
-        blockUiElement.removeChild(maskElement);
-      }
-    }, SHORT_DELAY);
-  }
-});
 
 /* TODO: enable once our GitHub integration is fully ready.
 // GitHub integration.
