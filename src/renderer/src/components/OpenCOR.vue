@@ -1,5 +1,5 @@
 <template>
-  <BlockUI ref="blockUi" class="opencor overflow-hidden h-full"
+  <BlockUI ref="blockUi" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
     :blocked="blockUiBlocked"
     @click="activateInstance"
     @focus="activateInstance"
@@ -21,7 +21,7 @@
     >
       <input ref="files" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
-      <MainMenu :id="mainMenuId" v-if="!electronApi && !omex"
+      <MainMenu ref="mainMenu" :id="mainMenuId" v-if="showMainMenu"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -142,6 +142,7 @@ const { isDialogActive } = provideDialogState();
 
 const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null);
 const toastId = vue.ref('opencorToast');
+const mainMenu = vue.ref<vue.ComponentPublicInstance | null>(null);
 const mainMenuId = vue.ref('opencorMainMenu');
 const files = vue.ref<HTMLElement | null>(null);
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
@@ -224,6 +225,12 @@ vue.onUnmounted(() => {
   if (blockUiBlockedTimeoutId !== undefined) {
     window.clearTimeout(blockUiBlockedTimeoutId);
   }
+});
+
+// Determine whether to show the main menu or not.
+
+const showMainMenu = vue.computed(() => {
+  return !electronApi && !props.omex;
 });
 
 // Determine whether the background should be visible.
@@ -855,6 +862,33 @@ vue.onMounted(() => {
   }, SHORT_DELAY);
 });
 
+// Track the height of our main menu.
+
+let stopTrackingMainMenuHeight: (() => void) | null = null;
+
+vue.onMounted(() => {
+  if (!showMainMenu.value) {
+    return;
+  }
+
+  void vue.nextTick(() => {
+    const mainMenuElement = mainMenu.value?.$el as HTMLElement | undefined;
+    const blockUiElement = blockUi.value?.$el as HTMLElement | undefined;
+
+    if (mainMenuElement && blockUiElement) {
+      stopTrackingMainMenuHeight = vueCommon.trackElementHeight(mainMenuElement, blockUiElement, '--main-menu-height');
+    }
+  });
+});
+
+vue.onBeforeUnmount(() => {
+  if (stopTrackingMainMenuHeight) {
+    stopTrackingMainMenuHeight();
+
+    stopTrackingMainMenuHeight = null;
+  }
+});
+
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry on as normal (i.e. the whole OpenCOR UI will be shown).
 
@@ -1162,6 +1196,16 @@ const onGitHubButtonClick = async (): Promise<void> => {
     background-color: var(--p-red-700) !important;
     border-color: var(--p-red-700) !important;
     color: var(--p-red-200);
+  }
+}
+
+.with-main-menu {
+  :deep(.p-dialog-mask) {
+    padding-top: var(--main-menu-height) !important;
+  }
+
+  :deep(.p-message) {
+    margin-top: calc(0.5 * var(--main-menu-height)) !important;
   }
 }
 </style>
