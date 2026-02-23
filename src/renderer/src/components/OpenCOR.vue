@@ -23,7 +23,7 @@
     >
       <input ref="files" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
-      <MainMenu :id="mainMenuId" v-if="showMainMenu"
+      <MainMenu ref="mainMenu" :id="mainMenuId" v-if="showMainMenu"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -140,6 +140,7 @@ const props = defineProps<IOpenCORProps>();
 const { isDialogActive } = provideDialogState();
 
 const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null);
+const mainMenu = vue.ref<vue.ComponentPublicInstance | null>(null);
 const toastId = vue.ref('opencorToast');
 const mainMenuId = vue.ref('opencorMainMenu');
 const files = vue.ref<HTMLElement | null>(null);
@@ -939,6 +940,36 @@ vue.onMounted(() => {
   }, SHORT_DELAY);
 });
 
+// Dynamically track the main menu height.
+
+let stopHeightTracking: (() => void) | null = null;
+
+vue.onMounted(() => {
+  if (!showMainMenu.value) {
+    return;
+  }
+
+  void vue.nextTick(() => {
+    const mainMenuElement = mainMenu.value?.$el as HTMLElement | undefined;
+    const blockUiElement = blockUi.value?.$el as HTMLElement | undefined;
+
+    if (mainMenuElement && blockUiElement) {
+      stopHeightTracking = vueCommon.setupElementHeightTracking(
+        mainMenuElement,
+        blockUiElement,
+        '--main-menu-height'
+      );
+    }
+  });
+});
+
+vue.onBeforeUnmount(() => {
+  if (stopHeightTracking) {
+    stopHeightTracking();
+    stopHeightTracking = null;
+  }
+});
+
 // If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry on as normal (i.e. the whole OpenCOR UI will be shown).
 
@@ -1237,10 +1268,10 @@ const onGitHubButtonClick = async (): Promise<void> => {
 
 .with-main-menu {
   :deep(.p-dialog-mask) {
-    padding-top: 28px !important;
+    padding-top: var(--main-menu-height, 28px) !important;
   }
   :deep(.p-message) {
-    margin-top: 14px !important;
+    margin-top: calc(var(--main-menu-height, 28px) / 2) !important;
   }
 }
 

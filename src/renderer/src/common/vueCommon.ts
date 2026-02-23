@@ -67,3 +67,31 @@ export const useTheme = vueusecore.createGlobalState(() => {
     useDarkMode
   };
 });
+
+// Composable to dynamically track and update element height as a CSS variable.
+
+export const setupElementHeightTracking = (
+  sourceElement: HTMLElement,
+  targetElement: HTMLElement,
+  cssVariableName: string = '--element-height'
+): (() => void) => {
+  const updateHeight = () => {
+    const height = sourceElement.offsetHeight;
+    targetElement.style.setProperty(cssVariableName, `${height}px`);
+  };
+
+  // Set initial height.
+  updateHeight();
+
+  // Watch for height changes continuously, including border and padding changes.
+  const { stop } = vueusecore.useResizeObserver(
+    sourceElement,
+    () => {
+      updateHeight();
+    },
+    { box: 'border-box' }
+  );
+
+  // Return cleanup function.
+  return stop;
+};
