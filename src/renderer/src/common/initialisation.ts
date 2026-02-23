@@ -45,12 +45,15 @@ const externalDependencies: ExternalDependency[] = [
 ];
 
 // Some variables to keep track of the initialisation progress.
-// Note: the 2 initial steps are to import libOpenCOR's WASM and to instantiate it. Then, we have one or two steps per
-//       external dependency, depending on whether it has an associated CSS file or not.
+// Note: the 2 initial steps are to import libOpenCOR's WASM and to instantiate it. We then have one or two steps per
+//       external dependency, depending on whether it has an associated CSS file or not. Finally, we have one step to
+//       initialise xxHash.
 
 const crtNbOfSteps = vue.ref<number>(0);
 const totalNbOfSteps =
-  (electronApi ? 0 : 2) + externalDependencies.reduce((acc, dep) => acc + (dep.url ? 1 : 0) + (dep.cssUrl ? 1 : 0), 0);
+  (electronApi ? 0 : 2) +
+  externalDependencies.reduce((acc, dep) => acc + (dep.url ? 1 : 0) + (dep.cssUrl ? 1 : 0), 0) +
+  1;
 
 // Retrieve the version of libOpenCOR that is to be used. Two options:
 //  - OpenCOR: libOpenCOR can be accessed using window.locApi, which references our C++ API.
@@ -155,7 +158,7 @@ const initialisationError = (error: unknown): void => {
   failed.value = true;
 };
 
-// Initialise libOpenCOR and then our external dependencies.
+// Initialise libOpenCOR, our external dependencies, and xxHash.
 
 initialiseLocApi().catch((error: unknown) => {
   initialisationError(error);
@@ -171,6 +174,14 @@ for (const externalDependency of externalDependencies) {
     initialisationError(error);
   });
 }
+
+dependencies.initialiseXxhash
+  .then(() => {
+    ++crtNbOfSteps.value;
+  })
+  .catch((error: unknown) => {
+    initialisationError(error);
+  });
 
 // Let people know whether initialisation is done and how it's progressing.
 

@@ -11,7 +11,10 @@ import type { ISplashScreenInfo } from '../renderer/src/common/electronApi.ts';
 
 const exec = promisify(_exec);
 
-const _operatingSystem = await (async (): Promise<string> => {
+let _operatingSystem: string | null = null;
+const defaultOperatingSystem = `${process.platform} (${process.arch === 'x64' ? 'Intel' : 'ARM'})`;
+
+const retrieveOperatingSystem = async (): Promise<string> => {
   const safeExec = async (cmd: string): Promise<string | null> => {
     try {
       const { stdout } = await exec(cmd);
@@ -69,8 +72,19 @@ const _operatingSystem = await (async (): Promise<string> => {
 
     operatingSystem = operatingSystem || 'macOS';
   }
-  return `${operatingSystem || process.platform} (${process.arch === 'x64' ? 'Intel' : 'ARM'})`;
-})();
+
+  return operatingSystem ? `${operatingSystem} (${process.arch === 'x64' ? 'Intel' : 'ARM'})` : defaultOperatingSystem;
+};
+
+// Retrieve the version of the operating system.
+
+retrieveOperatingSystem()
+  .then((operatingSystem) => {
+    _operatingSystem = operatingSystem;
+  })
+  .catch(() => {
+    _operatingSystem = defaultOperatingSystem;
+  });
 
 // Some bridging between our main process and renderer process.
 // Note: this must be in sync with src/electronApi.ts.
@@ -79,7 +93,9 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   // Some general methods.
 
   operatingSystem: () => {
-    return _operatingSystem;
+    // Return a cached version of the operating system if we have it, otherwise return a default value.
+
+    return _operatingSystem || defaultOperatingSystem;
   },
 
   // Splash screen window.
