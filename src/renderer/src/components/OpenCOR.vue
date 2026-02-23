@@ -954,11 +954,7 @@ vue.onMounted(() => {
     const blockUiElement = blockUi.value?.$el as HTMLElement | undefined;
 
     if (mainMenuElement && blockUiElement) {
-      stopHeightTracking = vueCommon.setupElementHeightTracking(
-        mainMenuElement,
-        blockUiElement,
-        '--main-menu-height'
-      );
+      stopHeightTracking = vueCommon.setupElementHeightTracking(mainMenuElement, blockUiElement, '--main-menu-height');
     }
   });
 });
