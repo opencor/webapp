@@ -1,7 +1,7 @@
 <template>
   <div class="flex justify-center items-center h-full overflow-hidden">
     <img
-      class="z-10 max-w-77.75 max-h-[266.92px] rounded-2xl p-2 bg-(--p-content-background) shadow-[0_0_0.75rem_0.375rem_var(--p-content-border-color)]"
+      class="z-9 max-w-77.75 max-h-[266.92px] rounded-2xl p-2 bg-(--p-content-background) shadow-[0_0_0.75rem_0.375rem_var(--p-content-border-color)]"
       src="../assets/logo.svg"
     />
     <div class="absolute bottom-1 left-2 text-xs text-neutral-400 dark:text-neutral-600">Copyright {{ COPYRIGHT }}</div>

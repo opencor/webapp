@@ -266,7 +266,7 @@ if (common.isDesktop()) {
 
 :deep(.p-menubar-submenu) {
   padding: 0.1rem;
-  z-index: 10;
+  z-index: 99;
 }
 
 .shortcut {
