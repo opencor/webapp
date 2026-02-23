@@ -1,5 +1,7 @@
 <template>
-  <BlockUI ref="blockUi" class="opencor overflow-hidden h-full"
+  <BlockUI ref="blockUi"
+    class="opencor overflow-hidden h-full"
+    :class="showMainMenu ? 'with-main-menu' : ''"
     :blocked="compBlockUiEnabled"
     @click="activateInstance"
     @focus="activateInstance"
@@ -21,7 +23,7 @@
     >
       <input ref="files" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
-      <MainMenu :id="mainMenuId" v-if="!electronApi && !omex"
+      <MainMenu :id="mainMenuId" v-if="showMainMenu"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -157,6 +159,10 @@ const activateInstance = (): void => {
 
 const compIsActive = vue.computed(() => {
   return activeInstanceUid.value === crtInstanceUid;
+});
+
+const showMainMenu = vue.computed(() => {
+  return !electronApi && !props.omex;
 });
 
 // Determine whether the component UI should be blocked/enabled.
@@ -1227,6 +1233,15 @@ const onGitHubButtonClick = async (): Promise<void> => {
   background-color: var(--p-red-200) !important;
   border-color: var(--p-red-200) !important;
   color: var(--p-red-700);
+}
+
+.with-main-menu {
+  :deep(.p-dialog-mask) {
+    padding-top: 28px !important;
+  }
+  :deep(.p-message) {
+    margin-top: 14px !important;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
