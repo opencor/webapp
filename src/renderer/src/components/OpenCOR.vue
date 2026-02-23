@@ -1,7 +1,5 @@
 <template>
-  <BlockUI ref="blockUi"
-    class="opencor overflow-hidden h-full"
-    :class="showMainMenu ? 'with-main-menu' : ''"
+  <BlockUI ref="blockUi" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
     :blocked="compBlockUiEnabled"
     @click="activateInstance"
     @focus="activateInstance"
@@ -140,8 +138,8 @@ const props = defineProps<IOpenCORProps>();
 const { isDialogActive } = provideDialogState();
 
 const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null);
-const mainMenu = vue.ref<vue.ComponentPublicInstance | null>(null);
 const toastId = vue.ref('opencorToast');
+const mainMenu = vue.ref<vue.ComponentPublicInstance | null>(null);
 const mainMenuId = vue.ref('opencorMainMenu');
 const files = vue.ref<HTMLElement | null>(null);
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
@@ -160,10 +158,6 @@ const activateInstance = (): void => {
 
 const compIsActive = vue.computed(() => {
   return activeInstanceUid.value === crtInstanceUid;
-});
-
-const showMainMenu = vue.computed(() => {
-  return !electronApi && !props.omex;
 });
 
 // Determine whether the component UI should be blocked/enabled.
@@ -186,6 +180,12 @@ const compBlockUiEnabled = vue.computed(() => {
 
 const compUiEnabled = vue.computed(() => {
   return !compBlockUiEnabled.value && !isDialogActive.value;
+});
+
+// Determine whether to show the main menu or not.
+
+const showMainMenu = vue.computed(() => {
+  return !electronApi && !props.omex;
 });
 
 // Provide access to our progress message features.
@@ -940,9 +940,9 @@ vue.onMounted(() => {
   }, SHORT_DELAY);
 });
 
-// Dynamically track the main menu height.
+// Track the height of our main menu.
 
-let stopHeightTracking: (() => void) | null = null;
+let stopTrackingMainMenuHeight: (() => void) | null = null;
 
 vue.onMounted(() => {
   if (!showMainMenu.value) {
@@ -954,15 +954,16 @@ vue.onMounted(() => {
     const blockUiElement = blockUi.value?.$el as HTMLElement | undefined;
 
     if (mainMenuElement && blockUiElement) {
-      stopHeightTracking = vueCommon.setupElementHeightTracking(mainMenuElement, blockUiElement, '--main-menu-height');
+      stopTrackingMainMenuHeight = vueCommon.trackElementHeight(mainMenuElement, blockUiElement, '--main-menu-height');
     }
   });
 });
 
 vue.onBeforeUnmount(() => {
-  if (stopHeightTracking) {
-    stopHeightTracking();
-    stopHeightTracking = null;
+  if (stopTrackingMainMenuHeight) {
+    stopTrackingMainMenuHeight();
+
+    stopTrackingMainMenuHeight = null;
   }
 });
 
@@ -1262,15 +1263,6 @@ const onGitHubButtonClick = async (): Promise<void> => {
   color: var(--p-red-700);
 }
 
-.with-main-menu {
-  :deep(.p-dialog-mask) {
-    padding-top: var(--main-menu-height, 28px) !important;
-  }
-  :deep(.p-message) {
-    margin-top: calc(var(--main-menu-height, 28px) / 2) !important;
-  }
-}
-
 @media (prefers-color-scheme: dark) {
   .connected-to-github,
   :deep(.connected-to-github .pi-github) {
@@ -1298,6 +1290,16 @@ const onGitHubButtonClick = async (): Promise<void> => {
     background-color: var(--p-red-700) !important;
     border-color: var(--p-red-700) !important;
     color: var(--p-red-200);
+  }
+}
+
+.with-main-menu {
+  :deep(.p-dialog-mask) {
+    padding-top: var(--main-menu-height) !important;
+  }
+
+  :deep(.p-message) {
+    margin-top: calc(0.5 * var(--main-menu-height)) !important;
   }
 }
 </style>
