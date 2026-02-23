@@ -21,7 +21,7 @@
     >
       <input ref="files" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
-      <MainMenu ref="mainMenu" :id="mainMenuId" v-if="showMainMenu"
+      <MainMenu ref="mainMenu" v-if="showMainMenu"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -143,7 +143,6 @@ const { isDialogActive } = provideDialogState();
 const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null);
 const toastId = vue.ref('opencorToast');
 const mainMenu = vue.ref<vue.ComponentPublicInstance | null>(null);
-const mainMenuId = vue.ref('opencorMainMenu');
 const files = vue.ref<HTMLElement | null>(null);
 const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
@@ -843,7 +842,6 @@ vue.onMounted(() => {
   // Customise our IDs.
 
   toastId.value = `opencorToast${crtInstanceUid}`;
-  mainMenuId.value = `opencorMainMenu${crtInstanceUid}`;
 
   // Make ourselves the active instance.
 
