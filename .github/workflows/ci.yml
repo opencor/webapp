@@ -60,9 +60,6 @@ jobs:
       - name: OpenCOR dependencies (Windows ARM only)
         if: ${{ matrix.name == 'Windows (ARM)' }}
         run: bun install --cpu=arm64
-      - name: Build libOpenCOR
-        if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
-        run: bun libopencor
       - name: Build OpenCOR
         if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
         run: bun run build
