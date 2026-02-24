@@ -841,7 +841,7 @@ electronApi?.onSelect((filePath: string) => {
 // A few things that can only be done when the component is mounted.
 
 vue.onMounted(() => {
-  const blockUiElement = blockUiRef.value?.$el;
+  const blockUiElement = (blockUiRef.value as unknown as { $el: HTMLElement })?.$el;
 
   // Make ourselves the active instance.
 
@@ -870,8 +870,8 @@ vue.onMounted(() => {
   }
 
   void vue.nextTick(() => {
-    const mainMenuElement = mainMenuRef.value?.$el;
-    const blockUiElement = blockUiRef.value?.$el;
+    const mainMenuElement = (mainMenuRef.value as unknown as { $el: HTMLElement })?.$el;
+    const blockUiElement = (blockUiRef.value as unknown as { $el: HTMLElement })?.$el;
 
     if (mainMenuElement && blockUiElement) {
       stopTrackingMainMenuHeight = vueCommon.trackElementHeight(mainMenuElement, blockUiElement, '--main-menu-height');

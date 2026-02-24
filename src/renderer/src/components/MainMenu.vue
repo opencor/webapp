@@ -152,13 +152,13 @@ const items = [
 
 // A few things that can only be done when the component is mounted.
 
-const menuBarRef = vue.ref<(InstanceType<typeof Menubar> & { hide: () => void }) | null>(null);
+const menuBarRef = vue.ref<(InstanceType<typeof Menubar> & { hide: () => void; $el: HTMLElement }) | null>(null);
 
 vue.onMounted(() => {
   if (menuBarRef.value) {
     // Ensure that the menubar never gets the 'p-menubar-mobile' class, which would turn it into a hamburger menu.
 
-    const menuBarElement = menuBarRef.value.$el as HTMLElement;
+    const menuBarElement = menuBarRef.value.$el;
     const mutationObserver = new MutationObserver(() => {
       if (menuBarElement.classList.contains('p-menubar-mobile')) {
         menuBarElement.classList.remove('p-menubar-mobile');

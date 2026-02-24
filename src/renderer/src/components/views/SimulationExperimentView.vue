@@ -165,7 +165,7 @@
                             :title="`Change ${run.isLiveRun ? 'live run' : 'run'} colour`"
                             @click="onToggleRunColorPopover(index, $event)"
                           />
-                          <Popover :ref="(element: any) => interactiveRunColorPopoverRefs[index] = element as unknown as InstanceType<typeof Popover> ?? undefined"
+                          <Popover :ref="(element: any) => interactiveRunColorPopoverRefs[index] = element"
                             v-if="interactiveRunColorPopoverIndex === index"
                           >
                             <div class="flex gap-2">
@@ -212,7 +212,7 @@
             <IssuesView v-show="interactiveInstanceIssues.length" class="mt-4 mr-4" style="height: calc(100% - 2rem);" :issues="interactiveInstanceIssues" />
             <GraphPanelWidget v-show="!interactiveInstanceIssues.length"
               v-for="(_plot, index) in interactiveUiJson.output.plots"
-              :ref="(element: any) => interactiveGraphPanelRefs[index] = element as unknown as InstanceType<typeof GraphPanelWidget> ?? undefined"
+              :ref="(element: any) => interactiveGraphPanelRefs[index] = element"
               :key="`plot_${index}`"
               class="w-full min-h-0"
               :margins="interactiveCompMargins"
