@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <Toolbar v-if="toolbarNeeded" class="p-1! shrink-0">
+    <Toolbar v-if="showToolbar" class="p-1! shrink-0">
       <template #start>
         <div :class="{ 'invisible': interactiveModeEnabled && interactiveLiveUpdatesEnabled }">
           <Button class="p-1! toolbar-button"
@@ -11,7 +11,7 @@
           />
         </div>
       </template>
-      <template #center>
+      <template #center v-if="!simulationOnly">
         <div>
           <ToggleButton
             size="small"
@@ -275,10 +275,6 @@ const props = defineProps<{
 const emit = defineEmits<(event: 'error', message: string) => void>();
 
 const editorRef = vue.ref<HTMLElement | null>(null);
-
-const toolbarNeeded = vue.computed(() => {
-  return (props.simulationOnly && !interactiveUiJson) || !props.simulationOnly;
-});
 
 const populateParameters = (
   parameters: vue.Ref<string[]>,
@@ -610,6 +606,12 @@ const interactiveSettings = vue.computed(() => ({
   }
 }));
 const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interactiveSettings.value)));
+
+// Determine whether to show the toolbar.
+
+const showToolbar = vue.computed(() => {
+  return (props.simulationOnly && interactiveUiJsonEmpty.value) || !props.simulationOnly;
+});
 
 // Populate our model parameters.
 
