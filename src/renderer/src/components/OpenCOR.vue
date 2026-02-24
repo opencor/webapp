@@ -1,5 +1,5 @@
 <template>
-  <BlockUI ref="blockUi" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
+  <BlockUI ref="blockUiRef" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
     :blocked="blockUiBlocked"
     @click="activateInstance"
     @focus="activateInstance"
@@ -19,9 +19,9 @@
       @drop.prevent="onDrop"
       @dragleave="onDragLeave"
     >
-      <input ref="files" type="file" multiple style="display: none;" @change="onChange" />
+      <input ref="filesRef" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
-      <MainMenu ref="mainMenu" :id="mainMenuId" v-if="showMainMenu"
+      <MainMenu ref="mainMenuRef" v-if="showMainMenu"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -48,7 +48,7 @@
         />
       </div>
       -->
-      <ContentsComponent ref="contents" class="grow min-h-0"
+      <ContentsComponent ref="contentsRef" class="grow min-h-0"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :simulationOnly="!!omex"
@@ -104,17 +104,17 @@
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
-import * as vue from 'vue';
-
 /* TODO: enable once our GitHub integration is fully ready.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { Octokit } from 'octokit';
 */
+import BlockUI from 'primevue/blockui';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
+import * as vue from 'vue';
 
 import type { IOpenCORProps } from '../../index.ts';
 
@@ -131,21 +131,20 @@ import * as initialisation from '../common/initialisation.ts';
 import * as locCommon from '../common/locCommon.ts';
 import * as version from '../common/version.ts';
 import * as vueCommon from '../common/vueCommon.ts';
-import type IContentsComponent from '../components/ContentsComponent.vue';
+import ContentsComponent from '../components/ContentsComponent.vue';
 import * as locApi from '../libopencor/locApi.ts';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
+import MainMenu from './MainMenu.vue';
 
 const props = defineProps<IOpenCORProps>();
 
 const { isDialogActive } = provideDialogState();
 
-const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null);
-const toastId = vue.ref('opencorToast');
-const mainMenu = vue.ref<vue.ComponentPublicInstance | null>(null);
-const mainMenuId = vue.ref('opencorMainMenu');
-const files = vue.ref<HTMLElement | null>(null);
-const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
+const blockUiRef = vue.ref<InstanceType<typeof BlockUI> | null>(null);
+const mainMenuRef = vue.ref<InstanceType<typeof MainMenu> | null>(null);
+const filesRef = vue.ref<HTMLElement | null>(null);
+const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const compIssues = vue.computed(() => {
   return [...initialisation.issues.value, ...issues.value];
@@ -303,7 +302,17 @@ if (crtVueAppInstance) {
 
 vueCommon.useTheme().setTheme(props.theme);
 
+// Get ready to show toasts and provide a helper to show them that ensures that the proper group id is used and that the
+// instance becomes active before the message is pushed.
+
 const toast = useToast();
+const toastId = vue.ref(`opencorToast${crtInstanceUid}`);
+
+const addToast = (options: Parameters<typeof toast.add>[0]) => {
+  activateInstance();
+
+  toast.add({ ...options, group: toastId.value });
+};
 
 // Finish initialising OpenCOR.
 
@@ -409,9 +418,8 @@ const handleAction = (action: string): void => {
         openFile(filePath);
       }
     } else {
-      toast.add({
+      addToast({
         severity: 'error',
-        group: toastId.value,
         summary: 'Handling an action',
         detail: `${action}\n\nThe action could not be handled.`,
         life: TOAST_LIFE
@@ -423,7 +431,7 @@ const handleAction = (action: string): void => {
 // Enable/disable some menu items.
 
 const hasFiles = vue.computed(() => {
-  return contents.value?.hasFiles() ?? false;
+  return contentsRef.value?.hasFiles() ?? false;
 });
 
 vue.watch(hasFiles, (newHasFiles: boolean) => {
@@ -494,9 +502,8 @@ electronApi?.onUpdateCheckError((issue: string) => {
 // Handle errors.
 
 const onError = (message: string): void => {
-  toast.add({
+  addToast({
     severity: 'error',
-    group: toastId.value,
     summary: 'Error',
     detail: message,
     life: TOAST_LIFE
@@ -556,9 +563,8 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
   locCommon.zipCellmlDataUrl(fileFilePathOrFileContents).then((zipCellmlDataUriInfo: locCommon.IDataUriInfo) => {
     if (zipCellmlDataUriInfo.res) {
       if (zipCellmlDataUriInfo.error) {
-        toast.add({
+        addToast({
           severity: 'error',
-          group: toastId.value,
           summary: 'Opening a file',
           detail: zipCellmlDataUriInfo.error,
           life: TOAST_LIFE
@@ -576,9 +582,8 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
 
       if (combineArchiveDataUriInfo.res) {
         if (combineArchiveDataUriInfo.error) {
-          toast.add({
+          addToast({
             severity: 'error',
-            group: toastId.value,
             summary: 'Opening a file',
             detail: combineArchiveDataUriInfo.error,
             life: TOAST_LIFE
@@ -596,8 +601,8 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
 
     const filePath = locCommon.filePath(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
 
-    if (contents.value?.hasFile(filePath) ?? false) {
-      contents.value?.selectFile(filePath);
+    if (contentsRef.value?.hasFile(filePath) ?? false) {
+      contentsRef.value?.selectFile(filePath);
 
       return;
     }
@@ -632,9 +637,8 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
               });
             });
           } else {
-            toast.add({
+            addToast({
               severity: 'error',
-              group: toastId.value,
               summary: 'Opening a file',
               detail:
                 filePath +
@@ -650,7 +654,7 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
 
           electronApi?.fileIssue(filePath);
         } else {
-          contents.value?.openFile(file);
+          contentsRef.value?.openFile(file);
         }
       })
       .catch((error: unknown) => {
@@ -662,9 +666,8 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
             });
           });
         } else {
-          toast.add({
+          addToast({
             severity: 'error',
-            group: toastId.value,
             summary: 'Opening a file',
             detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
             life: TOAST_LIFE
@@ -747,7 +750,7 @@ const onOpenMenu = (): void => {
     return;
   }
 
-  files.value?.click();
+  filesRef.value?.click();
 };
 
 // Open remote.
@@ -800,7 +803,7 @@ const onCloseMenu = (): void => {
     return;
   }
 
-  contents.value?.closeCurrentFile();
+  contentsRef.value?.closeCurrentFile();
 };
 
 // Close all.
@@ -814,7 +817,7 @@ const onCloseAllMenu = (): void => {
     return;
   }
 
-  contents.value?.closeAllFiles();
+  contentsRef.value?.closeAllFiles();
 };
 
 // Reset all.
@@ -832,18 +835,13 @@ const onResetAll = (): void => {
 // Select.
 
 electronApi?.onSelect((filePath: string) => {
-  contents.value?.selectFile(filePath);
+  contentsRef.value?.selectFile(filePath);
 });
 
 // A few things that can only be done when the component is mounted.
 
 vue.onMounted(() => {
-  const blockUiElement = blockUi.value?.$el as HTMLElement;
-
-  // Customise our IDs.
-
-  toastId.value = `opencorToast${crtInstanceUid}`;
-  mainMenuId.value = `opencorMainMenu${crtInstanceUid}`;
+  const blockUiElement = (blockUiRef.value as unknown as { $el: HTMLElement })?.$el;
 
   // Make ourselves the active instance.
 
@@ -856,7 +854,7 @@ vue.onMounted(() => {
   setTimeout(() => {
     const toastElement = document.getElementById(toastId.value);
 
-    if (toastElement) {
+    if (toastElement && blockUiElement && toastElement.parentElement !== blockUiElement) {
       blockUiElement.appendChild(toastElement);
     }
   }, SHORT_DELAY);
@@ -872,8 +870,8 @@ vue.onMounted(() => {
   }
 
   void vue.nextTick(() => {
-    const mainMenuElement = mainMenu.value?.$el as HTMLElement | undefined;
-    const blockUiElement = blockUi.value?.$el as HTMLElement | undefined;
+    const mainMenuElement = (mainMenuRef.value as unknown as { $el: HTMLElement })?.$el;
+    const blockUiElement = (blockUiRef.value as unknown as { $el: HTMLElement })?.$el;
 
     if (mainMenuElement && blockUiElement) {
       stopTrackingMainMenuHeight = vueCommon.trackElementHeight(mainMenuElement, blockUiElement, '--main-menu-height');
@@ -942,9 +940,8 @@ if (props.omex) {
                 if (action.value.startsWith(FULL_URI_SCHEME)) {
                   handleAction(action.value.slice(FULL_URI_SCHEME.length));
                 } else {
-                  toast.add({
+                  addToast({
                     severity: 'error',
-                    group: toastId.value,
                     summary: 'Handling an action',
                     detail: `${action.value}\n\nThe action could not be handled.`,
                     life: TOAST_LIFE
@@ -1029,18 +1026,16 @@ const saveGitHubAccessToken = async (accessToken: string): Promise<void> => {
     const stored = await electronApi.saveGitHubAccessToken(accessToken);
 
     if (!stored) {
-      toast.add({
+      addToast({
         severity: 'warn',
-        group: toastId.value,
         summary: 'Remembering GitHub access token',
         detail: 'The token could not be stored securely, so you will need to sign in again next time.',
         life: TOAST_LIFE
       });
     }
   } catch (error: unknown) {
-    toast.add({
+    addToast({
       severity: 'warn',
-      group: toastId.value,
       summary: 'Remembering GitHub access token',
       detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE
@@ -1083,9 +1078,8 @@ const onDisconnectFromGitHub = async (): Promise<void> => {
       await electronApi.clearGitHubCache();
     }
   } catch (error: unknown) {
-    toast.add({
+    addToast({
       severity: 'error',
-      group: toastId.value,
       summary: 'GitHub sign-out',
       detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE
@@ -1126,9 +1120,8 @@ const onGitHubButtonClick = async (): Promise<void> => {
 
     await checkGitHubAccessToken(accessToken);
   } catch (error: unknown) {
-    toast.add({
+    addToast({
       severity: 'error',
-      group: toastId.value,
       summary: 'GitHub sign-in',
       detail: common.formatMessage(common.formatError(error)),
       life: TOAST_LIFE

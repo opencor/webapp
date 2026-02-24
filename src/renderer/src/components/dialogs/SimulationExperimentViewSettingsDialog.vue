@@ -664,7 +664,7 @@
         <!-- Simulation issues -->
 
         <template v-if="activeTab === 'simulation'">
-          <Popover ref="simulationSettingsIssuesPopup" v-if="simulationSettingsIssues.length">
+          <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length">
             <div class="issues-popover-content">
               <IssuesView :issues="simulationSettingsIssues" :extraSpace="false" />
             </div>
@@ -687,7 +687,7 @@
         <!-- Solvers issues -->
 
         <template v-else-if="activeTab === 'solvers'">
-          <Popover ref="solversSettingsIssuesPopup" v-if="solversSettingsIssues.length">
+          <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length">
             <div class="issues-popover-content">
               <IssuesView :issues="solversSettingsIssues" :extraSpace="false" />
             </div>
@@ -710,7 +710,7 @@
         <!-- UI JSON issues -->
 
         <template v-else-if="activeTab === 'interactive'">
-          <Popover ref="uiJsonIssuesPopup" v-if="uiJsonIssues.length">
+          <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length">
             <div class="issues-popover-content">
               <IssuesView :issues="uiJsonIssues" :extraSpace="false" />
             </div>
@@ -744,6 +744,7 @@
 </template>
 
 <script setup lang="ts">
+import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
 import * as locApi from '../../libopencor/locApi.ts';
@@ -786,9 +787,9 @@ const emit = defineEmits<{
 const DEFAULT_TAB = 'interactive';
 const DEFAULT_INTERACTIVE_TAB = 'simulationInputs';
 
-const simulationSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
-const solversSettingsIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
-const uiJsonIssuesPopup = vue.ref<{ toggle: (event: Event) => void } | null>(null);
+const simulationSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
+const solversSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
+const uiJsonIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const activeTab = vue.ref(DEFAULT_TAB);
 const activeInteractiveTab = vue.ref(DEFAULT_INTERACTIVE_TAB);
 const showSimulationSettingsIssuesPanel = vue.ref(false);
@@ -1133,19 +1134,19 @@ const onCancel = () => {
 };
 
 const toggleSimulationSettingsIssues = (event: Event) => {
-  simulationSettingsIssuesPopup.value?.toggle(event);
+  simulationSettingsIssuesPopoverRef.value?.toggle(event);
 
   showSimulationSettingsIssuesPanel.value = !showSimulationSettingsIssuesPanel.value;
 };
 
 const toggleSolversSettingsIssues = (event: Event) => {
-  solversSettingsIssuesPopup.value?.toggle(event);
+  solversSettingsIssuesPopoverRef.value?.toggle(event);
 
   showSolversSettingsIssuesPanel.value = !showSolversSettingsIssuesPanel.value;
 };
 
 const toggleUiJsonIssues = (event: Event) => {
-  uiJsonIssuesPopup.value?.toggle(event);
+  uiJsonIssuesPopoverRef.value?.toggle(event);
 
   showUiJsonIssuesPanel.value = !showUiJsonIssuesPanel.value;
 };

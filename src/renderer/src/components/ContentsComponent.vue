@@ -21,7 +21,7 @@
       :scrollable="true"
       :selectOnFocus="true"
     >
-      <TabList :id="fileTablistId" class="border-b border-b-primary shrink-0">
+      <TabList class="border-b border-b-primary shrink-0">
         <Tab
           v-for="fileTab in fileTabs"
           :id="`tab_${fileTab.file.path()}`"
@@ -81,16 +81,6 @@ const props = defineProps<{
 }>();
 defineEmits<(event: 'error', message: string) => void>();
 
-export interface IContentsComponent {
-  openFile(file: locApi.File): void;
-  closeCurrentFile(): void;
-  closeAllFiles(): void;
-  hasFile(filePath: string): boolean;
-  hasFiles(): boolean;
-  selectFile(filePath: string): void;
-}
-
-const fileTablistId = vue.ref('contentsComponentFileTablist');
 const fileTabs = vue.ref<IFileTab[]>([]);
 const activeFile = vue.ref<string>('');
 
@@ -199,16 +189,6 @@ vue.watch(activeFile, (newActiveFile: string) => {
   //       people know that a file has been selected.
 
   electronApi?.fileSelected(newActiveFile);
-});
-
-// Various things that need to be done once we are mounted.
-
-const crtInstance = vue.getCurrentInstance();
-
-vue.onMounted(() => {
-  // Customise our IDs.
-
-  fileTablistId.value = `contentsComponentFileTablist${String(crtInstance?.uid)}`;
 });
 
 // Keyboard shortcuts.
