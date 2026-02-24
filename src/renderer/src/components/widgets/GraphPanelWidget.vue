@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-row h-full" :class="isVisible ? 'visible' : 'invisible'">
     <div v-if="showMarker" class="w-0.75 bg-primary" />
-    <div ref="mainDiv" class="grow h-full" @contextmenu="onContextMenu" />
-    <ContextMenu ref="contextMenu" :model="contextMenuItems" />
+    <div ref="mainDivRef" class="grow h-full" @contextmenu="onContextMenu" />
+    <ContextMenu ref="contextMenuRef" :model="contextMenuItems" />
   </div>
 </template>
 
@@ -71,8 +71,8 @@ const emit = defineEmits<{
 const resize = (): Promise<unknown> => {
   return Promise.resolve()
     .then(() => {
-      if (mainDiv.value) {
-        dependencies._plotlyJs.Plots.resize(mainDiv.value);
+      if (mainDivRef.value) {
+        dependencies._plotlyJs.Plots.resize(mainDivRef.value);
       }
     })
     .then(() => {
@@ -85,11 +85,11 @@ defineExpose({
 });
 
 const instanceId = Symbol('GraphPanelWidget');
-const mainDiv = vue.ref<HTMLElement | null>(null);
+const mainDivRef = vue.ref<HTMLElement | null>(null);
 const isVisible = vue.ref(false);
 const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
-const contextMenu = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
+const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 let updatingMargins = false;
 const progressMessage = vue.inject<IProgressMessage>('progressMessage');
 
@@ -166,15 +166,15 @@ const onContextMenu = (event: MouseEvent): void => {
     })
   );
 
-  contextMenu.value?.show(event);
+  contextMenuRef.value?.show(event);
 };
 
 const zoomIn = (): void => {
-  if (!mainDiv.value) {
+  if (!mainDivRef.value) {
     return;
   }
 
-  const layout = (mainDiv.value as unknown as { layout?: IPlotlyLayout }).layout;
+  const layout = (mainDivRef.value as unknown as { layout?: IPlotlyLayout }).layout;
 
   if (!layout?.xaxis?.range || !layout?.yaxis?.range) {
     return;
@@ -188,7 +188,7 @@ const zoomIn = (): void => {
   const xSpan = 0.5 * (xRange[1] - xRange[0]);
   const ySpan = 0.5 * (yRange[1] - yRange[0]);
 
-  dependencies._plotlyJs.relayout(mainDiv.value, {
+  dependencies._plotlyJs.relayout(mainDivRef.value, {
     'xaxis.range': [xCenter - 0.5 * xSpan, xCenter + 0.5 * xSpan],
     'yaxis.range': [yCenter - 0.5 * ySpan, yCenter + 0.5 * ySpan]
   });
@@ -197,11 +197,11 @@ const zoomIn = (): void => {
 };
 
 const zoomOut = (): void => {
-  if (!mainDiv.value) {
+  if (!mainDivRef.value) {
     return;
   }
 
-  const layout = (mainDiv.value as unknown as { layout?: IPlotlyLayout }).layout;
+  const layout = (mainDivRef.value as unknown as { layout?: IPlotlyLayout }).layout;
 
   if (!layout?.xaxis?.range || !layout?.yaxis?.range) {
     return;
@@ -215,7 +215,7 @@ const zoomOut = (): void => {
   const xSpan = 0.5 * (xRange[1] - xRange[0]);
   const ySpan = 0.5 * (yRange[1] - yRange[0]);
 
-  dependencies._plotlyJs.relayout(mainDiv.value, {
+  dependencies._plotlyJs.relayout(mainDivRef.value, {
     'xaxis.range': [xCenter - 2 * xSpan, xCenter + 2 * xSpan],
     'yaxis.range': [yCenter - 2 * ySpan, yCenter + 2 * ySpan]
   });
@@ -224,11 +224,11 @@ const zoomOut = (): void => {
 };
 
 const resetZoom = (): void => {
-  if (!mainDiv.value) {
+  if (!mainDivRef.value) {
     return;
   }
 
-  dependencies._plotlyJs.relayout(mainDiv.value, {
+  dependencies._plotlyJs.relayout(mainDivRef.value, {
     'xaxis.autorange': true,
     'yaxis.autorange': true
   });
@@ -237,15 +237,15 @@ const resetZoom = (): void => {
 };
 
 const copyToClipboard = async (): Promise<void> => {
-  if (!mainDiv.value) {
+  if (!mainDivRef.value) {
     return;
   }
 
   try {
-    const imageData = await dependencies._plotlyJs.toImage(mainDiv.value, {
+    const imageData = await dependencies._plotlyJs.toImage(mainDivRef.value, {
       format: 'png',
-      width: mainDiv.value.clientWidth,
-      height: mainDiv.value.clientHeight
+      width: mainDivRef.value.clientWidth,
+      height: mainDivRef.value.clientHeight
     });
 
     const binaryData = atob(imageData.split(',')[1]);
@@ -262,15 +262,15 @@ const copyToClipboard = async (): Promise<void> => {
 };
 
 const exportToImage = async (format: 'jpeg' | 'png' | 'svg' | 'webp'): Promise<void> => {
-  if (!mainDiv.value) {
+  if (!mainDivRef.value) {
     return;
   }
 
   try {
-    await dependencies._plotlyJs.downloadImage(mainDiv.value, {
+    await dependencies._plotlyJs.downloadImage(mainDivRef.value, {
       format: format,
-      width: mainDiv.value.clientWidth,
-      height: mainDiv.value.clientHeight,
+      width: mainDivRef.value.clientWidth,
+      height: mainDivRef.value.clientHeight,
       filename: 'plot'
     });
   } catch (error: unknown) {
@@ -493,7 +493,7 @@ const resolvedMargin = (propValue: number | undefined, compValue: number): numbe
 const compMargins = (): IGraphPanelMargins => {
   // Retrieve the width of the Y ticks.
 
-  const yTicks = mainDiv.value?.querySelectorAll('.ytick text');
+  const yTicks = mainDivRef.value?.querySelectorAll('.ytick text');
   let yTicksWidth = 0;
 
   if (yTicks?.length) {
@@ -505,7 +505,7 @@ const compMargins = (): IGraphPanelMargins => {
   // Retrieve the width of the Y Axis title.
 
   const yTitleWidth = props.data.yAxisTitle
-    ? mainDiv.value?.querySelector('.ytitle')?.getBoundingClientRect()?.width || 0
+    ? mainDivRef.value?.querySelector('.ytitle')?.getBoundingClientRect()?.width || 0
     : 0;
 
   // Compute the final left margin.
@@ -520,10 +520,10 @@ const compMargins = (): IGraphPanelMargins => {
   let rightMargin = 0;
 
   if (props.showLegend) {
-    rightMargin = mainDiv.value?.querySelector('.legend')?.getBoundingClientRect()?.width || 0;
+    rightMargin = mainDivRef.value?.querySelector('.legend')?.getBoundingClientRect()?.width || 0;
   }
 
-  const xTicks = mainDiv.value?.querySelectorAll('.xtick text');
+  const xTicks = mainDivRef.value?.querySelectorAll('.xtick text');
 
   if (xTicks?.length) {
     const lastTick = xTicks[xTicks.length - 1] as HTMLElement;
@@ -577,7 +577,7 @@ const updateMarginsAsync = (): void => {
     }
 
     if (Object.keys(relayoutUpdates).length) {
-      dependencies._plotlyJs.relayout(mainDiv.value, relayoutUpdates);
+      dependencies._plotlyJs.relayout(mainDivRef.value, relayoutUpdates);
     }
 
     updatingMargins = false;
@@ -604,7 +604,7 @@ const updatePlot = (): void => {
 
   dependencies._plotlyJs
     .react(
-      mainDiv.value,
+      mainDivRef.value,
       traces,
       {
         // Note: the various keys can be found at https://plotly.com/javascript/reference/.
@@ -634,7 +634,7 @@ const updatePlot = (): void => {
       if (!isVisible.value) {
         // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
 
-        return dependencies._plotlyJs.Plots.resize(mainDiv.value);
+        return dependencies._plotlyJs.Plots.resize(mainDivRef.value);
       }
     })
     .then(() => {
@@ -666,7 +666,7 @@ const handleContextMenu = (event: Event): void => {
     return;
   }
 
-  contextMenu.value?.hide?.();
+  contextMenuRef.value?.hide?.();
 };
 
 vue.onMounted(() => {
@@ -675,7 +675,7 @@ vue.onMounted(() => {
   vue.nextTick(() => {
     // Reset our margins on double-click and relayout.
 
-    const plotlyElement = mainDiv.value as IPlotlyHTMLElement;
+    const plotlyElement = mainDivRef.value as IPlotlyHTMLElement;
 
     plotlyElement.on('plotly_doubleclick', () => {
       emit('resetMargins');
@@ -709,8 +709,8 @@ vue.watch(
   () => theme.useLightMode(),
   () => {
     vue.nextTick(() => {
-      if (mainDiv.value) {
-        dependencies._plotlyJs.relayout(mainDiv.value, {
+      if (mainDivRef.value) {
+        dependencies._plotlyJs.relayout(mainDivRef.value, {
           ...themeData(),
           ...axesData()
         });
@@ -725,8 +725,8 @@ vue.watch(
   () => {
     vue
       .nextTick(() => {
-        if (mainDiv.value) {
-          return dependencies._plotlyJs.relayout(mainDiv.value, {
+        if (mainDivRef.value) {
+          return dependencies._plotlyJs.relayout(mainDivRef.value, {
             'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
             'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
           });
@@ -745,9 +745,9 @@ vue.watch(
   () => props.showLegend,
   () => {
     vue.nextTick(() => {
-      if (mainDiv.value) {
+      if (mainDivRef.value) {
         dependencies._plotlyJs
-          .relayout(mainDiv.value, {
+          .relayout(mainDivRef.value, {
             showlegend: props.showLegend
           })
           .then(() => {

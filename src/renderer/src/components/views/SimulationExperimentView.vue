@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <Toolbar v-if="toolbarNeeded" :id="toolbarId" class="p-1! shrink-0">
+    <Toolbar v-if="toolbarNeeded" class="p-1! shrink-0">
       <template #start>
         <div :class="{ 'invisible': interactiveModeEnabled && interactiveLiveUpdatesEnabled }">
           <Button class="p-1! toolbar-button"
@@ -86,7 +86,7 @@
           </Splitter>
         </SplitterPanel>
         <SplitterPanel v-if="!simulationOnly" :size="11">
-          <div :id="editorId" class="h-full console overflow-y-auto px-2 py-1 leading-[1.42] text-[13px]" aria-readonly="true" v-html="standardConsoleContents"></div>
+          <div ref="editorRef" class="h-full console overflow-y-auto px-2 py-1 leading-[1.42] text-[13px]" aria-readonly="true" v-html="standardConsoleContents"></div>
         </SplitterPanel>
       </Splitter>
     </div>
@@ -165,7 +165,7 @@
                             :title="`Change ${run.isLiveRun ? 'live run' : 'run'} colour`"
                             @click="onToggleRunColorPopover(index, $event)"
                           />
-                          <Popover :ref="(element: any) => interactiveRunColorPopovers[index] = element as unknown as IPopover ?? undefined"
+                          <Popover :ref="(element: any) => interactiveRunColorPopoverRefs[index] = element as unknown as InstanceType<typeof Popover> ?? undefined"
                             v-if="interactiveRunColorPopoverIndex === index"
                           >
                             <div class="flex gap-2">
@@ -212,7 +212,7 @@
             <IssuesView v-show="interactiveInstanceIssues.length" class="mt-4 mr-4" style="height: calc(100% - 2rem);" :issues="interactiveInstanceIssues" />
             <GraphPanelWidget v-show="!interactiveInstanceIssues.length"
               v-for="(_plot, index) in interactiveUiJson.output.plots"
-              :ref="(element: any) => interactiveGraphPanels[index] = element as unknown as InstanceType<typeof GraphPanelWidget> ?? undefined"
+              :ref="(element: any) => interactiveGraphPanelRefs[index] = element as unknown as InstanceType<typeof GraphPanelWidget> ?? undefined"
               :key="`plot_${index}`"
               class="w-full min-h-0"
               :margins="interactiveCompMargins"
@@ -241,6 +241,7 @@
 <script setup lang="ts">
 import * as vueusecore from '@vueuse/core';
 
+import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
 import * as colors from '../../common/colors.ts';
@@ -273,13 +274,11 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<(event: 'error', message: string) => void>();
 
+const editorRef = vue.ref<HTMLElement | null>(null);
+
 const toolbarNeeded = vue.computed(() => {
   return (props.simulationOnly && !interactiveUiJson) || !props.simulationOnly;
 });
-
-const toolbarId = vue.ref('simulationExperimentViewToolbar');
-const editorId = vue.ref('simulationExperimentViewEditor');
-const liveUpdatesCheckboxId = vue.ref('simulationExperimentViewLiveUpdatesCheckbox');
 
 const populateParameters = (
   parameters: vue.Ref<string[]>,
@@ -357,7 +356,7 @@ const onRun = (): void => {
     }
 
     vue.nextTick(() => {
-      const consoleElement = document.getElementById(editorId.value);
+      const consoleElement = editorRef.value;
 
       if (consoleElement) {
         consoleElement.scrollTop = consoleElement.scrollHeight;
@@ -474,11 +473,6 @@ const updatePlot = () => {
 
 // Interactive mode.
 
-interface IPopover {
-  toggle: (event: MouseEvent) => void;
-  hide: () => void;
-}
-
 const interactiveModeEnabled = vue.ref<boolean>(!!props.uiJson);
 const interactiveLiveUpdatesEnabled = vue.ref<boolean>(true);
 const interactiveSettingsVisible = vue.ref<boolean>(false);
@@ -549,8 +543,8 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
   }
 ]);
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
-const interactiveRunColorPopovers = vue.ref<Record<number, IPopover | undefined>>({});
-const interactiveGraphPanels = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
+const interactiveRunColorPopoverRefs = vue.ref<Record<number, InstanceType<typeof Popover> | undefined>>({});
+const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
 const interactiveCompData = vue.computed(() => {
   // Combine the live data with the data from the tracked runs.
 
@@ -947,7 +941,7 @@ const onToggleRunColorPopover = (index: number, event: MouseEvent) => {
   vue.nextTick(() => {
     // Note: we do this in a next tick to ensure that the reference is available.
 
-    interactiveRunColorPopovers.value[index]?.toggle(event);
+    interactiveRunColorPopoverRefs.value[index]?.toggle(event);
   });
 };
 
@@ -1016,11 +1010,11 @@ const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): v
   // Resize our graph panels if the number of plots has changed.
 
   if (interactiveUiJson.value.output.plots.length !== oldNbOfGraphPanelWidgets) {
-    interactiveGraphPanels.value = {};
+    interactiveGraphPanelRefs.value = {};
 
     vue.nextTick().then(() => {
       for (let i = 0; i < settings.interactive.uiJson.output.plots.length; ++i) {
-        const graphPanelRef = interactiveGraphPanels.value[i];
+        const graphPanelRef = interactiveGraphPanelRefs.value[i];
 
         if (graphPanelRef) {
           graphPanelRef.resize();
@@ -1038,18 +1032,11 @@ vue.onMounted(() => {
   updateInteractiveSimulation();
 });
 
-// Various things that need to be done once we are is mounted.
+// Various things that need to be done once we are mounted.
 
-const crtInstance = vue.getCurrentInstance();
 const windowIsFocused = vueusecore.useWindowFocus();
 
 vue.onMounted(() => {
-  // Customise our IDs.
-
-  toolbarId.value = `simulationExperimentViewToolbar${String(crtInstance?.uid)}`;
-  editorId.value = `simulationExperimentViewEditor${String(crtInstance?.uid)}`;
-  liveUpdatesCheckboxId.value = `simulationExperimentViewLiveUpdatesCheckbox${String(crtInstance?.uid)}`;
-
   // Make sure that our active popover gets hidden when the window loses focus.
 
   vue.watch(
@@ -1057,7 +1044,7 @@ vue.onMounted(() => {
     (isFocused) => {
       if (!isFocused) {
         if (interactiveRunColorPopoverIndex.value !== -1) {
-          interactiveRunColorPopovers.value[interactiveRunColorPopoverIndex.value]?.hide();
+          interactiveRunColorPopoverRefs.value[interactiveRunColorPopoverIndex.value]?.hide();
 
           interactiveRunColorPopoverIndex.value = -1;
         }

@@ -1,5 +1,5 @@
 <template>
-  <Menubar ref="menuBar" :id="props.id" :model="items">
+  <Menubar ref="menuBarRef" :id="props.id" :model="items">
     <template #item="{ item, props }">
       <a v-bind="props.action">
         <div class="p-menubar-item-label">{{ item.label }}</div>
@@ -152,13 +152,13 @@ const items = [
 
 // A few things that can only be done when the component is mounted.
 
-const menuBar = vue.ref<(vue.ComponentPublicInstance<typeof Menubar> & { hide: () => void }) | null>(null);
+const menuBarRef = vue.ref<(InstanceType<typeof Menubar> & { hide: () => void }) | null>(null);
 
 vue.onMounted(() => {
-  if (menuBar.value) {
+  if (menuBarRef.value) {
     // Ensure that the menubar never gets the 'p-menubar-mobile' class, which would turn it into a hamburger menu.
 
-    const menuBarElement = menuBar.value.$el as HTMLElement;
+    const menuBarElement = menuBarRef.value.$el as HTMLElement;
     const mutationObserver = new MutationObserver(() => {
       if (menuBarElement.classList.contains('p-menubar-mobile')) {
         menuBarElement.classList.remove('p-menubar-mobile');
@@ -167,7 +167,7 @@ vue.onMounted(() => {
 
     mutationObserver.observe(menuBarElement, { attributes: true, attributeFilter: ['class'] });
 
-    // Close the menu when clicking clicking on the menubar but outside of the main menu items.
+    // Close the menu when clicking on the menubar but outside of the main menu items.
 
     const onClick = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -177,7 +177,7 @@ vue.onMounted(() => {
         !menuBarElement.querySelector('.p-menubar-root-list')?.contains(target) &&
         !Array.from(document.querySelectorAll('.p-menubar-submenu')).some((submenu) => submenu.contains(target))
       ) {
-        menuBar.value?.hide();
+        menuBarRef.value?.hide();
       }
     };
 

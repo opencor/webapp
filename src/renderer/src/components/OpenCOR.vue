@@ -1,5 +1,5 @@
 <template>
-  <BlockUI ref="blockUi" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
+  <BlockUI ref="blockUiRef" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
     :blocked="blockUiBlocked"
     @click="activateInstance"
     @focus="activateInstance"
@@ -19,9 +19,9 @@
       @drop.prevent="onDrop"
       @dragleave="onDragLeave"
     >
-      <input ref="files" type="file" multiple style="display: none;" @change="onChange" />
+      <input ref="filesRef" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
-      <MainMenu ref="mainMenu" v-if="showMainMenu"
+      <MainMenu ref="mainMenuRef" v-if="showMainMenu"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -48,7 +48,7 @@
         />
       </div>
       -->
-      <ContentsComponent ref="contents" class="grow min-h-0"
+      <ContentsComponent ref="contentsRef" class="grow min-h-0"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :simulationOnly="!!omex"
@@ -104,17 +104,17 @@
 import primeVueAuraTheme from '@primeuix/themes/aura';
 import * as vueusecore from '@vueuse/core';
 
-import * as vue from 'vue';
-
 /* TODO: enable once our GitHub integration is fully ready.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { Octokit } from 'octokit';
 */
+import BlockUI from 'primevue/blockui';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
+import * as vue from 'vue';
 
 import type { IOpenCORProps } from '../../index.ts';
 
@@ -131,19 +131,20 @@ import * as initialisation from '../common/initialisation.ts';
 import * as locCommon from '../common/locCommon.ts';
 import * as version from '../common/version.ts';
 import * as vueCommon from '../common/vueCommon.ts';
-import type IContentsComponent from '../components/ContentsComponent.vue';
+import ContentsComponent from '../components/ContentsComponent.vue';
 import * as locApi from '../libopencor/locApi.ts';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
+import MainMenu from './MainMenu.vue';
 
 const props = defineProps<IOpenCORProps>();
 
 const { isDialogActive } = provideDialogState();
 
-const blockUi = vue.ref<vue.ComponentPublicInstance | null>(null);
-const mainMenu = vue.ref<vue.ComponentPublicInstance | null>(null);
-const files = vue.ref<HTMLElement | null>(null);
-const contents = vue.ref<InstanceType<typeof IContentsComponent> | null>(null);
+const blockUiRef = vue.ref<InstanceType<typeof BlockUI> | null>(null);
+const mainMenuRef = vue.ref<InstanceType<typeof MainMenu> | null>(null);
+const filesRef = vue.ref<HTMLElement | null>(null);
+const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const compIssues = vue.computed(() => {
   return [...initialisation.issues.value, ...issues.value];
@@ -430,7 +431,7 @@ const handleAction = (action: string): void => {
 // Enable/disable some menu items.
 
 const hasFiles = vue.computed(() => {
-  return contents.value?.hasFiles() ?? false;
+  return contentsRef.value?.hasFiles() ?? false;
 });
 
 vue.watch(hasFiles, (newHasFiles: boolean) => {
@@ -600,8 +601,8 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
 
     const filePath = locCommon.filePath(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
 
-    if (contents.value?.hasFile(filePath) ?? false) {
-      contents.value?.selectFile(filePath);
+    if (contentsRef.value?.hasFile(filePath) ?? false) {
+      contentsRef.value?.selectFile(filePath);
 
       return;
     }
@@ -653,7 +654,7 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
 
           electronApi?.fileIssue(filePath);
         } else {
-          contents.value?.openFile(file);
+          contentsRef.value?.openFile(file);
         }
       })
       .catch((error: unknown) => {
@@ -749,7 +750,7 @@ const onOpenMenu = (): void => {
     return;
   }
 
-  files.value?.click();
+  filesRef.value?.click();
 };
 
 // Open remote.
@@ -802,7 +803,7 @@ const onCloseMenu = (): void => {
     return;
   }
 
-  contents.value?.closeCurrentFile();
+  contentsRef.value?.closeCurrentFile();
 };
 
 // Close all.
@@ -816,7 +817,7 @@ const onCloseAllMenu = (): void => {
     return;
   }
 
-  contents.value?.closeAllFiles();
+  contentsRef.value?.closeAllFiles();
 };
 
 // Reset all.
@@ -834,13 +835,13 @@ const onResetAll = (): void => {
 // Select.
 
 electronApi?.onSelect((filePath: string) => {
-  contents.value?.selectFile(filePath);
+  contentsRef.value?.selectFile(filePath);
 });
 
 // A few things that can only be done when the component is mounted.
 
 vue.onMounted(() => {
-  const blockUiElement = blockUi.value?.$el as HTMLElement;
+  const blockUiElement = blockUiRef.value?.$el;
 
   // Make ourselves the active instance.
 
@@ -853,7 +854,7 @@ vue.onMounted(() => {
   setTimeout(() => {
     const toastElement = document.getElementById(toastId.value);
 
-    if (toastElement) {
+    if (toastElement && blockUiElement && toastElement.parentElement !== blockUiElement) {
       blockUiElement.appendChild(toastElement);
     }
   }, SHORT_DELAY);
@@ -869,8 +870,8 @@ vue.onMounted(() => {
   }
 
   void vue.nextTick(() => {
-    const mainMenuElement = mainMenu.value?.$el as HTMLElement | undefined;
-    const blockUiElement = blockUi.value?.$el as HTMLElement | undefined;
+    const mainMenuElement = mainMenuRef.value?.$el;
+    const blockUiElement = blockUiRef.value?.$el;
 
     if (mainMenuElement && blockUiElement) {
       stopTrackingMainMenuHeight = vueCommon.trackElementHeight(mainMenuElement, blockUiElement, '--main-menu-height');
