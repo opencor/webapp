@@ -318,11 +318,14 @@ const addToast = (options: Parameters<typeof toast.add>[0]) => {
 
 const crtGlobalProperties = crtVueAppInstance?.config.globalProperties as Record<string, unknown> | undefined;
 const vueTippyInstalledFlag = 'opencorVueTippyInstalled';
+let postInitialisationDone = false;
 
 vue.watch(
   initialisation.done,
   async (newInitialisationDone: boolean) => {
-    if (newInitialisationDone) {
+    if (newInitialisationDone && !postInitialisationDone) {
+      postInitialisationDone = true;
+
       // OpenCOR is now fully initialised, so we can finalise a few things, namely let the current Vue app instance use
       // VueTippy.
 
