@@ -545,6 +545,8 @@ const interactiveCompData = vue.computed(() => {
   // Combine the live data with the data from the tracked runs.
 
   const res: IGraphPanelData[] = [];
+  const paletteColors = colors.PALETTE_COLORS;
+  const paletteColorsLength = paletteColors.length;
 
   for (
     let interactiveDataIndex = 0;
@@ -567,10 +569,7 @@ const interactiveCompData = vue.computed(() => {
           name:
             trace.name +
             (interactiveRuns.value.length === 1 ? '' : interactiveRun.isLiveRun ? ' [Live]' : ` [#${runIndex}]`),
-          color:
-            colors.PALETTE_COLORS[
-              (colors.PALETTE_COLORS.indexOf(interactiveRun.color) + traceIndex) % colors.PALETTE_COLORS.length
-            ] ?? colors.DEFAULT_COLOR,
+          color: paletteColors[(paletteColors.indexOf(interactiveRun.color) + traceIndex) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
           zorder: interactiveRun.isLiveRun ? 1 : undefined
         };
       });
