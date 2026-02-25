@@ -520,7 +520,7 @@ const interactiveUiJsonEmpty = vue.computed(() => {
 });
 const interactiveMath = dependencies._mathJs.create(dependencies._mathJs.all, {});
 const interactiveModel = interactiveDocument.model(0);
-const interactiveData = vue.ref<IGraphPanelData[]>([]);
+const interactiveLiveData = vue.ref<IGraphPanelData[]>([]);
 let interactiveMargins: Record<string, IGraphPanelMargins> = {};
 const interactiveCompMargins = vue.ref<IGraphPanelMargins>();
 const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(locApi.validateUiJson(interactiveUiJson.value));
@@ -544,45 +544,58 @@ const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof Gra
 const interactiveCompData = vue.computed(() => {
   // Combine the live data with the data from the tracked runs.
 
+  const liveData = interactiveLiveData.value;
+  const runs = interactiveRuns.value;
+  const runsCount = runs.length;
   const res: IGraphPanelData[] = [];
   const paletteColors = colors.PALETTE_COLORS;
   const paletteColorsLength = paletteColors.length;
 
-  for (
-    let interactiveDataIndex = 0;
-    interactiveDataIndex < (interactiveData.value.length || 0);
-    ++interactiveDataIndex
-  ) {
+  for (let liveDataIndex = 0; liveDataIndex < liveData.length; ++liveDataIndex) {
     const traces: IGraphPanelPlotTrace[] = [];
 
-    interactiveRuns.value.forEach((interactiveRun: ISimulationRun, runIndex: number) => {
+    for (let runIndex = 0; runIndex < runsCount; ++runIndex) {
+      const interactiveRun = runs[runIndex];
+
+      if (!interactiveRun) {
+        continue;
+      }
+
       if (!interactiveRun.isVisible) {
-        return;
+        continue;
       }
 
       const runColorIndex = paletteColors.indexOf(interactiveRun.color);
       const baseColorIndex = runColorIndex >= 0 ? runColorIndex : 0;
-      const data = interactiveRun.isLiveRun
-        ? interactiveData.value[interactiveDataIndex]
-        : interactiveRun.data[interactiveDataIndex];
-      const runTraces = (data?.traces ?? []).map((trace, traceIndex) => {
-        return {
-          ...trace,
-          name:
-            trace.name +
-            (interactiveRuns.value.length === 1 ? '' : interactiveRun.isLiveRun ? ' [Live]' : ` [#${runIndex}]`),
-          color: paletteColors[(baseColorIndex + traceIndex) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
-          zorder: interactiveRun.isLiveRun ? 1 : undefined
-        };
-      });
+      const data = interactiveRun.isLiveRun ? liveData[liveDataIndex] : interactiveRun.data[liveDataIndex];
+      const dataTraces = data?.traces;
 
-      traces.push(...runTraces);
-    });
+      if (!dataTraces?.length) {
+        continue;
+      }
+
+      const suffix = runsCount === 1 ? '' : interactiveRun.isLiveRun ? ' [Live]' : ` [#${runIndex}]`;
+
+      for (let dataTraceIndex = 0; dataTraceIndex < dataTraces.length; ++dataTraceIndex) {
+        const dataTrace = dataTraces[dataTraceIndex];
+
+        if (!dataTrace) {
+          continue;
+        }
+
+        traces.push({
+          ...dataTrace,
+          name: dataTrace.name + suffix,
+          color: paletteColors[(baseColorIndex + dataTraceIndex) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
+          zorder: interactiveRun.isLiveRun ? 1 : undefined
+        });
+      }
+    }
 
     res.push({
-      xAxisTitle: interactiveData.value[interactiveDataIndex]?.xAxisTitle,
-      yAxisTitle: interactiveData.value[interactiveDataIndex]?.yAxisTitle,
-      traces: traces
+      xAxisTitle: liveData[liveDataIndex]?.xAxisTitle,
+      yAxisTitle: liveData[liveDataIndex]?.yAxisTitle,
+      traces
     });
   }
 
@@ -684,9 +697,13 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
 
   // Show/hide the input widgets.
 
-  interactiveUiJson.value.input.forEach((input: locApi.IUiJsonInput, index: number) => {
-    interactiveShowInput.value[index] = parser.evaluate(input.visible ?? 'true') as string;
-  });
+  for (let index = 0; index < interactiveUiJson.value.input.length; ++index) {
+    const input = interactiveUiJson.value.input[index];
+
+    if (input) {
+      interactiveShowInput.value[index] = parser.evaluate(input.visible ?? 'true') as string;
+    }
+  }
 
   // Update the SED-ML document.
 
@@ -699,7 +716,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
   interactiveModel.removeAllChanges();
   interactiveInstanceIssues.value = [];
 
-  interactiveUiJson.value.parameters.forEach((parameter: locApi.IUiJsonParameter) => {
+  for (const parameter of interactiveUiJson.value.parameters) {
     const componentVariableNames = parameter.name.split('/');
 
     if (componentVariableNames[0] && componentVariableNames[1]) {
@@ -716,7 +733,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         });
       }
     }
-  });
+  }
 
   if (interactiveInstanceIssues.value.length) {
     interactiveInstanceIssues.value.push(informationIssue);
@@ -738,7 +755,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  interactiveUiJson.value.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+  for (const data of interactiveUiJson.value.output.data) {
     const info = interactiveIdToInfo[data.id];
 
     if (info) {
@@ -746,7 +763,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     } else {
       parser.set(data.id, []);
     }
-  });
+  }
 
   const parserEvaluate = (value: string): Float64Array => {
     // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure element-wise
@@ -756,7 +773,9 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
   };
 
   try {
-    interactiveData.value = interactiveUiJson.value.output.plots.map((plot: locApi.IUiJsonOutputPlot) => {
+    const newInteractiveData: IGraphPanelData[] = [];
+
+    for (const plot of interactiveUiJson.value.output.plots) {
       const traces: IGraphPanelPlotTrace[] = [
         {
           name: traceName(plot.name, plot.xValue, plot.yValue),
@@ -768,7 +787,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         }
       ];
 
-      plot.additionalTraces?.forEach((additionalTrace: locApi.IUiJsonOutputPlotAdditionalTrace) => {
+      for (const additionalTrace of plot.additionalTraces ?? []) {
         traces.push({
           name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
           xValue: additionalTrace.xValue,
@@ -777,14 +796,16 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
           y: parserEvaluate(additionalTrace.yValue),
           color: colors.DEFAULT_COLOR
         });
-      });
+      }
 
-      return {
+      newInteractiveData.push({
         xAxisTitle: plot.xAxisTitle,
         yAxisTitle: plot.yAxisTitle,
         traces
-      };
-    });
+      });
+    }
+
+    interactiveLiveData.value = newInteractiveData;
   } catch (error: unknown) {
     interactiveInstanceIssues.value = [
       {
@@ -801,17 +822,26 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
 const onMarginsUpdated = (plotId: string, newMargins: IGraphPanelMargins): void => {
   interactiveMargins[plotId] = newMargins;
 
-  const margins = Object.values(interactiveMargins);
+  let marginCount = 0;
+  let maxLeft = 0;
+  let maxRight = 0;
 
-  if (margins.length !== interactiveUiJson.value.output.plots.length) {
+  for (const margin of Object.values(interactiveMargins)) {
+    ++marginCount;
+
+    maxLeft = Math.max(maxLeft, margin.left);
+    maxRight = Math.max(maxRight, margin.right);
+  }
+
+  if (marginCount !== interactiveUiJson.value.output.plots.length) {
     interactiveCompMargins.value = undefined;
 
     return;
   }
 
   interactiveCompMargins.value = {
-    left: Math.max(...margins.map((margin) => margin.left)),
-    right: Math.max(...margins.map((margin) => margin.right))
+    left: maxLeft,
+    right: maxRight
   };
 };
 
@@ -837,47 +867,58 @@ const onTrackRun = (): void => {
 
   // Compute the tooltip for this run, keeping in mind that some simulation inputs may not be visible.
 
-  const tooltipLines = interactiveUiJson.value.input
-    .map((input, index) => ({
-      input: input,
-      visible: interactiveShowInput.value[index]
-    }))
-    .filter((input) => input.visible)
-    .map(({ input }) => {
-      let inputValue: string | number | undefined = inputParameters[input.id];
+  const tooltipRows: string[] = [];
 
-      if (locApi.isDiscreteInput(input)) {
-        const selectedValue = input.possibleValues.find(
-          (possibleValue) => possibleValue.value === inputParameters[input.id]
-        );
+  for (let index = 0; index < interactiveUiJson.value.input.length; ++index) {
+    if (!interactiveShowInput.value[index]) {
+      continue;
+    }
 
-        if (selectedValue?.name) {
-          inputValue = selectedValue.name.charAt(0).toLowerCase() + selectedValue.name.slice(1);
-        } else {
-          inputValue = inputParameters[input.id];
-        }
+    const input = interactiveUiJson.value.input[index];
+
+    if (!input) {
+      continue;
+    }
+
+    let inputValue: string | number | undefined = inputParameters[input.id];
+
+    if (locApi.isDiscreteInput(input)) {
+      const selectedValue = input.possibleValues.find(
+        (possibleValue) => possibleValue.value === inputParameters[input.id]
+      );
+
+      if (selectedValue?.name) {
+        inputValue = selectedValue.name.charAt(0).toLowerCase() + selectedValue.name.slice(1);
+      } else {
+        inputValue = inputParameters[input.id];
       }
+    }
 
-      return `<tr>
+    tooltipRows.push(`<tr>
       <td>
         <b>${input.name}:</b>
       </td>
       <td style="padding-left: 8px;">
         ${inputValue}
       </td>
-    </tr>`;
-    })
-    .join('');
+    </tr>`);
+  }
+
   const tooltip = `<table>
   <tbody>
-    ${tooltipLines}
+    ${tooltipRows.join('')}
   </tbody>
 </table>`;
 
   // Determine the colour (of the first trace) by using the next unused colour in the palette unless all the colours
   // have already been used.
 
-  const usedColors = new Set<string>(interactiveRuns.value.map((run) => run.color));
+  const usedColors = new Set<string>();
+
+  for (const run of interactiveRuns.value) {
+    usedColors.add(run.color);
+  }
+
   const lastColor = interactiveRuns.value[interactiveRuns.value.length - 1]?.color ?? colors.DEFAULT_COLOR;
   const lastColorIndex = colors.PALETTE_COLORS.indexOf(lastColor);
   let color: string = colors.DEFAULT_COLOR;
@@ -897,7 +938,7 @@ const onTrackRun = (): void => {
   interactiveRuns.value.push({
     inputParameters,
     isVisible: true,
-    data: interactiveData.value,
+    data: interactiveLiveData.value,
     color,
     tooltip,
     isLiveRun: false
