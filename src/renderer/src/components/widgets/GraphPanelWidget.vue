@@ -596,10 +596,8 @@ const updatePlot = (): void => {
 
   const traces = props.data.traces.map((trace) => ({
     ...trace,
-    ...{
-      line: { color: trace.color },
-      legendrank: trace.zorder
-    }
+    line: { color: trace.color },
+    legendrank: trace.zorder
   }));
 
   dependencies._plotlyJs
