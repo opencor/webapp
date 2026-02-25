@@ -311,17 +311,19 @@ const exportToCsv = async (): Promise<void> => {
     const allXValuesEqual = props.data.traces.every((trace) => trace.xValue === firstTrace.xValue);
     const headerParts: string[] = [allXValuesEqual ? firstTrace.xValue : 'X'];
 
-    props.data.traces.forEach((trace) => {
+    for (const trace of props.data.traces) {
       headerParts.push(trace.name.replace(/<[^>]*>|,/g, '') || trace.yValue);
       // Note: we remove any HTML tags and commas to ensure the CSV is well-formed.
-    });
+    }
 
     csvLines.push(headerParts.join(','));
 
     // Data rows: collect all unique X values and build value maps.
 
     const allXValues = new Set<number>();
-    const traceMaps = props.data.traces.map((trace) => {
+    const traceMaps: Map<number, number>[] = [];
+
+    for (const trace of props.data.traces) {
       const map = new Map<number, number>();
 
       for (let i = 0; i < trace.x.length; ++i) {
@@ -335,8 +337,8 @@ const exportToCsv = async (): Promise<void> => {
         }
       }
 
-      return map;
-    });
+      traceMaps.push(map);
+    }
 
     // Process the rows and update the progress message at regular intervals to keep the UI responsive.
 
@@ -348,11 +350,11 @@ const exportToCsv = async (): Promise<void> => {
     for (const sortedXValue of sortedXValues) {
       const rowParts: string[] = [String(sortedXValue)];
 
-      props.data.traces.forEach((_trace, traceIndex) => {
+      for (let traceIndex = 0; traceIndex < props.data.traces.length; ++traceIndex) {
         const yValue = traceMaps[traceIndex]?.get(sortedXValue);
 
         rowParts.push(yValue !== undefined ? String(yValue) : '');
-      });
+      }
 
       csvLines.push(rowParts.join(','));
 
