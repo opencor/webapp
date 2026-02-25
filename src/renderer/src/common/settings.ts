@@ -4,6 +4,7 @@ import { electronApi } from './electronApi.ts';
 class Settings {
   protected static _instance: Settings | null = null;
   private _settings!: ISettings;
+  private _oldRawSettings: string | null = null;
   private _isInitialised = false;
   private _initialisationListeners: (() => void)[] = [];
 
@@ -45,6 +46,7 @@ class Settings {
     if (electronApi) {
       electronApi.loadSettings().then((settings: ISettings) => {
         this._settings = settings;
+        this._oldRawSettings = JSON.stringify(settings);
 
         this.emitInitialised();
       });
@@ -54,6 +56,7 @@ class Settings {
 
         if (raw) {
           this._settings = JSON.parse(raw);
+          this._oldRawSettings = raw;
         }
       } catch (error: unknown) {
         console.error(
@@ -69,11 +72,21 @@ class Settings {
   }
 
   save(): void {
+    const rawSettings = JSON.stringify(this._settings);
+
+    if (rawSettings === this._oldRawSettings) {
+      return;
+    }
+
     if (electronApi) {
       electronApi.saveSettings(this._settings);
+
+      this._oldRawSettings = rawSettings;
     } else {
       try {
-        window.localStorage.setItem('settings', JSON.stringify(this._settings));
+        window.localStorage.setItem('settings', rawSettings);
+
+        this._oldRawSettings = rawSettings;
       } catch (error: unknown) {
         console.error('Failed to save the settings to the local storage:', formatError(error));
       }
@@ -86,6 +99,8 @@ class Settings {
         checkForUpdatesAtStartup: true
       }
     };
+
+    this._oldRawSettings = null;
   }
 
   toString(): string {
