@@ -560,6 +560,8 @@ const interactiveCompData = vue.computed(() => {
         return;
       }
 
+      const runColorIndex = paletteColors.indexOf(interactiveRun.color);
+      const baseColorIndex = runColorIndex >= 0 ? runColorIndex : 0;
       const data = interactiveRun.isLiveRun
         ? interactiveData.value[interactiveDataIndex]
         : interactiveRun.data[interactiveDataIndex];
@@ -569,7 +571,7 @@ const interactiveCompData = vue.computed(() => {
           name:
             trace.name +
             (interactiveRuns.value.length === 1 ? '' : interactiveRun.isLiveRun ? ' [Live]' : ` [#${runIndex}]`),
-          color: paletteColors[(paletteColors.indexOf(interactiveRun.color) + traceIndex) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
+          color: paletteColors[(baseColorIndex + traceIndex) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
           zorder: interactiveRun.isLiveRun ? 1 : undefined
         };
       });
