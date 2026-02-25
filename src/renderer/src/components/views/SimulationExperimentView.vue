@@ -663,17 +663,6 @@ interactiveMath.import(
   { override: true }
 );
 
-const evaluateValue = (value: string): unknown => {
-  const parser = interactiveMath.parser();
-  let index = -1;
-
-  interactiveUiJson.value.input.forEach((input: locApi.IUiJsonInput) => {
-    parser.set(input.id, interactiveInputValues.value[++index]);
-  });
-
-  return parser.evaluate(value);
-};
-
 const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
   // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
@@ -681,10 +670,22 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
+  // Create a parser with the current input values as variables.
+
+  const parser = interactiveMath.parser();
+
+  for (let index = 0; index < interactiveUiJson.value.input.length; ++index) {
+    const input = interactiveUiJson.value.input[index];
+
+    if (input) {
+      parser.set(input.id, interactiveInputValues.value[index]);
+    }
+  }
+
   // Show/hide the input widgets.
 
   interactiveUiJson.value.input.forEach((input: locApi.IUiJsonInput, index: number) => {
-    interactiveShowInput.value[index] = evaluateValue(input.visible ?? 'true') as string;
+    interactiveShowInput.value[index] = parser.evaluate(input.visible ?? 'true') as string;
   });
 
   // Update the SED-ML document.
@@ -706,7 +707,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         interactiveModel.addChange(
           componentVariableNames[0],
           componentVariableNames[1],
-          String(evaluateValue(parameter.value))
+          String(parser.evaluate(parameter.value))
         );
       } catch (error: unknown) {
         interactiveInstanceIssues.value.push({
@@ -736,8 +737,6 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
 
     return;
   }
-
-  const parser = interactiveMath.parser();
 
   interactiveUiJson.value.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     const info = interactiveIdToInfo[data.id];
