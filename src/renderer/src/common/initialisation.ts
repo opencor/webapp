@@ -185,11 +185,11 @@ dependencies.initialiseXxhash
 
 // Let people know whether initialisation is done and how it's progressing.
 
-export const done = vue.computed(() => {
+export const done = vue.computed<boolean>(() => {
   return progress.value >= 100;
 });
 export const failed = vue.ref<boolean>(false);
 export const issues = vue.ref<locApi.IIssue[]>([]);
-export const progress = vue.computed(() => {
+export const progress = vue.computed<number>(() => {
   return Math.round((100 * crtNbOfSteps.value) / totalNbOfSteps);
 });

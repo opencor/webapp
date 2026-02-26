@@ -447,8 +447,12 @@ const traceName = (name: string | undefined, xValue: string, yValue: string): st
   return name ?? `${yValue} <i>vs.</i> ${xValue}`;
 };
 
-const xInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value));
-const yInfo = vue.computed(() => locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value));
+const xInfo = vue.computed<locCommon.ISimulationDataInfo>(() =>
+  locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value)
+);
+const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() =>
+  locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value)
+);
 
 const updatePlot = () => {
   standardData.value = {
@@ -499,7 +503,7 @@ const interactiveUiJson = vue.ref<locApi.IUiJson>(
         parameters: []
       }
 );
-const interactiveUiJsonEmpty = vue.computed(() => {
+const interactiveUiJsonEmpty = vue.computed<boolean>(() => {
   if (
     interactiveUiJson.value.input.length === 0 &&
     interactiveUiJson.value.output.plots.length === 0 &&
@@ -541,7 +545,7 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
 const interactiveRunColorPopoverRefs = vue.ref<Record<number, InstanceType<typeof Popover> | undefined>>({});
 const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
-const interactiveCompData = vue.computed(() => {
+const interactiveCompData = vue.computed<IGraphPanelData[]>(() => {
   // Combine the live data with the data from the tracked runs.
 
   const liveData = interactiveLiveData.value;
@@ -601,7 +605,7 @@ const interactiveCompData = vue.computed(() => {
 
   return res;
 });
-const interactiveSettings = vue.computed(() => ({
+const interactiveSettings = vue.computed<ISimulationExperimentViewSettings>(() => ({
   simulation: {
     startingPoint: interactiveUniformTimeCourse.outputStartTime(),
     endingPoint: interactiveUniformTimeCourse.outputEndTime(),
@@ -623,7 +627,7 @@ const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interact
 
 // Determine whether to show the toolbar.
 
-const showToolbar = vue.computed(() => {
+const showToolbar = vue.computed<boolean>(() => {
   return (props.simulationOnly && interactiveUiJsonEmpty.value) || !props.simulationOnly;
 });
 

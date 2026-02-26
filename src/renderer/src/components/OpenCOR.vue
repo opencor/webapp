@@ -146,7 +146,7 @@ const mainMenuRef = vue.ref<InstanceType<typeof MainMenu> | null>(null);
 const filesRef = vue.ref<HTMLElement | null>(null);
 const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
-const compIssues = vue.computed(() => {
+const compIssues = vue.computed<locApi.IIssue[]>(() => {
   return [...initialisation.issues.value, ...issues.value];
 });
 const activeInstanceUid = vueCommon.activeInstanceUid();
@@ -163,7 +163,7 @@ const activateInstance = (): void => {
   activeInstanceUid.value = crtInstanceUid;
 };
 
-const compIsActive = vue.computed(() => {
+const compIsActive = vue.computed<boolean>(() => {
   return activeInstanceUid.value === crtInstanceUid;
 });
 
@@ -183,7 +183,7 @@ electronApi?.onEnableDisableUi((enable: boolean) => {
 //       since a dialog already has some overlaying effect and the BlockUI's overlay would just make things look darker
 //       and worse.
 
-const compBlockUiEnabled = vue.computed(() => {
+const compBlockUiEnabled = vue.computed<boolean>(() => {
   return (
     !electronUiEnabled.value ||
     initialisingOpencorMessageVisible.value ||
@@ -193,7 +193,7 @@ const compBlockUiEnabled = vue.computed(() => {
   );
 });
 
-const compUiEnabled = vue.computed(() => {
+const compUiEnabled = vue.computed<boolean>(() => {
   return !compBlockUiEnabled.value && !isDialogActive.value;
 });
 
@@ -228,13 +228,13 @@ vue.onUnmounted(() => {
 
 // Determine whether to show the main menu or not.
 
-const showMainMenu = vue.computed(() => {
+const showMainMenu = vue.computed<boolean>(() => {
   return !electronApi && !props.omex;
 });
 
 // Determine whether the background should be visible.
 
-const compBackgroundVisible = vue.computed(() => {
+const compBackgroundVisible = vue.computed<boolean>(() => {
   return (
     (initialisingOpencorMessageVisible.value || loadingModelMessageVisible.value || progressMessageVisible.value) &&
     !!props.omex
@@ -433,7 +433,7 @@ const handleAction = (action: string): void => {
 
 // Enable/disable some menu items.
 
-const hasFiles = vue.computed(() => {
+const hasFiles = vue.computed<boolean>(() => {
   return contentsRef.value?.hasFiles() ?? false;
 });
 

@@ -796,7 +796,7 @@ const showSimulationSettingsIssuesPanel = vue.ref(false);
 const showSolversSettingsIssuesPanel = vue.ref(false);
 const showUiJsonIssuesPanel = vue.ref(false);
 const localSettings = vue.ref<ISimulationExperimentViewSettings>(JSON.parse(JSON.stringify(props.settings)));
-const numberOfDataPoints = vue.computed(() => {
+const numberOfDataPoints = vue.computed<string>(() => {
   // Our total number of data points.
   // Note: only calculate when simulation settings are valid.
 
@@ -814,7 +814,7 @@ const numberOfDataPoints = vue.computed(() => {
 
   return res;
 });
-const simulationSettingsIssues = vue.computed(() => {
+const simulationSettingsIssues = vue.computed<locApi.IIssue[]>(() => {
   // Validate our simulation settings and return any issues.
 
   const res: locApi.IIssue[] = [];
@@ -860,7 +860,7 @@ const simulationSettingsIssues = vue.computed(() => {
 
   return res;
 });
-const solversSettingsIssues = vue.computed(() => {
+const solversSettingsIssues = vue.computed<locApi.IIssue[]>(() => {
   // Validate our solvers settings and return any issues.
 
   const res: locApi.IIssue[] = [];
@@ -881,7 +881,7 @@ const solversSettingsIssues = vue.computed(() => {
 
   return res;
 });
-const uiJsonIssues = vue.computed(() => {
+const uiJsonIssues = vue.computed<locApi.IIssue[]>(() => {
   // Validate our local UI JSON and return any issues.
 
   return validateUiJson(localSettings.value.interactive.uiJson);

@@ -70,17 +70,17 @@ const props = withDefaults(
   }
 );
 
-const errorCount = vue.computed(() => {
+const errorCount = vue.computed<number>(() => {
   return props.issues.filter((i) => i.type === locApi.EIssueType.ERROR).length;
 });
-const warningCount = vue.computed(() => {
+const warningCount = vue.computed<number>(() => {
   return props.issues.filter((i) => i.type === locApi.EIssueType.WARNING).length;
 });
-const informationCount = vue.computed(() => {
+const informationCount = vue.computed<number>(() => {
   return props.issues.filter((i) => i.type === locApi.EIssueType.INFORMATION).length;
 });
 
-const severityClass = vue.computed(() => {
+const severityClass = vue.computed<string>(() => {
   if (errorCount.value > 0) {
     return 'error';
   }
