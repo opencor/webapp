@@ -860,7 +860,7 @@ const onTrackRun = (): void => {
   interactiveUiJson.value.input.forEach((input: locApi.IUiJsonInput, index: number) => {
     const interactiveInputValue = interactiveInputValues.value[index];
 
-    if (interactiveInputValue) {
+    if (interactiveInputValue !== undefined) {
       inputParameters[input.id] = interactiveInputValue;
     }
   });
