@@ -81,6 +81,14 @@ export const resetAll = (): void => {
 
 let recentFilePaths: string[] = [];
 
+const removeRecentFilePath = (filePath: string): void => {
+  for (let i = recentFilePaths.length - 1; i >= 0; --i) {
+    if (recentFilePaths[i] === filePath) {
+      recentFilePaths.splice(i, 1);
+    }
+  }
+};
+
 export const clearRecentFiles = (): void => {
   recentFilePaths = [];
 
@@ -94,20 +102,25 @@ export const fileClosed = (filePath: string): void => {
     return;
   }
 
+  removeRecentFilePath(filePath);
+
   recentFilePaths.unshift(filePath);
-  recentFilePaths = recentFilePaths.slice(0, 10);
+
+  if (recentFilePaths.length > 10) {
+    recentFilePaths.length = 10;
+  }
 
   updateReopenMenu(recentFilePaths);
 };
 
 export const fileIssue = (filePath: string): void => {
-  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath);
+  removeRecentFilePath(filePath);
 
   updateReopenMenu(recentFilePaths);
 };
 
 export const fileOpened = (filePath: string): void => {
-  recentFilePaths = recentFilePaths.filter((recentFilePath) => recentFilePath !== filePath);
+  removeRecentFilePath(filePath);
 
   updateReopenMenu(recentFilePaths);
 
@@ -142,6 +155,7 @@ export class MainWindow extends ApplicationWindow {
   private _splashScreenWindowClosed = false;
 
   private _openedFilePaths: string[] = [];
+  private _openedFilePathIndex = 0;
   private _selectedFilePath = '';
 
   // Constructor.
@@ -209,6 +223,7 @@ export class MainWindow extends ApplicationWindow {
         // Reopen previously opened files, if any, and select the previously selected file.
 
         this._openedFilePaths = electronConf.get('app.files.opened');
+        this._openedFilePathIndex = 0;
         this._selectedFilePath = electronConf.get('app.files.selected');
 
         this.reopenFilePathsAndSelectFilePath();
@@ -360,16 +375,21 @@ export class MainWindow extends ApplicationWindow {
   //       reopen. So, we need to wait for the file to be reopened before reopening the next one.
 
   reopenFilePathsAndSelectFilePath(): void {
-    if (this._openedFilePaths.length) {
-      const filePath = this._openedFilePaths[0];
+    if (this._openedFilePathIndex < this._openedFilePaths.length) {
+      const filePath = this._openedFilePaths[this._openedFilePathIndex];
 
-      this.webContents.send('open', filePath);
+      if (filePath) {
+        this.webContents.send('open', filePath);
+      }
 
-      this._openedFilePaths = this._openedFilePaths.slice(1);
+      ++this._openedFilePathIndex;
 
-      if (this._openedFilePaths.length) {
+      if (this._openedFilePathIndex < this._openedFilePaths.length) {
         return;
       }
+
+      this._openedFilePaths = [];
+      this._openedFilePathIndex = 0;
     }
 
     if (this._selectedFilePath) {
@@ -394,21 +414,27 @@ export class MainWindow extends ApplicationWindow {
       return;
     }
 
-    commandLine.forEach((argument: string) => {
+    for (let argument of commandLine) {
       if (this.isAction(argument)) {
         this.webContents.send('action', argument.slice(FULL_URI_SCHEME.length));
-      } else if (argument !== '--allow-file-access-from-files' && argument !== '--enable-avfoundation') {
-        // The argument is not an action (and not --allow-file-access-from-files or --enable-avfoundation either), so it
-        // must be a file to open. But, first, check whether the argument is a relative path and, if so, convert it to
-        // an absolute path.
 
-        if (!path.isAbsolute(argument)) {
-          argument = path.resolve(argument);
-        }
-
-        this.webContents.send('open', argument);
+        continue;
       }
-    });
+
+      if (argument === '--allow-file-access-from-files' || argument === '--enable-avfoundation') {
+        continue;
+      }
+
+      // The argument is not an action (and not --allow-file-access-from-files or --enable-avfoundation either), so it
+      // must be a file to open. But, first, check whether the argument is a relative path and, if so, convert it to
+      // an absolute path.
+
+      if (!path.isAbsolute(argument)) {
+        argument = path.resolve(argument);
+      }
+
+      this.webContents.send('open', argument);
+    }
   }
 
   // Enable/disable our UI.
