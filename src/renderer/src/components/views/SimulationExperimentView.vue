@@ -676,6 +676,9 @@ interactiveMath.import(
   { override: true }
 );
 
+const NON_ELEMENTWISE_MULTIPLY_REGEX = /(?<!\.)\*(?!\.)/g;
+const NON_ELEMENTWISE_DIVIDE_REGEX = /(?<!\.)\/(?!\.)/g;
+
 const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
   // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
@@ -765,11 +768,22 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     }
   }
 
-  const parserEvaluate = (value: string): Float64Array => {
-    // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure element-wise
-    //       operations.
+  const normalisedExpressionCache = new Map<string, string>();
 
-    return new Float64Array(parser.evaluate(value.replace(/(?<!\.)\*(?!\.)/g, '.*').replace(/(?<!\.)\/(?!\.)/g, './')));
+  const parserEvaluate = (expression: string): Float64Array => {
+    let normalisedExpression = normalisedExpressionCache.get(expression);
+
+    if (!normalisedExpression) {
+      normalisedExpression = expression
+        .replace(NON_ELEMENTWISE_MULTIPLY_REGEX, '.*')
+        .replace(NON_ELEMENTWISE_DIVIDE_REGEX, './');
+      // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure element-wise
+      //       operations.
+
+      normalisedExpressionCache.set(expression, normalisedExpression);
+    }
+
+    return Float64Array.from(parser.evaluate(normalisedExpression) as number[]);
   };
 
   try {
@@ -826,7 +840,13 @@ const onMarginsUpdated = (plotId: string, newMargins: IGraphPanelMargins): void 
   let maxLeft = 0;
   let maxRight = 0;
 
-  for (const margin of Object.values(interactiveMargins)) {
+  for (const key in interactiveMargins) {
+    const margin = interactiveMargins[key];
+
+    if (!margin) {
+      continue;
+    }
+
     ++marginCount;
 
     maxLeft = Math.max(maxLeft, margin.left);
@@ -857,13 +877,19 @@ const onTrackRun = (): void => {
 
   const inputParameters: Record<string, number> = {};
 
-  interactiveUiJson.value.input.forEach((input: locApi.IUiJsonInput, index: number) => {
+  for (let index = 0; index < interactiveUiJson.value.input.length; ++index) {
+    const input = interactiveUiJson.value.input[index];
+
+    if (!input) {
+      continue;
+    }
+
     const interactiveInputValue = interactiveInputValues.value[index];
 
     if (interactiveInputValue !== undefined) {
       inputParameters[input.id] = interactiveInputValue;
     }
-  });
+  }
 
   // Compute the tooltip for this run, keeping in mind that some simulation inputs may not be visible.
 
