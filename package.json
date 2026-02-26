@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20260227.0",
+  "version": "0.20260227.1",
   "scripts": {
     "archive:web": "bun src/renderer/scripts/archive.web.js",
     "build": "bun src/renderer/scripts/libopencor.js && electron-vite build",
@@ -66,7 +66,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/postcss": "^4.2.1",
     "@tailwindcss/vite": "^4.2.1",
-    "@types/node": "^25.3.1",
+    "@types/node": "^25.3.2",
     "@types/plotly.js": "^3.0.10",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue/tsconfig": "^0.8.1",
