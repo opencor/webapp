@@ -50,16 +50,12 @@ jobs:
       - name: Install bun (Windows ARM only)
         if: ${{ matrix.name == 'Windows (ARM)' }}
         run: |
-          curl -L https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64-baseline.zip -o bun.zip
+          curl -L https://github.com/oven-sh/bun/releases/latest/download/bun-windows-aarch64.zip -o bun.zip
           unzip -j bun.zip -d $env:USERPROFILE\.bun
           del bun.zip
           echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
       - name: OpenCOR dependencies
-        if: ${{ matrix.name != 'Windows (ARM)' }}
         run: bun install
-      - name: OpenCOR dependencies (Windows ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: bun install --cpu=arm64
       - name: Build OpenCOR
         if: ${{ matrix.name != 'Code formatting' && matrix.name != 'Linting' }}
         run: bun run build
