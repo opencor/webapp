@@ -95,7 +95,9 @@ interface IDialogState {
 
 export const provideDialogState = (): IDialogState => {
   const activeDialogs = vue.ref(0);
-  const isDialogActive = vue.computed(() => activeDialogs.value > 0);
+  const isDialogActive = vue.computed<boolean>(() => {
+    return activeDialogs.value > 0;
+  });
 
   const incrementDialogs = () => {
     ++activeDialogs.value;

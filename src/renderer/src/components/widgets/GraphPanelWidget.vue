@@ -311,17 +311,19 @@ const exportToCsv = async (): Promise<void> => {
     const allXValuesEqual = props.data.traces.every((trace) => trace.xValue === firstTrace.xValue);
     const headerParts: string[] = [allXValuesEqual ? firstTrace.xValue : 'X'];
 
-    props.data.traces.forEach((trace) => {
+    for (const trace of props.data.traces) {
       headerParts.push(trace.name.replace(/<[^>]*>|,/g, '') || trace.yValue);
       // Note: we remove any HTML tags and commas to ensure the CSV is well-formed.
-    });
+    }
 
     csvLines.push(headerParts.join(','));
 
     // Data rows: collect all unique X values and build value maps.
 
     const allXValues = new Set<number>();
-    const traceMaps = props.data.traces.map((trace) => {
+    const traceMaps: Map<number, number>[] = [];
+
+    for (const trace of props.data.traces) {
       const map = new Map<number, number>();
 
       for (let i = 0; i < trace.x.length; ++i) {
@@ -335,8 +337,8 @@ const exportToCsv = async (): Promise<void> => {
         }
       }
 
-      return map;
-    });
+      traceMaps.push(map);
+    }
 
     // Process the rows and update the progress message at regular intervals to keep the UI responsive.
 
@@ -348,11 +350,11 @@ const exportToCsv = async (): Promise<void> => {
     for (const sortedXValue of sortedXValues) {
       const rowParts: string[] = [String(sortedXValue)];
 
-      props.data.traces.forEach((_trace, traceIndex) => {
+      for (let traceIndex = 0; traceIndex < props.data.traces.length; ++traceIndex) {
         const yValue = traceMaps[traceIndex]?.get(sortedXValue);
 
         rowParts.push(yValue !== undefined ? String(yValue) : '');
-      });
+      }
 
       csvLines.push(rowParts.join(','));
 
@@ -414,21 +416,23 @@ interface IThemeData {
 const themeData = (): IThemeData => {
   // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 
+  const useLightMode = theme.useLightMode();
+
   const axisThemeData = (): IAxisThemeData => {
     return {
-      zerolinecolor: theme.useLightMode() ? '#94a3b8' : '#71717a', // --p-surface-400 / --p-surface-500
-      gridcolor: theme.useLightMode() ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
+      zerolinecolor: useLightMode ? '#94a3b8' : '#71717a', // --p-surface-400 / --p-surface-500
+      gridcolor: useLightMode ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
       minor: {
-        gridcolor: theme.useLightMode() ? '#f1f5f9' : '#27272a' // --p-surface-100 / --p-surface-800
+        gridcolor: useLightMode ? '#f1f5f9' : '#27272a' // --p-surface-100 / --p-surface-800
       }
     };
   };
 
   return {
-    paper_bgcolor: theme.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
-    plot_bgcolor: theme.useLightMode() ? '#ffffff' : '#18181b', // --p-content-background
+    paper_bgcolor: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
+    plot_bgcolor: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
     font: {
-      color: theme.useLightMode() ? '#334155' : '#ffffff' // --p-text-color
+      color: useLightMode ? '#334155' : '#ffffff' // --p-text-color
     },
     colorway: colors.PALETTE_COLORS,
     xaxis: axisThemeData(),
@@ -596,10 +600,8 @@ const updatePlot = (): void => {
 
   const traces = props.data.traces.map((trace) => ({
     ...trace,
-    ...{
-      line: { color: trace.color },
-      legendrank: trace.zorder
-    }
+    line: { color: trace.color },
+    legendrank: trace.zorder
   }));
 
   dependencies._plotlyJs

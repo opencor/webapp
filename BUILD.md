@@ -38,13 +38,7 @@ npm install -g bun
    bun install
    ```
 
-2. **Build libOpenCOR's native Node.js module:**
-
-   ```bash
-   bun libopencor
-   ```
-
-3. **Start the development version of OpenCOR:**
+2. **Start the development version of OpenCOR:**
    - **Desktop version:**
 
      ```bash
@@ -57,7 +51,7 @@ npm install -g bun
      bun dev:web
      ```
 
-4. **Test OpenCOR:**
+3. **Test OpenCOR:**
    - **Desktop version:** the application will open automatically; and
    - **Web app version:** open your browser and navigate to the local development URL (typically http://localhost:5173).
 
@@ -74,7 +68,6 @@ npm install -g bun
 | `dev:web`             | (Build and) start OpenCOR's Web app with hot reload             |
 | `format`              | Format the code                                                 |
 | `format:check`        | Check code formatting without making changes                    |
-| `libopencor`          | Build libOpenCOR's native Node.js module                        |
 | `lint`                | Lint and automatically fix issues                               |
 | `release`             | Release OpenCOR for the current platform                        |
 | `release:local`       | Release OpenCOR for the current platform without code signing   |

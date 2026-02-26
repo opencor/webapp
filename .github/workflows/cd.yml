@@ -94,8 +94,6 @@ jobs:
       - name: OpenCOR dependencies (Windows ARM only)
         if: ${{ matrix.name == 'Windows (ARM)' }}
         run: bun install --cpu=arm64
-      - name: Build libOpenCOR
-        run: bun libopencor
       - name: Build OpenCOR
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}

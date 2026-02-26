@@ -15,34 +15,34 @@ export interface ISettings {
 // Note: the order of the checks in osName() is important. For instance, we need to check for "iPhone" before checking
 //       for "Mac" since the user agent of iPhones contains both "iPhone" and "Mac".
 
+let _osName: string | null = null;
+
 const osName = (): string => {
+  if (_osName) {
+    return _osName;
+  }
+
   try {
     const userAgent = window.navigator.userAgent;
 
     if (/Android/i.test(userAgent)) {
-      return 'Android';
+      _osName = 'Android';
+    } else if (/iPhone|iPad|iPod/i.test(userAgent)) {
+      _osName = 'iOS';
+    } else if (/Windows/i.test(userAgent)) {
+      _osName = 'Windows';
+    } else if (/Linux/i.test(userAgent)) {
+      _osName = 'Linux';
+    } else if (/Mac/i.test(userAgent)) {
+      _osName = 'macOS';
+    } else {
+      _osName = 'Unknown';
     }
-
-    if (/iPhone|iPad|iPod/i.test(userAgent)) {
-      return 'iOS';
-    }
-
-    if (/Windows/i.test(userAgent)) {
-      return 'Windows';
-    }
-
-    if (/Linux/i.test(userAgent)) {
-      return 'Linux';
-    }
-
-    if (/Mac/i.test(userAgent)) {
-      return 'macOS';
-    }
-
-    return 'Unknown';
   } catch {
-    return 'Unknown';
+    _osName = 'Unknown';
   }
+
+  return _osName;
 };
 
 export const isWindows = (): boolean => {

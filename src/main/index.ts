@@ -90,44 +90,68 @@ electron.app.on('second-instance', (_event, argv) => {
 
 electron.app.setAsDefaultProtocolClient(URI_SCHEME, isWindows() ? process.execPath : undefined);
 
-if (isLinux()) {
-  // Make our application icon available so that it can be referenced by our desktop file.
+// Set up Linux desktop integration by creating a desktop file and making our application icon available.
+// Note: this is not needed on Windows and macOS since they automatically pick up the necessary information from
+//       OpenCOR.
 
-  const localShareFolder = path.join(electron.app.getPath('home'), '.local/share');
-  const localShareOpencorFolder = path.join(localShareFolder, URI_SCHEME);
+const setupLinuxDesktopIntegration = async (): Promise<void> => {
+  try {
+    // Make our application icon available so that it can be referenced by our desktop file.
 
-  // Check whether localShareOpencorFolder exists and, if not, create it.
+    const localShareFolder = path.join(electron.app.getPath('home'), '.local/share');
+    const localShareOpencorFolder = path.join(localShareFolder, URI_SCHEME);
+    const iconSourcePath = path.join(import.meta.dirname, '../../src/main/assets/icon.png');
+    const iconTargetPath = path.join(localShareOpencorFolder, 'icon.png');
 
-  if (!fs.existsSync(localShareOpencorFolder)) {
-    fs.mkdirSync(localShareOpencorFolder);
-  }
+    await fs.promises.mkdir(localShareOpencorFolder, { recursive: true });
+    await fs.promises.copyFile(iconSourcePath, iconTargetPath);
 
-  fs.copyFileSync(
-    path.join(import.meta.dirname, '../../src/main/assets/icon.png'),
-    path.join(`${localShareOpencorFolder}/icon.png`)
-  );
+    // Create a desktop file for OpenCOR and its URI scheme.
 
-  // Create a desktop file for OpenCOR and its URI scheme.
+    const localApplicationsFolder = path.join(localShareFolder, 'applications');
 
-  fs.writeFileSync(
-    path.join(`${localShareFolder}/applications/${URI_SCHEME}.desktop`),
-    `[Desktop Entry]
+    await fs.promises.mkdir(localApplicationsFolder, { recursive: true });
+
+    const desktopFilePath = path.join(localApplicationsFolder, `${URI_SCHEME}.desktop`);
+    const desktopFileContents = `[Desktop Entry]
 Type=Application
 Name=OpenCOR
 Exec=${process.execPath} %u
-Icon=${localShareOpencorFolder}/icon.png
+Icon=${iconTargetPath}
 Terminal=false
-MimeType=x-scheme-handler/${URI_SCHEME}`
-  );
+MimeType=x-scheme-handler/${URI_SCHEME}`;
+    let updateDesktopDatabase: boolean = false;
 
-  // Update the desktop database.
+    try {
+      const currentDesktopFileContents = await fs.promises.readFile(desktopFilePath, { encoding: 'utf8' });
 
-  nodeChildProcess.exec('update-desktop-database ~/.local/share/applications', (error) => {
-    if (error) {
-      console.error('Failed to update the desktop database:', error);
+      if (currentDesktopFileContents !== desktopFileContents) {
+        await fs.promises.writeFile(desktopFilePath, desktopFileContents);
+
+        updateDesktopDatabase = true;
+      }
+    } catch {
+      await fs.promises.writeFile(desktopFilePath, desktopFileContents);
+
+      updateDesktopDatabase = true;
     }
-  });
-}
+
+    // Update the desktop database.
+
+    if (updateDesktopDatabase) {
+      nodeChildProcess.exec(
+        'update-desktop-database ~/.local/share/applications',
+        (error: nodeChildProcess.ExecException | null) => {
+          if (error) {
+            console.error('Failed to update the desktop database:', formatError(error));
+          }
+        }
+      );
+    }
+  } catch (error: unknown) {
+    console.error('Failed to set up Linux desktop integration:', formatError(error));
+  }
+};
 
 // Handle the clicking of an opencor:// link.
 
@@ -144,6 +168,12 @@ electron.app.on('open-url', (_event, url) => {
 electron.app
   .whenReady()
   .then(() => {
+    // Set up Linux desktop integration.
+
+    if (isLinux()) {
+      setupLinuxDesktopIntegration();
+    }
+
     // Set process.env.NODE_ENV to 'production' if we are not the default app.
     // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they
     //       should run in development mode (default) or production mode.

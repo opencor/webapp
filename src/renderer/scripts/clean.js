@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import fs from 'node:fs';
 
 for (const path of [

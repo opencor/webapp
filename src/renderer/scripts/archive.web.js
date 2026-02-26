@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import fs from 'node:fs';
 import * as tar from 'tar';
 

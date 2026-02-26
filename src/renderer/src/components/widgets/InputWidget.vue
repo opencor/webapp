@@ -45,7 +45,7 @@ let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
   props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
-const compStepValue = vue.computed(() => {
+const compStepValue = vue.computed<number>(() => {
   if (props.stepValue !== undefined) {
     return props.stepValue;
   }

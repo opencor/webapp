@@ -84,7 +84,7 @@ defineEmits<(event: 'error', message: string) => void>();
 const fileTabs = vue.ref<IFileTab[]>([]);
 const activeFile = vue.ref<string>('');
 
-const filePaths = vue.computed(() => {
+const filePaths = vue.computed<string[]>(() => {
   const res: string[] = [];
 
   for (const fileTab of fileTabs.value) {
