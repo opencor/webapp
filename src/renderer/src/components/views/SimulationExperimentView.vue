@@ -679,6 +679,65 @@ interactiveMath.import(
 const NON_ELEMENTWISE_MULTIPLY_REGEX = /(?<!\.)\*(?!\.)/g;
 const NON_ELEMENTWISE_DIVIDE_REGEX = /(?<!\.)\/(?!\.)/g;
 
+// Check whether our plot expressions contain multiplications and/or divisions.
+// Note: libOpenCOR now returns `Float64Array`s which is very efficient, but Math.js dot multiplications and divisions
+//       don't support them. So, we need to convert our data to `number[]`s whenever one of our expressions has
+//       multiplications and/or divisions. This is not ideal, but we have no choice if we want to plot things like
+//       `t*sin(t)*x`. Still, most of the time, people will likely just plot `x` and that will be as fast as it can be.
+
+const containsMultiplicationsOrDivisions = vue.computed<boolean>(() => {
+  const plots = interactiveUiJson.value.output.plots;
+
+  for (let i = 0; i < plots.length; ++i) {
+    const plot = plots[i];
+
+    if (plot) {
+      if (
+        plot.xValue.includes('*') ||
+        plot.xValue.includes('/') ||
+        plot.yValue.includes('*') ||
+        plot.yValue.includes('/')
+      ) {
+        return true;
+      }
+
+      const additionalTraces = plot.additionalTraces;
+
+      if (additionalTraces) {
+        for (let j = 0; j < additionalTraces.length; ++j) {
+          const additionalTrace = additionalTraces[j];
+
+          if (
+            additionalTrace &&
+            (additionalTrace.xValue.includes('*') ||
+              additionalTrace.xValue.includes('/') ||
+              additionalTrace.yValue.includes('*') ||
+              additionalTrace.yValue.includes('/'))
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+});
+
+// Cache for normalised plot expressions.
+
+const normalisedExpressionCache = new Map<string, string>();
+
+vue.watch(
+  () => interactiveUiJson.value,
+  () => {
+    normalisedExpressionCache.clear();
+  },
+  { deep: true }
+);
+
+// Function to update our interactive simulation.
+
 const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
   // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
@@ -758,33 +817,44 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
+  // Configure our parser to have the simulation data as variables, so that the plot expressions can refer to them.
+
   for (const data of interactiveUiJson.value.output.data) {
     const info = interactiveIdToInfo[data.id];
 
     if (info) {
-      parser.set(data.id, locCommon.simulationData(interactiveInstanceTask, info));
+      parser.set(
+        data.id,
+        containsMultiplicationsOrDivisions.value
+          ? Array.from(locCommon.simulationData(interactiveInstanceTask, info))
+          : locCommon.simulationData(interactiveInstanceTask, info)
+      );
     } else {
       parser.set(data.id, []);
     }
   }
 
-  const normalisedExpressionCache = new Map<string, string>();
+  // Evaluate the plot expressions to get the data to display.
 
-  const parserEvaluate = (expression: string): Float64Array => {
-    let normalisedExpression = normalisedExpressionCache.get(expression);
+  const parserEvaluate = containsMultiplicationsOrDivisions.value
+    ? (expression: string): Float64Array => {
+        let normalisedExpression = normalisedExpressionCache.get(expression);
 
-    if (!normalisedExpression) {
-      normalisedExpression = expression
-        .replace(NON_ELEMENTWISE_MULTIPLY_REGEX, '.*')
-        .replace(NON_ELEMENTWISE_DIVIDE_REGEX, './');
-      // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure element-wise
-      //       operations.
+        if (!normalisedExpression) {
+          normalisedExpression = expression
+            .replace(NON_ELEMENTWISE_MULTIPLY_REGEX, '.*')
+            .replace(NON_ELEMENTWISE_DIVIDE_REGEX, './');
+          // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure
+          //       element-wise operations.
 
-      normalisedExpressionCache.set(expression, normalisedExpression);
-    }
+          normalisedExpressionCache.set(expression, normalisedExpression);
+        }
 
-    return Float64Array.from(parser.evaluate(normalisedExpression) as number[]);
-  };
+        return Float64Array.from(parser.evaluate(normalisedExpression));
+      }
+    : (expression: string): Float64Array => {
+        return parser.evaluate(expression);
+      };
 
   try {
     const newInteractiveData: IGraphPanelData[] = [];
