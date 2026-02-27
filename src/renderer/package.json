@@ -39,7 +39,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20260227.1",
+  "version": "0.20260227.2",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.js",
     "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
@@ -67,7 +67,6 @@
     "@vueuse/core": "^14.2.1",
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
-    "quill": "^2.0.3",
     "vue": "3.4.21",
     "xxhash-wasm": "^1.1.0"
   },
