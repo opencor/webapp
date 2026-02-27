@@ -67,7 +67,6 @@
     "@vueuse/core": "^14.2.1",
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
-    "quill": "^2.0.3",
     "vue": "3.4.21",
     "xxhash-wasm": "^1.1.0"
   },
