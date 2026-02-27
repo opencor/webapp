@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20260227.1",
+  "version": "0.20260227.2",
   "scripts": {
     "archive:web": "bun src/renderer/scripts/archive.web.js",
     "build": "bun src/renderer/scripts/libopencor.js && electron-vite build",
