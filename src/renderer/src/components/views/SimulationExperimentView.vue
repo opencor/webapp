@@ -1,5 +1,7 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full">
+    <IssuesView v-if="instanceIssues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="instanceIssues" />
+    <div v-else class="w-full h-full flex flex-col">
     <Toolbar v-if="showToolbar" class="p-1! shrink-0">
       <template #start>
         <div :class="{ 'invisible': interactiveModeEnabled && interactiveLiveUpdatesEnabled }">
@@ -44,7 +46,7 @@
           <Splitter>
             <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
               <ScrollPanel class="h-full">
-                <SimulationPropertyEditor :uniformTimeCourse="standardUniformTimeCourse" :instanceTask="standardInstanceTask" />
+                <SimulationPropertyEditor v-if="standardInstanceTask" :uniformTimeCourse="standardUniformTimeCourse" :instanceTask="standardInstanceTask" />
                 <!--
                     <SolversPropertyEditor />
                     <GraphsPropertyEditor />
@@ -229,12 +231,13 @@
       :settings="interactiveSettings"
       :voiId="interactiveVoiId"
       :voiName="interactiveVoiName"
-      :voiUnit="interactiveInstanceTask.voiUnit()"
+      :voiUnit="interactiveInstanceTask ? interactiveInstanceTask.voiUnit() : ''"
       :allModelParameters="interactiveAllModelParameters"
       :editableModelParameters="interactiveEditableModelParameters"
       @ok="onInteractiveSettingsOk"
       @close="interactiveSettingsVisible = false"
     />
+    </div>
   </div>
 </template>
 
@@ -420,8 +423,23 @@ const populateInputProperties = (currentUiJson: locApi.IUiJson) => {
   });
 
   currentUiJson.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-    interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
+    if (data.id && interactiveInstanceTask) {
+      interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
+    }
   });
+};
+
+const instanceIssues = vue.ref<locApi.IIssue[]>([]);
+let hasInstanceIssues = false;
+
+const NoGraphPanelData = {
+  xAxisTitle: undefined,
+  yAxisTitle: undefined,
+  traces: []
+};
+const NoSimulationDataInfo: locCommon.ISimulationDataInfo = {
+  type: locCommon.ESimulationDataInfoType.UNKNOWN,
+  index: -1
 };
 
 // Standard mode.
@@ -430,31 +448,43 @@ const standardFile = props.file;
 const standardDocument = standardFile.document();
 const standardUniformTimeCourse = standardDocument.simulation(0) as locApi.SedUniformTimeCourse;
 const standardInstance = standardDocument.instantiate();
-const standardInstanceTask = standardInstance.task(0);
+
+instanceIssues.value = standardInstance.issues();
+hasInstanceIssues = instanceIssues.value.length > 0;
+
+const standardInstanceTask = hasInstanceIssues ? null : standardInstance.task(0);
 const standardParameters = vue.ref<string[]>([]);
-const standardXParameter = vue.ref(standardInstanceTask.voiName());
-const standardYParameter = vue.ref(standardInstanceTask.stateName(0));
-const standardData = vue.ref<IGraphPanelData>({
-  xAxisTitle: undefined,
-  yAxisTitle: undefined,
-  traces: []
-});
+const standardXParameter = vue.ref(standardInstanceTask ? standardInstanceTask.voiName() : '');
+const standardYParameter = vue.ref(standardInstanceTask ? standardInstanceTask.stateName(0) : '');
+const standardData = vue.ref<IGraphPanelData>(NoGraphPanelData);
 const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`);
 
-populateParameters(standardParameters, standardInstanceTask);
+if (standardInstanceTask) {
+  populateParameters(standardParameters, standardInstanceTask);
+}
 
 const traceName = (name: string | undefined, xValue: string, yValue: string): string => {
   return name ?? `${yValue} <i>vs.</i> ${xValue}`;
 };
 
-const xInfo = vue.computed<locCommon.ISimulationDataInfo>(() =>
-  locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value)
-);
-const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() =>
-  locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value)
-);
+const xInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
+  return standardInstanceTask
+    ? locCommon.simulationDataInfo(standardInstanceTask, standardXParameter.value)
+    : NoSimulationDataInfo;
+});
+const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
+  return standardInstanceTask
+    ? locCommon.simulationDataInfo(standardInstanceTask, standardYParameter.value)
+    : NoSimulationDataInfo;
+});
 
 const updatePlot = () => {
+  if (!standardInstanceTask) {
+    standardData.value = NoGraphPanelData;
+
+    return;
+  }
+
   standardData.value = {
     xAxisTitle: standardXParameter.value,
     yAxisTitle: standardYParameter.value,
@@ -481,11 +511,11 @@ const interactiveDocument = interactiveFile.document();
 const interactiveUniformTimeCourse = interactiveDocument.simulation(0) as locApi.SedUniformTimeCourse;
 const interactiveCvode = interactiveUniformTimeCourse.cvode();
 let interactiveInstance = interactiveDocument.instantiate();
-let interactiveInstanceTask = interactiveInstance.task(0);
+let interactiveInstanceTask = hasInstanceIssues ? null : interactiveInstance.task(0);
 const interactiveAllModelParameters = vue.ref<string[]>([]);
 const interactiveEditableModelParameters = vue.ref<string[]>([]);
-const interactiveVoiName = vue.ref(interactiveInstanceTask.voiName());
-const interactiveVoiId = vue.ref(interactiveVoiName.value.split('/')[1] ?? '');
+const interactiveVoiName = vue.ref(interactiveInstanceTask ? interactiveInstanceTask.voiName() : '');
+const interactiveVoiId = vue.ref(interactiveInstanceTask ? (interactiveVoiName.value.split('/')[1] ?? '') : '');
 const interactiveUiJson = vue.ref<locApi.IUiJson>(
   props.uiJson
     ? JSON.parse(JSON.stringify(props.uiJson))
@@ -516,7 +546,7 @@ const interactiveUiJsonEmpty = vue.computed<boolean>(() => {
     if (interactiveUiJson.value.output.data.length === 1) {
       const data = interactiveUiJson.value.output.data[0];
 
-      return data && data.id === interactiveVoiId.value && data.name === interactiveVoiName.value;
+      return !!(data && data.id === interactiveVoiId.value && data.name === interactiveVoiName.value);
     }
   }
 
@@ -633,8 +663,10 @@ const showToolbar = vue.computed<boolean>(() => {
 
 // Populate our model parameters.
 
-populateParameters(interactiveAllModelParameters, interactiveInstanceTask);
-populateParameters(interactiveEditableModelParameters, interactiveInstanceTask, true);
+if (interactiveInstanceTask) {
+  populateParameters(interactiveAllModelParameters, interactiveInstanceTask);
+  populateParameters(interactiveEditableModelParameters, interactiveInstanceTask, true);
+}
 
 // Populate our input properties.
 
@@ -826,7 +858,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
   for (const data of interactiveUiJson.value.output.data) {
     const info = interactiveIdToInfo[data.id];
 
-    if (info) {
+    if (info && interactiveInstanceTask) {
       parser.set(
         data.id,
         containsMultiplicationsOrDivisions.value
@@ -1204,12 +1236,18 @@ if (common.isDesktop()) {
       return;
     }
 
-    if (props.isActiveFile && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.code === 'F9') {
-      if (!interactiveModeEnabled.value || (interactiveModeEnabled.value && !interactiveLiveUpdatesEnabled.value)) {
-        event.preventDefault();
+    if (
+      props.isActiveFile &&
+      !hasInstanceIssues &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.metaKey &&
+      event.code === 'F9' &&
+      (!interactiveModeEnabled.value || (interactiveModeEnabled.value && !interactiveLiveUpdatesEnabled.value))
+    ) {
+      event.preventDefault();
 
-        onRun();
-      }
+      onRun();
     }
   });
 }
