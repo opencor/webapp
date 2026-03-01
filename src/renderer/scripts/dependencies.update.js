@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { spawnSync } from 'bun';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +23,9 @@ const updateDependencies = (dir) => {
 
   run('bun', ['clean']);
   run('bun', ['update', '-i']);
+
+  fs.rmSync(path.join(dir, 'bun.lock'), { force: true });
+
   run('bun', ['install']);
   run('bun', ['clean']);
 };
