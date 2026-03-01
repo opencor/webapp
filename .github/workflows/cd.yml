@@ -62,10 +62,6 @@ jobs:
           echo "CSC_LINK=$(echo $MACOS_CSC_LINK)" >> $GITHUB_ENV
           echo "CSC_KEY_PASSWORD=$(echo $MACOS_CSC_KEY_PASSWORD)" >> $GITHUB_ENV
           echo -n $DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 | base64 -d > $MACOS_CSC_LINK
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
       - name: Install bun
         if: ${{ matrix.name != 'Windows (ARM)' }}
         uses: oven-sh/setup-bun@v2
@@ -103,12 +99,8 @@ jobs:
           timezoneLinux: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
       - name: Install bun
-        run: npm install -g bun
+        uses: oven-sh/setup-bun@v2
       - name: OpenCOR dependencies
         run: bun install
       - name: Build OpenCOR's Web app
@@ -153,7 +145,7 @@ jobs:
         # https://docs.npmjs.com/trusted-publishers).
         run: npm install -g npm@latest
       - name: Install bun
-        run: npm install -g bun
+        uses: oven-sh/setup-bun@v2
       - name: OpenCOR dependencies
         run: |
           cd src/renderer

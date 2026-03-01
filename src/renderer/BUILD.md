@@ -1,17 +1,10 @@
 # Prerequisites
 
-- [Node.js](https://nodejs.org/) (version 22+);
-- [npm](https://npmjs.com/) (it comes with Node.js); and
-- [bun](https://bun.com/package-manager) (for package management).
+- [bun](https://bun.com/) (version 1.2+).
 
 ## Installation
 
-1. **Install Node.js and npm from [here](https://nodejs.org/en/download/package-manager);** and
-2. **Install bun globally:**
-
-```bash
-npm install -g bun
-```
+1. **Install bun from [here](https://bun.com/docs/installation).**
 
 # Getting Started
 
@@ -36,7 +29,7 @@ npm install -g bun
 | Script         | Description                                                     |
 | -------------- | ----------------------------------------------------------------|
 | `build`        | Build OpenCOR's Web app                                         |
-| `build:lib`    | Build OpenCOR's Web app as a library for npm publishing         |
+| `build:lib`    | Build OpenCOR's Web app as a library                            |
 | `clean`        | Clean OpenCOR's environment                                     |
 | `dev`          | (Build and) start OpenCOR's Web app with hot reload             |
 | `format`       | Format the code using                                           |

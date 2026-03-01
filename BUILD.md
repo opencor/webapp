@@ -1,22 +1,13 @@
 # Prerequisites
 
-- [Node.js](https://nodejs.org/) (version 22+);
-- [npm](https://npmjs.com/) (it comes with Node.js);
-- [bun](https://bun.com/package-manager) (for package management); and
+- [bun](https://bun.com/) (version 1.2+); and
 - [C](<https://en.wikipedia.org/wiki/C_(programming_language)>)/[C++](https://en.wikipedia.org/wiki/C%2B%2B) toolchain.
 
 ## Installation
 
-1. **Install Node.js and npm from [here](https://nodejs.org/en/download/package-manager);**
-   **Note:** on [Windows](https://en.wikipedia.org/wiki/Microsoft_Windows) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you can install [Node.js](https://nodejs.org/) using [fnm](https://github.com/Schniz/fnm). However, if you use `fnm install --lts`, it will install the [Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors) version of [Node.js](https://nodejs.org/), which may or may not be what you want. If you want to install the [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family) version of [Node.js](https://nodejs.org/), you should use `fnm install --lts --arch arm64`.
+1. **Install bun from [here](https://bun.com/docs/installation).**
 
-2. **Install bun globally:**
-
-```bash
-npm install -g bun
-```
-
-3. **Install a C/C++ toolchain:**
+2. **Install a C/C++ toolchain:**
    - **[Windows](https://en.wikipedia.org/wiki/Microsoft_Windows):**
      - **[Intel](https://en.wikipedia.org/wiki/List_of_Intel_processors):**
        - [Visual Studio Community 2019](https://apps.microsoft.com/detail/xp8cdjnzkfm06w) (`Desktop development with C++` with `MSVC v142 - VS 2019 C++ x64/x86 build tools` and `Windows 10 SDK`); or
@@ -27,7 +18,7 @@ npm install -g bun
    - **[Linux](https://en.wikipedia.org/wiki/Linux):** G++ (`g++` package) on [Ubuntu 22.04 LTS](https://en.wikipedia.org/wiki/Ubuntu_version_history#2204)/[Ubuntu 24.04 LTS](https://en.wikipedia.org/wiki/Ubuntu_version_history#2404); and
    - **[macOS](https://en.wikipedia.org/wiki/MacOS):** [Xcode](https://developer.apple.com/xcode/) (including its [Command Line Tools](https://developer.apple.com/downloads/?q=Command%20Line%20Tools)).
 
-4. **Install additional dependencies:**
+3. **Install additional dependencies:**
    - On [Ubuntu](https://en.wikipedia.org/wiki/Ubuntu) on [ARM](https://en.wikipedia.org/wiki/ARM_architecture_family), you need to install the `libopenjp2-tools` package so that [`electron-builder`](https://electron.build/) can get access to [`opj_decompress`](https://manpages.ubuntu.com/manpages/man1/opj_decompress.1.html).
 
 # Getting Started

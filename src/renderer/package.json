@@ -32,6 +32,9 @@
   },
   "type": "module",
   "types": "dist/index.d.ts",
+  "engines": {
+    "bun": ">=1.2.0"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -42,15 +45,15 @@
   "version": "0.20260301.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.js",
-    "build:lib": "vite build --config vite.lib.config.ts && cp index.d.ts dist/index.d.ts",
+    "build:lib": "vite build --config vite.lib.config.ts && bun scripts/copy.indexdts.js",
     "clean": "bun scripts/clean.js",
-    "dependencies:update": "cd ../.. && bun clean && bun update -i && bun install && bun clean && cd src/renderer && bun clean && bun update -i && bun install && bun clean",
+    "dependencies:update": "bun scripts/dependencies.update.js",
     "dev": "vite dev",
-    "format": "cd ../.. && bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/renderer/src/libopencor/src/*",
-    "format:check": "cd ../.. && bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/renderer/src/libopencor/src/*",
+    "format": "bun --cwd ../.. format",
+    "format:check": "bun --cwd ../.. format:check",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
-    "version:new": "bun scripts/version.js"
+    "version:new": "bun scripts/version.new.js"
   },
   "bun": {
     "overrides": {
