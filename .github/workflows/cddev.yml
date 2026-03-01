@@ -16,12 +16,8 @@ jobs:
           timezoneLinux: 'Pacific/Auckland'
       - name: Check out OpenCOR
         uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
       - name: Install bun
-        run: npm install -g bun
+        uses: oven-sh/setup-bun@v2
       - name: OpenCOR dependencies
         run: bun install
       - name: Build OpenCOR's Web app

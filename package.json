@@ -23,23 +23,26 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20260227.2",
+  "version": "0.20260301.0",
+  "engines": {
+    "bun": ">=1.2.0"
+  },
   "scripts": {
     "archive:web": "bun src/renderer/scripts/archive.web.js",
     "build": "bun src/renderer/scripts/libopencor.js && electron-vite build",
-    "build:web": "cd ./src/renderer && vite build && bun scripts/generate.version.js",
+    "build:web": "bun --cwd src/renderer build",
     "clean": "bun src/renderer/scripts/clean.js",
-    "dependencies:update": "bun clean && bun update -i && bun install && bun clean && cd ./src/renderer && bun clean && bun update -i && bun install && bun clean",
+    "dependencies:update": "bun src/renderer/scripts/dependencies.update.js",
     "dev": "bun src/renderer/scripts/libopencor.js && electron-vite dev --watch",
-    "dev:web": "cd ./src/renderer && vite dev",
+    "dev:web": "bun --cwd src/renderer dev",
     "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/renderer/src/libopencor/src/*",
     "format:check": "bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/renderer/src/libopencor/src/*",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "release": "bun src/renderer/scripts/libopencor.js && electron-builder",
     "release:local": "bun src/renderer/scripts/libopencor.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.notarize=false --publish=never",
     "start": "bun src/renderer/scripts/libopencor.js && electron-vite preview",
-    "start:web": "bun build:web && cd ./src/renderer && vite preview",
-    "version:new": "bun src/renderer/scripts/version.js"
+    "start:web": "bun --cwd src/renderer start",
+    "version:new": "bun src/renderer/scripts/version.new.js"
   },
   "bun": {
     "overrides": {
@@ -65,7 +68,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/postcss": "^4.2.1",
     "@tailwindcss/vite": "^4.2.1",
-    "@types/node": "^25.3.2",
+    "@types/node": "^25.3.3",
     "@types/plotly.js": "^3.0.10",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue/tsconfig": "^0.8.1",
@@ -78,7 +81,7 @@
     "electron-updater": "^6.8.3",
     "electron-vite": "^5.0.0",
     "esbuild": "^0.27.3",
-    "node-addon-api": "^8.5.0",
+    "node-addon-api": "^8.6.0",
     "rollup-plugin-visualizer": "^7.0.0",
     "stylelint": "^17.4.0",
     "stylelint-config-standard": "^40.0.0",
