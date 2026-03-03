@@ -1,8 +1,8 @@
-export type Theme = 'light' | 'dark' | 'system';
+export type OpenCORTheme = 'light' | 'dark' | 'system';
 
 export interface IOpenCORProps {
   omex?: string | Uint8Array;
-  theme?: Theme;
+  theme?: OpenCORTheme;
 }
 
 export { default, default as OpenCOR } from './src/components/OpenCOR.vue';
