@@ -1308,12 +1308,6 @@ const toggleUiJsonIssues = (event: Event) => {
   padding: 0;
 }
 
-.plot-card {
-  border: 1px solid var(--p-content-border-color);
-  border-radius: 0.375rem;
-  overflow: hidden;
-}
-
 .plot-card-body {
   padding: 0.75rem;
   display: flex;

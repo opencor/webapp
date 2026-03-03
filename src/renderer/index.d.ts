@@ -1,7 +1,4 @@
-import { Component } from 'vue';
+export { IOpenCORProps, Theme } from './index.ts';
 
-import { IOpenCORProps } from './index.ts';
-export { IOpenCORProps };
-
-export declare const OpenCOR: Component<IOpenCORProps>;
+export declare const OpenCOR: import('vue').Component<IOpenCORProps>;
 export default OpenCOR;

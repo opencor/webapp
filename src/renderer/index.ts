@@ -1,5 +1,3 @@
-import OpenCOR from './src/components/OpenCOR.vue';
-
 export type Theme = 'light' | 'dark' | 'system';
 
 export interface IOpenCORProps {
@@ -7,5 +5,4 @@ export interface IOpenCORProps {
   theme?: Theme;
 }
 
-export { OpenCOR };
-export default OpenCOR;
+export { default, default as OpenCOR } from './src/components/OpenCOR.vue';

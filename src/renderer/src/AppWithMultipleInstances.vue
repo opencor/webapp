@@ -31,5 +31,5 @@
 </template>
 
 <style>
-  @import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/preflight.css" layer(base);
 </style>
