@@ -11,17 +11,24 @@ const opencorRef = vue.ref<InstanceType<typeof OpenCOR> | null>(null);
 
 vue.onMounted(() => {
   if (opencorRef.value) {
-    for (const modelParameter of ['VOI', 'main/t', 'main/x', 'main/y', 'main/z', 'unknown']) {
-      opencorRef.value
-        .simulationData(modelParameter)
-        .then((simulationData: Float64Array) => {
-          console.log(`Simulation data for "${modelParameter}":`);
-          console.log(simulationData);
-        })
-        .catch((error) => {
-          console.error(error);
+    const params = ['VOI', 'main/t', 'main/x', 'main/y', 'main/z', 'unknown'];
+
+    opencorRef.value.simulationData(params).then((res) => {
+      for (const modelParameter of params) {
+        console.log(`Simulation data for "${modelParameter}":`);
+        console.log(res.simulationData[modelParameter]);
+      }
+
+      if (res.issues.length > 0) {
+        console.log('Issues:');
+
+        res.issues.forEach((issue) => {
+          console.log(` - ${issue}`);
         });
-    }
+      } else {
+        console.log('No issues.');
+      }
+    });
   }
 });
 </script>

@@ -2,7 +2,7 @@ import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
 
-import type { Theme } from '../../index.ts';
+import type { OpenCORTheme } from '../../index.ts';
 
 // A constant to know the UID of the active instance of OpenCOR.
 
@@ -14,7 +14,7 @@ export const useTheme = vueusecore.createGlobalState(() => {
   const prefersColorScheme = window.matchMedia('(prefers-color-scheme: light)');
   const isLightMode = vue.ref(prefersColorScheme.matches);
   const isDarkMode = vue.ref(!prefersColorScheme.matches);
-  const _theme = vue.ref<Theme>('system');
+  const _theme = vue.ref<OpenCORTheme>('system');
 
   const updateLightAndDarkModes = (prefersColorScheme: MediaQueryList | MediaQueryListEvent) => {
     isLightMode.value = prefersColorScheme.matches;
@@ -32,11 +32,11 @@ export const useTheme = vueusecore.createGlobalState(() => {
     }
   });
 
-  const theme = (): Theme => {
+  const theme = (): OpenCORTheme => {
     return _theme.value;
   };
 
-  const setTheme = (newTheme: Theme | undefined) => {
+  const setTheme = (newTheme: OpenCORTheme | undefined) => {
     _theme.value = newTheme ?? 'system';
 
     if (_theme.value === 'light') {

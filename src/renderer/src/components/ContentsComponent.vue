@@ -71,6 +71,7 @@ import { electronApi } from '../common/electronApi.ts';
 import * as locApi from '../libopencor/locApi.ts';
 
 import SimulationExperimentView from './views/SimulationExperimentView.vue';
+import type { IOpenCORSimulationData } from '../../index.ts';
 
 interface IFileTab {
   file: locApi.File;
@@ -173,31 +174,39 @@ const closeAllFiles = (): void => {
   }
 };
 
-const simulationData = (modelParameter: string, attempt: number = 0): Promise<Float64Array> => {
+const simulationData = (modelParameters: string[], attempt: number = 0): Promise<IOpenCORSimulationData> => {
   if (!props.simulationOnly) {
-    return Promise.reject(new Error('Simulation data can only be retrieved in simulation only mode.'));
+    return Promise.resolve({
+      simulationData: common.undefinedSimulationData(modelParameters),
+      issues: ['Simulation data can only be retrieved in simulation only mode.']
+    });
   }
 
   const simulationExperimentViews = simulationExperimentViewRef.value;
 
   if (!simulationExperimentViews.length) {
-    // In simulation only mode, there should always be a simulation experiment view available, but we add this check
-    // just in case. If there is no simulation experiment view available, we retry a few times with a delay to give
-    // it some time to load before giving up.
+    // In simulation only mode, there should always be a simulation experiment view available, but we retry a few times
+    // with a delay to give it some time to load before giving up.
 
     if (attempt < 3) {
       return new Promise((resolve) => {
         setTimeout(() => {
-          resolve(simulationData(modelParameter, attempt + 1));
+          resolve(simulationData(modelParameters, attempt + 1));
         }, HUGE_DELAY);
       });
     }
 
-    return Promise.reject(new Error('No simulation experiment view available.'));
+    return Promise.resolve({
+      simulationData: common.undefinedSimulationData(modelParameters),
+      issues: ['No simulation experiment view available.']
+    });
   }
 
-  return simulationExperimentViews[0].simulationData(modelParameter).catch((error: unknown) => {
-    throw new Error(common.formatError(error));
+  return simulationExperimentViews[0].simulationData(modelParameters).catch((error: unknown) => {
+    return {
+      simulationData: common.undefinedSimulationData(modelParameters),
+      issues: [common.formatError(error)]
+    };
   });
 };
 

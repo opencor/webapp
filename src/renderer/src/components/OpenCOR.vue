@@ -116,7 +116,7 @@ import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
-import type { IOpenCORProps } from '../../index.ts';
+import type { IOpenCORProps, IOpenCORSimulationData } from '../../index.ts';
 
 import '../assets/app.css';
 import '../assets/primeicons-assets.ts';
@@ -139,15 +139,21 @@ import MainMenu from './MainMenu.vue';
 
 const props = defineProps<IOpenCORProps>();
 
-const simulationData = (modelParameter: string): Promise<Float64Array> => {
+const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationData> => {
   const contents = contentsRef.value;
 
   if (!contents) {
-    return Promise.reject(new Error('No contents available.'));
+    return Promise.resolve({
+      simulationData: common.undefinedSimulationData(modelParameters),
+      issues: ['No contents available.']
+    });
   }
 
-  return contents.simulationData(modelParameter).catch((error: unknown) => {
-    throw new Error(common.formatError(error));
+  return contents.simulationData(modelParameters).catch((error: unknown) => {
+    return {
+      simulationData: common.undefinedSimulationData(modelParameters),
+      issues: [common.formatError(error)]
+    };
   });
 };
 
