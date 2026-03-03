@@ -1,3 +1,5 @@
+import type { OpenCORSimulationData } from '../../index.ts';
+
 import * as dependencies from './dependencies.ts';
 import { electronApi } from './electronApi.ts';
 
@@ -211,4 +213,16 @@ export const fileName = (filePath: string): string => {
 
 export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+// A method to get an object with undefined values for a list of model parameters.
+
+export const undefinedSimulationData = (modelParameters: string[]): OpenCORSimulationData => {
+  const res: OpenCORSimulationData = {};
+
+  for (const modelParameter of modelParameters) {
+    res[modelParameter] = undefined;
+  }
+
+  return res;
 };

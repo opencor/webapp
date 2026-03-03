@@ -247,6 +247,8 @@ import * as vueusecore from '@vueuse/core';
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
+import type { IOpenCORSimulationData } from '../../../index.ts';
+
 import * as colors from '../../common/colors.ts';
 import * as common from '../../common/common.ts';
 import * as dependencies from '../../common/dependencies.ts';
@@ -659,30 +661,44 @@ const interactiveSettings = vue.computed<ISimulationExperimentViewSettings>(() =
 }));
 const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interactiveSettings.value)));
 
-// A helper function to get the simulation data for a given model parameter.
+// A helper function to retrieve simulation data for one or more model parameters.
 
-const simulationData = (modelParameter: string): Promise<Float64Array> => {
+const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationData> => {
+  const res: IOpenCORSimulationData = {
+    simulationData: common.undefinedSimulationData(modelParameters),
+    issues: []
+  };
+
   if (!interactiveInstanceTask) {
-    return Promise.reject(new Error('No SED-ML instance task available.'));
+    res.issues.push('No SED-ML instance task available.');
+
+    return Promise.resolve(res);
   }
 
   const instanceTask = interactiveInstanceTask as locSedApi.SedInstanceTask;
-  const info = locCommon.simulationDataInfo(
-    instanceTask,
-    modelParameter === 'VOI' ? instanceTask.voiName() : modelParameter
-  );
 
-  if (isNoSimulationDataInfo(info)) {
-    return Promise.reject(
-      new Error(`No simulation data information was found for model parameter "${modelParameter}".`)
+  for (const modelParameter of modelParameters) {
+    const info = locCommon.simulationDataInfo(
+      instanceTask,
+      modelParameter === 'VOI' ? instanceTask.voiName() : modelParameter
     );
+
+    if (isNoSimulationDataInfo(info)) {
+      res.simulationData[modelParameter] = undefined;
+      res.issues.push(`No simulation data information was found for model parameter "${modelParameter}".`);
+
+      continue;
+    }
+
+    try {
+      res.simulationData[modelParameter] = locCommon.simulationData(instanceTask, info);
+    } catch (error: unknown) {
+      res.simulationData[modelParameter] = undefined;
+      res.issues.push(`Error for model parameter "${modelParameter}": ${common.formatError(error)}`);
+    }
   }
 
-  try {
-    return Promise.resolve(locCommon.simulationData(instanceTask, info));
-  } catch (error: unknown) {
-    return Promise.reject(new Error(common.formatError(error)));
-  }
+  return Promise.resolve(res);
 };
 
 defineExpose({
