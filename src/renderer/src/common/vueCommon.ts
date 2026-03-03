@@ -8,7 +8,7 @@ import type { Theme } from '../../index.ts';
 
 export const activeInstanceUid = vueusecore.createGlobalState(() => vue.ref<string | null>(null));
 
-// Theme composable to know whether OpenCOR uses light mode, dark mode, or system mode.
+// A composable to know whether OpenCOR uses light mode, dark mode, or system mode.
 
 export const useTheme = vueusecore.createGlobalState(() => {
   const prefersColorScheme = window.matchMedia('(prefers-color-scheme: light)');

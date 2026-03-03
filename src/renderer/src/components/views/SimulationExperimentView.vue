@@ -442,6 +442,10 @@ const NoSimulationDataInfo: locCommon.ISimulationDataInfo = {
   index: -1
 };
 
+const isNoSimulationDataInfo = (info: locCommon.ISimulationDataInfo): boolean => {
+  return info.type === locCommon.ESimulationDataInfoType.UNKNOWN && info.index === -1;
+};
+
 // Standard mode.
 
 const standardFile = props.file;
@@ -654,6 +658,36 @@ const interactiveSettings = vue.computed<ISimulationExperimentViewSettings>(() =
   }
 }));
 const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interactiveSettings.value)));
+
+// A helper function to get the simulation data for a given model parameter.
+
+const simulationData = (modelParameter: string): Promise<Float64Array> => {
+  if (!interactiveInstanceTask) {
+    return Promise.reject(new Error('No SED-ML instance task available.'));
+  }
+
+  const instanceTask = interactiveInstanceTask as locSedApi.SedInstanceTask;
+  const info = locCommon.simulationDataInfo(
+    instanceTask,
+    modelParameter === 'VOI' ? instanceTask.voiName() : modelParameter
+  );
+
+  if (isNoSimulationDataInfo(info)) {
+    return Promise.reject(
+      new Error(`No simulation data information was found for model parameter "${modelParameter}".`)
+    );
+  }
+
+  try {
+    return Promise.resolve(locCommon.simulationData(instanceTask, info));
+  } catch (error: unknown) {
+    return Promise.reject(new Error(common.formatError(error)));
+  }
+};
+
+defineExpose({
+  simulationData
+});
 
 // Determine whether to show the toolbar.
 

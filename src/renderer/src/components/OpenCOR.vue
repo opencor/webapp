@@ -139,6 +139,22 @@ import MainMenu from './MainMenu.vue';
 
 const props = defineProps<IOpenCORProps>();
 
+const simulationData = (modelParameter: string): Promise<Float64Array> => {
+  const contents = contentsRef.value;
+
+  if (!contents) {
+    return Promise.reject(new Error('No contents available.'));
+  }
+
+  return contents.simulationData(modelParameter).catch((error: unknown) => {
+    throw new Error(common.formatError(error));
+  });
+};
+
+defineExpose({
+  simulationData
+});
+
 const { isDialogActive } = provideDialogState();
 
 const blockUiRef = vue.ref<InstanceType<typeof BlockUI> | null>(null);

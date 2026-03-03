@@ -4,7 +4,7 @@
       <IssuesView v-if="fileTab.file.issues().length" class="m-4" style="height: calc(100% - 2rem);"
         :issues="fileTab.file.issues()"
       />
-      <SimulationExperimentView v-else class="h-full"
+      <SimulationExperimentView v-else ref="simulationExperimentViewRef" class="h-full"
         :isActive="isActive"
         :uiEnabled="uiEnabled"
         :file="fileTab.file"
@@ -66,8 +66,11 @@ import * as vueusecore from '@vueuse/core';
 import * as vue from 'vue';
 
 import * as common from '../common/common.ts';
+import { HUGE_DELAY } from '../common/constants.ts';
 import { electronApi } from '../common/electronApi.ts';
 import * as locApi from '../libopencor/locApi.ts';
+
+import SimulationExperimentView from './views/SimulationExperimentView.vue';
 
 interface IFileTab {
   file: locApi.File;
@@ -81,6 +84,7 @@ const props = defineProps<{
 }>();
 defineEmits<(event: 'error', message: string) => void>();
 
+const simulationExperimentViewRef = vue.ref<InstanceType<typeof SimulationExperimentView>[]>([]);
 const fileTabs = vue.ref<IFileTab[]>([]);
 const activeFile = vue.ref<string>('');
 
@@ -169,13 +173,42 @@ const closeAllFiles = (): void => {
   }
 };
 
+const simulationData = (modelParameter: string, attempt: number = 0): Promise<Float64Array> => {
+  if (!props.simulationOnly) {
+    return Promise.reject(new Error('Simulation data can only be retrieved in simulation only mode.'));
+  }
+
+  const simulationExperimentViews = simulationExperimentViewRef.value;
+
+  if (!simulationExperimentViews.length) {
+    // In simulation only mode, there should always be a simulation experiment view available, but we add this check
+    // just in case. If there is no simulation experiment view available, we retry a few times with a delay to give
+    // it some time to load before giving up.
+
+    if (attempt < 3) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(simulationData(modelParameter, attempt + 1));
+        }, HUGE_DELAY);
+      });
+    }
+
+    return Promise.reject(new Error('No simulation experiment view available.'));
+  }
+
+  return simulationExperimentViews[0].simulationData(modelParameter).catch((error: unknown) => {
+    throw new Error(common.formatError(error));
+  });
+};
+
 defineExpose({
   openFile,
   closeCurrentFile,
   closeAllFiles,
   hasFile,
   hasFiles,
-  selectFile
+  selectFile,
+  simulationData
 });
 
 // Some watchers to let people know about changes to the opened files and the selected file.
