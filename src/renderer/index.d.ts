@@ -2,7 +2,7 @@ export {
   IOpenCOREmits,
   IOpenCORExpose,
   IOpenCORProps,
-  IOpenCORSimulationData,
+  IOpenCORSimulationDataEvent,
   OpenCORSimulationData,
   OpenCORTheme
 } from './index.ts';

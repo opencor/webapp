@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import type { IOpenCORExpose, IOpenCORSimulationData } from '../index.ts';
+import type { IOpenCORExpose, IOpenCORSimulationDataEvent } from '../index.ts';
 
 import OpenCOR from './components/OpenCOR.vue';
 
@@ -55,18 +55,18 @@ const untrackAllModelParameters = () => {
   simulationDataTracked.value = [];
 };
 
-const onSimulationData = (res: IOpenCORSimulationData) => {
+const onSimulationData = (event: IOpenCORSimulationDataEvent) => {
   console.log('---[Simulation data]---');
 
-  for (const modelParameter of Object.keys(res.simulationData)) {
+  for (const modelParameter of Object.keys(event.simulationData)) {
     console.log(`Simulation data for "${modelParameter}":`);
-    console.log(res.simulationData[modelParameter]);
+    console.log(event.simulationData[modelParameter]);
   }
 
-  if (res.issues.length > 0) {
+  if (event.issues.length > 0) {
     console.log('Issues:');
 
-    res.issues.forEach((issue: string) => {
+    event.issues.forEach((issue: string) => {
       console.log(` - ${issue}`);
     });
   } else {

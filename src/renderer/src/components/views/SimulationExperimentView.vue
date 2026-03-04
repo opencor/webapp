@@ -247,7 +247,7 @@ import * as vueusecore from '@vueuse/core';
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
-import type { IOpenCORSimulationData } from '../../../index.ts';
+import type { IOpenCORSimulationDataEvent } from '../../../index.ts';
 
 import * as colors from '../../common/colors.ts';
 import * as common from '../../common/common.ts';
@@ -669,8 +669,8 @@ const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interact
 
 // A helper function to retrieve simulation data for one or more model parameters.
 
-const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationData> => {
-  const res: IOpenCORSimulationData = {
+const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
+  const res: IOpenCORSimulationDataEvent = {
     simulationData: common.undefinedSimulationData(modelParameters),
     issues: []
   };

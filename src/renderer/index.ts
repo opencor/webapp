@@ -12,12 +12,12 @@ export interface IOpenCORExpose {
 }
 
 export interface IOpenCOREmits extends /* @vue-ignore */ Record<string, unknown[]> {
-  simulationData: [IOpenCORSimulationData];
+  simulationData: [IOpenCORSimulationDataEvent];
 }
 
 export type OpenCORSimulationData = Record<string, Float64Array | undefined>;
 
-export interface IOpenCORSimulationData {
+export interface IOpenCORSimulationDataEvent {
   simulationData: OpenCORSimulationData;
   issues: string[];
 }

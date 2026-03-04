@@ -71,7 +71,7 @@ import { electronApi } from '../common/electronApi.ts';
 import * as locApi from '../libopencor/locApi.ts';
 
 import SimulationExperimentView from './views/SimulationExperimentView.vue';
-import type { IOpenCORSimulationData } from '../../index.ts';
+import type { IOpenCORSimulationDataEvent } from '../../index.ts';
 
 interface IFileTab {
   file: locApi.File;
@@ -178,7 +178,7 @@ const closeAllFiles = (): void => {
   }
 };
 
-const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationData> => {
+const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
   if (!props.simulationOnly) {
     return Promise.resolve({
       simulationData: common.undefinedSimulationData(modelParameters),
