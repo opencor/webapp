@@ -11,6 +11,7 @@
         :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="simulationOnly"
         :uiJson="fileTab.uiJson!"
+        @simulationData="$emit('simulationData')"
       />
     </div>
   </div>
@@ -66,7 +67,6 @@ import * as vueusecore from '@vueuse/core';
 import * as vue from 'vue';
 
 import * as common from '../common/common.ts';
-import { HUGE_DELAY } from '../common/constants.ts';
 import { electronApi } from '../common/electronApi.ts';
 import * as locApi from '../libopencor/locApi.ts';
 
@@ -83,7 +83,11 @@ const props = defineProps<{
   simulationOnly?: boolean;
   uiEnabled: boolean;
 }>();
-defineEmits<(event: 'error', message: string) => void>();
+
+defineEmits<{
+  (event: 'error', message: string): void;
+  (event: 'simulationData'): void;
+}>();
 
 const simulationExperimentViewRef = vue.ref<InstanceType<typeof SimulationExperimentView>[]>([]);
 const fileTabs = vue.ref<IFileTab[]>([]);
@@ -174,7 +178,7 @@ const closeAllFiles = (): void => {
   }
 };
 
-const simulationData = (modelParameters: string[], attempt: number = 0): Promise<IOpenCORSimulationData> => {
+const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationData> => {
   if (!props.simulationOnly) {
     return Promise.resolve({
       simulationData: common.undefinedSimulationData(modelParameters),
@@ -185,17 +189,6 @@ const simulationData = (modelParameters: string[], attempt: number = 0): Promise
   const simulationExperimentViews = simulationExperimentViewRef.value;
 
   if (!simulationExperimentViews.length) {
-    // In simulation only mode, there should always be a simulation experiment view available, but we retry a few times
-    // with a delay to give it some time to load before giving up.
-
-    if (attempt < 3) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(simulationData(modelParameters, attempt + 1));
-        }, HUGE_DELAY);
-      });
-    }
-
     return Promise.resolve({
       simulationData: common.undefinedSimulationData(modelParameters),
       issues: ['No simulation experiment view available.']

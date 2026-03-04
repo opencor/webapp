@@ -277,9 +277,15 @@ const props = defineProps<{
   uiEnabled: boolean;
   uiJson: locApi.IUiJson;
 }>();
-const emit = defineEmits<(event: 'error', message: string) => void>();
+
+const emit = defineEmits<{
+  (event: 'error', message: string): void;
+  (event: 'simulationData'): void;
+}>();
 
 const editorRef = vue.ref<HTMLElement | null>(null);
+
+// Populate the parameters of the given instance task.
 
 const populateParameters = (
   parameters: vue.Ref<string[]>,
@@ -985,6 +991,10 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
       informationIssue
     ];
   }
+
+  // Let people know that the simulation data has been updated.
+
+  emit('simulationData');
 };
 
 // Interactive mode's margins-related event handlers.

@@ -53,6 +53,7 @@
         :uiEnabled="compUiEnabled"
         :simulationOnly="!!omex"
         @error="onError"
+        @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
       <BlockingMessageComponent v-show="loadingModelMessageVisible" message="Loading model..." />
@@ -116,7 +117,7 @@ import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
-import type { IOpenCORProps, IOpenCORSimulationData } from '../../index.ts';
+import type { IOpenCOREmits, IOpenCORProps } from '../../index.ts';
 
 import '../assets/app.css';
 import '../assets/primeicons-assets.ts';
@@ -139,27 +140,54 @@ import MainMenu from './MainMenu.vue';
 
 const props = defineProps<IOpenCORProps>();
 
-const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationData> => {
-  const contents = contentsRef.value;
+const emit = defineEmits<IOpenCOREmits>();
 
-  if (!contents) {
-    return Promise.resolve({
-      simulationData: common.undefinedSimulationData(modelParameters),
-      issues: ['No contents available.']
-    });
+const trackedSimulationData = vue.ref<string[]>([]);
+
+const trackSimulationData = (modelParameters: string[]): void => {
+  for (const modelParameter of modelParameters) {
+    if (!trackedSimulationData.value.includes(modelParameter)) {
+      trackedSimulationData.value.push(modelParameter);
+    }
   }
 
-  return contents.simulationData(modelParameters).catch((error: unknown) => {
-    return {
-      simulationData: common.undefinedSimulationData(modelParameters),
-      issues: [common.formatError(error)]
-    };
-  });
+  emitSimulationData();
+};
+
+const untrackSimulationData = (modelParameters: string[]): void => {
+  trackedSimulationData.value = trackedSimulationData.value.filter((mp) => !modelParameters.includes(mp));
+};
+
+const untrackAllSimulationData = (): void => {
+  trackedSimulationData.value = [];
 };
 
 defineExpose({
-  simulationData
+  trackSimulationData,
+  untrackSimulationData,
+  untrackAllSimulationData
 });
+
+const emitSimulationData = (): void => {
+  if (!trackedSimulationData.value.length) {
+    return;
+  }
+
+  const contents = contentsRef.value;
+
+  if (!contents) {
+    emit('simulationData', {
+      simulationData: common.undefinedSimulationData(trackedSimulationData.value),
+      issues: ['No contents available.']
+    });
+
+    return;
+  }
+
+  contents.simulationData(trackedSimulationData.value).then((res) => {
+    emit('simulationData', res);
+  });
+};
 
 const { isDialogActive } = provideDialogState();
 
