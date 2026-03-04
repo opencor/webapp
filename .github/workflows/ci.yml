@@ -41,15 +41,7 @@ jobs:
       - name: Install CMake and Ninja
         uses: lukka/get-cmake@latest
       - name: Install bun
-        if: ${{ matrix.name != 'Windows (ARM)' }}
         uses: oven-sh/setup-bun@v2
-      - name: Install bun (Windows ARM only)
-        if: ${{ matrix.name == 'Windows (ARM)' }}
-        run: |
-          curl -L https://github.com/oven-sh/bun/releases/latest/download/bun-windows-aarch64.zip -o bun.zip
-          unzip -j bun.zip -d $env:USERPROFILE\.bun
-          del bun.zip
-          echo "$env:USERPROFILE\.bun" >> $env:GITHUB_PATH
       - name: OpenCOR dependencies
         run: bun install
       - name: Build OpenCOR
