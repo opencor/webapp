@@ -63,6 +63,7 @@ const props = withDefaults(
     showLegend: true
   }
 );
+
 const emit = defineEmits<{
   (event: 'marginsUpdated', newMargins: IGraphPanelMargins): void;
   (event: 'resetMargins'): void;

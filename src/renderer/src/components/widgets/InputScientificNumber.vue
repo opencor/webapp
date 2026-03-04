@@ -20,6 +20,7 @@ const props = defineProps<{
   label: string;
   allowEmpty?: boolean;
 }>();
+
 const emit = defineEmits<(event: 'update:modelValue', value: number | undefined) => void>();
 
 const internalValue = vue.ref<string>('');

@@ -32,7 +32,7 @@ import * as vue from 'vue';
 import type * as locApi from '../../libopencor/locApi.ts';
 
 const value = defineModel<number>({ required: true });
-const emits = defineEmits<(event: 'change', name: string, newValue: number) => void>();
+
 const props = defineProps<{
   maximumValue?: number;
   minimumValue?: number;
@@ -40,6 +40,8 @@ const props = defineProps<{
   possibleValues?: locApi.IUiJsonDiscreteInputPossibleValue[];
   stepValue?: number;
 }>();
+
+const emits = defineEmits<(event: 'change', name: string, newValue: number) => void>();
 
 let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(

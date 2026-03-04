@@ -20,6 +20,7 @@ const emit = defineEmits<{
   (event: 'openRemote', url: string): void;
   (event: 'close'): void;
 }>();
+
 const url = vue.ref<string>('');
 
 const emitOpenRemote = (): void => {
