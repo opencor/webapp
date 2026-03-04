@@ -9,6 +9,7 @@
 
 <script setup lang="ts">
 defineEmits<(event: 'ok') => void>();
+
 defineProps<{
   title: string;
   message: string;

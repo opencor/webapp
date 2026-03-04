@@ -5,6 +5,16 @@ export interface IOpenCORProps {
   theme?: OpenCORTheme;
 }
 
+export interface IOpenCORExpose {
+  trackSimulationData: (modelParameters: string[]) => void;
+  untrackSimulationData: (modelParameters: string[]) => void;
+  untrackAllSimulationData: () => void;
+}
+
+export interface IOpenCOREmits extends /* @vue-ignore */ Record<string, unknown[]> {
+  simulationData: [IOpenCORSimulationData];
+}
+
 export type OpenCORSimulationData = Record<string, Float64Array | undefined>;
 
 export interface IOpenCORSimulationData {

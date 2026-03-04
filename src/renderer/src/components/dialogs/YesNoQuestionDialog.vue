@@ -9,10 +9,6 @@
 </template>
 
 <script setup lang="ts">
-defineEmits<{
-  (event: 'yes'): void;
-  (event: 'no'): void;
-}>();
 withDefaults(
   defineProps<{
     title: string;
@@ -23,4 +19,9 @@ withDefaults(
     severity: 'warning'
   }
 );
+
+defineEmits<{
+  (event: 'yes'): void;
+  (event: 'no'): void;
+}>();
 </script>

@@ -41,7 +41,6 @@ const onPropertyUpdated = (index: number, newValue: number): void => {
   } else if (index === 1) {
     props.uniformTimeCourse.setOutputEndTime(newValue);
   } else if (index === 2) {
-    // @ts-expect-error (we trust that we have valid properties)
     props.uniformTimeCourse.setNumberOfSteps((properties.value[1].value - properties.value[0].value) / newValue);
   }
 };
