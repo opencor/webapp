@@ -62,7 +62,7 @@ const isWindowsOrLinux = common.isWindows() || common.isLinux();
 const isMacOs = common.isMacOs();
 const updateAvailable = version.updateAvailable;
 
-const items = [
+const items = vue.computed(() => [
   {
     label: 'File',
     items: [
@@ -117,7 +117,7 @@ const items = [
         label: 'Settings...',
         shortcut: isWindowsOrLinux ? 'Ctrl+Alt+,' : isMacOs ? '⌘⌥,' : undefined,
         command: () => {
-          emit('settings')
+          emit('settings');
         }
       }
     ]
@@ -148,7 +148,7 @@ const items = [
       }
     ]
   }
-];
+]);
 
 // A few things that can only be done when the component is mounted.
 
@@ -201,22 +201,30 @@ if (common.isDesktop()) {
       return;
     }
 
-    if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyO') {
+    if (common.isCtrlOrCmd(event) && !event.shiftKey && event.altKey && event.code === 'KeyO') {
       event.preventDefault();
 
       emit('open');
-    } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.code === 'KeyO') {
+    } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.altKey && event.code === 'KeyO') {
       event.preventDefault();
 
       emit('openRemote');
-    } else if (props.hasFiles && common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'KeyW') {
+    } else if (
+      props.hasFiles &&
+      common.isCtrlOrCmd(event) &&
+      !event.shiftKey &&
+      event.altKey &&
+      event.code === 'KeyW'
+    ) {
       event.preventDefault();
 
       emit('close');
-    } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.code === 'Comma') {
+      /* TODO: enable the settings menu once we have settings for OpenCOR's Web app.
+    } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.altKey && event.code === 'Comma') {
       event.preventDefault();
 
       emit('settings');
+      */
     }
   });
 }
