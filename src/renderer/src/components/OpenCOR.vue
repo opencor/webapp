@@ -1245,6 +1245,10 @@ const onGitHubButtonClick = async (): Promise<void> => {
   }
 }
 
+:deep(.p-overlay-mask) {
+  border-radius: 0;
+}
+
 .with-main-menu {
   :deep(.p-dialog-mask) {
     padding-top: var(--main-menu-height) !important;
