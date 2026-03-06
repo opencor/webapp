@@ -42,7 +42,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20260305.1",
+  "version": "0.20260306.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.js",
     "build:lib": "vite build --config vite.lib.config.ts && bun scripts/copy.indexdts.js",
@@ -74,10 +74,10 @@
     "xxhash-wasm": "^1.1.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.5",
+    "@biomejs/biome": "^2.4.6",
     "@tailwindcss/postcss": "^4.2.1",
     "@tailwindcss/vite": "^4.2.1",
-    "@types/node": "^25.3.3",
+    "@types/node": "^25.3.4",
     "@types/plotly.js": "^3.0.10",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue/tsconfig": "^0.9.0",
