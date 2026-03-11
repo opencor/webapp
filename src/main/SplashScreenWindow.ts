@@ -29,7 +29,7 @@ export class SplashScreenWindow extends ApplicationWindow {
     });
 
     this.loadFile('./src/main/assets/splashscreen.html').catch((error: unknown) => {
-      console.error('Failed to load splash screen:', formatError(error));
+      console.error('OpenCOR: failed to load splash screen:', formatError(error));
     });
 
     // Initialise our Web contents.

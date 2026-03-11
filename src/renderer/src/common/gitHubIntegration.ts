@@ -10,7 +10,7 @@ export const clearGitHubCache = async (): Promise<void> => {
       try {
         await electron.session.defaultSession.clearStorageData({ origin });
       } catch (error: unknown) {
-        console.warn(`Failed to clear storage data for ${origin}:`, formatError(error));
+        console.warn(`OpenCOR: failed to clear storage data for ${origin}:`, formatError(error));
       }
     })
   );
@@ -21,7 +21,7 @@ let storeAvailable = true;
 const gitHubAccessTokenError = (operation: string, error: unknown): void => {
   if (storeAvailable) {
     console.warn(
-      `Failed to ${operation} the GitHub access token using the system credential store. Subsequent attempts will be skipped.`,
+      `OpenCOR: failed to ${operation} the GitHub access token using the system credential store. Subsequent attempts will be skipped.`,
       error
     );
   }
@@ -79,7 +79,7 @@ export const loadGitHubAccessToken = async (): Promise<string | null> => {
 
 export const saveGitHubAccessToken = async (token: string): Promise<boolean> => {
   if (!token.trim()) {
-    console.warn('Ignoring request to store an empty GitHub access token.');
+    console.warn('OpenCOR: ignoring request to store an empty GitHub access token.');
 
     return false;
   }

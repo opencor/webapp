@@ -25,7 +25,7 @@ const checkForUpdates = async (): Promise<boolean> => {
     const response = await fetch(`./assets/version.json?t=${Date.now()}`);
 
     if (!response.ok) {
-      console.warn('Failed to fetch the version information.');
+      console.warn('OpenCOR: failed to fetch the version information.');
 
       updateAvailable.value = false;
       latestVersion.value = '';

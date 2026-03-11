@@ -438,7 +438,7 @@ if (firebaseConfig) {
   };
 
   console.error(
-    `The Firebase configuration is missing. Please ensure that the following environment variables are set: ${formatList(items)}.`
+    `OpenCOR: the Firebase configuration is missing. Please ensure that the following environment variables are set: ${formatList(items)}.`
   );
 }
 
@@ -1029,7 +1029,7 @@ const deleteGitHubAccessToken = async (silent: boolean = false): Promise<void> =
     await electronApi.deleteGitHubAccessToken();
   } catch (error: unknown) {
     if (silent) {
-      console.warn('Failed to remove the stored GitHub access token:', common.formatError(error));
+      console.warn('OpenCOR: failed to remove the stored GitHub access token:', common.formatError(error));
     } else {
       toast.add({
         severity: 'warn',
@@ -1052,7 +1052,7 @@ const loadGitHubAccessToken = async (): Promise<void> => {
   try {
     gitHubAccessToken = await electronApi.loadGitHubAccessToken();
   } catch (error: unknown) {
-    console.warn('Failed to load the GitHub access token:', common.formatError(error));
+    console.warn('OpenCOR: failed to load the GitHub access token:', common.formatError(error));
 
     return;
   }
@@ -1066,7 +1066,7 @@ const loadGitHubAccessToken = async (): Promise<void> => {
   try {
     await checkGitHubAccessToken(gitHubAccessToken);
   } catch (error: unknown) {
-    console.warn('Stored GitHub access token is no longer valid. Clearing it.', common.formatError(error));
+    console.warn('OpenCOR: stored GitHub access token is no longer valid. Clearing it.', common.formatError(error));
 
     await deleteGitHubAccessToken(true);
   } finally {
@@ -1119,7 +1119,7 @@ const checkGitHubAccessToken = async (accessToken: string): Promise<void> => {
       console.log(`- ${repo.name} (${repo.private ? 'private' : 'public'}): ${repo.html_url}`);
     }
   } catch (error: unknown) {
-    console.warn(`Failed to retrieve repositories for user ${user.data.login}:`, common.formatError(error));
+    console.warn(`OpenCOR: failed to retrieve repositories for user ${user.data.login}:`, common.formatError(error));
   }
 };
 

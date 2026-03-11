@@ -84,7 +84,7 @@ export const initialiseLocApi = async (): Promise<void> => {
 
       ++crtNbOfSteps.value;
     } catch (error: unknown) {
-      console.error('Failed to load libOpenCOR:', common.formatError(error));
+      console.error('OpenCOR: failed to load libOpenCOR:', common.formatError(error));
 
       throw error;
     }
@@ -133,7 +133,7 @@ const createLazyInitialiser = (
         ++crtNbOfSteps.value;
       }
     } catch (error: unknown) {
-      console.error(`Failed to import ${name ?? url}:`, common.formatError(error));
+      console.error(`OpenCOR: failed to import ${name ?? url}:`, common.formatError(error));
 
       throw error;
     }
