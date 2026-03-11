@@ -1,5 +1,5 @@
 <template>
-  <BlockUI ref="blockUiRef" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
+  <BlockUI ref="blockUiRef" class="opencor overflow-hidden h-full" :class="isFullWebApp ? 'with-main-menu' : ''"
     :blocked="blockUiBlocked"
     @click="activateInstance"
     @focus="activateInstance"
@@ -21,7 +21,7 @@
     >
       <input ref="filesRef" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
-      <MainMenu ref="mainMenuRef" v-if="showMainMenu"
+      <MainMenu ref="mainMenuRef" v-if="isFullWebApp"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -276,9 +276,9 @@ vue.onUnmounted(() => {
   }
 });
 
-// Determine whether to show the main menu or not.
+// Determine whether we are running the full Web app (i.e. not in isolation).
 
-const showMainMenu = vue.computed<boolean>(() => {
+const isFullWebApp = vue.computed<boolean>(() => {
   return !electronApi && !props.omex;
 });
 
@@ -392,9 +392,13 @@ vue.watch(
 
       initialisingOpencorMessageVisible.value = false;
 
-      // We are all done, so let's start checking for a new version of OpenCOR.
+      // We are all done, so let's start checking for a newer version of OpenCOR, but only if we are running the Web app
+      // and not in isolation mode (i.e. with a COMBINE archive) since in those cases we don't want to let the user know
+      // about a newer version of OpenCOR.
 
-      version.startCheck();
+      if (isFullWebApp.value) {
+        version.startCheck();
+      }
     }
   },
   { immediate: true }
@@ -918,7 +922,7 @@ vue.onMounted(() => {
 let stopTrackingMainMenuHeight: (() => void) | null = null;
 
 vue.onMounted(() => {
-  if (!showMainMenu.value) {
+  if (!isFullWebApp.value) {
     return;
   }
 
