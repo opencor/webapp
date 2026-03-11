@@ -2,8 +2,6 @@ import * as vue from 'vue';
 
 import packageJson from '../../package.json' with { type: 'json' };
 
-import { electronApi } from './electronApi.ts';
-
 const { version: currentVersion } = packageJson;
 
 // State to track whether an update is available and the latest version.
@@ -18,12 +16,6 @@ interface IVersionInfo {
 }
 
 const checkForUpdates = async (): Promise<boolean> => {
-  // Make sure that we are not running the desktop version of OpenCOR.
-
-  if (electronApi) {
-    return false;
-  }
-
   // Get the latest version information from the server and compare it with the current version.
 
   try {
@@ -33,7 +25,7 @@ const checkForUpdates = async (): Promise<boolean> => {
     const response = await fetch(`./assets/version.json?t=${Date.now()}`);
 
     if (!response.ok) {
-      console.warn('Failed to fetch the version information.');
+      console.warn('OpenCOR: failed to fetch the version information.');
 
       updateAvailable.value = false;
       latestVersion.value = '';
@@ -87,12 +79,6 @@ const isNewerVersion = (versionA: string, versionB: string): boolean => {
 let checkInterval: number | null = null;
 
 const startCheck = (): void => {
-  // Make sure that we are not running the desktop version of OpenCOR.
-
-  if (electronApi) {
-    return;
-  }
-
   // Check immediately on start.
 
   checkForUpdates();

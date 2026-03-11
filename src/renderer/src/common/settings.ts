@@ -59,8 +59,8 @@ class Settings {
           this._oldRawSettings = raw;
         }
       } catch (error: unknown) {
-        console.error(
-          'Failed to load the settings from the local storage, so resetting to defaults:',
+        console.warn(
+          'OpenCOR: failed to load the settings from the local storage, so resetting to defaults:',
           formatError(error)
         );
 
@@ -88,7 +88,7 @@ class Settings {
 
         this._oldRawSettings = rawSettings;
       } catch (error: unknown) {
-        console.error('Failed to save the settings to the local storage:', formatError(error));
+        console.warn('OpenCOR: failed to save the settings to the local storage:', formatError(error));
       }
     }
   }

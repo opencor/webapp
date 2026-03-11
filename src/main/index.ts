@@ -143,13 +143,13 @@ MimeType=x-scheme-handler/${URI_SCHEME}`;
         'update-desktop-database ~/.local/share/applications',
         (error: nodeChildProcess.ExecException | null) => {
           if (error) {
-            console.error('Failed to update the desktop database:', formatError(error));
+            console.warn('OpenCOR: failed to update the desktop database:', formatError(error));
           }
         }
       );
     }
   } catch (error: unknown) {
-    console.error('Failed to set up Linux desktop integration:', formatError(error));
+    console.warn('OpenCOR: failed to set up Linux desktop integration:', formatError(error));
   }
 };
 
@@ -309,13 +309,13 @@ electron.app
     });
   })
   .catch((error: unknown) => {
-    console.error('Failed to create the main window:', formatError(error));
+    console.error('OpenCOR: failed to create the main window:', formatError(error));
   });
 
 // Ensure that the renderer server is stopped when quitting.
 
 electron.app.on('will-quit', () => {
   stopRendererServer().catch((error: unknown) => {
-    console.error('Failed to stop the renderer server:', formatError(error));
+    console.warn('OpenCOR: failed to stop the renderer server:', formatError(error));
   });
 });

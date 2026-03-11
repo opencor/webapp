@@ -352,10 +352,10 @@ export class MainWindow extends ApplicationWindow {
 
       if (isHttpUrl(details.url)) {
         electron.shell.openExternal(details.url).catch((error: unknown) => {
-          console.error(`Failed to open external URL (${details.url}):`, formatError(error));
+          console.warn(`OpenCOR: failed to open external URL (${details.url}):`, formatError(error));
         });
       } else {
-        console.warn(`Blocked attempt to open unsupported URL (${details.url}).`);
+        console.warn(`OpenCOR: blocked attempt to open unsupported URL (${details.url}).`);
       }
 
       return {
@@ -366,7 +366,7 @@ export class MainWindow extends ApplicationWindow {
     // Load the renderer URL.
 
     this.loadURL(rendererUrl).catch((error: unknown) => {
-      console.error(`Failed to load URL (${rendererUrl}):`, formatError(error));
+      console.error(`OpenCOR: failed to load URL (${rendererUrl}):`, formatError(error));
     });
   }
 
@@ -462,7 +462,7 @@ export class MainWindow extends ApplicationWindow {
         this.enableDisableUi(true);
       })
       .catch((error: unknown) => {
-        console.error('Failed to open file(s):', formatError(error));
+        console.warn('OpenCOR: failed to open file(s):', formatError(error));
 
         this.enableDisableUi(true);
       });

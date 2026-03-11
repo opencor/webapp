@@ -1,5 +1,5 @@
 <template>
-  <BlockUI ref="blockUiRef" class="opencor overflow-hidden h-full" :class="showMainMenu ? 'with-main-menu' : ''"
+  <BlockUI ref="blockUiRef" class="opencor overflow-hidden h-full" :class="isFullWebApp ? 'with-main-menu' : ''"
     :blocked="blockUiBlocked"
     @click="activateInstance"
     @focus="activateInstance"
@@ -21,7 +21,7 @@
     >
       <input ref="filesRef" type="file" multiple style="display: none;" @change="onChange" />
       <DragNDropComponent v-show="dragAndDropCounter" />
-      <MainMenu ref="mainMenuRef" v-if="showMainMenu"
+      <MainMenu ref="mainMenuRef" v-if="isFullWebApp"
         :isActive="compIsActive"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
@@ -276,9 +276,9 @@ vue.onUnmounted(() => {
   }
 });
 
-// Determine whether to show the main menu or not.
+// Determine whether we are running the full Web app (i.e. not in isolation).
 
-const showMainMenu = vue.computed<boolean>(() => {
+const isFullWebApp = vue.computed<boolean>(() => {
   return !electronApi && !props.omex;
 });
 
@@ -392,9 +392,13 @@ vue.watch(
 
       initialisingOpencorMessageVisible.value = false;
 
-      // We are all done, so let's start checking for a new version of OpenCOR.
+      // We are all done, so let's start checking for a newer version of OpenCOR, but only if we are running the Web app
+      // and not in isolation mode (i.e. with a COMBINE archive) since in those cases we don't want to let the user know
+      // about a newer version of OpenCOR.
 
-      version.startCheck();
+      if (isFullWebApp.value) {
+        version.startCheck();
+      }
     }
   },
   { immediate: true }
@@ -433,8 +437,8 @@ if (firebaseConfig) {
     return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
   };
 
-  console.error(
-    `The Firebase configuration is missing. Please ensure that the following environment variables are set: ${formatList(items)}.`
+  console.warn(
+    `OpenCOR: the Firebase configuration is missing. Please ensure that the following environment variables are set: ${formatList(items)}.`
   );
 }
 
@@ -918,7 +922,7 @@ vue.onMounted(() => {
 let stopTrackingMainMenuHeight: (() => void) | null = null;
 
 vue.onMounted(() => {
-  if (!showMainMenu.value) {
+  if (!isFullWebApp.value) {
     return;
   }
 
@@ -1025,7 +1029,7 @@ const deleteGitHubAccessToken = async (silent: boolean = false): Promise<void> =
     await electronApi.deleteGitHubAccessToken();
   } catch (error: unknown) {
     if (silent) {
-      console.warn('Failed to remove the stored GitHub access token:', common.formatError(error));
+      console.warn('OpenCOR: failed to remove the stored GitHub access token:', common.formatError(error));
     } else {
       toast.add({
         severity: 'warn',
@@ -1048,7 +1052,7 @@ const loadGitHubAccessToken = async (): Promise<void> => {
   try {
     gitHubAccessToken = await electronApi.loadGitHubAccessToken();
   } catch (error: unknown) {
-    console.warn('Failed to load the GitHub access token:', common.formatError(error));
+    console.warn('OpenCOR: failed to load the GitHub access token:', common.formatError(error));
 
     return;
   }
@@ -1062,7 +1066,7 @@ const loadGitHubAccessToken = async (): Promise<void> => {
   try {
     await checkGitHubAccessToken(gitHubAccessToken);
   } catch (error: unknown) {
-    console.warn('Stored GitHub access token is no longer valid. Clearing it.', common.formatError(error));
+    console.warn('OpenCOR: stored GitHub access token is no longer valid. Clearing it.', common.formatError(error));
 
     await deleteGitHubAccessToken(true);
   } finally {
@@ -1115,7 +1119,7 @@ const checkGitHubAccessToken = async (accessToken: string): Promise<void> => {
       console.log(`- ${repo.name} (${repo.private ? 'private' : 'public'}): ${repo.html_url}`);
     }
   } catch (error: unknown) {
-    console.warn(`Failed to retrieve repositories for user ${user.data.login}:`, common.formatError(error));
+    console.warn(`OpenCOR: failed to retrieve repositories for user ${user.data.login}:`, common.formatError(error));
   }
 };
 
