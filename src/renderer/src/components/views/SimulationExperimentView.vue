@@ -418,7 +418,7 @@ const onDownloadCombineArchive = (): void => {
       common.downloadFile(`${baseFileName}.omex`, content, 'application/zip');
     })
     .catch((error: unknown) => {
-      console.error('OpenCOR: failed to generate COMBINE archive:', common.formatError(error));
+      console.warn('OpenCOR: failed to generate COMBINE archive:', common.formatError(error));
     });
 };
 

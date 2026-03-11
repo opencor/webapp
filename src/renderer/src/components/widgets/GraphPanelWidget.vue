@@ -258,7 +258,7 @@ const copyToClipboard = async (): Promise<void> => {
       })
     ]);
   } catch (error: unknown) {
-    console.error('OpenCOR: failed to copy to clipboard:', common.formatError(error));
+    console.warn('OpenCOR: failed to copy to clipboard:', common.formatError(error));
   }
 };
 
@@ -275,7 +275,7 @@ const exportToImage = async (format: 'jpeg' | 'png' | 'svg' | 'webp'): Promise<v
       filename: 'plot'
     });
   } catch (error: unknown) {
-    console.error('OpenCOR: failed to export image:', common.formatError(error));
+    console.warn('OpenCOR: failed to export image:', common.formatError(error));
   }
 };
 
@@ -380,7 +380,7 @@ const exportToCsv = async (): Promise<void> => {
   } catch (error: unknown) {
     successfulExport = false;
 
-    console.error('OpenCOR: failed to export to CSV:', common.formatError(error));
+    console.warn('OpenCOR: failed to export to CSV:', common.formatError(error));
   } finally {
     // Hide the progress message. If the export succeeded then delay briefly so that the user can see that we reached
     // 100%. Otherwise, hide immediately to avoid blocking the UI unnecessarily.

@@ -238,7 +238,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       label: 'Home Page',
       click: () => {
         electron.shell.openExternal('https://opencor.ws/').catch((error: unknown) => {
-          console.error('OpenCOR: failed to open the home page:', formatError(error));
+          console.warn('OpenCOR: failed to open the home page:', formatError(error));
         });
       }
     });
@@ -247,7 +247,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       label: 'Report Issue',
       click: () => {
         electron.shell.openExternal('https://github.com/opencor/webapp/issues/new').catch((error: unknown) => {
-          console.error('OpenCOR: failed to report an issue:', formatError(error));
+          console.warn('OpenCOR: failed to report an issue:', formatError(error));
         });
       }
     });

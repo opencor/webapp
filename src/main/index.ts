@@ -143,13 +143,13 @@ MimeType=x-scheme-handler/${URI_SCHEME}`;
         'update-desktop-database ~/.local/share/applications',
         (error: nodeChildProcess.ExecException | null) => {
           if (error) {
-            console.error('OpenCOR: failed to update the desktop database:', formatError(error));
+            console.warn('OpenCOR: failed to update the desktop database:', formatError(error));
           }
         }
       );
     }
   } catch (error: unknown) {
-    console.error('OpenCOR: failed to set up Linux desktop integration:', formatError(error));
+    console.warn('OpenCOR: failed to set up Linux desktop integration:', formatError(error));
   }
 };
 
@@ -316,6 +316,6 @@ electron.app
 
 electron.app.on('will-quit', () => {
   stopRendererServer().catch((error: unknown) => {
-    console.error('OpenCOR: failed to stop the renderer server:', formatError(error));
+    console.warn('OpenCOR: failed to stop the renderer server:', formatError(error));
   });
 });

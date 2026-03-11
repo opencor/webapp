@@ -203,7 +203,7 @@ export const fileName = (filePath: string): string => {
   try {
     return decodeURIComponent(res);
   } catch (error: unknown) {
-    console.error('OpenCOR: failed to decode the file path:', res, formatError(error));
+    console.warn('OpenCOR: failed to decode the file path:', res, formatError(error));
 
     return res;
   }

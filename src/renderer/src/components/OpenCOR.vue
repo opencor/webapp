@@ -437,7 +437,7 @@ if (firebaseConfig) {
     return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
   };
 
-  console.error(
+  console.warn(
     `OpenCOR: the Firebase configuration is missing. Please ensure that the following environment variables are set: ${formatList(items)}.`
   );
 }

@@ -133,7 +133,7 @@ export class File {
       // Note: we should never reach this point since we should always provide some file contents when using the WASM
       //       version of libOpenCOR.
 
-      console.error(`OpenCOR: no contents provided for file '${path}'.`);
+      console.warn(`OpenCOR: no contents provided for file '${path}'.`);
 
       return;
     }
