@@ -15,7 +15,12 @@ export interface IOpenCOREmits extends /* @vue-ignore */ Record<string, unknown[
   simulationData: [IOpenCORSimulationDataEvent];
 }
 
-export type OpenCORSimulationData = Record<string, Float64Array | undefined>;
+export interface IOpenCORSimulationDataValue {
+  data: Float64Array;
+  unit: string;
+}
+
+export type OpenCORSimulationData = Record<string, IOpenCORSimulationDataValue>;
 
 export interface IOpenCORSimulationDataEvent {
   simulationData: OpenCORSimulationData;

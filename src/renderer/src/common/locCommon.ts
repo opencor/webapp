@@ -1,3 +1,5 @@
+import type { IOpenCORSimulationDataValue } from '../../index.ts';
+
 import * as locApi from '../libopencor/locApi.ts';
 
 import * as common from './common.ts';
@@ -341,23 +343,44 @@ export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: s
   };
 };
 
-// A method to retrieve the simulation data for a given name from an instance task.
+// A method to retrieve the simulation data value for a given name from an instance task.
 
-export const simulationData = (instanceTask: locApi.SedInstanceTask, info: ISimulationDataInfo): Float64Array => {
+export const simulationDataValue = (
+  instanceTask: locApi.SedInstanceTask,
+  info: ISimulationDataInfo
+): IOpenCORSimulationDataValue => {
   switch (info.type) {
     case ESimulationDataInfoType.VOI:
-      return instanceTask.voi();
+      return {
+        data: instanceTask.voi(),
+        unit: instanceTask.voiUnit()
+      };
     case ESimulationDataInfoType.STATE:
-      return instanceTask.state(info.index);
+      return {
+        data: instanceTask.state(info.index),
+        unit: instanceTask.stateUnit(info.index)
+      };
     case ESimulationDataInfoType.RATE:
-      return instanceTask.rate(info.index);
+      return {
+        data: instanceTask.rate(info.index),
+        unit: instanceTask.rateUnit(info.index)
+      };
     case ESimulationDataInfoType.CONSTANT:
-      return instanceTask.constant(info.index);
+      return {
+        data: instanceTask.constant(info.index),
+        unit: instanceTask.constantUnit(info.index)
+      };
     case ESimulationDataInfoType.COMPUTED_CONSTANT:
-      return instanceTask.computedConstant(info.index);
+      return {
+        data: instanceTask.computedConstant(info.index),
+        unit: instanceTask.computedConstantUnit(info.index)
+      };
     case ESimulationDataInfoType.ALGEBRAIC:
-      return instanceTask.algebraicVariable(info.index);
+      return {
+        data: instanceTask.algebraicVariable(info.index),
+        unit: instanceTask.algebraicVariableUnit(info.index)
+      };
     default:
-      return new Float64Array();
+      return { ...common.UNDEFINED_SIMULATION_DATA_VALUE };
   }
 };

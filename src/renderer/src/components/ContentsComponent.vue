@@ -181,7 +181,7 @@ const closeAllFiles = (): void => {
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
   if (!props.simulationOnly) {
     return Promise.resolve({
-      simulationData: common.undefinedSimulationData(modelParameters),
+      simulationData: common.emptySimulationData(modelParameters),
       issues: ['Simulation data can only be retrieved in simulation only mode.']
     });
   }
@@ -190,14 +190,14 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
 
   if (!simulationExperimentViews.length) {
     return Promise.resolve({
-      simulationData: common.undefinedSimulationData(modelParameters),
+      simulationData: common.emptySimulationData(modelParameters),
       issues: ['No simulation experiment view available.']
     });
   }
 
   return simulationExperimentViews[0].simulationData(modelParameters).catch((error: unknown) => {
     return {
-      simulationData: common.undefinedSimulationData(modelParameters),
+      simulationData: common.emptySimulationData(modelParameters),
       issues: [common.formatError(error)]
     };
   });

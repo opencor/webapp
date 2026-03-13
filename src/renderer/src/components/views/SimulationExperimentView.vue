@@ -504,9 +504,9 @@ const updatePlot = () => {
       {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
         xValue: standardXParameter.value,
-        x: locCommon.simulationData(standardInstanceTask, xInfo.value),
+        x: locCommon.simulationDataValue(standardInstanceTask, xInfo.value).data,
         yValue: standardYParameter.value,
-        y: locCommon.simulationData(standardInstanceTask, yInfo.value),
+        y: locCommon.simulationDataValue(standardInstanceTask, yInfo.value).data,
         color: colors.DEFAULT_COLOR
       }
     ]
@@ -671,7 +671,7 @@ const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interact
 
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
   const res: IOpenCORSimulationDataEvent = {
-    simulationData: common.undefinedSimulationData(modelParameters),
+    simulationData: common.emptySimulationData(modelParameters),
     issues: []
   };
 
@@ -690,16 +690,14 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     );
 
     if (isNoSimulationDataInfo(info)) {
-      res.simulationData[modelParameter] = undefined;
       res.issues.push(`No simulation data information was found for model parameter "${modelParameter}".`);
 
       continue;
     }
 
     try {
-      res.simulationData[modelParameter] = locCommon.simulationData(instanceTask, info);
+      res.simulationData[modelParameter] = locCommon.simulationDataValue(instanceTask, info);
     } catch (error: unknown) {
-      res.simulationData[modelParameter] = undefined;
       res.issues.push(`Error for model parameter "${modelParameter}": ${common.formatError(error)}`);
     }
   }
@@ -915,14 +913,14 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     const info = interactiveIdToInfo[data.id];
 
     if (info && interactiveInstanceTask) {
+      const simulationDataValue = locCommon.simulationDataValue(interactiveInstanceTask, info);
+
       parser.set(
         data.id,
-        containsMultiplicationsOrDivisions.value
-          ? Array.from(locCommon.simulationData(interactiveInstanceTask, info))
-          : locCommon.simulationData(interactiveInstanceTask, info)
+        containsMultiplicationsOrDivisions.value ? Array.from(simulationDataValue.data) : simulationDataValue.data
       );
     } else {
-      parser.set(data.id, []);
+      parser.set(data.id, containsMultiplicationsOrDivisions.value ? [] : common.EMPTY_FLOAT64_ARRAY);
     }
   }
 
