@@ -49,8 +49,8 @@
     "clean": "bun scripts/clean.js",
     "dependencies:update": "bun scripts/dependencies.update.js",
     "dev": "vite dev",
-    "format": "bun --cwd ../.. format",
-    "format:check": "bun --cwd ../.. format:check",
+    "format": "bunx --bun biome format --fix --max-diagnostics=none",
+    "format:check": "bunx --bun biome format --max-diagnostics=none",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
     "version:new": "bun scripts/version.new.js"
