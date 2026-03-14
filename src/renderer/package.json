@@ -42,17 +42,18 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20260311.0",
+  "version": "0.20260314.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.js",
     "build:lib": "vite build --config vite.lib.config.ts && bun scripts/copy.indexdts.js",
     "clean": "bun scripts/clean.js",
     "dependencies:update": "bun scripts/dependencies.update.js",
     "dev": "vite dev",
-    "format": "bun --cwd ../.. format",
-    "format:check": "bun --cwd ../.. format:check",
+    "format": "bunx --bun biome format --fix --max-diagnostics=none",
+    "format:check": "bunx --bun biome format --max-diagnostics=none",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
+    "typecheck": "bunx --bun vue-tsc --noEmit",
     "version:new": "bun scripts/version.new.js"
   },
   "bun": {
@@ -77,18 +78,19 @@
     "@biomejs/biome": "^2.4.6",
     "@tailwindcss/postcss": "^4.2.1",
     "@tailwindcss/vite": "^4.2.1",
-    "@types/node": "^25.4.0",
+    "@types/node": "^25.5.0",
     "@types/plotly.js": "^3.0.10",
-    "@vitejs/plugin-vue": "^6.0.4",
+    "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.0",
     "autoprefixer": "^10.4.27",
-    "esbuild": "^0.27.3",
+    "esbuild": "^0.27.4",
     "stylelint": "^17.4.0",
     "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4.2.1",
     "tailwindcss-primeui": "^0.6.1",
     "typescript": "^5.9.3",
     "unplugin-vue-components": "^31.0.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vue-tsc": "^3.2.5"
   }
 }

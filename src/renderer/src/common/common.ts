@@ -1,4 +1,4 @@
-import type { OpenCORSimulationData } from '../../index.ts';
+import type { IOpenCORSimulationDataValue, OpenCORSimulationData } from '../../index.ts';
 
 import * as dependencies from './dependencies.ts';
 import { electronApi } from './electronApi.ts';
@@ -215,13 +215,21 @@ export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-// A method to get an object with undefined values for a list of model parameters.
+// Some constants related to simulation data values.
 
-export const undefinedSimulationData = (modelParameters: string[]): OpenCORSimulationData => {
+export const EMPTY_FLOAT64_ARRAY = Object.freeze(new Float64Array(0));
+export const UNDEFINED_SIMULATION_DATA_VALUE = Object.freeze({
+  data: EMPTY_FLOAT64_ARRAY,
+  unit: ''
+}) as Readonly<IOpenCORSimulationDataValue>;
+
+// A method to get an object with an empty simulation data values for a list of model parameters.
+
+export const emptySimulationData = (modelParameters: string[]): OpenCORSimulationData => {
   const res: OpenCORSimulationData = {};
 
   for (const modelParameter of modelParameters) {
-    res[modelParameter] = undefined;
+    res[modelParameter] = { ...UNDEFINED_SIMULATION_DATA_VALUE };
   }
 
   return res;

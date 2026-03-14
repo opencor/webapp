@@ -177,7 +177,7 @@ const emitSimulationData = (): void => {
 
   if (!contents) {
     emit('simulationData', {
-      simulationData: common.undefinedSimulationData(trackedSimulationData.value),
+      simulationData: common.emptySimulationData(trackedSimulationData.value),
       issues: ['No contents available.']
     });
 
