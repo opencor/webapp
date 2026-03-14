@@ -53,6 +53,7 @@
     "format:check": "bunx --bun biome format --max-diagnostics=none",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
+    "typecheck": "bunx --bun vue-tsc --noEmit",
     "version:new": "bun scripts/version.new.js"
   },
   "bun": {
@@ -89,6 +90,7 @@
     "tailwindcss-primeui": "^0.6.1",
     "typescript": "^5.9.3",
     "unplugin-vue-components": "^31.0.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vue-tsc": "^3.2.5"
   }
 }
