@@ -145,6 +145,10 @@ const emit = defineEmits<IOpenCOREmits>();
 const trackedSimulationData = vue.ref<string[]>([]);
 
 const trackSimulationData = (modelParameters: string[]): void => {
+  if (!props.omex) {
+    return;
+  }
+
   for (const modelParameter of modelParameters) {
     if (!trackedSimulationData.value.includes(modelParameter)) {
       trackedSimulationData.value.push(modelParameter);
@@ -155,10 +159,18 @@ const trackSimulationData = (modelParameters: string[]): void => {
 };
 
 const untrackSimulationData = (modelParameters: string[]): void => {
+  if (!props.omex) {
+    return;
+  }
+
   trackedSimulationData.value = trackedSimulationData.value.filter((mp) => !modelParameters.includes(mp));
 };
 
 const untrackAllSimulationData = (): void => {
+  if (!props.omex) {
+    return;
+  }
+
   trackedSimulationData.value = [];
 };
 
