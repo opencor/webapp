@@ -2,7 +2,7 @@ import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
 import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
 
-import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import vitePlugin from 'unplugin-vue-components/vite';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import * as vite from 'vite';
@@ -52,7 +52,7 @@ export default vite.defineConfig({
   ],
   server: {
     fs: {
-      allow: [path.join(import.meta.dirname, '../..')]
+      allow: [fileURLToPath(new URL('../..', import.meta.url))]
     }
   }
 });
