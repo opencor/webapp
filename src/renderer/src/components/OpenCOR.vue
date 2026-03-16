@@ -271,12 +271,12 @@ vue.watch(
   (newCompBlockUiEnabled: boolean) => {
     if (blockUiBlockedTimeoutId !== undefined) {
       window.clearTimeout(blockUiBlockedTimeoutId);
+
+      blockUiBlockedTimeoutId = undefined;
     }
 
     blockUiBlockedTimeoutId = window.setTimeout(() => {
       blockUiBlocked.value = newCompBlockUiEnabled;
-
-      blockUiBlockedTimeoutId = undefined;
     }, NO_DELAY);
   },
   { immediate: true }
