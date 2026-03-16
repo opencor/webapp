@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
 import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
@@ -24,6 +26,10 @@ export default electronVite.defineConfig({
   renderer: {
     build: {
       target: 'esnext'
+    },
+    define: {
+      __OPENCOR_DEV__:
+        ((process as unknown as { env?: { NODE_ENV?: string } }).env?.NODE_ENV ?? 'development') !== 'production'
     },
     envDir: path.join(import.meta.dirname, 'src/renderer'),
     optimizeDeps: {
