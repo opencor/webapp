@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen">
+  <div class="opencor" style="height: 100vh; height: 100dvh;">
     <Splitter class="h-full" layout="vertical">
       <SplitterPanel class="flex items-center justify-center bg-blue-500" :size="15">Top panel...</SplitterPanel>
       <SplitterPanel :size="50">

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen overflow-hidden">
+  <div class="opencor" style="height: 100vh; height: 100dvh; overflow: hidden;">
     <Splitter class="h-full" layout="vertical">
       <SplitterPanel :size="15">
         <OpenCOR />
