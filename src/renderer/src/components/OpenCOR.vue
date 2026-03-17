@@ -1,6 +1,6 @@
 <template>
-  <BlockUI ref="blockUiRef" class="opencor overflow-hidden h-full" :class="isFullWebApp ? 'with-main-menu' : ''"
-    :blocked="blockUiBlocked"
+  <SafeBlockUI ref="safeBlockUiRef" class="opencor overflow-hidden h-full" :class="isFullWebApp ? 'with-main-menu' : ''"
+    :blocked="compBlockUiEnabled"
     @click="activateInstance"
     @focus="activateInstance"
     @focusin="activateInstance"
@@ -98,7 +98,7 @@
         @close="webUpdateAvailableVisible = false"
       />
     </div>
-  </BlockUI>
+  </SafeBlockUI>
 </template>
 
 <script setup lang="ts">
@@ -110,7 +110,6 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { Octokit } from 'octokit';
 */
-import BlockUI from 'primevue/blockui';
 import primeVueConfig from 'primevue/config';
 import primeVueConfirmationService from 'primevue/confirmationservice';
 import primeVueToastService from 'primevue/toastservice';
@@ -122,7 +121,7 @@ import type { IOpenCOREmits, IOpenCORProps } from '../../index.ts';
 import '../assets/app.css';
 import '../assets/primeicons-assets.ts';
 import * as common from '../common/common.ts';
-import { FULL_URI_SCHEME, LONG_DELAY, NO_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
+import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
 import * as dependencies from '../common/dependencies.ts';
 import { electronApi } from '../common/electronApi.ts';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -136,6 +135,7 @@ import ContentsComponent from '../components/ContentsComponent.vue';
 import * as locApi from '../libopencor/locApi.ts';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
+import SafeBlockUI from './widgets/SafeBlockUI.vue';
 import MainMenu from './MainMenu.vue';
 
 const props = defineProps<IOpenCORProps>();
@@ -145,6 +145,10 @@ const emit = defineEmits<IOpenCOREmits>();
 const trackedSimulationData = vue.ref<string[]>([]);
 
 const trackSimulationData = (modelParameters: string[]): void => {
+  if (!props.omex) {
+    return;
+  }
+
   for (const modelParameter of modelParameters) {
     if (!trackedSimulationData.value.includes(modelParameter)) {
       trackedSimulationData.value.push(modelParameter);
@@ -155,10 +159,18 @@ const trackSimulationData = (modelParameters: string[]): void => {
 };
 
 const untrackSimulationData = (modelParameters: string[]): void => {
+  if (!props.omex) {
+    return;
+  }
+
   trackedSimulationData.value = trackedSimulationData.value.filter((mp) => !modelParameters.includes(mp));
 };
 
 const untrackAllSimulationData = (): void => {
+  if (!props.omex) {
+    return;
+  }
+
   trackedSimulationData.value = [];
 };
 
@@ -191,7 +203,7 @@ const emitSimulationData = (): void => {
 
 const { isDialogActive } = provideDialogState();
 
-const blockUiRef = vue.ref<InstanceType<typeof BlockUI> | null>(null);
+const safeBlockUiRef = vue.ref<InstanceType<typeof SafeBlockUI> | null>(null);
 const mainMenuRef = vue.ref<InstanceType<typeof MainMenu> | null>(null);
 const filesRef = vue.ref<HTMLElement | null>(null);
 const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null);
@@ -247,34 +259,25 @@ const compUiEnabled = vue.computed<boolean>(() => {
   return !compBlockUiEnabled.value && !isDialogActive.value;
 });
 
-// Block/unblock the UI with "no" (i.e. a bit of a) delay to ensure that it doesn't happen too quickly (e.g., when
-// loading a model from a COMBINE archive, we don't want the UI to be blocked for a split second while the file is
-// being processed and the Simulation Experiment view is being shown in isolation).
-
-const blockUiBlocked = vue.ref<boolean>(true);
-let blockUiBlockedTimeoutId: number | undefined;
+// Remove any leftover SafeBlockUI masks when unblocking.
+// Note: this is to ensure that we don't end up with leftover masks if the block event is emitted multiple times before
+//       the unblock event is emitted, which can lead to multiple masks being created and not properly removed.
 
 vue.watch(
   compBlockUiEnabled,
   (newCompBlockUiEnabled: boolean) => {
-    if (blockUiBlockedTimeoutId !== undefined) {
-      window.clearTimeout(blockUiBlockedTimeoutId);
+    if (!newCompBlockUiEnabled) {
+      const safeBlockUi = safeBlockUiRef.value as unknown as InstanceType<typeof SafeBlockUI> | null;
+
+      if (!safeBlockUi) {
+        return;
+      }
+
+      safeBlockUi.cleanupMasks();
     }
-
-    blockUiBlockedTimeoutId = window.setTimeout(() => {
-      blockUiBlocked.value = newCompBlockUiEnabled;
-
-      blockUiBlockedTimeoutId = undefined;
-    }, NO_DELAY);
   },
   { immediate: true }
 );
-
-vue.onUnmounted(() => {
-  if (blockUiBlockedTimeoutId !== undefined) {
-    window.clearTimeout(blockUiBlockedTimeoutId);
-  }
-});
 
 // Determine whether we are running the full Web app (i.e. not in isolation).
 
@@ -898,7 +901,7 @@ electronApi?.onSelect((filePath: string) => {
 // A few things that can only be done when the component is mounted.
 
 vue.onMounted(() => {
-  const blockUiElement = (blockUiRef.value as unknown as { $el: HTMLElement })?.$el;
+  const safeBlockUiElement = (safeBlockUiRef.value as unknown as { $el: HTMLElement })?.$el;
 
   // Make ourselves the active instance.
 
@@ -911,8 +914,8 @@ vue.onMounted(() => {
   setTimeout(() => {
     const toastElement = document.getElementById(toastId.value);
 
-    if (toastElement && blockUiElement && toastElement.parentElement !== blockUiElement) {
-      blockUiElement.appendChild(toastElement);
+    if (toastElement && safeBlockUiElement && toastElement.parentElement !== safeBlockUiElement) {
+      safeBlockUiElement.appendChild(toastElement);
     }
   }, SHORT_DELAY);
 });
@@ -928,10 +931,14 @@ vue.onMounted(() => {
 
   void vue.nextTick(() => {
     const mainMenuElement = (mainMenuRef.value as unknown as { $el: HTMLElement })?.$el;
-    const blockUiElement = (blockUiRef.value as unknown as { $el: HTMLElement })?.$el;
+    const safeBlockUiElement = (safeBlockUiRef.value as unknown as { $el: HTMLElement })?.$el;
 
-    if (mainMenuElement && blockUiElement) {
-      stopTrackingMainMenuHeight = vueCommon.trackElementHeight(mainMenuElement, blockUiElement, '--main-menu-height');
+    if (mainMenuElement && safeBlockUiElement) {
+      stopTrackingMainMenuHeight = vueCommon.trackElementHeight(
+        mainMenuElement,
+        safeBlockUiElement,
+        '--main-menu-height'
+      );
     }
   });
 });
