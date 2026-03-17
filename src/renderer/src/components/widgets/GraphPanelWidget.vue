@@ -53,6 +53,10 @@ export interface IGraphPanelMargins {
   right: number;
 }
 
+const sameMargins = (firstMargins: IGraphPanelMargins | undefined, secondMargins: IGraphPanelMargins): boolean => {
+  return firstMargins?.left === secondMargins.left && firstMargins?.right === secondMargins.right;
+};
+
 const props = withDefaults(
   defineProps<{
     data: IGraphPanelData;
@@ -118,6 +122,7 @@ let plotIsReady = false;
 let resizeQueued = false;
 let trackedWidth = 0;
 let trackedHeight = 0;
+let trackedMargins: IGraphPanelMargins | undefined;
 let stopTrackingContainerSize: (() => void) | undefined;
 
 // Context menu functionality.
@@ -522,9 +527,18 @@ const resolvedMargin = (propValue: number | undefined, compValue: number): numbe
 };
 
 const compMargins = (): IGraphPanelMargins => {
+  const mainDiv = mainDivRef.value;
+
+  if (!mainDiv) {
+    return {
+      left: 0,
+      right: 0
+    };
+  }
+
   // Retrieve the width of the Y ticks.
 
-  const yTicks = mainDivRef.value?.querySelectorAll('.ytick text');
+  const yTicks = mainDiv.querySelectorAll('.ytick text');
   let yTicksWidth = 0;
 
   if (yTicks?.length) {
@@ -535,9 +549,7 @@ const compMargins = (): IGraphPanelMargins => {
 
   // Retrieve the width of the Y Axis title.
 
-  const yTitleWidth = props.data.yAxisTitle
-    ? mainDivRef.value?.querySelector('.ytitle')?.getBoundingClientRect()?.width || 0
-    : 0;
+  const yTitleWidth = props.data.yAxisTitle ? mainDiv.querySelector('.ytitle')?.getBoundingClientRect()?.width || 0 : 0;
 
   // Compute the final left margin.
 
@@ -551,10 +563,10 @@ const compMargins = (): IGraphPanelMargins => {
   let rightMargin = 0;
 
   if (props.showLegend) {
-    rightMargin = mainDivRef.value?.querySelector('.legend')?.getBoundingClientRect()?.width || 0;
+    rightMargin = mainDiv.querySelector('.legend')?.getBoundingClientRect()?.width || 0;
   }
 
-  const xTicks = mainDivRef.value?.querySelectorAll('.xtick text');
+  const xTicks = mainDiv.querySelectorAll('.xtick text');
 
   if (xTicks?.length) {
     const lastTick = xTicks[xTicks.length - 1] as HTMLElement;
@@ -587,7 +599,11 @@ const updateMarginsAsync = (): void => {
   requestAnimationFrame(() => {
     const newMargins = compMargins();
 
-    emit('marginsUpdated', newMargins);
+    if (!sameMargins(trackedMargins, newMargins)) {
+      trackedMargins = newMargins;
+
+      emit('marginsUpdated', newMargins);
+    }
 
     // Update our margins if they have changed.
 
@@ -616,6 +632,8 @@ const updateMarginsAsync = (): void => {
 };
 
 const updatePlot = (): void => {
+  plotIsReady = false;
+
   // Reset our margins if they are not overridden.
 
   if (!props.margins) {
@@ -770,7 +788,7 @@ vue.watch(
   () => theme.useLightMode(),
   () => {
     vue.nextTick(() => {
-      if (mainDivRef.value) {
+      if (plotIsReady && mainDivRef.value) {
         dependencies._plotlyJs.relayout(mainDivRef.value, {
           ...themeData(),
           ...axesData()
@@ -786,7 +804,7 @@ vue.watch(
   () => {
     vue
       .nextTick(() => {
-        if (mainDivRef.value) {
+        if (plotIsReady && mainDivRef.value) {
           return dependencies._plotlyJs.relayout(mainDivRef.value, {
             'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
             'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
@@ -806,7 +824,7 @@ vue.watch(
   () => props.showLegend,
   () => {
     vue.nextTick(() => {
-      if (mainDivRef.value) {
+      if (plotIsReady && mainDivRef.value) {
         dependencies._plotlyJs
           .relayout(mainDivRef.value, {
             showlegend: props.showLegend
