@@ -7,6 +7,8 @@
 </template>
 
 <script setup lang="ts">
+import * as vueusecore from '@vueuse/core';
+
 import ContextMenu from 'primevue/contextmenu';
 import type { MenuItem } from 'primevue/menuitem';
 import * as vue from 'vue';
@@ -69,16 +71,35 @@ const emit = defineEmits<{
   (event: 'resetMargins'): void;
 }>();
 
+const trackSize = (): void => {
+  trackedWidth = mainDivRef.value?.clientWidth || 0;
+  trackedHeight = mainDivRef.value?.clientHeight || 0;
+};
+
+const queueResize = (): void => {
+  if (resizeQueued) {
+    return;
+  }
+
+  resizeQueued = true;
+
+  requestAnimationFrame(() => {
+    resizeQueued = false;
+
+    resize();
+  });
+};
+
 const resize = (): Promise<unknown> => {
-  return Promise.resolve()
-    .then(() => {
-      if (mainDivRef.value) {
-        dependencies._plotlyJs.Plots.resize(mainDivRef.value);
-      }
-    })
-    .then(() => {
-      updateMarginsAsync();
-    });
+  if (!mainDivRef.value || !plotIsReady) {
+    return Promise.resolve();
+  }
+
+  return Promise.resolve(dependencies._plotlyJs.Plots.resize(mainDivRef.value)).then(() => {
+    trackSize();
+
+    updateMarginsAsync();
+  });
 };
 
 defineExpose({
@@ -91,8 +112,13 @@ const isVisible = vue.ref(false);
 const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
-let updatingMargins = false;
 const progressMessage = vue.inject<IProgressMessage>('progressMessage');
+let updatingMargins = false;
+let plotIsReady = false;
+let resizeQueued = false;
+let trackedWidth = 0;
+let trackedHeight = 0;
+let stopTrackingContainerSize: (() => void) | undefined;
 
 // Context menu functionality.
 
@@ -634,6 +660,8 @@ const updatePlot = (): void => {
       }
     )
     .then(() => {
+      plotIsReady = true;
+
       if (!isVisible.value) {
         // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
 
@@ -641,6 +669,8 @@ const updatePlot = (): void => {
       }
     })
     .then(() => {
+      trackSize();
+
       if (!isVisible.value) {
         // Show the component now that the plot has been properly sized.
 
@@ -675,6 +705,32 @@ const handleContextMenu = (event: Event): void => {
 vue.onMounted(() => {
   window.addEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
 
+  const { stop } = vueusecore.useResizeObserver(
+    mainDivRef,
+    () => {
+      const width = mainDivRef.value?.clientWidth || 0;
+      const height = mainDivRef.value?.clientHeight || 0;
+
+      if (!plotIsReady || width <= 0 || height <= 0) {
+        return;
+      }
+
+      if (width === trackedWidth && height === trackedHeight) {
+        return;
+      }
+
+      trackedWidth = width;
+      trackedHeight = height;
+
+      queueResize();
+    },
+    {
+      box: 'border-box'
+    }
+  );
+
+  stopTrackingContainerSize = stop;
+
   vue.nextTick(() => {
     // Reset our margins on double-click and relayout.
 
@@ -696,6 +752,8 @@ vue.onMounted(() => {
 
 vue.onUnmounted(() => {
   window.removeEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
+
+  stopTrackingContainerSize?.();
 });
 
 vue.watch(
