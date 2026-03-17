@@ -1,5 +1,5 @@
 <template>
-  <SafeBlockUI ref="safeBlockUiRef" class="opencor overflow-hidden h-full" :class="isFullWebApp ? 'with-main-menu' : ''"
+  <SafeBlockUI ref="safeBlockUiRef" class="opencor" :class="isFullWebApp ? 'with-main-menu' : ''"
     :blocked="compBlockUiEnabled"
     @click="activateInstance"
     @focus="activateInstance"
@@ -1254,6 +1254,11 @@ const onGitHubButtonClick = async (): Promise<void> => {
     border-color: var(--p-red-700) !important;
     color: var(--p-red-200);
   }
+}
+
+.opencor {
+  height: 100%;
+  overflow: hidden;
 }
 
 :deep(.p-overlay-mask) {

@@ -4,8 +4,6 @@ import { ZIndex } from '@primeuix/utils/zindex';
 import BlockUI from 'primevue/blockui';
 import * as vue from 'vue';
 
-declare const __OPENCOR_DEV__: boolean;
-
 // This component is a wrapper around PrimeVue's BlockUI. It provides a safe implementation of the block and unblock
 // methods that ensure that we don't attempt to block if we are already blocked, and that we properly remove the mask
 // when unblocking. This is necessary because PrimeVue's BlockUI does not account for the case where multiple block
@@ -37,20 +35,6 @@ export default vue.defineComponent({
 
     const instance = vue.getCurrentInstance();
     const self = instance?.proxy as unknown as BlockUISafeInstance;
-
-    // Confirm that the version of PrimeVue we are using is compatible with our implementation.
-
-    if (typeof __OPENCOR_DEV__ !== 'undefined' && __OPENCOR_DEV__) {
-      const EXPECTED_PRIMEVUE_VERSION = '4.2.5';
-
-      import('../../../../../node_modules/primevue/package.json').then(({ default: primeVuePkg }) => {
-        if (primeVuePkg.version !== EXPECTED_PRIMEVUE_VERSION) {
-          throw new Error(
-            `SafeBlockUI is designed to work with PrimeVue version ${EXPECTED_PRIMEVUE_VERSION}, but the current version is ${primeVuePkg.version}. Please check if there are any changes to the BlockUI component that might affect our implementation.`
-          );
-        }
-      });
-    }
 
     const block = (): void => {
       // Don't attempt to block if we are already blocked.

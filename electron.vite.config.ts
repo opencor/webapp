@@ -27,10 +27,6 @@ export default electronVite.defineConfig({
     build: {
       target: 'esnext'
     },
-    define: {
-      __OPENCOR_DEV__:
-        ((process as unknown as { env?: { NODE_ENV?: string } }).env?.NODE_ENV ?? 'development') !== 'production'
-    },
     envDir: path.join(import.meta.dirname, 'src/renderer'),
     optimizeDeps: {
       esbuildOptions: {

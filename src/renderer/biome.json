@@ -10,11 +10,15 @@
   "formatter": {
     "includes": ["**"],
     "indentStyle": "space",
-    "lineWidth": 120
+    "lineWidth": 120,
+    "formatWithErrors": true
   },
   "css": {
     "formatter": {
       "enabled": true
+    },
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "html": {

@@ -1,17 +1,19 @@
 <template>
-  <div class="h-full flex flex-col">
-    <div class="flex p-2 space-x-2 justify-center">
-      <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(voi) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(voi)">VOI</button>
-      <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(mainT) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(mainT)">main/t</button>
-      <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(mainXYZ) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(mainXYZ)">main/xyz</button>
-      <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(unknown) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(unknown)">unknown</button>
-      <button class="flex-1 px-4 py-2 rounded bg-red-600 disabled:opacity-50 text-center cursor-pointer disabled:cursor-default" :disabled="!simulationDataTracked.length" @click="untrackAllModelParameters">All</button>
-    </div>
-    <div class="flex flex-1">
-      <OpenCOR class="flex-1" ref="opencorRef"
-        omex="https://raw.githubusercontent.com/opencor/webapp/refs/heads/main/tests/models/ui/lorenz.omex"
-        @simulationData="onSimulationData"
-      />
+  <div class="opencor" style="height: 100vh; height: 100dvh;">
+    <div class="h-full flex flex-col">
+      <div class="flex p-2 space-x-2 justify-center">
+        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(voi) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(voi)">VOI</button>
+        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(mainT) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(mainT)">main/t</button>
+        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(mainXYZ) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(mainXYZ)">main/xyz</button>
+        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(unknown) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(unknown)">unknown</button>
+        <button class="flex-1 px-4 py-2 rounded bg-red-600 disabled:opacity-50 text-center cursor-pointer disabled:cursor-default" :disabled="!simulationDataTracked.length" @click="untrackAllModelParameters">All</button>
+      </div>
+      <div class="flex flex-1">
+        <OpenCOR class="flex-1" ref="opencorRef"
+          omex="https://raw.githubusercontent.com/opencor/webapp/refs/heads/main/tests/models/ui/lorenz.omex"
+          @simulationData="onSimulationData"
+        />
+      </div>
     </div>
   </div>
 </template>
