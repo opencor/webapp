@@ -2,6 +2,7 @@ import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
 import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
 
+import * as postcss from 'postcss';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
@@ -53,71 +54,30 @@ export default vite.defineConfig({
       generateBundle(_options, bundle) {
         for (const asset of Object.values(bundle)) {
           if (asset.type === 'asset' && typeof asset.source === 'string' && asset.fileName.endsWith('.css')) {
-            // Process @layer blocks: strip base, unwrap others.
+            // Process @layer blocks through a CSS AST:
+            //  1. Remove @layer base blocks;
+            //  2. Unwrap remaining @layer blocks; and
+            //  3. Remove bare @layer ordering declarations.
 
-            const processLayers = (source: string): string => {
-              const layerBlockRegEx = /@layer\s+([\w-]+)\s*\{/g;
-              let res = '';
-              let pos = 0;
+            const root = postcss.parse(asset.source);
 
-              for (;;) {
-                layerBlockRegEx.lastIndex = pos;
+            root.walkAtRules('layer', (atRule) => {
+              if (!atRule.nodes || atRule.nodes.length === 0) {
+                atRule.remove();
 
-                const match = layerBlockRegEx.exec(source);
-
-                if (!match) {
-                  res += source.slice(pos);
-
-                  break;
-                }
-
-                const layerName = match[1] ?? '';
-                const start = match.index;
-                const contentStart = start + match[0].length;
-
-                // Scan forward to find the matching closing brace.
-
-                let depth = 1;
-                let i = contentStart;
-
-                while (i < source.length && depth > 0) {
-                  if (source[i] === '{') {
-                    ++depth;
-                  } else if (source[i] === '}') {
-                    --depth;
-                  }
-
-                  ++i;
-                }
-
-                const end = i; // One past the closing '}'.
-
-                // Append everything before this @layer block unchanged.
-
-                res += source.slice(pos, start);
-
-                if (layerName !== 'base') {
-                  // Unwrap: keep content, remove @layer wrapper.
-                  // Note: we recurse so any nested @layer blocks are also processed.
-
-                  res += processLayers(source.slice(contentStart, end - 1));
-                }
-
-                // 'base' is stripped entirely (no append).
-
-                pos = end;
+                return;
               }
 
-              return res;
-            };
+              if (atRule.params.trim() === 'base') {
+                atRule.remove();
 
-            let css = processLayers(asset.source);
+                return;
+              }
 
-            // Remove bare @layer ordering declarations (e.g., "@layer base, components;").
+              atRule.replaceWith(...atRule.nodes);
+            });
 
-            css = css.replace(/@layer\s+[\w\s,-]+;/g, '');
-
-            asset.source = css;
+            asset.source = root.toString();
           }
         }
       }
