@@ -1,10 +1,18 @@
+/* stylelint-disable at-rule-no-unknown, no-invalid-position-at-import-rule */
 @config "../../tailwind.config.ts";
 
 @layer theme, base, components, utilities;
 
+/* biome-ignore lint/correctness/noInvalidPositionAtImportRule: ignored using `--suppress` */
 @import "tailwindcss/theme.css" layer(theme);
+
+/* biome-ignore lint/correctness/noInvalidPositionAtImportRule: ignored using `--suppress` */
 @import "tailwindcss/utilities.css" layer(utilities);
+
+/* biome-ignore lint/correctness/noInvalidPositionAtImportRule: ignored using `--suppress` */
 @import "tailwindcss-primeui";
+
+/* biome-ignore lint/correctness/noInvalidPositionAtImportRule: ignored using `--suppress` */
 @import "primeicons/primeicons.css";
 
 body {
