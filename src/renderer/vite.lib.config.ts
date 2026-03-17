@@ -31,6 +31,10 @@ export default vite.defineConfig({
     },
     target: 'esnext'
   },
+  define: {
+    __OPENCOR_DEV__:
+      ((process as unknown as { env?: { NODE_ENV?: string } }).env?.NODE_ENV ?? 'development') !== 'production'
+  },
   optimizeDeps: {
     esbuildOptions: {
       target: 'esnext'
