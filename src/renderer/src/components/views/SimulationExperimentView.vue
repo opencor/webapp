@@ -255,6 +255,7 @@ import * as dependencies from '../../common/dependencies.ts';
 import * as locCommon from '../../common/locCommon.ts';
 import * as locApi from '../../libopencor/locApi.ts';
 import * as locSedApi from '../../libopencor/locSedApi.ts';
+import * as math from '../../common/math.ts';
 
 import type { ISimulationExperimentViewSettings } from '../dialogs/SimulationExperimentViewSettingsDialog.vue';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
@@ -424,7 +425,9 @@ const onDownloadCombineArchive = (): void => {
 
 const populateInputProperties = (currentUiJson: locApi.IUiJson) => {
   interactiveInputValues.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue);
-  interactiveShowInput.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true');
+  interactiveShowInput.value = currentUiJson.input.map(
+    (input: locApi.IUiJsonInput) => (input.visible ?? 'true') !== 'false'
+  );
 
   Object.keys(interactiveIdToInfo).forEach((key) => {
     delete interactiveIdToInfo[key];
@@ -564,7 +567,7 @@ const interactiveUiJsonEmpty = vue.computed<boolean>(() => {
 
   return false;
 });
-const interactiveMath = dependencies._mathJs.create(dependencies._mathJs.all, {});
+const interactiveMath = new math.Float64ArrayMath();
 const interactiveModel = interactiveDocument.model(0);
 const interactiveLiveData = vue.ref<IGraphPanelData[]>([]);
 let interactiveMargins: Record<string, IGraphPanelMargins> = {};
@@ -572,7 +575,7 @@ const interactiveCompMargins = vue.ref<IGraphPanelMargins>();
 const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(locApi.validateUiJson(interactiveUiJson.value));
 const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
 const interactiveInputValues = vue.ref<number[]>([]);
-const interactiveShowInput = vue.ref<string[]>([]);
+const interactiveShowInput = vue.ref<boolean[]>([]);
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 const interactiveRuns = vue.ref<ISimulationRun[]>([
   {
@@ -726,102 +729,12 @@ if (interactiveInstanceTask) {
 
 populateInputProperties(interactiveUiJson.value);
 
-// Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
-
-const value = (v: unknown, i: number): number => {
-  return Array.isArray(v) ? v[i] : Number(v);
-};
-
-interactiveMath.import(
-  {
-    // Arithmetic operators.
-
-    pow: (x: number[], y: unknown) => x.map((v: number, i: number) => v ** value(y, i)),
-    sqrt: (x: number[]) => x.map((v: number) => Math.sqrt(v)),
-    abs: (x: number[]) => x.map((v: number) => Math.abs(v)),
-    exp: (x: number[]) => x.map((v: number) => Math.exp(v)),
-    log: (x: number[]) => x.map((v: number) => Math.log(v)),
-    log10: (x: number[]) => x.map((v: number) => Math.log10(v)),
-    ceil: (x: number[]) => x.map((v: number) => Math.ceil(v)),
-    floor: (x: number[]) => x.map((v: number) => Math.floor(v)),
-    min: (x: number[], y: unknown) => x.map((v: number, i: number) => Math.min(v, value(y, i))),
-    max: (x: number[], y: unknown) => x.map((v: number, i: number) => Math.max(v, value(y, i))),
-    mod: (x: number[], y: unknown) => x.map((v: number, i: number) => v % value(y, i)),
-
-    // // Trigonometric operators.
-
-    sin: (x: number[]) => x.map((v: number) => Math.sin(v)),
-    cos: (x: number[]) => x.map((v: number) => Math.cos(v)),
-    tan: (x: number[]) => x.map((v: number) => Math.tan(v)),
-    sinh: (x: number[]) => x.map((v: number) => Math.sinh(v)),
-    cosh: (x: number[]) => x.map((v: number) => Math.cosh(v)),
-    tanh: (x: number[]) => x.map((v: number) => Math.tanh(v)),
-    asin: (x: number[]) => x.map((v: number) => Math.asin(v)),
-    acos: (x: number[]) => x.map((v: number) => Math.acos(v)),
-    atan: (x: number[]) => x.map((v: number) => Math.atan(v)),
-    asinh: (x: number[]) => x.map((v: number) => Math.asinh(v)),
-    acosh: (x: number[]) => x.map((v: number) => Math.acosh(v)),
-    atanh: (x: number[]) => x.map((v: number) => Math.atanh(v))
-  },
-  { override: true }
-);
-
-const NON_ELEMENTWISE_MULTIPLY_REGEX = /(?<!\.)\*(?!\.)/g;
-const NON_ELEMENTWISE_DIVIDE_REGEX = /(?<!\.)\/(?!\.)/g;
-
-// Check whether our plot expressions contain multiplications and/or divisions.
-// Note: libOpenCOR now returns `Float64Array`s which is very efficient, but Math.js dot multiplications and divisions
-//       don't support them. So, we need to convert our data to `number[]`s whenever one of our expressions has
-//       multiplications and/or divisions. This is not ideal, but we have no choice if we want to plot things like
-//       `t*sin(t)*x`. Still, most of the time, people will likely just plot `x` and that will be as fast as it can be.
-
-const containsMultiplicationsOrDivisions = vue.computed<boolean>(() => {
-  const plots = interactiveUiJson.value.output.plots;
-
-  for (let i = 0; i < plots.length; ++i) {
-    const plot = plots[i];
-
-    if (plot) {
-      if (
-        plot.xValue.includes('*') ||
-        plot.xValue.includes('/') ||
-        plot.yValue.includes('*') ||
-        plot.yValue.includes('/')
-      ) {
-        return true;
-      }
-
-      const additionalTraces = plot.additionalTraces;
-
-      if (additionalTraces) {
-        for (let j = 0; j < additionalTraces.length; ++j) {
-          const additionalTrace = additionalTraces[j];
-
-          if (
-            additionalTrace &&
-            (additionalTrace.xValue.includes('*') ||
-              additionalTrace.xValue.includes('/') ||
-              additionalTrace.yValue.includes('*') ||
-              additionalTrace.yValue.includes('/'))
-          ) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-
-  return false;
-});
-
-// Cache for normalised plot expressions.
-
-const normalisedExpressionCache = new Map<string, string>();
+// Watch for changes to our UI JSON and reset the compiled expressions when it changes.
 
 vue.watch(
   () => interactiveUiJson.value,
   () => {
-    normalisedExpressionCache.clear();
+    interactiveMath.resetCompiledExpressions();
   },
   { deep: true }
 );
@@ -835,15 +748,15 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Create a parser with the current input values as variables.
+  // Create a scope using the current input values.
 
-  const parser = interactiveMath.parser();
+  const scope: math.ExpressionScope = {};
 
   for (let index = 0; index < interactiveUiJson.value.input.length; ++index) {
     const input = interactiveUiJson.value.input[index];
 
     if (input) {
-      parser.set(input.id, interactiveInputValues.value[index]);
+      scope[input.id] = interactiveInputValues.value[index];
     }
   }
 
@@ -853,7 +766,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     const input = interactiveUiJson.value.input[index];
 
     if (input) {
-      interactiveShowInput.value[index] = parser.evaluate(input.visible ?? 'true') as string;
+      interactiveShowInput.value[index] = Boolean(interactiveMath.evaluate(input.visible ?? 'true', scope));
     }
   }
 
@@ -876,7 +789,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         interactiveModel.addChange(
           componentVariableNames[0],
           componentVariableNames[1],
-          String(parser.evaluate(parameter.value))
+          String(interactiveMath.evaluate(parameter.value, scope))
         );
       } catch (error: unknown) {
         interactiveInstanceIssues.value.push({
@@ -907,67 +820,111 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Configure our parser to have the simulation data as variables, so that the plot expressions can refer to them.
+  // Update our scope with the latest simulation data.
 
   for (const data of interactiveUiJson.value.output.data) {
     const info = interactiveIdToInfo[data.id];
 
     if (info && interactiveInstanceTask) {
-      const simulationDataValue = locCommon.simulationDataValue(interactiveInstanceTask, info);
-
-      parser.set(
-        data.id,
-        containsMultiplicationsOrDivisions.value ? Array.from(simulationDataValue.data) : simulationDataValue.data
-      );
+      scope[data.id] = locCommon.simulationDataValue(interactiveInstanceTask, info).data;
     } else {
-      parser.set(data.id, containsMultiplicationsOrDivisions.value ? [] : common.EMPTY_FLOAT64_ARRAY);
+      scope[data.id] = common.EMPTY_FLOAT64_ARRAY;
     }
   }
 
   // Evaluate the plot expressions to get the data to display.
 
-  const parserEvaluate = containsMultiplicationsOrDivisions.value
-    ? (expression: string): Float64Array => {
-        let normalisedExpression = normalisedExpressionCache.get(expression);
+  const evaluate = (expression: string): Float64Array => {
+    const res = interactiveMath.evaluate(expression, scope);
 
-        if (!normalisedExpression) {
-          normalisedExpression = expression
-            .replace(NON_ELEMENTWISE_MULTIPLY_REGEX, '.*')
-            .replace(NON_ELEMENTWISE_DIVIDE_REGEX, './');
-          // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure
-          //       element-wise operations.
+    if (typeof res === 'boolean') {
+      return new Float64Array([res ? 1 : 0]);
+    }
 
-          normalisedExpressionCache.set(expression, normalisedExpression);
-        }
+    if (typeof res === 'number') {
+      return new Float64Array([res]);
+    }
 
-        return Float64Array.from(parser.evaluate(normalisedExpression));
-      }
-    : (expression: string): Float64Array => {
-        return parser.evaluate(expression);
+    return res;
+  };
+
+  const normaliseFloat64Arrays = (x: Float64Array, y: Float64Array): { x: Float64Array; y: Float64Array } => {
+    // Return the arrays as they are if they are of the same length.
+
+    if (x.length === y.length) {
+      return {
+        x,
+        y
       };
+    }
+
+    // If one of the arrays is of length 1, broadcast it to the length of the other array.
+
+    if (x.length === 1 && y.length > 1) {
+      const value = x[0];
+      const broadcastX = new Float64Array(y.length);
+
+      broadcastX.fill(value);
+
+      return {
+        x: broadcastX,
+        y
+      };
+    }
+
+    if (y.length === 1 && x.length > 1) {
+      const value = y[0];
+      const broadcastY = new Float64Array(x.length);
+
+      broadcastY.fill(value);
+
+      return {
+        x,
+        y: broadcastY
+      };
+    }
+
+    // We can't reconcile the lengths of these arrays, so fall back to the minimum length, which preserves as many valid
+    // (x, y) pairs as possible.
+
+    const minLength = Math.min(x.length, y.length);
+
+    return {
+      x: x.slice(0, minLength),
+      y: y.slice(0, minLength)
+    };
+  };
 
   try {
     const newInteractiveData: IGraphPanelData[] = [];
 
     for (const plot of interactiveUiJson.value.output.plots) {
+      const xMain = evaluate(plot.xValue);
+      const yMain = evaluate(plot.yValue);
+      const normalisedMain = normaliseFloat64Arrays(xMain, yMain);
+
       const traces: IGraphPanelPlotTrace[] = [
         {
           name: traceName(plot.name, plot.xValue, plot.yValue),
           xValue: plot.xValue,
-          x: parserEvaluate(plot.xValue),
+          x: normalisedMain.x,
           yValue: plot.yValue,
-          y: parserEvaluate(plot.yValue),
+          y: normalisedMain.y,
           color: colors.DEFAULT_COLOR
         }
       ];
 
       for (const additionalTrace of plot.additionalTraces ?? []) {
+        const xAdditional = evaluate(additionalTrace.xValue);
+        const yAdditional = evaluate(additionalTrace.yValue);
+        const normalisedAdditional = normaliseFloat64Arrays(xAdditional, yAdditional);
+
         traces.push({
           name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
           xValue: additionalTrace.xValue,
-          x: parserEvaluate(additionalTrace.xValue),
+          x: normalisedAdditional.x,
           yValue: additionalTrace.yValue,
-          y: parserEvaluate(additionalTrace.yValue),
+          y: normalisedAdditional.y,
           color: colors.DEFAULT_COLOR
         });
       }
