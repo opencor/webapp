@@ -726,104 +726,125 @@ if (interactiveInstanceTask) {
 
 populateInputProperties(interactiveUiJson.value);
 
-// Import some element-wise functions to allow sin(array) instead of map(array, sin), for instance.
+// Override Math.js operators and functions so that they natively handle plain numbers as well as Float64Array
+// (element-wise).
+// Note: this avoids the need to convert Float64Array to number[] before evaluation and back afterwards.
 
-const value = (v: unknown, i: number): number => {
-  return Array.isArray(v) ? v[i] : Number(v);
-};
+type NumberOfFloat64Array = number | Float64Array;
 
-interactiveMath.import(
-  {
-    // Arithmetic operators.
+const float64ArrayBinaryOperator = (
+  a: NumberOfFloat64Array,
+  b: NumberOfFloat64Array,
+  fn: (a: number, b: number) => number
+): NumberOfFloat64Array => {
+  if (a instanceof Float64Array) {
+    const len = a.length;
+    const res = new Float64Array(len);
 
-    pow: (x: number[], y: unknown) => x.map((v: number, i: number) => v ** value(y, i)),
-    sqrt: (x: number[]) => x.map((v: number) => Math.sqrt(v)),
-    abs: (x: number[]) => x.map((v: number) => Math.abs(v)),
-    exp: (x: number[]) => x.map((v: number) => Math.exp(v)),
-    log: (x: number[]) => x.map((v: number) => Math.log(v)),
-    log10: (x: number[]) => x.map((v: number) => Math.log10(v)),
-    ceil: (x: number[]) => x.map((v: number) => Math.ceil(v)),
-    floor: (x: number[]) => x.map((v: number) => Math.floor(v)),
-    min: (x: number[], y: unknown) => x.map((v: number, i: number) => Math.min(v, value(y, i))),
-    max: (x: number[], y: unknown) => x.map((v: number, i: number) => Math.max(v, value(y, i))),
-    mod: (x: number[], y: unknown) => x.map((v: number, i: number) => v % value(y, i)),
-
-    // // Trigonometric operators.
-
-    sin: (x: number[]) => x.map((v: number) => Math.sin(v)),
-    cos: (x: number[]) => x.map((v: number) => Math.cos(v)),
-    tan: (x: number[]) => x.map((v: number) => Math.tan(v)),
-    sinh: (x: number[]) => x.map((v: number) => Math.sinh(v)),
-    cosh: (x: number[]) => x.map((v: number) => Math.cosh(v)),
-    tanh: (x: number[]) => x.map((v: number) => Math.tanh(v)),
-    asin: (x: number[]) => x.map((v: number) => Math.asin(v)),
-    acos: (x: number[]) => x.map((v: number) => Math.acos(v)),
-    atan: (x: number[]) => x.map((v: number) => Math.atan(v)),
-    asinh: (x: number[]) => x.map((v: number) => Math.asinh(v)),
-    acosh: (x: number[]) => x.map((v: number) => Math.acosh(v)),
-    atanh: (x: number[]) => x.map((v: number) => Math.atanh(v))
-  },
-  { override: true }
-);
-
-const NON_ELEMENTWISE_MULTIPLY_REGEX = /(?<!\.)\*(?!\.)/g;
-const NON_ELEMENTWISE_DIVIDE_REGEX = /(?<!\.)\/(?!\.)/g;
-
-// Check whether our plot expressions contain multiplications and/or divisions.
-// Note: libOpenCOR now returns `Float64Array`s which is very efficient, but Math.js dot multiplications and divisions
-//       don't support them. So, we need to convert our data to `number[]`s whenever one of our expressions has
-//       multiplications and/or divisions. This is not ideal, but we have no choice if we want to plot things like
-//       `t*sin(t)*x`. Still, most of the time, people will likely just plot `x` and that will be as fast as it can be.
-
-const containsMultiplicationsOrDivisions = vue.computed<boolean>(() => {
-  const plots = interactiveUiJson.value.output.plots;
-
-  for (let i = 0; i < plots.length; ++i) {
-    const plot = plots[i];
-
-    if (plot) {
-      if (
-        plot.xValue.includes('*') ||
-        plot.xValue.includes('/') ||
-        plot.yValue.includes('*') ||
-        plot.yValue.includes('/')
-      ) {
-        return true;
+    if (b instanceof Float64Array) {
+      for (let i = 0; i < len; ++i) {
+        res[i] = fn(a[i], b[i]);
       }
+    } else {
+      const bNumber = b as number;
 
-      const additionalTraces = plot.additionalTraces;
-
-      if (additionalTraces) {
-        for (let j = 0; j < additionalTraces.length; ++j) {
-          const additionalTrace = additionalTraces[j];
-
-          if (
-            additionalTrace &&
-            (additionalTrace.xValue.includes('*') ||
-              additionalTrace.xValue.includes('/') ||
-              additionalTrace.yValue.includes('*') ||
-              additionalTrace.yValue.includes('/'))
-          ) {
-            return true;
-          }
-        }
+      for (let i = 0; i < len; ++i) {
+        res[i] = fn(a[i], bNumber);
       }
     }
+
+    return res;
   }
 
-  return false;
-});
+  if (b instanceof Float64Array) {
+    const aNumber = a as number;
+    const len = b.length;
+    const res = new Float64Array(len);
 
-// Cache for normalised plot expressions.
+    for (let i = 0; i < len; ++i) {
+      res[i] = fn(aNumber, b[i]);
+    }
 
-const normalisedExpressionCache = new Map<string, string>();
+    return res;
+  }
+
+  return fn(a as number, b as number);
+};
+
+const float64ArrayUnaryOperator = (x: NumberOfFloat64Array, fn: (v: number) => number): NumberOfFloat64Array => {
+  return x instanceof Float64Array ? x.map(fn) : fn(x as number);
+};
+
+const ELEMENTWISE_MULTIPLY_REGEX = /\.\*/g;
+const ELEMENTWISE_DIVIDE_REGEX = /\.\//g;
+const ELEMENTWISE_POWER_REGEX = /\.\^/g;
+const compiledExpressionCache = new Map<string, ReturnType<typeof interactiveMath.compile>>();
 
 vue.watch(
   () => interactiveUiJson.value,
   () => {
-    normalisedExpressionCache.clear();
+    compiledExpressionCache.clear();
   },
   { deep: true }
+);
+
+const compiledExpression = (expression: string): ReturnType<typeof interactiveMath.compile> => {
+  let compiled = compiledExpressionCache.get(expression);
+
+  if (!compiled) {
+    compiled = interactiveMath.compile(
+      expression
+        .replace(ELEMENTWISE_MULTIPLY_REGEX, '*')
+        .replace(ELEMENTWISE_DIVIDE_REGEX, '/')
+        .replace(ELEMENTWISE_POWER_REGEX, '^')
+    );
+
+    compiledExpressionCache.set(expression, compiled);
+  }
+
+  return compiled;
+};
+
+interactiveMath.import(
+  {
+    // Core arithmetic operators.
+
+    add: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x + y),
+    subtract: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x - y),
+    multiply: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x * y),
+    divide: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x / y),
+    pow: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x ** y),
+    mod: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x % y),
+    unaryMinus: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, (v) => -v),
+
+    // Math functions.
+
+    sqrt: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.sqrt),
+    abs: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.abs),
+    exp: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.exp),
+    log: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.log),
+    log10: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.log10),
+    ceil: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.ceil),
+    floor: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.floor),
+    min: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, Math.min),
+    max: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, Math.max),
+
+    // Trigonometric functions.
+
+    sin: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.sin),
+    cos: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.cos),
+    tan: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.tan),
+    sinh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.sinh),
+    cosh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.cosh),
+    tanh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.tanh),
+    asin: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.asin),
+    acos: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.acos),
+    atan: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.atan),
+    asinh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.asinh),
+    acosh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.acosh),
+    atanh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.atanh)
+  },
+  { override: true }
 );
 
 // Function to update our interactive simulation.
@@ -853,7 +874,9 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     const input = interactiveUiJson.value.input[index];
 
     if (input) {
-      interactiveShowInput.value[index] = parser.evaluate(input.visible ?? 'true') as string;
+      interactiveShowInput.value[index] = compiledExpression(input.visible ?? 'true').evaluate(
+        parser.getAll()
+      ) as string;
     }
   }
 
@@ -876,7 +899,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         interactiveModel.addChange(
           componentVariableNames[0],
           componentVariableNames[1],
-          String(parser.evaluate(parameter.value))
+          String(compiledExpression(parameter.value).evaluate(parser.getAll()))
         );
       } catch (error: unknown) {
         interactiveInstanceIssues.value.push({
@@ -913,38 +936,27 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     const info = interactiveIdToInfo[data.id];
 
     if (info && interactiveInstanceTask) {
-      const simulationDataValue = locCommon.simulationDataValue(interactiveInstanceTask, info);
-
-      parser.set(
-        data.id,
-        containsMultiplicationsOrDivisions.value ? Array.from(simulationDataValue.data) : simulationDataValue.data
-      );
+      parser.set(data.id, locCommon.simulationDataValue(interactiveInstanceTask, info).data);
     } else {
-      parser.set(data.id, containsMultiplicationsOrDivisions.value ? [] : common.EMPTY_FLOAT64_ARRAY);
+      parser.set(data.id, common.EMPTY_FLOAT64_ARRAY);
     }
   }
 
   // Evaluate the plot expressions to get the data to display.
 
-  const parserEvaluate = containsMultiplicationsOrDivisions.value
-    ? (expression: string): Float64Array => {
-        let normalisedExpression = normalisedExpressionCache.get(expression);
+  const parserEvaluate = (expression: string): Float64Array => {
+    const res = compiledExpression(expression).evaluate(parser.getAll());
 
-        if (!normalisedExpression) {
-          normalisedExpression = expression
-            .replace(NON_ELEMENTWISE_MULTIPLY_REGEX, '.*')
-            .replace(NON_ELEMENTWISE_DIVIDE_REGEX, './');
-          // Note: we replace `*` and `/` (but not `.*` and `./`) with `.*` and `./`, respectively, to ensure
-          //       element-wise operations.
+    if (res instanceof Float64Array) {
+      return res;
+    }
 
-          normalisedExpressionCache.set(expression, normalisedExpression);
-        }
+    if (typeof res === 'number') {
+      return new Float64Array([res]);
+    }
 
-        return Float64Array.from(parser.evaluate(normalisedExpression));
-      }
-    : (expression: string): Float64Array => {
-        return parser.evaluate(expression);
-      };
+    return new Float64Array(0);
+  };
 
   try {
     const newInteractiveData: IGraphPanelData[] = [];
