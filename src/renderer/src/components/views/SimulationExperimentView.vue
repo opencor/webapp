@@ -255,6 +255,7 @@ import * as dependencies from '../../common/dependencies.ts';
 import * as locCommon from '../../common/locCommon.ts';
 import * as locApi from '../../libopencor/locApi.ts';
 import * as locSedApi from '../../libopencor/locSedApi.ts';
+import * as math from '../../common/math.ts';
 
 import type { ISimulationExperimentViewSettings } from '../dialogs/SimulationExperimentViewSettingsDialog.vue';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
@@ -424,7 +425,9 @@ const onDownloadCombineArchive = (): void => {
 
 const populateInputProperties = (currentUiJson: locApi.IUiJson) => {
   interactiveInputValues.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.defaultValue);
-  interactiveShowInput.value = currentUiJson.input.map((input: locApi.IUiJsonInput) => input.visible ?? 'true');
+  interactiveShowInput.value = currentUiJson.input.map(
+    (input: locApi.IUiJsonInput) => (input.visible ?? 'true') !== 'false'
+  );
 
   Object.keys(interactiveIdToInfo).forEach((key) => {
     delete interactiveIdToInfo[key];
@@ -564,7 +567,7 @@ const interactiveUiJsonEmpty = vue.computed<boolean>(() => {
 
   return false;
 });
-const interactiveMath = dependencies._mathJs.create(dependencies._mathJs.all, {});
+const interactiveMath = new math.Float64ArrayMath();
 const interactiveModel = interactiveDocument.model(0);
 const interactiveLiveData = vue.ref<IGraphPanelData[]>([]);
 let interactiveMargins: Record<string, IGraphPanelMargins> = {};
@@ -572,7 +575,7 @@ const interactiveCompMargins = vue.ref<IGraphPanelMargins>();
 const interactiveUiJsonIssues = vue.ref<locApi.IIssue[]>(locApi.validateUiJson(interactiveUiJson.value));
 const interactiveInstanceIssues = vue.ref<locApi.IIssue[]>([]);
 const interactiveInputValues = vue.ref<number[]>([]);
-const interactiveShowInput = vue.ref<string[]>([]);
+const interactiveShowInput = vue.ref<boolean[]>([]);
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 const interactiveRuns = vue.ref<ISimulationRun[]>([
   {
@@ -726,125 +729,14 @@ if (interactiveInstanceTask) {
 
 populateInputProperties(interactiveUiJson.value);
 
-// Override Math.js operators and functions so that they natively handle plain numbers as well as Float64Array
-// (element-wise).
-// Note: this avoids the need to convert Float64Array to number[] before evaluation and back afterwards.
-
-type NumberOfFloat64Array = number | Float64Array;
-
-const float64ArrayBinaryOperator = (
-  a: NumberOfFloat64Array,
-  b: NumberOfFloat64Array,
-  fn: (a: number, b: number) => number
-): NumberOfFloat64Array => {
-  if (a instanceof Float64Array) {
-    const len = a.length;
-    const res = new Float64Array(len);
-
-    if (b instanceof Float64Array) {
-      for (let i = 0; i < len; ++i) {
-        res[i] = fn(a[i], b[i]);
-      }
-    } else {
-      const bNumber = b as number;
-
-      for (let i = 0; i < len; ++i) {
-        res[i] = fn(a[i], bNumber);
-      }
-    }
-
-    return res;
-  }
-
-  if (b instanceof Float64Array) {
-    const aNumber = a as number;
-    const len = b.length;
-    const res = new Float64Array(len);
-
-    for (let i = 0; i < len; ++i) {
-      res[i] = fn(aNumber, b[i]);
-    }
-
-    return res;
-  }
-
-  return fn(a as number, b as number);
-};
-
-const float64ArrayUnaryOperator = (x: NumberOfFloat64Array, fn: (v: number) => number): NumberOfFloat64Array => {
-  return x instanceof Float64Array ? x.map(fn) : fn(x as number);
-};
-
-const ELEMENTWISE_MULTIPLY_REGEX = /\.\*/g;
-const ELEMENTWISE_DIVIDE_REGEX = /\.\//g;
-const ELEMENTWISE_POWER_REGEX = /\.\^/g;
-const compiledExpressionCache = new Map<string, ReturnType<typeof interactiveMath.compile>>();
+// Watch for changes to our UI JSON and reset the compiled expressions when it changes.
 
 vue.watch(
   () => interactiveUiJson.value,
   () => {
-    compiledExpressionCache.clear();
+    interactiveMath.resetCompiledExpressions();
   },
   { deep: true }
-);
-
-const compiledExpression = (expression: string): ReturnType<typeof interactiveMath.compile> => {
-  let compiled = compiledExpressionCache.get(expression);
-
-  if (!compiled) {
-    compiled = interactiveMath.compile(
-      expression
-        .replace(ELEMENTWISE_MULTIPLY_REGEX, '*')
-        .replace(ELEMENTWISE_DIVIDE_REGEX, '/')
-        .replace(ELEMENTWISE_POWER_REGEX, '^')
-    );
-
-    compiledExpressionCache.set(expression, compiled);
-  }
-
-  return compiled;
-};
-
-interactiveMath.import(
-  {
-    // Core arithmetic operators.
-
-    add: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x + y),
-    subtract: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x - y),
-    multiply: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x * y),
-    divide: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x / y),
-    pow: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x ** y),
-    mod: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, (x, y) => x % y),
-    unaryMinus: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, (v) => -v),
-
-    // Math functions.
-
-    sqrt: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.sqrt),
-    abs: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.abs),
-    exp: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.exp),
-    log: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.log),
-    log10: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.log10),
-    ceil: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.ceil),
-    floor: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.floor),
-    min: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, Math.min),
-    max: (a: NumberOfFloat64Array, b: NumberOfFloat64Array) => float64ArrayBinaryOperator(a, b, Math.max),
-
-    // Trigonometric functions.
-
-    sin: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.sin),
-    cos: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.cos),
-    tan: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.tan),
-    sinh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.sinh),
-    cosh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.cosh),
-    tanh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.tanh),
-    asin: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.asin),
-    acos: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.acos),
-    atan: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.atan),
-    asinh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.asinh),
-    acosh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.acosh),
-    atanh: (x: NumberOfFloat64Array) => float64ArrayUnaryOperator(x, Math.atanh)
-  },
-  { override: true }
 );
 
 // Function to update our interactive simulation.
@@ -856,15 +748,15 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Create a parser with the current input values as variables.
+  // Create a scope using the current input values.
 
-  const parser = interactiveMath.parser();
+  const scope: math.ExpressionScope = {};
 
   for (let index = 0; index < interactiveUiJson.value.input.length; ++index) {
     const input = interactiveUiJson.value.input[index];
 
     if (input) {
-      parser.set(input.id, interactiveInputValues.value[index]);
+      scope[input.id] = interactiveInputValues.value[index];
     }
   }
 
@@ -874,9 +766,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     const input = interactiveUiJson.value.input[index];
 
     if (input) {
-      interactiveShowInput.value[index] = compiledExpression(input.visible ?? 'true').evaluate(
-        parser.getAll()
-      ) as string;
+      interactiveShowInput.value[index] = Boolean(interactiveMath.evaluate(input.visible ?? 'true', scope));
     }
   }
 
@@ -899,7 +789,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         interactiveModel.addChange(
           componentVariableNames[0],
           componentVariableNames[1],
-          String(compiledExpression(parameter.value).evaluate(parser.getAll()))
+          String(interactiveMath.evaluate(parameter.value, scope))
         );
       } catch (error: unknown) {
         interactiveInstanceIssues.value.push({
@@ -930,56 +820,111 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Configure our parser to have the simulation data as variables, so that the plot expressions can refer to them.
+  // Update our scope with the latest simulation data.
 
   for (const data of interactiveUiJson.value.output.data) {
     const info = interactiveIdToInfo[data.id];
 
     if (info && interactiveInstanceTask) {
-      parser.set(data.id, locCommon.simulationDataValue(interactiveInstanceTask, info).data);
+      scope[data.id] = locCommon.simulationDataValue(interactiveInstanceTask, info).data;
     } else {
-      parser.set(data.id, common.EMPTY_FLOAT64_ARRAY);
+      scope[data.id] = common.EMPTY_FLOAT64_ARRAY;
     }
   }
 
   // Evaluate the plot expressions to get the data to display.
 
-  const parserEvaluate = (expression: string): Float64Array => {
-    const res = compiledExpression(expression).evaluate(parser.getAll());
+  const evaluate = (expression: string): Float64Array => {
+    const res = interactiveMath.evaluate(expression, scope);
 
-    if (res instanceof Float64Array) {
-      return res;
+    if (typeof res === 'boolean') {
+      return new Float64Array([res ? 1 : 0]);
     }
 
     if (typeof res === 'number') {
       return new Float64Array([res]);
     }
 
-    return new Float64Array(0);
+    return res;
+  };
+
+  const normaliseFloat64Arrays = (x: Float64Array, y: Float64Array): { x: Float64Array; y: Float64Array } => {
+    // Return the arrays as they are if they are of the same length.
+
+    if (x.length === y.length) {
+      return {
+        x,
+        y
+      };
+    }
+
+    // If one of the arrays is of length 1, broadcast it to the length of the other array.
+
+    if (x.length === 1 && y.length > 1) {
+      const value = x[0];
+      const broadcastX = new Float64Array(y.length);
+
+      broadcastX.fill(value);
+
+      return {
+        x: broadcastX,
+        y
+      };
+    }
+
+    if (y.length === 1 && x.length > 1) {
+      const value = y[0];
+      const broadcastY = new Float64Array(x.length);
+
+      broadcastY.fill(value);
+
+      return {
+        x,
+        y: broadcastY
+      };
+    }
+
+    // We can't reconcile the lengths of these arrays, so fall back to the minimum length, which preserves as many valid
+    // (x, y) pairs as possible.
+
+    const minLength = Math.min(x.length, y.length);
+
+    return {
+      x: x.slice(0, minLength),
+      y: y.slice(0, minLength)
+    };
   };
 
   try {
     const newInteractiveData: IGraphPanelData[] = [];
 
     for (const plot of interactiveUiJson.value.output.plots) {
+      const xMain = evaluate(plot.xValue);
+      const yMain = evaluate(plot.yValue);
+      const normalisedMain = normaliseFloat64Arrays(xMain, yMain);
+
       const traces: IGraphPanelPlotTrace[] = [
         {
           name: traceName(plot.name, plot.xValue, plot.yValue),
           xValue: plot.xValue,
-          x: parserEvaluate(plot.xValue),
+          x: normalisedMain.x,
           yValue: plot.yValue,
-          y: parserEvaluate(plot.yValue),
+          y: normalisedMain.y,
           color: colors.DEFAULT_COLOR
         }
       ];
 
       for (const additionalTrace of plot.additionalTraces ?? []) {
+        const xAdditional = evaluate(additionalTrace.xValue);
+        const yAdditional = evaluate(additionalTrace.yValue);
+        const normalisedAdditional = normaliseFloat64Arrays(xAdditional, yAdditional);
+
         traces.push({
           name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
           xValue: additionalTrace.xValue,
-          x: parserEvaluate(additionalTrace.xValue),
+          x: normalisedAdditional.x,
           yValue: additionalTrace.yValue,
-          y: parserEvaluate(additionalTrace.yValue),
+          y: normalisedAdditional.y,
           color: colors.DEFAULT_COLOR
         });
       }
