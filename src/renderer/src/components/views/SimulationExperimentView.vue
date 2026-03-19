@@ -806,10 +806,6 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Reset our interactive margins.
-
-  onResetMargins();
-
   // Run the instance and update the plots.
 
   interactiveInstance.run();
@@ -1200,6 +1196,8 @@ const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): v
   // Resize our graph panels if the number of plots has changed.
 
   if (interactiveUiJson.value.output.plots.length !== oldNbOfGraphPanelWidgets) {
+    onResetMargins();
+
     interactiveGraphPanelRefs.value = {};
 
     vue.nextTick().then(() => {

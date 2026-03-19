@@ -594,10 +594,12 @@ const updateMarginsAsync = (): void => {
 
   updatingMargins = true;
 
-  // Use requestAnimationFrame for optimal timing (after render, before next paint).
+  // Use requestAnimationFrame for optimal timing.
 
   requestAnimationFrame(() => {
     const newMargins = compMargins();
+
+    // Emit an update if our margins have changed.
 
     if (!sameMargins(trackedMargins, newMargins)) {
       trackedMargins = newMargins;
@@ -813,6 +815,10 @@ vue.watch(
       })
       .then(() => {
         if (!props.margins) {
+          // When shared margins are unset, we need to clear our tracked margins so that we can emit them.
+
+          trackedMargins = undefined;
+
           updateMarginsAsync();
         }
       });
