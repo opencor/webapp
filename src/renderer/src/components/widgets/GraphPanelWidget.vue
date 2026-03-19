@@ -34,12 +34,23 @@ interface IPlotlyLayout {
 
 export interface IGraphPanelPlotTrace {
   name: string;
+  traceId?: string;
   xValue: string;
   x: Float64Array;
   yValue: string;
   y: Float64Array;
   color: string;
   zorder?: number;
+}
+
+type PlotlyTraceVisible = boolean | 'legendonly';
+
+interface IPlotlyTraceState {
+  name?: string;
+  traceId?: string;
+  xValue?: string;
+  yValue?: string;
+  visible?: PlotlyTraceVisible;
 }
 
 export interface IGraphPanelData {
@@ -645,11 +656,40 @@ const updatePlot = (): void => {
 
   // Update the plots.
 
-  const traces = props.data.traces.map((trace) => ({
-    ...trace,
-    line: { color: trace.color },
-    legendrank: trace.zorder
-  }));
+  const traceVisibilityKey = (trace: IPlotlyTraceState): string | undefined => {
+    if (trace.traceId) {
+      return `id::${trace.traceId}`;
+    }
+
+    if (trace.name && trace.xValue && trace.yValue) {
+      return `expr::${trace.xValue}::${trace.yValue}::${trace.name}`;
+    }
+
+    return undefined;
+  };
+
+  const previousTraceVisibilityByKey: Record<string, PlotlyTraceVisible> = {};
+  const previousPlotlyData = (mainDivRef.value as unknown as { data?: IPlotlyTraceState[] })?.data;
+
+  for (const plotlyTrace of previousPlotlyData ?? []) {
+    const plotlyTraceKey = traceVisibilityKey(plotlyTrace);
+
+    if (plotlyTraceKey && plotlyTrace.visible !== undefined) {
+      previousTraceVisibilityByKey[plotlyTraceKey] = plotlyTrace.visible;
+    }
+  }
+
+  const traces = props.data.traces.map((trace) => {
+    const traceKey = traceVisibilityKey(trace);
+    const visible = traceKey ? previousTraceVisibilityByKey[traceKey] : undefined;
+
+    return {
+      ...trace,
+      visible,
+      line: { color: trace.color },
+      legendrank: trace.zorder
+    };
+  });
 
   dependencies._plotlyJs
     .react(
