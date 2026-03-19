@@ -664,7 +664,7 @@
         <!-- Simulation issues -->
 
         <template v-if="activeTab === 'simulation'">
-          <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length">
+          <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length" :appendTo="issuesContainer">
             <div class="issues-popover-content">
               <IssuesView :issues="simulationSettingsIssues" :extraSpace="false" />
             </div>
@@ -687,7 +687,7 @@
         <!-- Solvers issues -->
 
         <template v-else-if="activeTab === 'solvers'">
-          <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length">
+          <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length" :appendTo="issuesContainer">
             <div class="issues-popover-content">
               <IssuesView :issues="solversSettingsIssues" :extraSpace="false" />
             </div>
@@ -710,7 +710,7 @@
         <!-- UI JSON issues -->
 
         <template v-else-if="activeTab === 'interactive'">
-          <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length">
+          <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length" :appendTo="issuesContainer">
             <div class="issues-popover-content">
               <IssuesView :issues="uiJsonIssues" :extraSpace="false" />
             </div>
@@ -790,6 +790,7 @@ const DEFAULT_INTERACTIVE_TAB = 'simulationInputs';
 const simulationSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const solversSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const uiJsonIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
+const issuesContainer = vue.ref<HTMLElement>();
 const activeTab = vue.ref(DEFAULT_TAB);
 const activeInteractiveTab = vue.ref(DEFAULT_INTERACTIVE_TAB);
 const showSimulationSettingsIssuesPanel = vue.ref(false);
@@ -1150,6 +1151,15 @@ const toggleUiJsonIssues = (event: Event) => {
 
   showUiJsonIssuesPanel.value = !showUiJsonIssuesPanel.value;
 };
+
+vue.onMounted(() => {
+  // Set the popover append target to the main OpenCOR element ('.opencor') so that Tailwind styles scoped with
+  // `important: '.opencor'` in tailwind.config.ts are applied correctly.
+  // Note: it should never be null, but just in case we add a fallback to undefined (which will result in the popover
+  //       being wrongly styled but at least functional instead of not being displayed at all).
+
+  issuesContainer.value = (document.querySelector('.opencor') as HTMLElement | null) || undefined;
+});
 </script>
 
 <style scoped>
