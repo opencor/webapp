@@ -142,7 +142,7 @@
                   </div>
                   <div class="flex flex-col gap-2">
                     <div v-for="(run, index) in interactiveRuns"
-                      :key="run.isLiveRun ? 'live' : `run_${index}`"
+                      :key="run.id"
                       class="run-card rounded-lg p-1 pl-2 opacity-75 hover:opacity-100"
                       :class="{ 'run-card-live': run.isLiveRun, 'opacity-50': !run.isVisible }"
                     >
@@ -262,6 +262,7 @@ import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
 import type { IGraphPanelData, IGraphPanelPlotTrace, IGraphPanelMargins } from '../widgets/GraphPanelWidget.vue';
 
 interface ISimulationRun {
+  id: string;
   inputParameters: Record<string, number>;
   isVisible: boolean;
   data: IGraphPanelData[];
@@ -579,6 +580,7 @@ const interactiveShowInput = vue.ref<boolean[]>([]);
 const interactiveIdToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
 const interactiveRuns = vue.ref<ISimulationRun[]>([
   {
+    id: 'live',
     inputParameters: {},
     isVisible: true,
     data: [],
@@ -587,6 +589,7 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
     isLiveRun: true
   }
 ]);
+let interactiveTrackedRunId = 0;
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
 const interactiveRunColorPopoverRefs = vue.ref<Record<number, InstanceType<typeof Popover> | undefined>>({});
 const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
@@ -634,6 +637,7 @@ const interactiveCompData = vue.computed<IGraphPanelData[]>(() => {
 
         traces.push({
           ...dataTrace,
+          traceId: `${interactiveRun.id}::${dataTrace.traceId ?? `${dataTrace.xValue}::${dataTrace.yValue}::${String(dataTraceIndex)}`}`,
           name: dataTrace.name + suffix,
           color: paletteColors[(baseColorIndex + dataTraceIndex) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
           zorder: interactiveRun.isLiveRun ? 1 : undefined
@@ -806,10 +810,6 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Reset our interactive margins.
-
-  onResetMargins();
-
   // Run the instance and update the plots.
 
   interactiveInstance.run();
@@ -898,13 +898,26 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
   try {
     const newInteractiveData: IGraphPanelData[] = [];
 
-    for (const plot of interactiveUiJson.value.output.plots) {
+    for (let plotIndex = 0; plotIndex < interactiveUiJson.value.output.plots.length; ++plotIndex) {
+      const plot = interactiveUiJson.value.output.plots[plotIndex];
+
+      if (!plot) {
+        newInteractiveData[plotIndex] = {
+          xAxisTitle: '',
+          yAxisTitle: '',
+          traces: []
+        };
+
+        continue;
+      }
+
       const xMain = evaluate(plot.xValue);
       const yMain = evaluate(plot.yValue);
       const normalisedMain = normaliseFloat64Arrays(xMain, yMain);
 
       const traces: IGraphPanelPlotTrace[] = [
         {
+          traceId: `plot_${String(plotIndex)}::trace_0`,
           name: traceName(plot.name, plot.xValue, plot.yValue),
           xValue: plot.xValue,
           x: normalisedMain.x,
@@ -914,12 +927,23 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         }
       ];
 
-      for (const additionalTrace of plot.additionalTraces ?? []) {
+      for (
+        let additionalTraceIndex = 0;
+        additionalTraceIndex < (plot.additionalTraces ?? []).length;
+        ++additionalTraceIndex
+      ) {
+        const additionalTrace = plot.additionalTraces?.[additionalTraceIndex];
+
+        if (!additionalTrace) {
+          continue;
+        }
+
         const xAdditional = evaluate(additionalTrace.xValue);
         const yAdditional = evaluate(additionalTrace.yValue);
         const normalisedAdditional = normaliseFloat64Arrays(xAdditional, yAdditional);
 
         traces.push({
+          traceId: `plot_${String(plotIndex)}::trace_${String(additionalTraceIndex + 1)}`,
           name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
           xValue: additionalTrace.xValue,
           x: normalisedAdditional.x,
@@ -929,11 +953,11 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         });
       }
 
-      newInteractiveData.push({
+      newInteractiveData[plotIndex] = {
         xAxisTitle: plot.xAxisTitle,
         yAxisTitle: plot.yAxisTitle,
         traces
-      });
+      };
     }
 
     interactiveLiveData.value = newInteractiveData;
@@ -1083,6 +1107,7 @@ const onTrackRun = (): void => {
   // Add the new run.
 
   interactiveRuns.value.push({
+    id: `run_${String(++interactiveTrackedRunId)}`,
     inputParameters,
     isVisible: true,
     data: interactiveLiveData.value,
@@ -1200,6 +1225,8 @@ const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): v
   // Resize our graph panels if the number of plots has changed.
 
   if (interactiveUiJson.value.output.plots.length !== oldNbOfGraphPanelWidgets) {
+    onResetMargins();
+
     interactiveGraphPanelRefs.value = {};
 
     vue.nextTick().then(() => {
