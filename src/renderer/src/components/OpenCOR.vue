@@ -125,6 +125,7 @@ import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
 import type { IOpenCOREmits, IOpenCORProps } from '../../index';
+import { provideOpenCORToast } from '../components/OpenCORToast';
 
 import '../assets/app.css';
 import '../assets/primeicons-assets';
@@ -375,6 +376,8 @@ const addToast = (options: Parameters<typeof toast.add>[0]) => {
 
   toast.add({ ...options, group: toastId.value });
 };
+
+provideOpenCORToast(addToast);
 
 // Finish initialising OpenCOR.
 
