@@ -112,7 +112,6 @@
 
 <script setup lang="ts">
 import primeVueAuraTheme from '@primeuix/themes/aura';
-import * as vueusecore from '@vueuse/core';
 
 /* TODO: enable once our GitHub integration is fully ready.
 import firebase from 'firebase/compat/app';
@@ -986,43 +985,29 @@ if (props.omex) {
         // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
 
         vue.watch(initialisingOpencorMessageVisible, (newInitialisingOpencorMessageVisible: boolean) => {
-          if (!newInitialisingOpencorMessageVisible) {
-            const action = vueusecore.useStorage('action', '');
+          if (!newInitialisingOpencorMessageVisible && window.location.search) {
+            // Retrieve the action from the URL.
+            // Note: we also include the hash since it is used to pass a model that is encoded as a data URL.
 
-            if (window.location.search) {
-              // Retrieve the action from the URL.
+            let action = window.location.search.substring(1);
 
-              action.value = window.location.search.substring(1);
+            if (window.location.hash) {
+              action += window.location.hash;
+            }
 
-              if (window.location.hash) {
-                action.value += window.location.hash;
-              }
+            // Ensure that the URL is cleaned up.
 
-              // Ensure that the URL is cleaned up.
+            window.history.replaceState({}, document.title, window.location.pathname);
 
-              window.history.replaceState({}, document.title, window.location.pathname);
-
-              // Force a reload to complete the two-phase action handling:
-              //  1) On the first load, we extract the action from the URL and store it in localStorage.
-              //  2) After we have reloaded (with a clean URL), the `else if (action.value)` branch below reads and
-              //     processes the stored action.
-
-              window.location.reload();
-            } else if (action.value) {
-              setTimeout(() => {
-                if (action.value.startsWith(FULL_URI_SCHEME)) {
-                  handleAction(action.value.slice(FULL_URI_SCHEME.length));
-                } else {
-                  addToast({
-                    severity: 'error',
-                    summary: 'Handling an action',
-                    detail: `${action.value}\n\nThe action could not be handled.`,
-                    life: TOAST_LIFE
-                  });
-                }
-
-                action.value = '';
-              }, SHORT_DELAY);
+            if (action.startsWith(FULL_URI_SCHEME)) {
+              handleAction(action.slice(FULL_URI_SCHEME.length));
+            } else {
+              addToast({
+                severity: 'error',
+                summary: 'Handling an action',
+                detail: `${action}\n\nThe action could not be handled.`,
+                life: TOAST_LIFE
+              });
             }
           }
         });
