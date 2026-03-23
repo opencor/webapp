@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "composite": true,
     "lib": ["dom", "esnext"],
     "paths": {
       "@renderer/*": ["src/renderer/src/*"]
-    }
+    },
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": false
   },
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
   "include": ["src/**/*.ts"]

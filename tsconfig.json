@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "module": "nodenext",
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "noEmit": false,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true
   },
   "include": ["*.ts"],
   "references": [

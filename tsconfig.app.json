@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "baseUrl": ".",
     "composite": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "noEmit": true,
+    "noEmit": false,
     "strictNullChecks": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true
   },
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "include": ["**/*.js", "**/*.ts", "**/*.vue", "package.json"]
