@@ -462,13 +462,23 @@
                                   <span class="font-medium text-sm">Plot #{{ Number(plotIndex) + 1 }}</span>
                                   <Tag :value="plotTraceCount(plot) + ' trace' + (plotTraceCount(plot) !== 1 ? 's' : '')" severity="info" size="small" />
                                 </div>
-                                <Button
-                                  icon="pi pi-trash"
-                                  text rounded
-                                  severity="danger"
-                                  size="small"
-                                  @click="removePlot(plotIndex)"
-                                />
+                                <div class="flex items-center gap-2">
+                                  <Button
+                                    icon="pi pi-plus"
+                                    label="Add trace"
+                                    outlined
+                                    severity="info"
+                                    size="small"
+                                    @click="addTrace(plotIndex)"
+                                  />
+                                  <Button
+                                    icon="pi pi-trash"
+                                    text rounded
+                                    severity="danger"
+                                    size="small"
+                                    @click="removePlot(plotIndex)"
+                                  />
+                                </div>
                               </div>
                               <div class="plot-card-body">
                                 <!-- Axes settings -->
@@ -486,34 +496,78 @@
 
                                 <!-- Traces -->
 
-                                <div class="traces-section">
-                                  <div class="traces-header">
-                                    <span class="text-sm font-medium text-muted-color">Traces</span>
-                                    <Button
-                                      icon="pi pi-plus"
-                                      label="Add trace"
-                                      outlined
-                                      severity="info"
-                                      size="small"
-                                      @click="addTrace(plotIndex)"
-                                    />
-                                  </div>
+                                <div class="traces-list">
+                                  <!-- Main trace -->
 
-                                  <div class="traces-list">
-                                    <!-- Main trace -->
+                                  <Fieldset class="entry-row">
+                                    <template #legend="scope">
+                                      <span v-html="traceName(plot, -1)" />
+                                    </template>
+                                    <div class="entry-row entry-row-trace">
+                                      <div>
+                                        <span class="index index-secondary">1</span>
+                                      </div>
+                                      <div class="w-full">
+                                        <div class="mb-3">
+                                          <FloatLabel variant="on" class="flex-1">
+                                            <InputText v-model="plot.name" class="w-full" size="small"
+                                              v-tippy="{
+                                                allowHTML: true,
+                                                content: traceNameTooltip(),
+                                                placement: 'bottom-start'
+                                              }"
+                                            />
+                                            <label>Name (optional)</label>
+                                          </FloatLabel>
+                                        </div>
+                                        <div class="entry-row">
+                                          <FloatLabel variant="on" class="flex-1">
+                                            <InputText v-model="plot.xValue" class="w-full" size="small"
+                                              v-tippy="{
+                                                allowHTML: true,
+                                                content: xyValueTooltip(true),
+                                                placement: 'bottom-start'
+                                              }"
+                                            />
+                                            <label>X value</label>
+                                          </FloatLabel>
+                                          <FloatLabel variant="on" class="flex-1">
+                                            <InputText v-model="plot.yValue" class="w-full" size="small"
+                                              v-tippy="{
+                                                allowHTML: true,
+                                                content: xyValueTooltip(false),
+                                                placement: 'bottom-start'
+                                              }"
+                                            />
+                                            <label>Y value</label>
+                                          </FloatLabel>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        icon="pi pi-times"
+                                        text rounded
+                                        severity="secondary"
+                                        size="small"
+                                        @click="removeTrace(plotIndex, -1)"
+                                      />
+                                    </div>
+                                  </Fieldset>
 
+                                  <!-- Additional traces -->
+
+                                  <div v-for="(trace, traceIndex) in plot.additionalTraces" :key="`trace_${traceIndex}`" class="entry-row">
                                     <Fieldset class="entry-row">
                                       <template #legend="scope">
-                                        <span v-html="traceName(plot, -1)" />
+                                        <span v-html="traceName(plot, traceIndex)" />
                                       </template>
                                       <div class="entry-row entry-row-trace">
                                         <div>
-                                          <span class="index index-secondary">1</span>
+                                          <span class="index index-secondary">{{ Number(traceIndex) + 2 }}</span>
                                         </div>
                                         <div class="w-full">
                                           <div class="mb-3">
                                             <FloatLabel variant="on" class="flex-1">
-                                              <InputText v-model="plot.name" class="w-full" size="small"
+                                              <InputText v-model="trace.name" class="w-full" size="small"
                                                 v-tippy="{
                                                   allowHTML: true,
                                                   content: traceNameTooltip(),
@@ -525,7 +579,7 @@
                                           </div>
                                           <div class="entry-row">
                                             <FloatLabel variant="on" class="flex-1">
-                                              <InputText v-model="plot.xValue" class="w-full" size="small"
+                                              <InputText v-model="trace.xValue" class="w-full" size="small"
                                                 v-tippy="{
                                                   allowHTML: true,
                                                   content: xyValueTooltip(true),
@@ -535,7 +589,7 @@
                                               <label>X value</label>
                                             </FloatLabel>
                                             <FloatLabel variant="on" class="flex-1">
-                                              <InputText v-model="plot.yValue" class="w-full" size="small"
+                                              <InputText v-model="trace.yValue" class="w-full" size="small"
                                                 v-tippy="{
                                                   allowHTML: true,
                                                   content: xyValueTooltip(false),
@@ -551,68 +605,10 @@
                                           text rounded
                                           severity="secondary"
                                           size="small"
-                                          @click="removeTrace(plotIndex, -1)"
+                                          @click="removeTrace(plotIndex, traceIndex)"
                                         />
                                       </div>
                                     </Fieldset>
-
-                                    <!-- Additional traces -->
-
-                                    <div v-for="(trace, traceIndex) in plot.additionalTraces" :key="`trace_${traceIndex}`" class="entry-row">
-                                      <Fieldset class="entry-row">
-                                        <template #legend="scope">
-                                          <span v-html="traceName(plot, traceIndex)" />
-                                        </template>
-                                        <div class="entry-row entry-row-trace">
-                                          <div>
-                                            <span class="index index-secondary">{{ Number(traceIndex) + 2 }}</span>
-                                          </div>
-                                          <div class="w-full">
-                                            <div class="mb-3">
-                                              <FloatLabel variant="on" class="flex-1">
-                                                <InputText v-model="trace.name" class="w-full" size="small"
-                                                  v-tippy="{
-                                                    allowHTML: true,
-                                                    content: traceNameTooltip(),
-                                                    placement: 'bottom-start'
-                                                  }"
-                                                />
-                                                <label>Name (optional)</label>
-                                              </FloatLabel>
-                                            </div>
-                                            <div class="entry-row">
-                                              <FloatLabel variant="on" class="flex-1">
-                                                <InputText v-model="trace.xValue" class="w-full" size="small"
-                                                  v-tippy="{
-                                                    allowHTML: true,
-                                                    content: xyValueTooltip(true),
-                                                    placement: 'bottom-start'
-                                                  }"
-                                                />
-                                                <label>X value</label>
-                                              </FloatLabel>
-                                              <FloatLabel variant="on" class="flex-1">
-                                                <InputText v-model="trace.yValue" class="w-full" size="small"
-                                                  v-tippy="{
-                                                    allowHTML: true,
-                                                    content: xyValueTooltip(false),
-                                                    placement: 'bottom-start'
-                                                  }"
-                                                />
-                                                <label>Y value</label>
-                                              </FloatLabel>
-                                            </div>
-                                          </div>
-                                          <Button
-                                            icon="pi pi-times"
-                                            text rounded
-                                            severity="secondary"
-                                            size="small"
-                                            @click="removeTrace(plotIndex, traceIndex)"
-                                          />
-                                        </div>
-                                      </Fieldset>
-                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1322,7 +1318,6 @@ vue.onMounted(() => {
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
 }
 
 .plot-card-header {
@@ -1428,12 +1423,6 @@ vue.onMounted(() => {
 .traces-list {
   display: flex;
   flex-direction: column;
-}
-
-.traces-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .validation-status {
