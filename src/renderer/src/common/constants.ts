@@ -8,6 +8,9 @@ export const LONG_DELAY: number = 369;
 
 export const TOAST_LIFE: number = 3000;
 
+export const SPIN_INITIAL_DELAY: number = 500;
+export const SPIN_REPEAT_DELAY: number = 40;
+
 const crtYear: number = new Date().getFullYear();
 
 export const COPYRIGHT: string = crtYear === 2025 ? '2025' : `2025-${String(crtYear)}`;

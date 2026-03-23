@@ -15,6 +15,9 @@
   <div v-else>
     <InputScientificNumber v-model="value"
       :label="name"
+      :min="minimumValue"
+      :max="maximumValue"
+      :step="compStepValue"
       size="small"
       @update:model-value="inputTextValueUpdated"
     />
@@ -98,17 +101,7 @@ const selectChange = (event: ISelectChangeEvent) => {
 
 const inputTextValueUpdated = (newValue: number | undefined) => {
   if (newValue !== undefined && newValue !== oldValue) {
-    let constrainedValue = newValue;
-
-    if (props.minimumValue !== undefined && constrainedValue < props.minimumValue) {
-      constrainedValue = props.minimumValue;
-    }
-
-    if (props.maximumValue !== undefined && constrainedValue > props.maximumValue) {
-      constrainedValue = props.maximumValue;
-    }
-
-    emitChange(constrainedValue);
+    emitChange(newValue);
   }
 };
 
