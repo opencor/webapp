@@ -41,8 +41,8 @@
     "release": "bun src/renderer/scripts/libopencor.js && electron-builder",
     "release:local": "bun src/renderer/scripts/libopencor.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.notarize=false --publish=never",
     "start": "bun src/renderer/scripts/libopencor.js && electron-vite preview",
-    "typecheck": "bunx --bun vue-tsc --noEmit -p tsconfig.app.json",
     "start:web": "bun --cwd src/renderer start",
+    "typecheck": "bunx --bun vue-tsc --noEmit -p tsconfig.app.json",
     "version:new": "bun src/renderer/scripts/version.new.js"
   },
   "bun": {
