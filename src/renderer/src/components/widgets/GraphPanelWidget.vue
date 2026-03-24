@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-row h-full" :class="isVisible ? 'visible' : 'invisible'">
+  <div class="flex flex-row h-full">
     <div v-if="showMarker" class="w-0.75 bg-primary" />
     <div ref="mainDivRef" class="grow h-full" @contextmenu="onContextMenu" />
     <ContextMenu ref="contextMenuRef" :model="contextMenuItems" />
@@ -123,7 +123,6 @@ defineExpose({
 
 const instanceId = Symbol('GraphPanelWidget');
 const mainDivRef = vue.ref<HTMLElement | null>(null);
-const isVisible = vue.ref(false);
 const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
@@ -596,6 +595,18 @@ const compMargins = (): IGraphPanelMargins => {
   };
 };
 
+const canMeasureMargins = (): boolean => {
+  const mainDiv = mainDivRef.value;
+
+  if (!mainDiv) {
+    return false;
+  }
+
+  const { width, height } = mainDiv.getBoundingClientRect();
+
+  return width > 0 && height > 0;
+};
+
 const updateMarginsAsync = (): void => {
   // Skip if we are already updating our margins.
 
@@ -608,6 +619,14 @@ const updateMarginsAsync = (): void => {
   // Use requestAnimationFrame for optimal timing.
 
   requestAnimationFrame(() => {
+    // Make sure that we can measure our margins before proceeding.
+
+    if (!canMeasureMargins()) {
+      updatingMargins = false;
+
+      return;
+    }
+
     const newMargins = compMargins();
 
     // Emit an update if our margins have changed.
@@ -722,26 +741,9 @@ const updatePlot = (): void => {
     .then(() => {
       plotIsReady = true;
 
-      if (!isVisible.value) {
-        // Force Plotly to recalculate the layout after the plot is rendered to ensure that it has correct dimensions.
+      // Force Plotly to recalculate the layout after each react() call to keep the graph aligned with sibling panels.
 
-        return dependencies._plotlyJs.Plots.resize(mainDivRef.value);
-      }
-    })
-    .then(() => {
-      trackSize();
-
-      if (!isVisible.value) {
-        // Show the component now that the plot has been properly sized.
-
-        vue.nextTick(() => {
-          isVisible.value = true;
-        });
-      }
-
-      // Update our margins asynchronously after our initial render.
-
-      updateMarginsAsync();
+      queueResize();
     });
 };
 
