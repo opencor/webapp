@@ -637,7 +637,7 @@ const interactiveCompData = vue.computed<IGraphPanelData[]>(() => {
 
         traces.push({
           ...dataTrace,
-          traceId: `${interactiveRun.id}::${dataTrace.traceId ?? `${dataTrace.xValue}::${dataTrace.yValue}::${String(dataTraceIndex)}`}`,
+          traceId: `${interactiveRun.id}::${dataTrace.traceId ?? `${dataTrace.xValue}::${dataTrace.yValue}::${dataTraceIndex}`}`,
           name: dataTrace.name + suffix,
           color: paletteColors[(baseColorIndex + dataTraceIndex) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
           zorder: interactiveRun.isLiveRun ? 1 : undefined
@@ -917,7 +917,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
 
       const traces: IGraphPanelPlotTrace[] = [
         {
-          traceId: `plot_${String(plotIndex)}::trace_0`,
+          traceId: `plot_${plotIndex}::trace_0`,
           name: traceName(plot.name, plot.xValue, plot.yValue),
           xValue: plot.xValue,
           x: normalisedMain.x,
@@ -943,7 +943,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         const normalisedAdditional = normaliseFloat64Arrays(xAdditional, yAdditional);
 
         traces.push({
-          traceId: `plot_${String(plotIndex)}::trace_${String(additionalTraceIndex + 1)}`,
+          traceId: `plot_${plotIndex}::trace_${additionalTraceIndex + 1}`,
           name: traceName(additionalTrace.name, additionalTrace.xValue, additionalTrace.yValue),
           xValue: additionalTrace.xValue,
           x: normalisedAdditional.x,
@@ -1107,7 +1107,7 @@ const onTrackRun = (): void => {
   // Add the new run.
 
   interactiveRuns.value.push({
-    id: `run_${String(++interactiveTrackedRunId)}`,
+    id: `run_${++interactiveTrackedRunId}`,
     inputParameters,
     isVisible: true,
     data: interactiveLiveData.value,

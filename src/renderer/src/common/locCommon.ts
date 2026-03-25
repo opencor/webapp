@@ -192,7 +192,7 @@ export const file = (
             }
 
             throw new Error(
-              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${String(response.status)}.`
+              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${response.status}.`
             );
           })
           .catch((error: unknown) => {
@@ -209,7 +209,7 @@ export const file = (
               }
 
               throw new Error(
-                `Failed to fetch the file directly. The server responded with a status of ${String(response.status)}.`
+                `Failed to fetch the file directly. The server responded with a status of ${response.status}.`
               );
             });
           })

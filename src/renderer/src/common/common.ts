@@ -120,23 +120,23 @@ export const formatTime = (time: number): string => {
   let res = '';
 
   if (d) {
-    res = `${String(d)}d`;
+    res = `${d}d`;
   }
 
   if (h || ((m || s || ms) && res)) {
-    res += `${res ? ' ' : ''}${String(h)}h`;
+    res += `${res ? ' ' : ''}${h}h`;
   }
 
   if (m || ((s || ms) && res)) {
-    res += `${res ? ' ' : ''}${String(m)}m`;
+    res += `${res ? ' ' : ''}${m}m`;
   }
 
   if (s || (ms && res)) {
-    res += `${res ? ' ' : ''}${String(s)}s`;
+    res += `${res ? ' ' : ''}${s}s`;
   }
 
   if (ms || !res) {
-    res += `${res ? ' ' : ''}${String(ms)}ms`;
+    res += `${res ? ' ' : ''}${ms}ms`;
   }
 
   return res;

@@ -114,7 +114,7 @@ export const validateUiJson = (uiJson: IUiJson | undefined): IIssue[] => {
     ];
   }
 
-  // Clean our UI JSON (there were optional values that were not provided and now empty).
+  // Clean our UI JSON (in case there were optional values that were not provided and are now empty).
 
   uiJson = cleanUiJson(uiJson);
 

@@ -1225,8 +1225,8 @@ const onGitHubButtonClick = async (): Promise<void> => {
 
     gitHubAuthProvider.addScope('repo');
 
-    const result = await firebase.auth().signInWithPopup(gitHubAuthProvider);
-    const credential = result.credential as firebase.auth.OAuthCredential | null;
+    const res = await firebase.auth().signInWithPopup(gitHubAuthProvider);
+    const credential = res.credential as firebase.auth.OAuthCredential | null;
 
     if (!credential?.accessToken) {
       throw new Error('GitHub OAuth flow did not return an access token.');
