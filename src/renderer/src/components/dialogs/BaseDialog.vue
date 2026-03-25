@@ -22,7 +22,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import { enableDisableMainMenu } from '../../common/common.ts';
+import { enableDisableMainMenu } from '../../common/common';
 
 const emit = defineEmits<(event: 'cancel') => void>();
 

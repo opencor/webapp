@@ -1,6 +1,6 @@
-import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi.ts';
-import type { IIssue } from './locLoggerApi.ts';
-import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi.ts';
+import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi';
+import type { IIssue } from './locLoggerApi';
+import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi';
 
 export interface ICppLocApi {
   // FileManager API.
@@ -139,11 +139,11 @@ export const setWasmLocApi = (api: IWasmLocApi): void => {
 
 // Logger API.
 
-export { EIssueType, type IIssue, type IWasmIssues, wasmIssuesToIssues } from './locLoggerApi.ts';
+export { EIssueType, type IIssue, type IWasmIssues, wasmIssuesToIssues } from './locLoggerApi';
 
 // File API.
 
-export { EFileType, File, fileManager, type IWasmFile } from './locFileApi.ts';
+export { EFileType, File, fileManager, type IWasmFile } from './locFileApi';
 
 // SED-ML API.
 
@@ -153,7 +153,7 @@ export {
   SedInstance,
   SedInstanceTask,
   SedUniformTimeCourse
-} from './locSedApi.ts';
+} from './locSedApi';
 
 // UI JSON API.
 
@@ -172,8 +172,8 @@ export {
   isDiscreteInput,
   cleanUiJson,
   validateUiJson
-} from './locUiJsonApi.ts';
+} from './locUiJsonApi';
 
 // Version API.
 
-export { cppVersion, version, wasmVersion } from './locVersionApi.ts';
+export { cppVersion, version, wasmVersion } from './locVersionApi';

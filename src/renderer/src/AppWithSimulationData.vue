@@ -21,7 +21,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import type { IOpenCORExpose, IOpenCORSimulationDataEvent } from '../index.ts';
+import type { IOpenCORExpose, IOpenCORSimulationDataEvent } from '../index';
 
 import OpenCOR from './components/OpenCOR.vue';
 

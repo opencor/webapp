@@ -747,11 +747,11 @@
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
-import * as locApi from '../../libopencor/locApi.ts';
-import * as common from '../../common/common.ts';
-import * as locUiJsonApi from '../../libopencor/locUiJsonApi.ts';
-import { validateUiJson } from '../../libopencor/locUiJsonApi.ts';
-import { EIssueType } from '../../libopencor/locLoggerApi.ts';
+import * as locApi from '../../libopencor/locApi';
+import * as common from '../../common/common';
+import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
+import { validateUiJson } from '../../libopencor/locUiJsonApi';
+import { EIssueType } from '../../libopencor/locLoggerApi';
 
 export interface ISimulationExperimentViewSettings {
   simulation: {

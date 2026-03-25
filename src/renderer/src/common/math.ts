@@ -1,4 +1,4 @@
-import * as dependencies from './dependencies.ts';
+import * as dependencies from './dependencies';
 
 type MathJsValue = number | Float64Array;
 type MathJsResult = boolean | MathJsValue;

@@ -2,7 +2,7 @@ import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
 
-import type { OpenCORTheme } from '../../index.ts';
+import type { OpenCORTheme } from '../../index';
 
 // A constant to know the UID of the active instance of OpenCOR.
 

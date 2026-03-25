@@ -14,7 +14,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import { settings } from '../../common/settings.ts';
+import { settings } from '../../common/settings';
 
 const emit = defineEmits<(event: 'close') => void>();
 

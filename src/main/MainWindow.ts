@@ -2,18 +2,18 @@ import electron from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
 import path from 'node:path';
 
-import { formatError, isDataUrlOmexFileName, isHttpUrl, type ISettings } from '../renderer/src/common/common.ts';
-import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants.ts';
-import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron.ts';
+import { formatError, isDataUrlOmexFileName, isHttpUrl, type ISettings } from '../renderer/src/common/common';
+import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
+import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
 /* TODO: enable once our GitHub integration is fully ready.
 import { deleteGitHubAccessToken } from '../renderer/src/common/gitHubIntegration';
 */
 
 import icon from './assets/icon.png?asset';
-import { ApplicationWindow } from './ApplicationWindow.ts';
-import { electronConf, type IElectronConfState } from './index.ts';
-import { enableDisableMainMenu, updateReopenMenu } from './MainMenu.ts';
-import type { SplashScreenWindow } from './SplashScreenWindow.ts';
+import { ApplicationWindow } from './ApplicationWindow';
+import { electronConf, type IElectronConfState } from './index';
+import { enableDisableMainMenu, updateReopenMenu } from './MainMenu';
+import type { SplashScreenWindow } from './SplashScreenWindow';
 
 autoUpdater.autoDownload = false;
 autoUpdater.logger = null;

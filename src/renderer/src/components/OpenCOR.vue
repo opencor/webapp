@@ -124,23 +124,23 @@ import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
-import type { IOpenCOREmits, IOpenCORProps } from '../../index.ts';
+import type { IOpenCOREmits, IOpenCORProps } from '../../index';
 
 import '../assets/app.css';
-import '../assets/primeicons-assets.ts';
-import * as common from '../common/common.ts';
-import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants.ts';
-import * as dependencies from '../common/dependencies.ts';
-import { electronApi } from '../common/electronApi.ts';
+import '../assets/primeicons-assets';
+import * as common from '../common/common';
+import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
+import * as dependencies from '../common/dependencies';
+import { electronApi } from '../common/electronApi';
 /* TODO: enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 */
-import * as initialisation from '../common/initialisation.ts';
-import * as locCommon from '../common/locCommon.ts';
-import * as version from '../common/version.ts';
-import * as vueCommon from '../common/vueCommon.ts';
+import * as initialisation from '../common/initialisation';
+import * as locCommon from '../common/locCommon';
+import * as version from '../common/version';
+import * as vueCommon from '../common/vueCommon';
 import ContentsComponent from '../components/ContentsComponent.vue';
-import * as locApi from '../libopencor/locApi.ts';
+import * as locApi from '../libopencor/locApi';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
 import SafeBlockUI from './widgets/SafeBlockUI.vue';

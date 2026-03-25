@@ -37,8 +37,8 @@ import * as vueusecore from '@vueuse/core';
 import type Menubar from 'primevue/menubar';
 import * as vue from 'vue';
 
-import * as common from '../common/common.ts';
-import * as version from '../common/version.ts';
+import * as common from '../common/common';
+import * as version from '../common/version';
 
 const props = defineProps<{
   id?: string;

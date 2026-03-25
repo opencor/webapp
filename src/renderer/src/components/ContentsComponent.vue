@@ -66,12 +66,12 @@ import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
 
-import * as common from '../common/common.ts';
-import { electronApi } from '../common/electronApi.ts';
-import * as locApi from '../libopencor/locApi.ts';
+import * as common from '../common/common';
+import { electronApi } from '../common/electronApi';
+import * as locApi from '../libopencor/locApi';
 
 import SimulationExperimentView from './views/SimulationExperimentView.vue';
-import type { IOpenCORSimulationDataEvent } from '../../index.ts';
+import type { IOpenCORSimulationDataEvent } from '../../index';
 
 interface IFileTab {
   file: locApi.File;

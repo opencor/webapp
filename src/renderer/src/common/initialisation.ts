@@ -1,10 +1,10 @@
 import * as vue from 'vue';
 
-import * as common from './common.ts';
-import * as dependencies from './dependencies.ts';
-import { electronApi } from './electronApi.ts';
+import * as common from './common';
+import * as dependencies from './dependencies';
+import { electronApi } from './electronApi';
 
-import * as locApi from '../libopencor/locApi.ts';
+import * as locApi from '../libopencor/locApi';
 
 // Our different external dependencies.
 

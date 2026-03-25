@@ -1,7 +1,7 @@
-import * as common from '../common/common.ts';
-import * as dependencies from '../common/dependencies.ts';
+import * as common from '../common/common';
+import * as dependencies from '../common/dependencies';
 
-import { EIssueType, type IIssue } from './locLoggerApi.ts';
+import { EIssueType, type IIssue } from './locLoggerApi';
 
 export interface IUiJson {
   input: IUiJsonInput[];

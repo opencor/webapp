@@ -1,7 +1,7 @@
-import type { IOpenCORSimulationDataValue, OpenCORSimulationData } from '../../index.ts';
+import type { IOpenCORSimulationDataValue, OpenCORSimulationData } from '../../index';
 
-import * as dependencies from './dependencies.ts';
-import { electronApi } from './electronApi.ts';
+import * as dependencies from './dependencies';
+import { electronApi } from './electronApi';
 
 // Some interfaces.
 

@@ -1,12 +1,10 @@
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "composite": true,
-    "lib": ["dom", "esnext"],
-    "paths": {
-      "@renderer/*": ["src/renderer/src/*"]
-    }
-  },
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": ["src/**/*.ts"]
+  "compilerOptions": {
+    "composite": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "outDir": "dist"
+  },
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.vue", "src/renderer/package.json"]
 }
