@@ -212,7 +212,17 @@ export const fileName = (filePath: string): string => {
 // A method to sleep for a number of milliseconds.
 
 export const sleep = (ms: number): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+};
+
+// A method to wait for the next animation frame.
+
+export const waitForNextAnimationFrame = (): Promise<number> => {
+  return new Promise((resolve: FrameRequestCallback) => {
+    requestAnimationFrame(resolve);
+  });
 };
 
 // Some constants related to simulation data values.

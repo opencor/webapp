@@ -226,6 +226,7 @@ const octokit = vue.ref<Octokit | null>(null);
 */
 const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
 const loadingModelMessageVisible = vue.ref<boolean>(false);
+const activeRemoteModelLoadsCount = vue.ref<number>(0);
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -482,9 +483,7 @@ const handleAction = (action: string): void => {
       (isAction(actionName, 'openFile') && filePaths.length === 1) ||
       (isAction(actionName, 'openFiles') && filePaths.length > 1)
     ) {
-      for (const filePath of filePaths) {
-        openFile(filePath);
-      }
+      openFiles(filePaths);
     } else {
       addToast({
         severity: 'error',
@@ -622,134 +621,197 @@ const onUpdateAvailable = () => {
 
 let globalOmexDataUrlCounter = 0;
 
-const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void => {
+interface IFileInfo {
+  alreadyOpen: boolean;
+  file: locApi.File | null;
+  filePath: string;
+}
+
+const processFile = async (fileFilePathOrFileContents: string | Uint8Array | File): Promise<IFileInfo | null> => {
   // Check whether we were passed a ZIP-CellML data URL.
 
   let cellmlDataUrlFileName: string = '';
   let omexDataUrlCounter: number = 0;
 
-  locCommon.zipCellmlDataUrl(fileFilePathOrFileContents).then((zipCellmlDataUriInfo: locCommon.IDataUriInfo) => {
-    if (zipCellmlDataUriInfo.res) {
-      if (zipCellmlDataUriInfo.error) {
+  const zipCellmlDataUriInfo = await locCommon.zipCellmlDataUrl(fileFilePathOrFileContents);
+
+  if (zipCellmlDataUriInfo.res) {
+    if (zipCellmlDataUriInfo.error) {
+      addToast({
+        severity: 'error',
+        summary: 'Opening a file',
+        detail: zipCellmlDataUriInfo.error,
+        life: TOAST_LIFE
+      });
+
+      return null;
+    }
+
+    cellmlDataUrlFileName = zipCellmlDataUriInfo.fileName as string;
+    fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
+  } else {
+    // Check whether we were passed a COMBINE archive data URL.
+
+    const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
+
+    if (combineArchiveDataUriInfo.res) {
+      if (combineArchiveDataUriInfo.error) {
         addToast({
           severity: 'error',
           summary: 'Opening a file',
-          detail: zipCellmlDataUriInfo.error,
+          detail: combineArchiveDataUriInfo.error,
           life: TOAST_LIFE
         });
 
-        return;
+        return null;
       }
 
-      cellmlDataUrlFileName = zipCellmlDataUriInfo.fileName as string;
-      fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
-    } else {
-      // Check whether we were passed a COMBINE archive data URL.
+      omexDataUrlCounter = ++globalOmexDataUrlCounter;
+      fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
+    }
+  }
 
-      const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
+  // Check whether the file is already open and if so then select it.
 
-      if (combineArchiveDataUriInfo.res) {
-        if (combineArchiveDataUriInfo.error) {
-          addToast({
-            severity: 'error',
-            summary: 'Opening a file',
-            detail: combineArchiveDataUriInfo.error,
-            life: TOAST_LIFE
+  const filePath = locCommon.filePath(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+
+  if (contentsRef.value?.hasFile(filePath) ?? false) {
+    return {
+      alreadyOpen: true,
+      file: null,
+      filePath
+    };
+  }
+
+  // Retrieve a locApi.File object for the given file or file path.
+
+  const isRemoteFilePath = locCommon.isRemoteFilePath(filePath);
+
+  if (isRemoteFilePath) {
+    ++activeRemoteModelLoadsCount.value;
+
+    loadingModelMessageVisible.value = true;
+  }
+
+  try {
+    const file = await locCommon.file(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+    const fileType = file.type();
+
+    if (
+      fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
+      fileType === locApi.EFileType.UNKNOWN_FILE ||
+      fileType === locApi.EFileType.SEDML_FILE ||
+      (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
+    ) {
+      if (props.omex) {
+        vue.nextTick(() => {
+          issues.value.push({
+            type: locApi.EIssueType.ERROR,
+            description:
+              fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+                ? 'The file could not be retrieved.'
+                : 'Only COMBINE archives are supported.'
           });
-
-          return;
-        }
-
-        omexDataUrlCounter = ++globalOmexDataUrlCounter;
-        fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
+        });
+      } else {
+        addToast({
+          severity: 'error',
+          summary: 'Opening a file',
+          detail:
+            filePath +
+            '\n\n' +
+            (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+              ? 'The file could not be retrieved.'
+              : fileType === locApi.EFileType.SEDML_FILE
+                ? 'SED-ML files are not currently supported.'
+                : 'Only CellML files and COMBINE archives are supported.'),
+          life: TOAST_LIFE
+        });
       }
+
+      electronApi?.fileIssue(filePath);
+
+      return null;
     }
 
-    // Check whether the file is already open and if so then select it.
+    return {
+      alreadyOpen: false,
+      file,
+      filePath
+    };
+  } catch (error: unknown) {
+    if (props.omex) {
+      vue.nextTick(() => {
+        issues.value.push({
+          type: locApi.EIssueType.ERROR,
+          description: common.formatMessage(common.formatError(error))
+        });
+      });
+    } else {
+      addToast({
+        severity: 'error',
+        summary: 'Opening a file',
+        detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
+        life: TOAST_LIFE
+      });
+    }
 
-    const filePath = locCommon.filePath(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+    electronApi?.fileIssue(filePath);
 
-    if (contentsRef.value?.hasFile(filePath) ?? false) {
-      contentsRef.value?.selectFile(filePath);
+    return null;
+  } finally {
+    if (isRemoteFilePath) {
+      --activeRemoteModelLoadsCount.value;
+
+      loadingModelMessageVisible.value = activeRemoteModelLoadsCount.value > 0;
+    }
+  }
+};
+
+const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void => {
+  processFile(fileFilePathOrFileContents).then(async (fileInfo) => {
+    if (!fileInfo) {
+      return;
+    }
+
+    if (fileInfo.alreadyOpen) {
+      await contentsRef.value?.selectFile(fileInfo.filePath);
 
       return;
     }
 
-    // Retrieve a locApi.File object for the given file or file path and add it to the contents.
+    if (fileInfo.file) {
+      await contentsRef.value?.openFile(fileInfo.file);
+    }
+  });
+};
 
-    const isRemoteFilePath = locCommon.isRemoteFilePath(filePath);
+const openFiles = (filesFilePathsOrFileContents: (string | Uint8Array | File)[]): void => {
+  // Start processing all files in parallel but open their tabs in the original order.
 
-    if (isRemoteFilePath) {
-      loadingModelMessageVisible.value = true;
+  const filePromises = filesFilePathsOrFileContents.map((fileFilePathOrFileContents) => {
+    return processFile(fileFilePathOrFileContents);
+  });
+
+  filePromises.reduce(async (previousFilePromises, currentFilePromise) => {
+    await previousFilePromises;
+
+    const currentFileInfo = await currentFilePromise;
+
+    if (!currentFileInfo) {
+      return;
     }
 
-    locCommon
-      .file(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter)
-      .then((file) => {
-        const fileType = file.type();
+    if (currentFileInfo.alreadyOpen) {
+      await contentsRef.value?.selectFile(currentFileInfo.filePath, true);
 
-        if (
-          fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
-          fileType === locApi.EFileType.UNKNOWN_FILE ||
-          fileType === locApi.EFileType.SEDML_FILE ||
-          (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
-        ) {
-          if (props.omex) {
-            vue.nextTick(() => {
-              issues.value.push({
-                type: locApi.EIssueType.ERROR,
-                description:
-                  fileType === locApi.EFileType.IRRETRIEVABLE_FILE
-                    ? 'The file could not be retrieved.'
-                    : 'Only COMBINE archives are supported.'
-              });
-            });
-          } else {
-            addToast({
-              severity: 'error',
-              summary: 'Opening a file',
-              detail:
-                filePath +
-                '\n\n' +
-                (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
-                  ? 'The file could not be retrieved.'
-                  : fileType === locApi.EFileType.SEDML_FILE
-                    ? 'SED-ML files are not currently supported.'
-                    : 'Only CellML files and COMBINE archives are supported.'),
-              life: TOAST_LIFE
-            });
-          }
+      return;
+    }
 
-          electronApi?.fileIssue(filePath);
-        } else {
-          contentsRef.value?.openFile(file);
-        }
-      })
-      .catch((error: unknown) => {
-        if (props.omex) {
-          vue.nextTick(() => {
-            issues.value.push({
-              type: locApi.EIssueType.ERROR,
-              description: common.formatMessage(common.formatError(error))
-            });
-          });
-        } else {
-          addToast({
-            severity: 'error',
-            summary: 'Opening a file',
-            detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
-            life: TOAST_LIFE
-          });
-        }
-
-        electronApi?.fileIssue(filePath);
-      })
-      .finally(() => {
-        if (isRemoteFilePath) {
-          loadingModelMessageVisible.value = false;
-        }
-      });
-  });
+    if (currentFileInfo.file) {
+      await contentsRef.value?.openFile(currentFileInfo.file, true);
+    }
+  }, Promise.resolve());
 };
 
 // Open file(s) dialog.
@@ -760,9 +822,7 @@ const onChange = (event: Event): void => {
   const input = event.target as HTMLInputElement;
 
   if (input.files) {
-    for (const file of input.files) {
-      openFile(file);
-    }
+    openFiles(Array.from(input.files));
   }
 
   // Reset the input.
@@ -793,9 +853,7 @@ const onDrop = (event: DragEvent): void => {
   const files = event.dataTransfer?.files;
 
   if (files) {
-    for (const file of Array.from(files)) {
-      openFile(file);
-    }
+    openFiles(Array.from(files));
   }
 };
 

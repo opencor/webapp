@@ -113,34 +113,52 @@ const hasFiles = (): boolean => {
   return fileTabs.value.length > 0;
 };
 
-const selectFile = (filePath: string): void => {
-  activeFile.value = filePath;
+const waitForTabsUpdate = async (): Promise<void> => {
+  // Wait a bit to ensure that the file tabs are properly updated.
+  // Note: although a bit of a hack, this is needed when opening multiple files. Indeed, without this, the file tab may
+  //       not be fully initialised when opening the next file. This means that when we select the file tab, it may try
+  //       to finish initialising itself and, when it comes to our simulation experiment view, this means resizing the
+  //       plots.
+
+  await vue.nextTick();
+
+  for (let i = 0; i < 3; ++i) {
+    await common.waitForNextAnimationFrame();
+  }
 };
 
-const selectNextFile = (): void => {
+const selectFile = async (filePath: string, wait: boolean = false): Promise<void> => {
+  activeFile.value = filePath;
+
+  if (wait) {
+    await waitForTabsUpdate();
+  }
+};
+
+const selectNextFile = async (): Promise<void> => {
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
   const fileTabName = fileTabs.value[(fileTabIndex + 1) % fileTabs.value.length]?.file.path() || '';
 
   if (fileTabName !== '') {
-    selectFile(fileTabName);
+    await selectFile(fileTabName);
   }
 };
 
-const selectPreviousFile = (): void => {
+const selectPreviousFile = async (): Promise<void> => {
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === activeFile.value);
   const fileTabName =
     fileTabs.value[(fileTabIndex - 1 + fileTabs.value.length) % fileTabs.value.length]?.file.path() || '';
 
   if (fileTabName !== '') {
-    selectFile(fileTabName);
+    await selectFile(fileTabName);
   }
 };
 
-const openFile = (file: locApi.File): void => {
+const openFile = async (file: locApi.File, wait: boolean = false): Promise<void> => {
   const filePath = file.path();
   const prevActiveFile = activeFile.value;
 
-  selectFile(filePath);
+  await selectFile(filePath);
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file: file,
@@ -148,9 +166,13 @@ const openFile = (file: locApi.File): void => {
   });
 
   electronApi?.fileOpened(filePath);
+
+  if (wait) {
+    await waitForTabsUpdate();
+  }
 };
 
-const closeFile = (filePath: string): void => {
+const closeFile = async (filePath: string): Promise<void> => {
   locApi.fileManager.unmanage(filePath);
 
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath);
@@ -161,20 +183,20 @@ const closeFile = (filePath: string): void => {
     const nextFileTab = fileTabs.value[Math.min(fileTabIndex, fileTabs.value.length - 1)];
 
     if (nextFileTab) {
-      selectFile(nextFileTab.file.path());
+      await selectFile(nextFileTab.file.path());
     }
   }
 
   electronApi?.fileClosed(filePath);
 };
 
-const closeCurrentFile = (): void => {
-  closeFile(activeFile.value);
+const closeCurrentFile = async (): Promise<void> => {
+  await closeFile(activeFile.value);
 };
 
-const closeAllFiles = (): void => {
+const closeAllFiles = async (): Promise<void> => {
   while (fileTabs.value.length) {
-    closeCurrentFile();
+    await closeCurrentFile();
   }
 };
 
