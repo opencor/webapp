@@ -217,6 +217,14 @@ export const sleep = (ms: number): Promise<void> => {
   });
 };
 
+// A method to wait for the next animation frame.
+
+export const waitForNextAnimationFrame = (): Promise<number> => {
+  return new Promise((resolve: FrameRequestCallback) => {
+    requestAnimationFrame(resolve);
+  });
+};
+
 // Some constants related to simulation data values.
 
 export const EMPTY_FLOAT64_ARRAY = Object.freeze(new Float64Array(0));
