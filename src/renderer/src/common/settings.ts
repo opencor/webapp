@@ -1,5 +1,5 @@
-import { formatError, type ISettings, type ISettingsGeneral } from './common.ts';
-import { electronApi } from './electronApi.ts';
+import { formatError, type ISettings, type ISettingsGeneral } from './common';
+import { electronApi } from './electronApi';
 
 class Settings {
   protected static _instance: Settings | null = null;

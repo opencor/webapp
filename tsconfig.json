@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
     "module": "nodenext",
-    "strictNullChecks": true
+    "moduleResolution": "nodenext",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
   },
   "include": ["*.ts"],
   "references": [
-    {
-      "path": "./tsconfig.app.json"
-    },
     {
       "path": "./tsconfig.node.json"
     },

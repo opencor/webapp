@@ -1,10 +1,10 @@
-import type { IOpenCORSimulationDataValue } from '../../index.ts';
+import type { IOpenCORSimulationDataValue } from '../../index';
 
-import * as locApi from '../libopencor/locApi.ts';
+import * as locApi from '../libopencor/locApi';
 
-import * as common from './common.ts';
-import * as dependencies from './dependencies.ts';
-import { electronApi } from './electronApi.ts';
+import * as common from './common';
+import * as dependencies from './dependencies';
+import { electronApi } from './electronApi';
 
 // Some file-related methods.
 

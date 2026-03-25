@@ -1,10 +1,10 @@
 import electron from 'electron';
 
-import { formatError } from '../renderer/src/common/common.ts';
-import { isMacOs, isPackaged } from '../renderer/src/common/electron.ts';
+import { formatError } from '../renderer/src/common/common';
+import { isMacOs, isPackaged } from '../renderer/src/common/electron';
 
-import { mainWindow } from './index.ts';
-import { clearRecentFiles } from './MainWindow.ts';
+import { mainWindow } from './index';
+import { clearRecentFiles } from './MainWindow';
 
 let enabledMenu: electron.Menu | null = null;
 let disabledMenu: electron.Menu | null = null;

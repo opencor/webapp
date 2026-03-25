@@ -45,7 +45,7 @@
   "version": "0.20260325.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.js",
-    "build:lib": "vite build --config vite.lib.config.ts && bun scripts/copy.indexdts.js",
+    "build:lib": "vite build --config vite.lib.config.ts && bunx --bun vue-tsc --project tsconfig.lib.types.json",
     "clean": "bun scripts/clean.js",
     "dependencies:update": "bun scripts/dependencies.update.js",
     "dev": "vite dev",

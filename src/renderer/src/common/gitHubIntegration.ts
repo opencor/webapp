@@ -2,7 +2,7 @@ import { AsyncEntry } from '@napi-rs/keyring';
 
 import electron from 'electron';
 
-import { formatError } from './common.ts';
+import { formatError } from './common';
 
 export const clearGitHubCache = async (): Promise<void> => {
   await Promise.all(

@@ -3,11 +3,10 @@ import { exec as _exec } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import { promisify } from 'node:util';
 
-// @ts-expect-error (libOpenCOR.node is a native module)
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node';
 
-import type { ISettings } from '../renderer/src/common/common.ts';
-import type { ISplashScreenInfo } from '../renderer/src/common/electronApi.ts';
+import type { ISettings } from '../renderer/src/common/common';
+import type { ISplashScreenInfo } from '../renderer/src/common/electronApi';
 
 const exec = promisify(_exec);
 

@@ -20,8 +20,8 @@
 </template>
 
 <script setup lang="ts">
-import * as common from '../../common/common.ts';
-import { latestVersion } from '../../common/version.ts';
+import * as common from '../../common/common';
+import { latestVersion } from '../../common/version';
 
 defineEmits<(event: 'close') => void>();
 </script>

@@ -247,15 +247,15 @@ import * as vueusecore from '@vueuse/core';
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
-import type { IOpenCORSimulationDataEvent } from '../../../index.ts';
+import type { IOpenCORSimulationDataEvent } from '../../../index';
 
-import * as colors from '../../common/colors.ts';
-import * as common from '../../common/common.ts';
-import * as dependencies from '../../common/dependencies.ts';
-import * as locCommon from '../../common/locCommon.ts';
-import * as locApi from '../../libopencor/locApi.ts';
-import * as locSedApi from '../../libopencor/locSedApi.ts';
-import * as math from '../../common/math.ts';
+import * as colors from '../../common/colors';
+import * as common from '../../common/common';
+import * as dependencies from '../../common/dependencies';
+import * as locCommon from '../../common/locCommon';
+import * as locApi from '../../libopencor/locApi';
+import * as locSedApi from '../../libopencor/locSedApi';
+import * as math from '../../common/math';
 
 import type { ISimulationExperimentViewSettings } from '../dialogs/SimulationExperimentViewSettingsDialog.vue';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';

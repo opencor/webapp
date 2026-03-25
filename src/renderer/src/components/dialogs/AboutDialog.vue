@@ -41,12 +41,12 @@
 </template>
 
 <script setup lang="ts">
-import { currentVersion } from '../../common/version.ts';
+import { currentVersion } from '../../common/version';
 
-import { COPYRIGHT } from '../../common/constants.ts';
+import { COPYRIGHT } from '../../common/constants';
 
-import { electronApi } from '../../common/electronApi.ts';
-import * as locApi from '../../libopencor/locApi.ts';
+import { electronApi } from '../../common/electronApi';
+import * as locApi from '../../libopencor/locApi';
 
 defineEmits<(event: 'close') => void>();
 </script>

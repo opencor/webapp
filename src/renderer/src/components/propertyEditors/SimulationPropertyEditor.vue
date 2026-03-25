@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import type * as locApi from '../../libopencor/locApi.ts';
+import type * as locApi from '../../libopencor/locApi';
 
 const props = defineProps<{
   uniformTimeCourse: locApi.SedUniformTimeCourse;
