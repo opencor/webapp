@@ -32,11 +32,6 @@ export default vite.defineConfig({
     },
     target: 'esnext'
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'esnext'
-    }
-  },
   plugins: [
     // Note: this must be in sync with vite.config.ts, except for the process-css-layers plugin which is only needed for
     //       the library build (to prevent styles from leaking into and being overridden by host apps).

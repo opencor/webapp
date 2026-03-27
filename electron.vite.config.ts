@@ -28,11 +28,6 @@ export default electronVite.defineConfig({
       target: 'esnext'
     },
     envDir: path.join(import.meta.dirname, 'src/renderer'),
-    optimizeDeps: {
-      esbuildOptions: {
-        target: 'esnext'
-      }
-    },
     plugins: [
       // Note: this must be in sync with src/renderer/vite.config.ts.
 
