@@ -16,8 +16,12 @@ export default {
 
       const parsedUrl = new URL(targetUrl);
       const allowedHosts = ['cellml.org', 'opencor.ws', 'physiomeproject.org'];
+      const allowedExtensions = ['.cellml', '.sedml', '.omex', '.csv'];
 
-      if (!allowedHosts.some((host) => parsedUrl.hostname.endsWith(host))) {
+      if (
+        !allowedHosts.some((host) => parsedUrl.hostname.endsWith(host)) &&
+        !allowedExtensions.some((extension) => parsedUrl.pathname.toLowerCase().endsWith(extension))
+      ) {
         return new Response('Target URL is not allowed.', { status: 403 });
       }
 
