@@ -13,4 +13,4 @@ export const SPIN_REPEAT_DELAY: number = 40;
 
 const crtYear: number = new Date().getFullYear();
 
-export const COPYRIGHT: string = crtYear === 2025 ? '2025' : `2025-${String(crtYear)}`;
+export const COPYRIGHT: string = crtYear === 2025 ? '2025' : `2025-${crtYear}`;

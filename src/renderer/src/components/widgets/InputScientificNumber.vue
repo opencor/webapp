@@ -237,7 +237,7 @@ const onPaste = (event: ClipboardEvent) => {
 
     match = sanitisedValue.match(scientificNumberPattern);
 
-    if (!match || !match[0]) {
+    if (!match?.[0]) {
       return;
     }
 

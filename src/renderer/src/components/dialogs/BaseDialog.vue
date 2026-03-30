@@ -37,8 +37,8 @@ const checkDialogPosition = () => {
     const dialogRect = dialogElement.getBoundingClientRect();
     const containerRect = containerElement.getBoundingClientRect();
 
-    dialogElement.style.top = `${String(Math.max(Math.min(dialogRect.top, containerRect.bottom - dialogRect.height), containerRect.top))}px`;
-    dialogElement.style.left = `${String(Math.max(Math.min(dialogRect.left, containerRect.right - dialogRect.width), containerRect.left))}px`;
+    dialogElement.style.top = `${Math.max(Math.min(dialogRect.top, containerRect.bottom - dialogRect.height), containerRect.top)}px`;
+    dialogElement.style.left = `${Math.max(Math.min(dialogRect.left, containerRect.right - dialogRect.width), containerRect.left)}px`;
   }
 };
 

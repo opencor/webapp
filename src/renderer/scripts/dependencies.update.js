@@ -6,15 +6,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const run = (command, args) => {
-  const result = spawnSync({
+  const res = spawnSync({
     cmd: [command, ...args],
     stdio: ['inherit', 'inherit', 'inherit']
   });
 
-  if (result.exitCode !== 0) {
+  if (res.exitCode !== 0) {
     console.error(`Command failed: ${command} ${args.join(' ')}`);
 
-    process.exit(result.exitCode);
+    process.exit(res.exitCode);
   }
 };
 

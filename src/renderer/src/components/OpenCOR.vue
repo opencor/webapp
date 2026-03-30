@@ -125,6 +125,7 @@ import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
 import type { IOpenCOREmits, IOpenCORProps } from '../../index';
+import { provideOpenCORToast } from '../components/OpenCORToast';
 
 import '../assets/app.css';
 import '../assets/primeicons-assets';
@@ -375,6 +376,8 @@ const addToast = (options: Parameters<typeof toast.add>[0]) => {
 
   toast.add({ ...options, group: toastId.value });
 };
+
+provideOpenCORToast(addToast);
 
 // Finish initialising OpenCOR.
 
@@ -1225,8 +1228,8 @@ const onGitHubButtonClick = async (): Promise<void> => {
 
     gitHubAuthProvider.addScope('repo');
 
-    const result = await firebase.auth().signInWithPopup(gitHubAuthProvider);
-    const credential = result.credential as firebase.auth.OAuthCredential | null;
+    const res = await firebase.auth().signInWithPopup(gitHubAuthProvider);
+    const credential = res.credential as firebase.auth.OAuthCredential | null;
 
     if (!credential?.accessToken) {
       throw new Error('GitHub OAuth flow did not return an access token.');

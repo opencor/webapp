@@ -164,13 +164,17 @@ export {
   type IUiJsonInput,
   type IUiJsonOutput,
   type IUiJsonOutputData,
+  type IUiJsonOutputExternalData,
+  type IUiJsonOutputExternalDataSeries,
   type IUiJsonOutputPlot,
   type IUiJsonOutputPlotAdditionalTrace,
   type IUiJsonParameter,
   type IUiJsonScalarInput,
+  cleanUiJson,
   isScalarInput,
   isDiscreteInput,
-  cleanUiJson,
+  normaliseUiJson,
+  uiJsonReplacer,
   validateUiJson
 } from './locUiJsonApi';
 

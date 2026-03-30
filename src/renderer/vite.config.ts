@@ -22,11 +22,6 @@ export default vite.defineConfig({
     },
     target: 'esnext'
   },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'esnext'
-    }
-  },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
 

@@ -7,6 +7,7 @@ import {
   type IIssue,
   type IUiJson,
   type IWasmIssues,
+  normaliseUiJson,
   SedDocument,
   wasmIssuesToIssues
 } from './locApi';
@@ -179,7 +180,22 @@ export class File {
     }
 
     const decoder = new TextDecoder();
+    let res: unknown;
 
-    return JSON.parse(decoder.decode(uiJsonContents));
+    try {
+      res = JSON.parse(decoder.decode(uiJsonContents));
+    } catch (_error: unknown) {
+      console.warn(`OpenCOR: unable to parse the UI JSON for file '${this._path}'.`);
+
+      return undefined;
+    }
+
+    if (!res || typeof res !== 'object' || Array.isArray(res)) {
+      console.warn(`OpenCOR: the UI JSON for file '${this._path}' has an unexpected structure.`);
+
+      return undefined;
+    }
+
+    return normaliseUiJson(res as IUiJson);
   }
 }
