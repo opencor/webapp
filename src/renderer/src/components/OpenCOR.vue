@@ -184,6 +184,8 @@ const untrackAllSimulationData = (): void => {
 };
 
 defineExpose({
+  // Simulation-only methods.
+
   trackSimulationData,
   untrackSimulationData,
   untrackAllSimulationData

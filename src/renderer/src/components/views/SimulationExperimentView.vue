@@ -701,6 +701,13 @@ const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interact
 // A helper function to retrieve simulation data for one or more model parameters.
 
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
+  if (!props.simulationOnly) {
+    return Promise.resolve({
+      simulationData: {},
+      issues: ['The simulation data event is only available in simulation-only mode.']
+    });
+  }
+
   const res: IOpenCORSimulationDataEvent = {
     simulationData: common.emptySimulationData(modelParameters),
     issues: []
@@ -737,6 +744,8 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
 };
 
 defineExpose({
+  // Simulation-only methods.
+
   simulationData
 });
 

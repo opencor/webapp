@@ -106,10 +106,18 @@ const filePaths = vue.computed<string[]>(() => {
 // Some methods to handle files and file tabs.
 
 const hasFile = (filePath: string): boolean => {
+  if (props.simulationOnly) {
+    return false;
+  }
+
   return fileTabs.value.find((fileTab) => fileTab.file.path() === filePath) !== undefined;
 };
 
 const hasFiles = (): boolean => {
+  if (props.simulationOnly) {
+    return false;
+  }
+
   return fileTabs.value.length > 0;
 };
 
@@ -128,6 +136,10 @@ const waitForTabsUpdate = async (): Promise<void> => {
 };
 
 const selectFile = async (filePath: string, wait: boolean = false): Promise<void> => {
+  if (props.simulationOnly) {
+    return;
+  }
+
   activeFile.value = filePath;
 
   if (wait) {
@@ -191,10 +203,18 @@ const closeFile = async (filePath: string): Promise<void> => {
 };
 
 const closeCurrentFile = async (): Promise<void> => {
+  if (props.simulationOnly) {
+    return;
+  }
+
   await closeFile(activeFile.value);
 };
 
 const closeAllFiles = async (): Promise<void> => {
+  if (props.simulationOnly) {
+    return;
+  }
+
   while (fileTabs.value.length) {
     await closeCurrentFile();
   }
@@ -204,7 +224,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
   if (!props.simulationOnly) {
     return Promise.resolve({
       simulationData: common.emptySimulationData(modelParameters),
-      issues: ['Simulation data can only be retrieved in simulation only mode.']
+      issues: ['Simulation data can only be retrieved in simulation-only mode.']
     });
   }
 
@@ -226,12 +246,20 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
 };
 
 defineExpose({
+  // General methods.
+
   openFile,
-  closeCurrentFile,
+
+  // Full OpenCOR methods.
+
   closeAllFiles,
+  closeCurrentFile,
   hasFile,
   hasFiles,
   selectFile,
+
+  // Simulation-only methods.
+
   simulationData
 });
 
