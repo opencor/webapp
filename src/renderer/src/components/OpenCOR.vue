@@ -124,7 +124,7 @@ import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
-import type { IOpenCOREmits, IOpenCORProps } from '../../index';
+import type { IOpenCOREmits, IOpenCORProps, IOpenCORSimulationDataEvent } from '../../index';
 import { provideOpenCORToast } from '../components/OpenCORToast';
 
 import '../assets/app.css';
@@ -205,7 +205,7 @@ const emitSimulationData = (): void => {
     return;
   }
 
-  contents.simulationData(trackedSimulationData.value).then((res) => {
+  contents.simulationData(trackedSimulationData.value).then((res: IOpenCORSimulationDataEvent) => {
     emit('simulationData', res);
   });
 };
@@ -688,7 +688,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
   // Retrieve a locApi.File object for the given file or file path.
 
-  const isRemoteFilePath = locCommon.isRemoteFilePath(filePath);
+  const isRemoteFilePath = common.isUrl(filePath);
 
   if (isRemoteFilePath) {
     ++activeRemoteModelLoadsCount.value;

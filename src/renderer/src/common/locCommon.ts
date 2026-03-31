@@ -153,10 +153,6 @@ export const combineArchiveDataUrl = (dataUrl: string | Uint8Array | File): IDat
   };
 };
 
-export const isRemoteFilePath = (filePath: string): boolean => {
-  return filePath.startsWith('http://') || filePath.startsWith('https://');
-};
-
 export const filePath = (
   fileFilePathOrFileContents: string | Uint8Array | File,
   dataUrlFileName: string,
@@ -181,7 +177,7 @@ export const file = (
   dataUrlCounter: number
 ): Promise<locApi.File> => {
   if (typeof fileFilePathOrFileContents === 'string') {
-    if (isRemoteFilePath(fileFilePathOrFileContents)) {
+    if (common.isUrl(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
         // First try fetching the URL through OpenCOR's CORS proxy.
 

@@ -475,18 +475,18 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
   // Make sure that the input information makes sense.
 
   const res: IIssue[] = [];
-  const inputIdUsed: Record<string, boolean> = {};
+  const usedOutputIds: Record<string, boolean> = {};
 
   for (const input of uiJson.input) {
     if (input.id) {
-      if (inputIdUsed[input.id]) {
+      if (usedOutputIds[input.id]) {
         res.push({
           type: EIssueType.WARNING,
           description: `UI JSON: an input id must be unique ('${input.id}' is used more than once).`
         });
       }
 
-      inputIdUsed[input.id] = true;
+      usedOutputIds[input.id] = true;
     } else {
       res.push({
         type: EIssueType.WARNING,

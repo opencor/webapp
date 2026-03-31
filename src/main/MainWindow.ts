@@ -2,7 +2,7 @@ import electron from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
 import path from 'node:path';
 
-import { formatError, isDataUrlOmexFileName, isHttpUrl, type ISettings } from '../renderer/src/common/common';
+import { formatError, isDataUrlOmexFileName, type ISettings, isUrl } from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY } from '../renderer/src/common/constants';
 import { isLinux, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -350,7 +350,7 @@ export class MainWindow extends ApplicationWindow {
         };
       }
 
-      if (isHttpUrl(details.url)) {
+      if (isUrl(details.url)) {
         electron.shell.openExternal(details.url).catch((error: unknown) => {
           console.warn(`OpenCOR: failed to open external URL (${details.url}):`, formatError(error));
         });
