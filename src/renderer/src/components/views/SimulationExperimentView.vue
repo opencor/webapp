@@ -701,20 +701,19 @@ const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interact
 // A helper function to retrieve simulation data for one or more model parameters.
 
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
-  if (!props.simulationOnly) {
-    return Promise.resolve({
-      simulationData: {},
-      issues: ['The simulation data event is only available in simulation-only mode.']
-    });
-  }
-
   const res: IOpenCORSimulationDataEvent = {
     simulationData: common.emptySimulationData(modelParameters),
     issues: []
   };
 
+  if (!props.simulationOnly) {
+    res.issues = ['The simulation data event is only available in simulation-only mode.'];
+
+    return Promise.resolve(res);
+  }
+
   if (!interactiveInstanceTask) {
-    res.issues.push('No SED-ML instance task available.');
+    res.issues = ['No SED-ML instance task available.'];
 
     return Promise.resolve(res);
   }
