@@ -327,7 +327,7 @@
                               <span class="index">{{ Number(parameterIndex) + 1 }}</span>
                               <FloatLabel variant="on" class="flex-1">
                                 <Select v-model="parameter.name"
-                                  class="w-full" panelClass="model-parameter-filter"
+                                  class="w-full" panelClass="item-filter"
                                   size="small"
                                   filter filterMode="lenient"
                                   :options="editableModelParameters"
@@ -401,7 +401,7 @@
                               </FloatLabel>
                               <FloatLabel variant="on" class="flex-1">
                                 <Select v-model="data.name"
-                                  class="w-full" panelClass="model-parameter-filter"
+                                  class="w-full" panelClass="item-filter"
                                   size="small"
                                   filter filterMode="lenient"
                                   :options="allModelParameters"
@@ -546,7 +546,7 @@
                                     </FloatLabel>
                                     <FloatLabel variant="on" class="flex-1">
                                       <Select v-model="externalData.name"
-                                        class="w-full" panelClass="model-parameter-filter"
+                                        class="w-full" panelClass="item-filter"
                                         size="small"
                                         filter filterMode="lenient"
                                         :options="externalDataSeries(externalDataFile)"
@@ -1812,7 +1812,7 @@ vue.onMounted(() => {
   overflow-y: auto;
 }
 
-:global(.p-select-overlay.model-parameter-filter .p-select-header > div > input) {
+:global(.p-select-overlay.item-filter .p-select-header > div > input) {
   padding: 0.25rem;
   padding-right: 0;
 }
