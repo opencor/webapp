@@ -329,7 +329,7 @@
                                 <Select v-model="parameter.name"
                                   class="w-full" panelClass="model-parameter-filter"
                                   size="small"
-                                  filter filterMode="lenient" :autoFilterFocus="true"
+                                  filter filterMode="lenient"
                                   :options="editableModelParameters"
                                 />
                                 <label>Model parameter</label>
@@ -403,7 +403,7 @@
                                 <Select v-model="data.name"
                                   class="w-full" panelClass="model-parameter-filter"
                                   size="small"
-                                  filter filterMode="lenient" :autoFilterFocus="true"
+                                  filter filterMode="lenient"
                                   :options="allModelParameters"
                                 />
                                 <label>Model parameter</label>
@@ -548,7 +548,7 @@
                                       <Select v-model="externalData.name"
                                         class="w-full" panelClass="model-parameter-filter"
                                         size="small"
-                                        filter filterMode="lenient" :autoFilterFocus="true"
+                                        filter filterMode="lenient"
                                         :options="externalDataSeries(externalDataFile)"
                                       />
                                       <label>External data</label>
