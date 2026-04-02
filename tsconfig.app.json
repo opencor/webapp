@@ -1,4 +1,7 @@
 {
   "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "module": "esnext"
+  },
   "include": ["src/renderer/src/**/*.ts", "src/renderer/src/**/*.vue"]
 }

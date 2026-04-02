@@ -99,7 +99,11 @@ export const corsProxyUrl = (url: string): string => {
 
 // A method to compute the XXH64 value of some data.
 
-export const xxh64 = (data: Uint8Array): string => {
+export const xxh64 = (data: string | Uint8Array): string => {
+  if (typeof data === 'string') {
+    return dependencies._xxhash.h64(data).toString(16).padStart(16, '0');
+  }
+
   return dependencies._xxhash.h64Raw(data).toString(16).padStart(16, '0');
 };
 

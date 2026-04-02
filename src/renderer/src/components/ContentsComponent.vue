@@ -71,7 +71,7 @@ import { electronApi } from '../common/electronApi';
 import * as locApi from '../libopencor/locApi';
 
 import SimulationExperimentView from './views/SimulationExperimentView.vue';
-import type { IOpenCORSimulationDataEvent } from '../../index';
+import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../index';
 
 interface IFileTab {
   file: locApi.File;
@@ -220,6 +220,32 @@ const closeAllFiles = async (): Promise<void> => {
   }
 };
 
+// Add some external data to the current simulation experiment view.
+
+const addExternalData = async (
+  csv: string,
+  voiExpression: string | undefined,
+  modelParameters: string[]
+): Promise<IOpenCORExternalDataEvent> => {
+  const simulationExperimentViews = simulationExperimentViewRef.value;
+
+  if (!simulationExperimentViews.length) {
+    return Promise.resolve({
+      csv,
+      issues: ['No simulation experiment view available.']
+    });
+  }
+
+  return simulationExperimentViews[0].addExternalData(csv, voiExpression, modelParameters).catch((error: unknown) => {
+    return {
+      csv,
+      issues: [common.formatError(error)]
+    };
+  });
+};
+
+// Retrieve some simulation data from the current simulation experiment view.
+
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
   if (!props.simulationOnly) {
     return Promise.resolve({
@@ -245,6 +271,8 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
   });
 };
 
+// Some exposed methods.
+
 defineExpose({
   // General methods.
 
@@ -260,6 +288,7 @@ defineExpose({
 
   // Simulation-only methods.
 
+  addExternalData,
   simulationData
 });
 

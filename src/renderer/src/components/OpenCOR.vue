@@ -124,7 +124,7 @@ import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
-import type { IOpenCOREmits, IOpenCORProps, IOpenCORSimulationDataEvent } from '../../index';
+import type { IOpenCOREmits, IOpenCORExternalDataEvent, IOpenCORProps, IOpenCORSimulationDataEvent } from '../../index';
 import { provideOpenCORToast } from '../components/OpenCORToast';
 
 import '../assets/app.css';
@@ -150,6 +150,29 @@ import MainMenu from './MainMenu.vue';
 const props = defineProps<IOpenCORProps>();
 
 const emit = defineEmits<IOpenCOREmits>();
+
+const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null);
+
+// Methods to handle external data.
+
+const addExternalData = (csv: string, voiExpression: string | undefined, modelParameters: string[]): void => {
+  const contents = contentsRef.value;
+
+  if (!contents) {
+    emit('externalData', {
+      csv,
+      issues: ['No contents available.']
+    });
+
+    return;
+  }
+
+  contents.addExternalData(csv, voiExpression, modelParameters).then((res: IOpenCORExternalDataEvent) => {
+    emit('externalData', res);
+  });
+};
+
+// Methods to handle simulation data tracking.
 
 const trackedSimulationData = vue.ref<string[]>([]);
 
@@ -183,14 +206,6 @@ const untrackAllSimulationData = (): void => {
   trackedSimulationData.value = [];
 };
 
-defineExpose({
-  // Simulation-only methods.
-
-  trackSimulationData,
-  untrackSimulationData,
-  untrackAllSimulationData
-});
-
 const emitSimulationData = (): void => {
   if (!trackedSimulationData.value.length) {
     return;
@@ -212,12 +227,24 @@ const emitSimulationData = (): void => {
   });
 };
 
+// Exposed methods.
+
+defineExpose({
+  // Simulation-only methods.
+
+  addExternalData,
+  trackSimulationData,
+  untrackSimulationData,
+  untrackAllSimulationData
+});
+
+// Internal methods.
+
 const { isDialogActive } = provideDialogState();
 
 const safeBlockUiRef = vue.ref<InstanceType<typeof SafeBlockUI> | null>(null);
 const mainMenuRef = vue.ref<InstanceType<typeof MainMenu> | null>(null);
 const filesRef = vue.ref<HTMLElement | null>(null);
-const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const compIssues = vue.computed<locApi.IIssue[]>(() => {
   return [...initialisation.issues.value, ...issues.value];
