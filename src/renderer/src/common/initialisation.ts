@@ -52,7 +52,7 @@ const externalDependencies: ExternalDependency[] = [
 const crtNbOfSteps = vue.ref<number>(0);
 const totalNbOfSteps =
   (electronApi ? 0 : 2) +
-  externalDependencies.reduce((acc, dep) => acc + (dep.url ? 1 : 0) + (dep.cssUrl ? 1 : 0), 0) +
+  externalDependencies.reduce((res, dependency) => res + (dependency.url ? 1 : 0) + (dependency.cssUrl ? 1 : 0), 0) +
   1;
 
 // Retrieve the version of libOpenCOR that is to be used. Two options:
