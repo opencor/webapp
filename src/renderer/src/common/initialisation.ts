@@ -69,18 +69,32 @@ export const initialiseLocApi = async (): Promise<void> => {
   } else {
     // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
 
+    const libopencorVersion = '0.20260409.1';
+
     try {
       const libOpenCOR = (
         await import(
           /* @vite-ignore */ common.corsProxyUrl(
-            'https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20260302.0.js'
+            `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.js`
           )
         )
       ).default;
 
       ++crtNbOfSteps.value;
 
-      locApi.setWasmLocApi(await libOpenCOR());
+      locApi.setWasmLocApi(
+        await libOpenCOR({
+          locateFile: (filename: string) => {
+            if (filename.endsWith('.wasm')) {
+              return common.corsProxyUrl(
+                `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.wasm`
+              );
+            }
+
+            return filename;
+          }
+        })
+      );
 
       ++crtNbOfSteps.value;
     } catch (error: unknown) {
