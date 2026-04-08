@@ -6,6 +6,7 @@ import App from './App.vue';
 // import App from './AppWithOmex.vue';
 // import App from './AppWithRawOmex.vue';
 // import App from './AppWithSimulationData.vue';
+// import App from './AppWithExternalData.vue';
 
 createApp(App).mount('#app');
 

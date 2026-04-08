@@ -6,18 +6,25 @@ export interface IOpenCORProps {
 }
 
 export interface IOpenCORExpose {
+  addExternalData: (csv: string, voiExpression: string | undefined, modelParameters: string[]) => void;
   trackSimulationData: (modelParameters: string[]) => void;
   untrackSimulationData: (modelParameters: string[]) => void;
   untrackAllSimulationData: () => void;
 }
 
 export interface IOpenCOREmits extends /* @vue-ignore */ Record<string, unknown[]> {
+  externalData: [IOpenCORExternalDataEvent];
   simulationData: [IOpenCORSimulationDataEvent];
 }
 
 export interface IOpenCORSimulationDataValue {
   data: Float64Array;
   unit: string;
+}
+
+export interface IOpenCORExternalDataEvent {
+  csv: string;
+  issues: string[];
 }
 
 export type OpenCORSimulationData = Record<string, IOpenCORSimulationDataValue>;

@@ -327,9 +327,9 @@
                               <span class="index">{{ Number(parameterIndex) + 1 }}</span>
                               <FloatLabel variant="on" class="flex-1">
                                 <Select v-model="parameter.name"
-                                  class="w-full" panelClass="model-parameter-filter"
+                                  class="w-full" panelClass="item-filter"
                                   size="small"
-                                  filter filterMode="lenient" :autoFilterFocus="true"
+                                  filter filterMode="lenient"
                                   :options="editableModelParameters"
                                 />
                                 <label>Model parameter</label>
@@ -401,9 +401,9 @@
                               </FloatLabel>
                               <FloatLabel variant="on" class="flex-1">
                                 <Select v-model="data.name"
-                                  class="w-full" panelClass="model-parameter-filter"
+                                  class="w-full" panelClass="item-filter"
                                   size="small"
-                                  filter filterMode="lenient" :autoFilterFocus="true"
+                                  filter filterMode="lenient"
                                   :options="allModelParameters"
                                 />
                                 <label>Model parameter</label>
@@ -546,9 +546,9 @@
                                     </FloatLabel>
                                     <FloatLabel variant="on" class="flex-1">
                                       <Select v-model="externalData.name"
-                                        class="w-full" panelClass="model-parameter-filter"
+                                        class="w-full" panelClass="item-filter"
                                         size="small"
-                                        filter filterMode="lenient" :autoFilterFocus="true"
+                                        filter filterMode="lenient"
                                         :options="externalDataSeries(externalDataFile)"
                                       />
                                       <label>External data</label>
@@ -896,6 +896,7 @@ import * as vue from 'vue';
 import * as locApi from '../../libopencor/locApi';
 import * as common from '../../common/common';
 import { TOAST_LIFE } from '../../common/constants';
+import * as externalData from '../../common/externalData';
 import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 import { validateUiJson } from '../../libopencor/locUiJsonApi';
 import { EIssueType } from '../../libopencor/locLoggerApi';
@@ -964,6 +965,15 @@ const addToast = useOpenCORToast();
 const localSettings = vue.ref<ISimulationExperimentViewSettings>(deepCloneSettings(props.settings));
 // Note: we need to do a deep copy here to make sure that any changes made to nested objects in our local settings are
 //       not reflected in the original settings while preserving any typed arrays in the UI JSON.
+
+vue.watch(
+  () => props.settings,
+  (newSettings) => {
+    localSettings.value = deepCloneSettings(newSettings);
+  },
+  { deep: true }
+);
+
 const simulationSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const solversSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const uiJsonIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
@@ -1244,96 +1254,6 @@ const externalDataDescription = (externalData: locApi.IUiJsonOutputExternalData,
   return externalData.description?.trim() || `External data #${externalDataIndex + 1}`;
 };
 
-interface IExternalCsvData {
-  headers: string[];
-  columns: number[][];
-}
-
-const parseExternalCsvData = (externalCsvData: string): IExternalCsvData => {
-  const lines = externalCsvData
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  if (lines.length < 2) {
-    throw new Error('The external CSV data must contain a header and at least one row of numbers.');
-  }
-
-  const headers = lines[0]?.split(',').map((header) => header.trim()) ?? [];
-
-  if (headers.length < 2) {
-    throw new Error(
-      'The external CSV data header must contain at least two columns: one VOI column and one or more data columns.'
-    );
-  }
-
-  if (!headers[0]) {
-    throw new Error('The external CSV data header must have a non-empty VOI column name.');
-  }
-
-  if (headers.slice(1).some((header) => !header)) {
-    throw new Error('The external CSV data header must have non-empty data column names.');
-  }
-
-  const seenHeaders = new Set<string>();
-
-  for (const header of headers.slice(1)) {
-    if (seenHeaders.has(header)) {
-      throw new Error(`The external CSV data header contains duplicate data column names ('${header}').`);
-    }
-
-    seenHeaders.add(header);
-  }
-
-  const columns = headers.map(() => [] as number[]);
-
-  for (let rowIndex = 1; rowIndex < lines.length; ++rowIndex) {
-    const line = lines[rowIndex];
-
-    if (!line) {
-      continue;
-    }
-
-    const valueStrings = line.split(',').map((value) => value.trim());
-
-    if (valueStrings.length !== headers.length) {
-      throw new Error(
-        `The external CSV data row #${String(rowIndex + 1)} does not have the same number of columns as the header (i.e. ${headers.length}, not ${valueStrings.length}).`
-      );
-    }
-
-    const values = valueStrings.map((trimmedValue, columnIndex) => {
-      if (trimmedValue === '') {
-        throw new Error(
-          `The external CSV data row #${String(rowIndex + 1)} contains an empty value in column #${String(columnIndex + 1)}.`
-        );
-      }
-
-      return {
-        number: Number(trimmedValue),
-        string: trimmedValue
-      };
-    });
-
-    for (let columnIndex = 0; columnIndex < values.length; ++columnIndex) {
-      const value = values[columnIndex];
-
-      if (!Number.isFinite(value.number)) {
-        throw new Error(
-          `The external CSV data row #${String(rowIndex + 1)} contains a non-numeric value ('${value.string}').`
-        );
-      }
-
-      columns[columnIndex]?.push(value.number);
-    }
-  }
-
-  return {
-    headers,
-    columns
-  };
-};
-
 const sourceDescription = (source: string): string => {
   const withoutQuery = source.split(/[?#]/)[0] ?? source;
   const parts = withoutQuery.split('/').filter(Boolean);
@@ -1346,7 +1266,7 @@ const sourceDescription = (source: string): string => {
   }
 };
 
-const createExternalDataFromCsv = (source: string, externalCsvData: IExternalCsvData): void => {
+const createExternalDataFromCsv = (source: string, externalCsvData: externalData.IExternalCsvData): void => {
   const dataSeries: locApi.IUiJsonOutputExternalDataSeries[] = [];
 
   for (let columnIndex = 1; columnIndex < externalCsvData.headers.length; ++columnIndex) {
@@ -1379,7 +1299,7 @@ const importExternalDataFromFiles = async (files: File[]): Promise<void> => {
 
   try {
     for (const file of files) {
-      createExternalDataFromCsv(file.name, parseExternalCsvData(await file.text()));
+      createExternalDataFromCsv(file.name, externalData.parseExternalCsvData(await file.text()));
     }
   } catch (error: unknown) {
     addToast({
@@ -1812,7 +1732,7 @@ vue.onMounted(() => {
   overflow-y: auto;
 }
 
-:global(.p-select-overlay.model-parameter-filter .p-select-header > div > input) {
+:global(.p-select-overlay.item-filter .p-select-header > div > input) {
   padding: 0.25rem;
   padding-right: 0;
 }

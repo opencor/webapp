@@ -15,7 +15,7 @@ export default {
       // Validate and restrict the target URL.
 
       const parsedUrl = new URL(targetUrl);
-      const allowedHosts = ['cellml.org', 'opencor.ws', 'physiomeproject.org'];
+      const allowedHosts = ['cellml.org', 'figshare.com', 'opencor.ws', 'physiomeproject.org'];
       const allowedExtensions = ['.cellml', '.sedml', '.omex', '.csv'];
 
       if (
