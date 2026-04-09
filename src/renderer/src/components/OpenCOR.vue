@@ -65,7 +65,7 @@
         @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
-      <BlockingMessageComponent v-show="loadingModelMessageVisible" message="Loading model..." />
+      <BlockingMessageComponent v-if="loadingModelMessageVisible" message="Loading model..." />
       <BlockingMessageComponent v-show="progressMessageVisible" :message="progressMessageMessage" :progress="progressMessageProgress" />
       <OkMessageDialog v-model:visible="updateErrorVisible"
         :title="updateErrorTitle"
