@@ -87,14 +87,8 @@ export const isDataUrlOmexFileName = (fileName: string): boolean => {
 
 // A method to determine whether a URL is an HTTP or HTTPS URL.
 
-export const isHttpUrl = (url: string): boolean => {
-  try {
-    const { protocol } = new URL(url);
-
-    return protocol === 'http:' || protocol === 'https:';
-  } catch {
-    return false;
-  }
+export const isUrl = (filePath: string): boolean => {
+  return filePath.startsWith('http://') || filePath.startsWith('https://');
 };
 
 // A method to get the CORS proxy URL for a URL.
@@ -105,7 +99,11 @@ export const corsProxyUrl = (url: string): string => {
 
 // A method to compute the XXH64 value of some data.
 
-export const xxh64 = (data: Uint8Array): string => {
+export const xxh64 = (data: string | Uint8Array): string => {
+  if (typeof data === 'string') {
+    return dependencies._xxhash.h64(data).toString(16).padStart(16, '0');
+  }
+
   return dependencies._xxhash.h64Raw(data).toString(16).padStart(16, '0');
 };
 

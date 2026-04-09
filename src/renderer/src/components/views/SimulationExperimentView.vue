@@ -250,11 +250,12 @@ import * as vueusecore from '@vueuse/core';
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
-import type { IOpenCORSimulationDataEvent } from '../../../index';
+import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../../index';
 
 import * as colors from '../../common/colors';
 import * as common from '../../common/common';
 import * as dependencies from '../../common/dependencies';
+import * as externalData from '../../common/externalData';
 import * as locCommon from '../../common/locCommon';
 import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
@@ -440,18 +441,6 @@ const updateInteractiveUi = () => {
   interactiveShowInput.value = interactiveUiJson.value.input.map(
     (input: locApi.IUiJsonInput) => (input.visible ?? 'true') !== 'false'
   );
-
-  // Update our mapping of interactive data IDs to simulation data information.
-
-  Object.keys(interactiveIdToInfo).forEach((key) => {
-    delete interactiveIdToInfo[key];
-  });
-
-  interactiveUiJson.value.output.data.forEach((data: locApi.IUiJsonOutputData) => {
-    if (data.id && interactiveInstanceTask) {
-      interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
-    }
-  });
 };
 
 const instanceIssues = vue.ref<locApi.IIssue[]>([]);
@@ -678,25 +667,292 @@ const interactiveCompData = vue.computed<IGraphPanelData[]>(() => {
 
   return res;
 });
-const interactiveSettings = vue.computed<ISimulationExperimentViewSettings>(() => ({
-  simulation: {
-    startingPoint: interactiveUniformTimeCourse.outputStartTime(),
-    endingPoint: interactiveUniformTimeCourse.outputEndTime(),
-    pointInterval:
-      (interactiveUniformTimeCourse.outputEndTime() - interactiveUniformTimeCourse.outputStartTime()) /
-      interactiveUniformTimeCourse.numberOfSteps()
-  },
-  solvers: {
-    cvodeMaximumStep: interactiveCvode.maximumStep()
-  },
-  interactive: {
-    uiJson: interactiveUiJson.value
-  },
-  miscellaneous: {
-    liveUpdates: interactiveLiveUpdatesEnabled.value
-  }
-}));
+
+const interactiveSettings = vue.computed<ISimulationExperimentViewSettings>(() => {
+  const uiJson = interactiveUiJson.value;
+
+  return {
+    simulation: {
+      startingPoint: interactiveUniformTimeCourse.outputStartTime(),
+      endingPoint: interactiveUniformTimeCourse.outputEndTime(),
+      pointInterval:
+        (interactiveUniformTimeCourse.outputEndTime() - interactiveUniformTimeCourse.outputStartTime()) /
+        interactiveUniformTimeCourse.numberOfSteps()
+    },
+    solvers: {
+      cvodeMaximumStep: interactiveCvode.maximumStep()
+    },
+    interactive: {
+      uiJson
+    },
+    miscellaneous: {
+      liveUpdates: interactiveLiveUpdatesEnabled.value
+    }
+  };
+});
 const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interactiveSettings.value)));
+
+// A helper function to generate a unique external data ID based on a candidate name and a set of already used IDs, by
+// normalising the candidate name and adding suffixes if necessary to avoid conflicts.
+
+const uniqueOutputDataId = (name: string, usedIds: Set<string>): string => {
+  const normalisedId = `${name.replace(/[^A-Za-z0-9_]/g, '_')}_ext`;
+  let res = normalisedId;
+  let suffix = 0;
+
+  while (usedIds.has(res)) {
+    res = `${normalisedId}_${++suffix}`;
+  }
+
+  usedIds.add(res);
+
+  return res;
+};
+
+// A helper function to replace data IDs in an expression with its corresponding external data IDs using the provided
+// mapping, ensuring that we only replace standalone IDs and not substrings of other IDs.
+
+const replaceWithExternalDataIds = (expression: string, mapping: Record<string, string>): string => {
+  let res = expression;
+  const dataIds = Object.keys(mapping).sort((a, b) => b.length - a.length);
+
+  for (const dataId of dataIds) {
+    const externalDataId = mapping[dataId];
+    let newRes = '';
+    let i = 0;
+
+    while (i < res.length) {
+      if (res.startsWith(dataId, i)) {
+        const prevChar = i === 0 ? '' : res[i - 1];
+        const nextChar = i + dataId.length >= res.length ? '' : res[i + dataId.length];
+
+        if (!/[A-Za-z0-9_]/.test(prevChar) && !/[A-Za-z0-9_]/.test(nextChar)) {
+          newRes += externalDataId;
+
+          i += dataId.length;
+
+          continue;
+        }
+      }
+
+      newRes += res[i++];
+    }
+
+    res = newRes;
+  }
+
+  return res;
+};
+
+// A helper function to add some external data to the interactive simulation.
+
+const addedExternalDataHashes = new Set<string>();
+const inFlightExternalDataHashes = new Set<string>();
+
+const addExternalData = async (
+  csv: string,
+  voiExpression: string | undefined,
+  modelParameters: string[]
+): Promise<IOpenCORExternalDataEvent> => {
+  // Make sure that we are in simulation-only mode.
+
+  const res: IOpenCORExternalDataEvent = {
+    csv,
+    issues: []
+  };
+
+  if (!props.simulationOnly) {
+    res.issues = ['The exposed addExternalData() method is only available in simulation-only mode.'];
+
+    return Promise.resolve(res);
+  }
+
+  // Make sure that we can retrieve the CSV data.
+
+  let csvContents: string = '';
+
+  if (common.isUrl(csv)) {
+    try {
+      const response = await fetch(common.corsProxyUrl(csv));
+
+      if (!response.ok) {
+        res.issues = [`Could not retrieve the CSV file from ${csv} (status: ${response.status}).`];
+
+        return Promise.resolve(res);
+      }
+
+      csvContents = await response.text();
+    } catch (error: unknown) {
+      res.issues = [
+        `Could not retrieve the CSV file from ${csv} (${common.formatMessage(common.formatError(error), false)}).`
+      ];
+
+      return Promise.resolve(res);
+    }
+  } else {
+    csvContents = csv;
+  }
+
+  if (!csvContents) {
+    return Promise.resolve(res);
+  }
+
+  // Make sure that we haven't already added this CSV data (based on a hash of the CSV contents) to avoid accidentally
+  // adding the same data multiple times.
+
+  const csvHash = common.xxh64(csvContents);
+
+  if (addedExternalDataHashes.has(csvHash) || inFlightExternalDataHashes.has(csvHash)) {
+    res.issues = ['The external data has already been added.'];
+
+    return Promise.resolve(res);
+  }
+
+  inFlightExternalDataHashes.add(csvHash);
+
+  try {
+    // Make sure that we can parse the CSV data.
+
+    let parsedCsv: externalData.IExternalCsvData;
+
+    try {
+      parsedCsv = externalData.parseExternalCsvData(csvContents);
+    } catch (error: unknown) {
+      res.issues.push(common.formatMessage(common.formatError(error)));
+
+      return Promise.resolve(res);
+    }
+
+    // Make sure that the number of model parameters matches the number of data columns in the CSV file.
+
+    if (parsedCsv.headers.length - 1 !== modelParameters.length) {
+      res.issues = [
+        `The number of model parameters provided must match the number of data columns in the CSV file (i.e. ${parsedCsv.headers.length - 1}, not ${modelParameters.length}).`
+      ];
+
+      return Promise.resolve(res);
+    }
+
+    // Make sure that the model parameters are valid.
+
+    const trimmedModelParameters = modelParameters.map((modelParameter) => modelParameter?.trim() ?? '');
+
+    for (let i = 0; i < trimmedModelParameters.length; ++i) {
+      const modelParameter = trimmedModelParameters[i];
+
+      if (!modelParameter) {
+        res.issues.push(`Model parameter #${i + 1} must be a non-empty string.`);
+      } else if (!/^\w+\/\w+$/.test(modelParameter)) {
+        res.issues.push(`Model parameter #${i + 1} must be of the form '<component>/<variable>'.`);
+      }
+    }
+
+    if (res.issues.length) {
+      return Promise.resolve(res);
+    }
+
+    // Determine the output IDs that are currently being used so that we can avoid conflicts when adding our external
+    // data IDs.
+
+    const existingExternalData = interactiveUiJson.value.output.externalData ?? [];
+    const usedOutputIds = new Set<string>();
+
+    for (const externalData of existingExternalData) {
+      for (const dataEntry of externalData.data) {
+        if (dataEntry.id) {
+          usedOutputIds.add(dataEntry.id);
+        }
+      }
+    }
+
+    for (const outputData of interactiveUiJson.value.output.data) {
+      if (outputData.id) {
+        usedOutputIds.add(outputData.id);
+      }
+    }
+
+    // Add the external data to our UI JSON, making sure that we generate unique output data IDs for the new data
+    // entries.
+
+    const dataSeries: locApi.IUiJsonOutputExternalDataSeries[] = [];
+    const data: locApi.IUiJsonOutputData[] = [];
+    const dataIdToExternalDataId: Record<string, string> = {};
+
+    for (let columnIndex = 1; columnIndex < parsedCsv.headers.length; ++columnIndex) {
+      const name = parsedCsv.headers[columnIndex];
+      const id = uniqueOutputDataId(name, usedOutputIds);
+
+      dataSeries.push({
+        name,
+        values: new Float64Array(parsedCsv.columns[columnIndex])
+      });
+      data.push({
+        id,
+        name
+      });
+
+      const modelParameter = trimmedModelParameters[columnIndex - 1];
+
+      for (const outputData of interactiveUiJson.value.output.data) {
+        if (outputData.name === modelParameter) {
+          dataIdToExternalDataId[outputData.id] = id;
+
+          break;
+        }
+      }
+    }
+
+    interactiveUiJson.value.output.externalData?.push({
+      data,
+      dataSeries,
+      description: `External data ${csvHash}`,
+      voiExpression: voiExpression?.trim() || 'voi',
+      voiValues: new Float64Array(parsedCsv.columns[0])
+    });
+
+    // Check the existing plots in our UI JSON and add additional traces for any plots that use model parameters that we
+    // have just replaced with external data IDs in the plot expressions, making sure to avoid adding duplicate traces
+    // if the same external data ID is used in multiple plot expressions.
+
+    for (const plot of interactiveUiJson.value.output.plots) {
+      const xExternalValue = replaceWithExternalDataIds(plot.xValue, dataIdToExternalDataId);
+      const yExternalValue = replaceWithExternalDataIds(plot.yValue, dataIdToExternalDataId);
+
+      if (xExternalValue === plot.xValue && yExternalValue === plot.yValue) {
+        continue;
+      }
+
+      if (!plot.additionalTraces) {
+        plot.additionalTraces = [];
+      }
+
+      const alreadyExists = plot.additionalTraces.some((additionalTrace) => {
+        return additionalTrace.xValue === xExternalValue && additionalTrace.yValue === yExternalValue;
+      });
+
+      if (alreadyExists) {
+        continue;
+      }
+
+      plot.additionalTraces.push({
+        xValue: xExternalValue,
+        yValue: yExternalValue,
+        name: `${yExternalValue} <i>vs.</i> ${xExternalValue}`
+      });
+    }
+
+    // Update our interactive simulation and reset the plot margins to accommodate any new traces that have been added.
+
+    updateInteractiveSimulation();
+    onResetMargins();
+
+    addedExternalDataHashes.add(csvHash);
+
+    return Promise.resolve(res);
+  } finally {
+    inFlightExternalDataHashes.delete(csvHash);
+  }
+};
 
 // A helper function to retrieve simulation data for one or more model parameters.
 
@@ -706,8 +962,14 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     issues: []
   };
 
+  if (!props.simulationOnly) {
+    res.issues = ['The exposed simulationData() method is only available in simulation-only mode.'];
+
+    return Promise.resolve(res);
+  }
+
   if (!interactiveInstanceTask) {
-    res.issues.push('No SED-ML instance task available.');
+    res.issues = ['No SED-ML instance task available.'];
 
     return Promise.resolve(res);
   }
@@ -736,7 +998,12 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
   return Promise.resolve(res);
 };
 
+// Exposed methods.
+
 defineExpose({
+  // Simulation-only methods.
+
+  addExternalData,
   simulationData
 });
 
@@ -1089,8 +1356,19 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Update our scope with the latest simulation data.
+  // Update our mapping of interactive data IDs to simulation data information.
 
+  Object.keys(interactiveIdToInfo).forEach((key) => {
+    delete interactiveIdToInfo[key];
+  });
+
+  interactiveUiJson.value.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+    if (data.id && interactiveInstanceTask) {
+      interactiveIdToInfo[data.id] = locCommon.simulationDataInfo(interactiveInstanceTask, data.name);
+    }
+  });
+
+  // Update our scope with the latest simulation data.
   if (interactiveInstanceTask) {
     // Latest simulation data.
 

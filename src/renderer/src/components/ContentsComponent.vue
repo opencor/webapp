@@ -71,7 +71,7 @@ import { electronApi } from '../common/electronApi';
 import * as locApi from '../libopencor/locApi';
 
 import SimulationExperimentView from './views/SimulationExperimentView.vue';
-import type { IOpenCORSimulationDataEvent } from '../../index';
+import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../index';
 
 interface IFileTab {
   file: locApi.File;
@@ -106,10 +106,18 @@ const filePaths = vue.computed<string[]>(() => {
 // Some methods to handle files and file tabs.
 
 const hasFile = (filePath: string): boolean => {
+  if (props.simulationOnly) {
+    return false;
+  }
+
   return fileTabs.value.find((fileTab) => fileTab.file.path() === filePath) !== undefined;
 };
 
 const hasFiles = (): boolean => {
+  if (props.simulationOnly) {
+    return false;
+  }
+
   return fileTabs.value.length > 0;
 };
 
@@ -128,6 +136,10 @@ const waitForTabsUpdate = async (): Promise<void> => {
 };
 
 const selectFile = async (filePath: string, wait: boolean = false): Promise<void> => {
+  if (props.simulationOnly) {
+    return;
+  }
+
   activeFile.value = filePath;
 
   if (wait) {
@@ -191,20 +203,54 @@ const closeFile = async (filePath: string): Promise<void> => {
 };
 
 const closeCurrentFile = async (): Promise<void> => {
+  if (props.simulationOnly) {
+    return;
+  }
+
   await closeFile(activeFile.value);
 };
 
 const closeAllFiles = async (): Promise<void> => {
+  if (props.simulationOnly) {
+    return;
+  }
+
   while (fileTabs.value.length) {
     await closeCurrentFile();
   }
 };
 
+// Add some external data to the current simulation experiment view.
+
+const addExternalData = async (
+  csv: string,
+  voiExpression: string | undefined,
+  modelParameters: string[]
+): Promise<IOpenCORExternalDataEvent> => {
+  const simulationExperimentViews = simulationExperimentViewRef.value;
+
+  if (!simulationExperimentViews.length) {
+    return Promise.resolve({
+      csv,
+      issues: ['No simulation experiment view available.']
+    });
+  }
+
+  return simulationExperimentViews[0].addExternalData(csv, voiExpression, modelParameters).catch((error: unknown) => {
+    return {
+      csv,
+      issues: [common.formatError(error)]
+    };
+  });
+};
+
+// Retrieve some simulation data from the current simulation experiment view.
+
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
   if (!props.simulationOnly) {
     return Promise.resolve({
       simulationData: common.emptySimulationData(modelParameters),
-      issues: ['Simulation data can only be retrieved in simulation only mode.']
+      issues: ['Simulation data can only be retrieved in simulation-only mode.']
     });
   }
 
@@ -225,13 +271,24 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
   });
 };
 
+// Some exposed methods.
+
 defineExpose({
+  // General methods.
+
   openFile,
-  closeCurrentFile,
+
+  // Full OpenCOR methods.
+
   closeAllFiles,
+  closeCurrentFile,
   hasFile,
   hasFiles,
   selectFile,
+
+  // Simulation-only methods.
+
+  addExternalData,
   simulationData
 });
 

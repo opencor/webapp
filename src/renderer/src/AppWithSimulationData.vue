@@ -2,11 +2,11 @@
   <div class="opencor" style="height: 100vh; height: 100dvh;">
     <div class="h-full flex flex-col">
       <div class="flex p-2 space-x-2 justify-center">
-        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(voi) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(voi)">VOI</button>
-        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(mainT) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(mainT)">main/t</button>
-        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(mainXYZ) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(mainXYZ)">main/xyz</button>
-        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(unknown) ? 'bg-red-600' : 'bg-green-600']" @click="trackOrUntrackModelParameters(unknown)">unknown</button>
-        <button class="flex-1 px-4 py-2 rounded bg-red-600 disabled:opacity-50 text-center cursor-pointer disabled:cursor-default" :disabled="!simulationDataTracked.length" @click="untrackAllModelParameters">All</button>
+        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(voi) ? 'bg-red-600' : 'bg-green-600', 'transition transform duration-150 ease-out active:scale-95 active:opacity-80']" @click="trackOrUntrackModelParameters(voi)">VOI</button>
+        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(mainT) ? 'bg-red-600' : 'bg-green-600', 'transition transform duration-150 ease-out active:scale-95 active:opacity-80']" @click="trackOrUntrackModelParameters(mainT)">main/t</button>
+        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(mainXYZ) ? 'bg-red-600' : 'bg-green-600', 'transition transform duration-150 ease-out active:scale-95 active:opacity-80']" @click="trackOrUntrackModelParameters(mainXYZ)">main/xyz</button>
+        <button :class="['flex-1 px-4 py-2 rounded text-center cursor-pointer', areModelParametersTracked(unknown) ? 'bg-red-600' : 'bg-green-600', 'transition transform duration-150 ease-out active:scale-95 active:opacity-80']" @click="trackOrUntrackModelParameters(unknown)">unknown</button>
+        <button class="flex-1 px-4 py-2 rounded disabled:opacity-50 text-center cursor-pointer disabled:cursor-default bg-red-600 transition transform duration-150 ease-out active:scale-95 active:opacity-80" :disabled="!simulationDataTracked.length" @click="untrackAllModelParameters">All</button>
       </div>
       <div class="flex flex-1">
         <OpenCOR class="flex-1" ref="opencorRef"
@@ -38,6 +38,8 @@ const areModelParametersTracked = (modelParameters: string[]): boolean => {
 
 const trackOrUntrackModelParameters = (modelParameters: string[]) => {
   if (!opencorRef.value) {
+    console.error('OpenCOR instance unavailable.');
+
     return;
   }
 
@@ -53,7 +55,13 @@ const trackOrUntrackModelParameters = (modelParameters: string[]) => {
 };
 
 const untrackAllModelParameters = () => {
-  opencorRef.value?.untrackAllSimulationData();
+  if (!opencorRef.value) {
+    console.error('OpenCOR instance unavailable.');
+
+    return;
+  }
+
+  opencorRef.value.untrackAllSimulationData();
   simulationDataTracked.value = [];
 };
 
