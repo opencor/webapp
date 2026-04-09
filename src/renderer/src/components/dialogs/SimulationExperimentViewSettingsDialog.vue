@@ -1349,7 +1349,7 @@ const importExternalDataFromUrl = async (): Promise<void> => {
       throw new Error(`Could not retrieve CSV file from URL (status: ${response.status}).`);
     }
 
-    createExternalDataFromCsv(url, parseExternalCsvData(await response.text()));
+    createExternalDataFromCsv(url, externalData.parseExternalCsvData(await response.text()));
 
     externalDataUrl.value = '';
   } catch (error: unknown) {

@@ -52,7 +52,7 @@ const externalDependencies: ExternalDependency[] = [
 const crtNbOfSteps = vue.ref<number>(0);
 const totalNbOfSteps =
   (electronApi ? 0 : 2) +
-  externalDependencies.reduce((acc, dep) => acc + (dep.url ? 1 : 0) + (dep.cssUrl ? 1 : 0), 0) +
+  externalDependencies.reduce((res, dependency) => res + (dependency.url ? 1 : 0) + (dependency.cssUrl ? 1 : 0), 0) +
   1;
 
 // Retrieve the version of libOpenCOR that is to be used. Two options:
@@ -69,18 +69,32 @@ export const initialiseLocApi = async (): Promise<void> => {
   } else {
     // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
 
+    const libopencorVersion = '0.20260409.1';
+
     try {
       const libOpenCOR = (
         await import(
           /* @vite-ignore */ common.corsProxyUrl(
-            'https://opencor.ws/libopencor/downloads/wasm/libopencor-0.20260302.0.js'
+            `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.js`
           )
         )
       ).default;
 
       ++crtNbOfSteps.value;
 
-      locApi.setWasmLocApi(await libOpenCOR());
+      locApi.setWasmLocApi(
+        await libOpenCOR({
+          locateFile: (filename: string) => {
+            if (filename.endsWith('.wasm')) {
+              return common.corsProxyUrl(
+                `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.wasm`
+              );
+            }
+
+            return filename;
+          }
+        })
+      );
 
       ++crtNbOfSteps.value;
     } catch (error: unknown) {

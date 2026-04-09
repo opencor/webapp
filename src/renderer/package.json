@@ -42,7 +42,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20260408.0",
+  "version": "0.20260410.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.js",
     "build:lib": "vite build --config vite.lib.config.ts && bunx --bun vue-tsc --project tsconfig.lib.types.json",
@@ -92,7 +92,7 @@
     "tailwindcss-primeui": "^0.6.1",
     "typescript": "^6.0.2",
     "unplugin-vue-components": "^32.0.0",
-    "vite": "^8.0.7",
+    "vite": "^8.0.8",
     "vue-tsc": "^3.2.6"
   }
 }

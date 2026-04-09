@@ -65,7 +65,8 @@
         @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
-      <BlockingMessageComponent v-show="loadingModelMessageVisible" message="Loading model..." />
+      <BlockingMessageComponent v-if="loadingModelMessageVisible" message="Loading model..." />
+      <BlockingMessageComponent v-show="loadingExternalDataVisible" message="Loading external data..." />
       <BlockingMessageComponent v-show="progressMessageVisible" :message="progressMessageMessage" :progress="progressMessageProgress" />
       <OkMessageDialog v-model:visible="updateErrorVisible"
         :title="updateErrorTitle"
@@ -167,9 +168,26 @@ const addExternalData = (csv: string, voiExpression: string | undefined, modelPa
     return;
   }
 
-  contents.addExternalData(csv, voiExpression, modelParameters).then((res: IOpenCORExternalDataEvent) => {
-    emit('externalData', res);
-  });
+  const isRemoteExternalData = common.isUrl(csv);
+
+  if (isRemoteExternalData) {
+    ++externalDataLoadsCount.value;
+
+    loadingExternalDataVisible.value = true;
+  }
+
+  contents
+    .addExternalData(csv, voiExpression, modelParameters)
+    .then((res: IOpenCORExternalDataEvent) => {
+      emit('externalData', res);
+    })
+    .finally(() => {
+      if (isRemoteExternalData) {
+        --externalDataLoadsCount.value;
+
+        loadingExternalDataVisible.value = externalDataLoadsCount.value > 0;
+      }
+    });
 };
 
 // Methods to handle simulation data tracking.
@@ -256,7 +274,9 @@ const octokit = vue.ref<Octokit | null>(null);
 */
 const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
 const loadingModelMessageVisible = vue.ref<boolean>(false);
-const activeRemoteModelLoadsCount = vue.ref<number>(0);
+const remoteModelLoadsCount = vue.ref<number>(0);
+const loadingExternalDataVisible = vue.ref<boolean>(false);
+const externalDataLoadsCount = vue.ref<number>(0);
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -289,6 +309,7 @@ const compBlockUiEnabled = vue.computed<boolean>(() => {
     !electronUiEnabled.value ||
     initialisingOpencorMessageVisible.value ||
     loadingModelMessageVisible.value ||
+    loadingExternalDataVisible.value ||
     progressMessageVisible.value ||
     connectingToGitHub.value
   );
@@ -720,7 +741,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
   const isRemoteFilePath = common.isUrl(filePath);
 
   if (isRemoteFilePath) {
-    ++activeRemoteModelLoadsCount.value;
+    ++remoteModelLoadsCount.value;
 
     loadingModelMessageVisible.value = true;
   }
@@ -793,9 +814,9 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
     return null;
   } finally {
     if (isRemoteFilePath) {
-      --activeRemoteModelLoadsCount.value;
+      --remoteModelLoadsCount.value;
 
-      loadingModelMessageVisible.value = activeRemoteModelLoadsCount.value > 0;
+      loadingModelMessageVisible.value = remoteModelLoadsCount.value > 0;
     }
   }
 };
