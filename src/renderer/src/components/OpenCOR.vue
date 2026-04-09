@@ -274,8 +274,8 @@ const octokit = vue.ref<Octokit | null>(null);
 */
 const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
 const loadingModelMessageVisible = vue.ref<boolean>(false);
+const remoteModelLoadsCount = vue.ref<number>(0);
 const loadingExternalDataVisible = vue.ref<boolean>(false);
-const activeRemoteModelLoadsCount = vue.ref<number>(0);
 const externalDataLoadsCount = vue.ref<number>(0);
 
 // Keep track of which instance of OpenCOR is currently active.
@@ -741,7 +741,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
   const isRemoteFilePath = common.isUrl(filePath);
 
   if (isRemoteFilePath) {
-    ++activeRemoteModelLoadsCount.value;
+    ++remoteModelLoadsCount.value;
 
     loadingModelMessageVisible.value = true;
   }
@@ -814,9 +814,9 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
     return null;
   } finally {
     if (isRemoteFilePath) {
-      --activeRemoteModelLoadsCount.value;
+      --remoteModelLoadsCount.value;
 
-      loadingModelMessageVisible.value = activeRemoteModelLoadsCount.value > 0;
+      loadingModelMessageVisible.value = remoteModelLoadsCount.value > 0;
     }
   }
 };
