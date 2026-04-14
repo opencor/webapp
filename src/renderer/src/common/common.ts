@@ -171,7 +171,14 @@ export const formatMessage = (message: string, selfContained: boolean = true): s
 // A method to determine whether a number is divisible by another one.
 
 export const isDivisible = (a: number, b: number): boolean => {
-  return Number.isInteger(a / b);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b === 0) {
+    return false;
+  }
+
+  const quotient = a / b;
+  const roundedQuotient = Math.round(quotient);
+
+  return Math.abs(quotient - roundedQuotient) <= Number.EPSILON * Math.max(1, Math.abs(roundedQuotient));
 };
 
 // A method to trigger a browser download for a file.
