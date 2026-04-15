@@ -83,7 +83,7 @@
     "electron-vite": "^5.0.0",
     "esbuild": "^0.28.0",
     "node-addon-api": "^8.7.0",
-    "postcss": "^8.5.9",
+    "postcss": "^8.5.10",
     "rollup-plugin-visualizer": "^7.0.1",
     "stylelint": "^17.8.0",
     "stylelint-config-standard": "^40.0.0",
