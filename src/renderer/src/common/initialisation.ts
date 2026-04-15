@@ -69,7 +69,7 @@ export const initialiseLocApi = async (): Promise<void> => {
   } else {
     // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
 
-    const libopencorVersion = '0.20260409.1';
+    const libopencorVersion = '0.20260416.0';
 
     try {
       const libOpenCOR = (
