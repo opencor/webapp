@@ -68,19 +68,24 @@ const untrackAllModelParameters = () => {
 const onSimulationData = (event: IOpenCORSimulationDataEvent) => {
   console.log('---[Simulation data]---');
 
-  for (const modelParameter of Object.keys(event.simulationData)) {
-    console.log(`Simulation data for "${modelParameter}":`);
-    console.log(event.simulationData[modelParameter]);
-  }
+  switch (event.type) {
+    case 'updated':
+      for (const modelParameter of Object.keys(event.simulationData)) {
+        console.log(`Simulation data for "${modelParameter}":`);
+        console.log(event.simulationData[modelParameter]);
+      }
 
-  if (event.issues.length > 0) {
-    console.log('Issues:');
+      console.log('No issues.');
 
-    event.issues.forEach((issue: string) => {
-      console.log(` - ${issue}`);
-    });
-  } else {
-    console.log('No issues.');
+      break;
+    case 'issue':
+      console.log('Simulation data issue:');
+
+      event.issues.forEach((issue: string) => {
+        console.log(` - ${issue}`);
+      });
+
+      break;
   }
 };
 </script>
