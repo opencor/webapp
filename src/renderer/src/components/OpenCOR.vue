@@ -62,6 +62,8 @@
         :uiEnabled="compUiEnabled"
         :simulationOnly="!!omex"
         @error="onError"
+        @fileClosed="onFileClosed"
+        @fileOpened="onFileOpened"
         @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
@@ -245,6 +247,16 @@ const emitSimulationData = (): void => {
   contents.simulationData(trackedSimulationData.value).then((res: IOpenCORSimulationDataEvent) => {
     emit('simulationData', res);
   });
+};
+
+// Methods to handle files.
+
+const onFileOpened = (filePath: string): void => {
+  emit('file', { type: 'opened', filePath, issues: [] });
+};
+
+const onFileClosed = (filePath: string): void => {
+  emit('file', { type: 'closed', filePath, issues: [] });
 };
 
 // Exposed methods.
@@ -758,33 +770,31 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
       fileType === locApi.EFileType.SEDML_FILE ||
       (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
     ) {
+      const issueMessage =
+        fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+          ? 'The file could not be retrieved.'
+          : fileType === locApi.EFileType.SEDML_FILE && !props.omex
+            ? 'SED-ML files are not currently supported.'
+            : props.omex
+              ? 'Only COMBINE archives are supported.'
+              : 'Only CellML files and COMBINE archives are supported.';
+
       if (props.omex) {
         vue.nextTick(() => {
-          issues.value.push({
-            type: locApi.EIssueType.ERROR,
-            description:
-              fileType === locApi.EFileType.IRRETRIEVABLE_FILE
-                ? 'The file could not be retrieved.'
-                : 'Only COMBINE archives are supported.'
-          });
+          issues.value.push({ type: locApi.EIssueType.ERROR, description: issueMessage });
         });
       } else {
         addToast({
           severity: 'error',
           summary: 'Opening a file',
-          detail:
-            filePath +
-            '\n\n' +
-            (fileType === locApi.EFileType.IRRETRIEVABLE_FILE
-              ? 'The file could not be retrieved.'
-              : fileType === locApi.EFileType.SEDML_FILE
-                ? 'SED-ML files are not currently supported.'
-                : 'Only CellML files and COMBINE archives are supported.'),
+          detail: `${filePath}\n\n${issueMessage}`,
           life: TOAST_LIFE
         });
       }
 
       electronApi?.fileIssue(filePath);
+
+      emit('file', { type: 'issue', filePath, issues: [issueMessage] });
 
       return null;
     }
@@ -812,6 +822,8 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
     }
 
     electronApi?.fileIssue(filePath);
+
+    emit('file', { type: 'issue', filePath, issues: [common.formatMessage(common.formatError(error))] });
 
     return null;
   } finally {

@@ -14,6 +14,7 @@ export interface IOpenCORExpose {
 
 export interface IOpenCOREmits extends /* @vue-ignore */ Record<string, unknown[]> {
   externalData: [IOpenCORExternalDataEvent];
+  file: [IOpenCORFileEvent];
   simulationData: [IOpenCORSimulationDataEvent];
 }
 
@@ -27,6 +28,14 @@ export type OpenCORExternalDataEventType = 'added' | 'issue';
 export interface IOpenCORExternalDataEvent {
   type: OpenCORExternalDataEventType;
   csv: string;
+  issues: string[];
+}
+
+export type OpenCORFileEventType = 'opened' | 'closed' | 'issue';
+
+export interface IOpenCORFileEvent {
+  type: OpenCORFileEventType;
+  filePath: string;
   issues: string[];
 }
 

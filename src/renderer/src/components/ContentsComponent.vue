@@ -84,8 +84,10 @@ const props = defineProps<{
   uiEnabled: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   (event: 'error', message: string): void;
+  (event: 'fileClosed', filePath: string): void;
+  (event: 'fileOpened', filePath: string): void;
   (event: 'simulationData'): void;
 }>();
 
@@ -179,6 +181,8 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
 
   electronApi?.fileOpened(filePath);
 
+  emit('fileOpened', filePath);
+
   if (wait) {
     await waitForTabsUpdate();
   }
@@ -200,6 +204,8 @@ const closeFile = async (filePath: string): Promise<void> => {
   }
 
   electronApi?.fileClosed(filePath);
+
+  emit('fileClosed', filePath);
 };
 
 const closeCurrentFile = async (): Promise<void> => {
