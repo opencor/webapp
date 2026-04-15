@@ -757,11 +757,13 @@ const addExternalData = async (
   // Make sure that we are in simulation-only mode.
 
   const res: IOpenCORExternalDataEvent = {
+    type: 'added',
     csv,
     issues: []
   };
 
   if (!props.simulationOnly) {
+    res.type = 'issue';
     res.issues = ['The exposed addExternalData() method is only available in simulation-only mode.'];
 
     return Promise.resolve(res);
@@ -776,6 +778,7 @@ const addExternalData = async (
       const response = await fetch(common.corsProxyUrl(csv));
 
       if (!response.ok) {
+        res.type = 'issue';
         res.issues = [`Could not retrieve the CSV file from ${csv} (status: ${response.status}).`];
 
         return Promise.resolve(res);
@@ -783,6 +786,7 @@ const addExternalData = async (
 
       csvContents = await response.text();
     } catch (error: unknown) {
+      res.type = 'issue';
       res.issues = [
         `Could not retrieve the CSV file from ${csv} (${common.formatMessage(common.formatError(error), false)}).`
       ];
@@ -803,6 +807,7 @@ const addExternalData = async (
   const csvHash = common.xxh64(csvContents);
 
   if (addedExternalDataHashes.has(csvHash) || inFlightExternalDataHashes.has(csvHash)) {
+    res.type = 'issue';
     res.issues = ['The external data has already been added.'];
 
     return Promise.resolve(res);
@@ -818,6 +823,7 @@ const addExternalData = async (
     try {
       parsedCsv = externalData.parseExternalCsvData(csvContents);
     } catch (error: unknown) {
+      res.type = 'issue';
       res.issues.push(common.formatMessage(common.formatError(error)));
 
       return Promise.resolve(res);
@@ -826,6 +832,7 @@ const addExternalData = async (
     // Make sure that the number of model parameters matches the number of data columns in the CSV file.
 
     if (parsedCsv.headers.length - 1 !== modelParameters.length) {
+      res.type = 'issue';
       res.issues = [
         `The number of model parameters provided must match the number of data columns in the CSV file (i.e. ${parsedCsv.headers.length - 1}, not ${modelParameters.length}).`
       ];
@@ -848,6 +855,7 @@ const addExternalData = async (
     }
 
     if (res.issues.length) {
+      res.type = 'issue';
       return Promise.resolve(res);
     }
 

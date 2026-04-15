@@ -161,6 +161,7 @@ const addExternalData = (csv: string, voiExpression: string | undefined, modelPa
 
   if (!contents) {
     emit('externalData', {
+      type: 'issue',
       csv,
       issues: ['No contents available.']
     });

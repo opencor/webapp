@@ -231,6 +231,7 @@ const addExternalData = async (
 
   if (!simulationExperimentViews.length) {
     return Promise.resolve({
+      type: 'issue',
       csv,
       issues: ['No simulation experiment view available.']
     });
@@ -238,6 +239,7 @@ const addExternalData = async (
 
   return simulationExperimentViews[0].addExternalData(csv, voiExpression, modelParameters).catch((error: unknown) => {
     return {
+      type: 'issue',
       csv,
       issues: [common.formatError(error)]
     };

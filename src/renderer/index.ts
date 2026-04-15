@@ -22,7 +22,10 @@ export interface IOpenCORSimulationDataValue {
   unit: string;
 }
 
+export type OpenCORExternalDataEventType = 'added' | 'issue';
+
 export interface IOpenCORExternalDataEvent {
+  type: OpenCORExternalDataEventType;
   csv: string;
   issues: string[];
 }
