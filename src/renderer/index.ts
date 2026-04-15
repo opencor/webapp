@@ -23,29 +23,60 @@ export interface IOpenCORSimulationDataValue {
   unit: string;
 }
 
-export type OpenCORExternalDataEventType = 'added' | 'issue';
+// External data events.
 
-export interface IOpenCORExternalDataEvent {
-  type: OpenCORExternalDataEventType;
+export interface IOpenCORExternalDataAddedEvent {
+  type: 'added';
   csv: string;
   issues: string[];
 }
 
-export type OpenCORFileEventType = 'opened' | 'closed' | 'issue';
+export interface IOpenCORExternalDataIssueEvent {
+  type: 'issue';
+  csv: string;
+  issues: string[];
+}
 
-export interface IOpenCORFileEvent {
-  type: OpenCORFileEventType;
+export type IOpenCORExternalDataEvent = IOpenCORExternalDataAddedEvent | IOpenCORExternalDataIssueEvent;
+
+// File events.
+
+export interface IOpenCORFileOpenedEvent {
+  type: 'opened';
   filePath: string;
   issues: string[];
 }
 
-export type OpenCORSimulationDataEventType = 'updated' | 'issue';
+export interface IOpenCORFileClosedEvent {
+  type: 'closed';
+  filePath: string;
+  issues: string[];
+}
+
+export interface IOpenCORFileIssueEvent {
+  type: 'issue';
+  filePath: string;
+  issues: string[];
+}
+
+export type IOpenCORFileEvent = IOpenCORFileOpenedEvent | IOpenCORFileClosedEvent | IOpenCORFileIssueEvent;
+
+// Simulation data events.
+
 export type OpenCORSimulationData = Record<string, IOpenCORSimulationDataValue>;
 
-export interface IOpenCORSimulationDataEvent {
-  type: OpenCORSimulationDataEventType;
+export interface IOpenCORSimulationDataUpdatedEvent {
+  type: 'updated';
   simulationData: OpenCORSimulationData;
   issues: string[];
 }
+
+export interface IOpenCORSimulationDataIssueEvent {
+  type: 'issue';
+  simulationData: OpenCORSimulationData;
+  issues: string[];
+}
+
+export type IOpenCORSimulationDataEvent = IOpenCORSimulationDataUpdatedEvent | IOpenCORSimulationDataIssueEvent;
 
 export { default, default as OpenCOR } from './src/components/OpenCOR.vue';

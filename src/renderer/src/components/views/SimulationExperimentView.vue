@@ -754,19 +754,27 @@ const addExternalData = async (
   voiExpression: string | undefined,
   modelParameters: string[]
 ): Promise<IOpenCORExternalDataEvent> => {
-  // Make sure that we are in simulation-only mode.
-
-  const res: IOpenCORExternalDataEvent = {
-    type: 'added',
-    csv,
-    issues: []
+  const addedEvent = (): IOpenCORExternalDataEvent => {
+    return {
+      type: 'added',
+      csv,
+      issues: []
+    };
+  };
+  const issueEvent = (issueMessages: string[]): IOpenCORExternalDataEvent => {
+    return {
+      type: 'issue',
+      csv,
+      issues: issueMessages
+    };
   };
 
-  if (!props.simulationOnly) {
-    res.type = 'issue';
-    res.issues = ['The exposed addExternalData() method is only available in simulation-only mode.'];
+  // Make sure that we are in simulation-only mode.
 
-    return Promise.resolve(res);
+  if (!props.simulationOnly) {
+    return Promise.resolve(
+      issueEvent(['The exposed addExternalData() method is only available in simulation-only mode.'])
+    );
   }
 
   // Make sure that we can retrieve the CSV data.
@@ -778,27 +786,25 @@ const addExternalData = async (
       const response = await fetch(common.corsProxyUrl(csv));
 
       if (!response.ok) {
-        res.type = 'issue';
-        res.issues = [`Could not retrieve the CSV file from ${csv} (status: ${response.status}).`];
-
-        return Promise.resolve(res);
+        return Promise.resolve(
+          issueEvent([`Could not retrieve the CSV file from ${csv} (status: ${response.status}).`])
+        );
       }
 
       csvContents = await response.text();
     } catch (error: unknown) {
-      res.type = 'issue';
-      res.issues = [
-        `Could not retrieve the CSV file from ${csv} (${common.formatMessage(common.formatError(error), false)}).`
-      ];
-
-      return Promise.resolve(res);
+      return Promise.resolve(
+        issueEvent([
+          `Could not retrieve the CSV file from ${csv} (${common.formatMessage(common.formatError(error), false)}).`
+        ])
+      );
     }
   } else {
     csvContents = csv;
   }
 
   if (!csvContents) {
-    return Promise.resolve(res);
+    return Promise.resolve(addedEvent());
   }
 
   // Make sure that we haven't already added this CSV data (based on a hash of the CSV contents) to avoid accidentally
@@ -807,10 +813,7 @@ const addExternalData = async (
   const csvHash = common.xxh64(csvContents);
 
   if (addedExternalDataHashes.has(csvHash) || inFlightExternalDataHashes.has(csvHash)) {
-    res.type = 'issue';
-    res.issues = ['The external data has already been added.'];
-
-    return Promise.resolve(res);
+    return Promise.resolve(issueEvent(['The external data has already been added.']));
   }
 
   inFlightExternalDataHashes.add(csvHash);
@@ -823,40 +826,36 @@ const addExternalData = async (
     try {
       parsedCsv = externalData.parseExternalCsvData(csvContents);
     } catch (error: unknown) {
-      res.type = 'issue';
-      res.issues.push(common.formatMessage(common.formatError(error)));
-
-      return Promise.resolve(res);
+      return Promise.resolve(issueEvent([common.formatMessage(common.formatError(error))]));
     }
 
     // Make sure that the number of model parameters matches the number of data columns in the CSV file.
 
     if (parsedCsv.headers.length - 1 !== modelParameters.length) {
-      res.type = 'issue';
-      res.issues = [
-        `The number of model parameters provided must match the number of data columns in the CSV file (i.e. ${parsedCsv.headers.length - 1}, not ${modelParameters.length}).`
-      ];
-
-      return Promise.resolve(res);
+      return Promise.resolve(
+        issueEvent([
+          `The number of model parameters provided must match the number of data columns in the CSV file (i.e. ${parsedCsv.headers.length - 1}, not ${modelParameters.length}).`
+        ])
+      );
     }
 
     // Make sure that the model parameters are valid.
 
     const trimmedModelParameters = modelParameters.map((modelParameter) => modelParameter?.trim() ?? '');
+    const validationIssues: string[] = [];
 
     for (let i = 0; i < trimmedModelParameters.length; ++i) {
       const modelParameter = trimmedModelParameters[i];
 
       if (!modelParameter) {
-        res.issues.push(`Model parameter #${i + 1} must be a non-empty string.`);
+        validationIssues.push(`Model parameter #${i + 1} must be a non-empty string.`);
       } else if (!/^\w+\/\w+$/.test(modelParameter)) {
-        res.issues.push(`Model parameter #${i + 1} must be of the form '<component>/<variable>'.`);
+        validationIssues.push(`Model parameter #${i + 1} must be of the form '<component>/<variable>'.`);
       }
     }
 
-    if (res.issues.length) {
-      res.type = 'issue';
-      return Promise.resolve(res);
+    if (validationIssues.length) {
+      return Promise.resolve(issueEvent(validationIssues));
     }
 
     // Determine the output IDs that are currently being used so that we can avoid conflicts when adding our external
@@ -956,7 +955,7 @@ const addExternalData = async (
 
     addedExternalDataHashes.add(csvHash);
 
-    return Promise.resolve(res);
+    return Promise.resolve(addedEvent());
   } finally {
     inFlightExternalDataHashes.delete(csvHash);
   }
@@ -965,26 +964,26 @@ const addExternalData = async (
 // A helper function to retrieve simulation data for one or more model parameters.
 
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
-  const res: IOpenCORSimulationDataEvent = {
-    simulationData: common.emptySimulationData(modelParameters),
-    issues: []
-  };
+  const simulationDataResult = common.emptySimulationData(modelParameters);
 
   if (!props.simulationOnly) {
-    res.type = 'issue';
-    res.issues = ['The exposed simulationData() method is only available in simulation-only mode.'];
-
-    return Promise.resolve(res);
+    return Promise.resolve({
+      type: 'issue',
+      simulationData: simulationDataResult,
+      issues: ['The exposed simulationData() method is only available in simulation-only mode.']
+    });
   }
 
   if (!interactiveInstanceTask) {
-    res.type = 'issue';
-    res.issues = ['No SED-ML instance task available.'];
-
-    return Promise.resolve(res);
+    return Promise.resolve({
+      type: 'issue',
+      simulationData: simulationDataResult,
+      issues: ['No SED-ML instance task available.']
+    });
   }
 
   const instanceTask = interactiveInstanceTask as locSedApi.SedInstanceTask;
+  const issueMessages: string[] = [];
 
   for (const modelParameter of modelParameters) {
     const info = locCommon.simulationDataInfo(
@@ -993,21 +992,31 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     );
 
     if (isNoSimulationDataInfo(info)) {
-      res.issues.push(`No simulation data information was found for model parameter "${modelParameter}".`);
+      issueMessages.push(`No simulation data information was found for model parameter "${modelParameter}".`);
 
       continue;
     }
 
     try {
-      res.simulationData[modelParameter] = locCommon.simulationDataValue(instanceTask, info);
+      simulationDataResult[modelParameter] = locCommon.simulationDataValue(instanceTask, info);
     } catch (error: unknown) {
-      res.issues.push(`Error for model parameter "${modelParameter}": ${common.formatError(error)}`);
+      issueMessages.push(`Error for model parameter "${modelParameter}": ${common.formatError(error)}`);
     }
   }
 
-  res.type = res.issues.length ? 'issue' : 'updated';
+  if (issueMessages.length) {
+    return Promise.resolve({
+      type: 'issue',
+      simulationData: simulationDataResult,
+      issues: issueMessages
+    });
+  }
 
-  return Promise.resolve(res);
+  return Promise.resolve({
+    type: 'updated',
+    simulationData: simulationDataResult,
+    issues: []
+  });
 };
 
 // Exposed methods.
