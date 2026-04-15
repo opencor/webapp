@@ -249,6 +249,7 @@ const addExternalData = async (
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
   if (!props.simulationOnly) {
     return Promise.resolve({
+      type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
       issues: ['Simulation data can only be retrieved in simulation-only mode.']
     });
@@ -258,6 +259,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
 
   if (!simulationExperimentViews.length) {
     return Promise.resolve({
+      type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
       issues: ['No simulation experiment view available.']
     });
@@ -265,6 +267,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
 
   return simulationExperimentViews[0].simulationData(modelParameters).catch((error: unknown) => {
     return {
+      type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
       issues: [common.formatError(error)]
     };

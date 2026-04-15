@@ -27,9 +27,11 @@ export interface IOpenCORExternalDataEvent {
   issues: string[];
 }
 
+export type OpenCORSimulationDataEventType = 'updated' | 'issue';
 export type OpenCORSimulationData = Record<string, IOpenCORSimulationDataValue>;
 
 export interface IOpenCORSimulationDataEvent {
+  type: OpenCORSimulationDataEventType;
   simulationData: OpenCORSimulationData;
   issues: string[];
 }

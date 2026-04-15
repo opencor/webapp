@@ -963,12 +963,14 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
   };
 
   if (!props.simulationOnly) {
+    res.type = 'issue';
     res.issues = ['The exposed simulationData() method is only available in simulation-only mode.'];
 
     return Promise.resolve(res);
   }
 
   if (!interactiveInstanceTask) {
+    res.type = 'issue';
     res.issues = ['No SED-ML instance task available.'];
 
     return Promise.resolve(res);
@@ -994,6 +996,8 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
       res.issues.push(`Error for model parameter "${modelParameter}": ${common.formatError(error)}`);
     }
   }
+
+  res.type = res.issues.length ? 'issue' : 'updated';
 
   return Promise.resolve(res);
 };
