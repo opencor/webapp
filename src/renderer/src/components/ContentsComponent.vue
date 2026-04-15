@@ -84,8 +84,10 @@ const props = defineProps<{
   uiEnabled: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   (event: 'error', message: string): void;
+  (event: 'fileClosed', filePath: string): void;
+  (event: 'fileOpened', filePath: string): void;
   (event: 'simulationData'): void;
 }>();
 
@@ -179,6 +181,8 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
 
   electronApi?.fileOpened(filePath);
 
+  emit('fileOpened', filePath);
+
   if (wait) {
     await waitForTabsUpdate();
   }
@@ -200,6 +204,8 @@ const closeFile = async (filePath: string): Promise<void> => {
   }
 
   electronApi?.fileClosed(filePath);
+
+  emit('fileClosed', filePath);
 };
 
 const closeCurrentFile = async (): Promise<void> => {
@@ -231,6 +237,7 @@ const addExternalData = async (
 
   if (!simulationExperimentViews.length) {
     return Promise.resolve({
+      type: 'issue',
       csv,
       issues: ['No simulation experiment view available.']
     });
@@ -238,6 +245,7 @@ const addExternalData = async (
 
   return simulationExperimentViews[0].addExternalData(csv, voiExpression, modelParameters).catch((error: unknown) => {
     return {
+      type: 'issue',
       csv,
       issues: [common.formatError(error)]
     };
@@ -249,6 +257,7 @@ const addExternalData = async (
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
   if (!props.simulationOnly) {
     return Promise.resolve({
+      type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
       issues: ['Simulation data can only be retrieved in simulation-only mode.']
     });
@@ -258,6 +267,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
 
   if (!simulationExperimentViews.length) {
     return Promise.resolve({
+      type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
       issues: ['No simulation experiment view available.']
     });
@@ -265,6 +275,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
 
   return simulationExperimentViews[0].simulationData(modelParameters).catch((error: unknown) => {
     return {
+      type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
       issues: [common.formatError(error)]
     };

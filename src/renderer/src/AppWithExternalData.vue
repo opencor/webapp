@@ -113,14 +113,21 @@ const addDataFromFigshareUrl = async (): Promise<void> => {
 const onExternalData = (event: IOpenCORExternalDataEvent) => {
   console.log('---[External data]---');
 
-  if (event.issues.length > 0) {
-    console.log('Issues:');
+  switch (event.type) {
+    case 'added':
+      console.log(`External data added for CSV: ${event.csv}`);
+      console.log('No issues.');
 
-    event.issues.forEach((issue: string) => {
-      console.log(` - ${issue}`);
-    });
-  } else {
-    console.log('No issues.');
+      break;
+    case 'issue':
+      console.log(`External data issue for CSV: ${event.csv}`);
+      console.log('Issues:');
+
+      event.issues.forEach((issue: string) => {
+        console.log(` - ${issue}`);
+      });
+
+      break;
   }
 };
 </script>
