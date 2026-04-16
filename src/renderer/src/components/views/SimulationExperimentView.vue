@@ -259,6 +259,7 @@ import * as externalData from '../../common/externalData';
 import * as locCommon from '../../common/locCommon';
 import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
+import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 import * as math from '../../common/math';
 
 import type { ISimulationExperimentViewSettings } from '../dialogs/SimulationExperimentViewSettingsDialog.vue';
@@ -923,35 +924,91 @@ const addExternalData = async (
       voiValues: new Float64Array(parsedCsv.columns[0])
     });
 
-    // Check the existing plots in our UI JSON and add additional traces for any plots that use model parameters that we
-    // have just replaced with external data IDs in the plot expressions, making sure to avoid adding duplicate traces
-    // if the same external data ID is used in multiple plot expressions.
+    // Go through the plots' main trace and additional traces and add a corresponding trace where the original model
+    // parameters are replaced with their corresponding external data. If an original trace has no corresponding
+    // external data then no corresponding trace is added.
 
-    for (const plot of interactiveUiJson.value.output.plots) {
-      const xExternalValue = replaceWithExternalDataIds(plot.xValue, dataIdToExternalDataId);
-      const yExternalValue = replaceWithExternalDataIds(plot.yValue, dataIdToExternalDataId);
+    for (let plotIndex = 0; plotIndex < interactiveUiJson.value.output.plots.length; ++plotIndex) {
+      const plot = interactiveUiJson.value.output.plots[plotIndex];
 
-      if (xExternalValue === plot.xValue && yExternalValue === plot.yValue) {
+      if (!plot) {
         continue;
       }
+
+      // Initialise the additional traces array if it doesn't already exist.
 
       if (!plot.additionalTraces) {
         plot.additionalTraces = [];
       }
 
-      const alreadyExists = plot.additionalTraces.some((additionalTrace) => {
-        return additionalTrace.xValue === xExternalValue && additionalTrace.yValue === yExternalValue;
-      });
+      // Use a set of trace keys to determine whether a candidate trace already exists or not.
 
-      if (alreadyExists) {
-        continue;
+      const traceKey = (x: string, y: string): string => {
+        return `${x}::${y}`;
+      };
+      const originalSimulationKeys = new Set<string>();
+      const originalAdditionalTraceCount =
+        nbOfOriginalAdditionalTracesInPlots[plotIndex] ?? plot.additionalTraces.length;
+
+      originalSimulationKeys.add(traceKey(plot.xValue, plot.yValue));
+
+      for (let additionalTraceIndex = 0; additionalTraceIndex < originalAdditionalTraceCount; ++additionalTraceIndex) {
+        const additionalTrace = plot.additionalTraces[additionalTraceIndex];
+
+        if (!additionalTrace) {
+          continue;
+        }
+
+        originalSimulationKeys.add(traceKey(additionalTrace.xValue, additionalTrace.yValue));
       }
 
-      plot.additionalTraces.push({
-        xValue: xExternalValue,
-        yValue: yExternalValue,
-        name: `${yExternalValue} <i>vs.</i> ${xExternalValue}`
-      });
+      // Retrieve the candidate traces for this plot.
+
+      const candidateTraces: Array<{ xValue: string; yValue: string }> = [
+        {
+          xValue: plot.xValue,
+          yValue: plot.yValue
+        }
+      ];
+
+      for (let additionalTraceIndex = 0; additionalTraceIndex < originalAdditionalTraceCount; ++additionalTraceIndex) {
+        const additionalTrace = plot.additionalTraces[additionalTraceIndex];
+
+        if (!additionalTrace) {
+          continue;
+        }
+
+        candidateTraces.push({
+          xValue: additionalTrace.xValue,
+          yValue: additionalTrace.yValue
+        });
+      }
+
+      // Go through the candidate traces and add corresponding external data based traces where possible.
+
+      for (let candidateTraceIndex = 0; candidateTraceIndex < candidateTraces.length; ++candidateTraceIndex) {
+        const candidateTrace = candidateTraces[candidateTraceIndex];
+
+        if (!candidateTrace) {
+          continue;
+        }
+
+        // Make sure that the candidate trace is not one of our original traces (i.e. no replacements were made).
+
+        const externalX = replaceWithExternalDataIds(candidateTrace.xValue, dataIdToExternalDataId);
+        const externalY = replaceWithExternalDataIds(candidateTrace.yValue, dataIdToExternalDataId);
+
+        if (originalSimulationKeys.has(traceKey(externalX, externalY))) {
+          continue;
+        }
+
+        // Add an additional trace for externalValue.
+
+        plot.additionalTraces.push({
+          xValue: externalX,
+          yValue: externalY
+        });
+      }
     }
 
     // Update our interactive simulation and reset the plot margins to accommodate any new traces that have been added.
@@ -1051,14 +1108,23 @@ if (interactiveInstanceTask) {
 
 updateInteractiveUi();
 
-// Watch for changes to our UI JSON and reset the compiled expressions when it changes.
+// Watch for changes to our UI JSON and reset the compiled expressions when it changes, as well as keeping track of the
+// number of additional traces in each plot.
+
+let nbOfOriginalAdditionalTracesInPlots: number[] = [];
 
 vue.watch(
   () => interactiveUiJson.value,
   () => {
     interactiveMath.resetCompiledExpressions();
+
+    nbOfOriginalAdditionalTracesInPlots = interactiveUiJson.value.output.plots.map(
+      (plot: locUiJsonApi.IUiJsonOutputPlot) => {
+        return plot.additionalTraces?.length ?? 0;
+      }
+    );
   },
-  { deep: true }
+  { deep: true, immediate: true }
 );
 
 // A helper function to interpolate external data values at the VOI values of our simulation.
