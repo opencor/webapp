@@ -179,13 +179,13 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
     uiJson: file.uiJson()
   });
 
-  electronApi?.fileOpened(filePath);
-
-  emit('fileOpened', filePath);
-
   if (wait) {
     await waitForTabsUpdate();
   }
+
+  electronApi?.fileOpened(filePath);
+
+  emit('fileOpened', filePath);
 };
 
 const closeFile = async (filePath: string): Promise<void> => {
