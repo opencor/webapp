@@ -909,7 +909,13 @@ const addExternalData = async (
       }
     }
 
-    interactiveUiJson.value.output.externalData?.push({
+    if (!interactiveUiJson.value.output.externalData) {
+      // Initialise the external data array if it doesn't already exist.
+
+      interactiveUiJson.value.output.externalData = [];
+    }
+
+    interactiveUiJson.value.output.externalData.push({
       data,
       dataSeries,
       description: `External data ${csvHash}`,
