@@ -48,23 +48,24 @@
 
 # Available Scripts
 
-| Script                | Description                                                     |
-| --------------------- | --------------------------------------------------------------- |
-| `archive:web`         | Archive OpenCOR's Web app                                       |
-| `build`               | Build OpenCOR                                                   |
-| `build:web`           | Build OpenCOR's Web app                                         |
-| `clean`               | Clean OpenCOR's environment                                     |
-| `dependencies:update` | Update all dependencies to their latest versions                |
-| `dev`                 | (Build and) start OpenCOR and OpenCOR's Web app with hot reload |
-| `dev:web`             | (Build and) start OpenCOR's Web app with hot reload             |
-| `format`              | Format the code                                                 |
-| `format:check`        | Check code formatting without making changes                    |
-| `lint`                | Lint and automatically fix issues                               |
-| `release`             | Release OpenCOR for the current platform                        |
-| `release:local`       | Release OpenCOR for the current platform without code signing   |
-| `start`               | (Build and) start (the production version of) OpenCOR           |
-| `start:web`           | (Build and) start (the production version of) OpenCOR's Web app |
-| `version:new`         | Update the version of OpenCOR                                   |
+| Script                | Description                                                                |
+| --------------------- | -------------------------------------------------------------------------- |
+| `archive:web`         | Archive OpenCOR's Web app                                                  |
+| `build`               | Build OpenCOR                                                              |
+| `build:web`           | Build OpenCOR's Web app                                                    |
+| `clean`               | Clean OpenCOR's environment                                                |
+| `dependencies:update` | Update all dependencies                                                    |
+| `dev`                 | (Build and) start the development version of OpenCOR and OpenCOR's Web app |
+| `dev:web`             | (Build and) start the development version of OpenCOR's Web app             |
+| `format`              | Format the code                                                            |
+| `format:check`        | Check code's formatting                                                    |
+| `lint`                | Lint and automatically fix issues                                          |
+| `release`             | Release OpenCOR for the current platform                                   |
+| `release:local`       | Release OpenCOR for the current platform without code signing              |
+| `start`               | (Build and) start the production version of OpenCOR                        |
+| `start:web`           | (Build and) start the production version of OpenCOR's Web app              |
+| `typecheck`           | Check the code for type errors                                             |
+| `version:new`         | Update the version of OpenCOR                                              |
 
 # Notes
 
