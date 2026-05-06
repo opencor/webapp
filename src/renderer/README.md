@@ -18,10 +18,10 @@ Some characteristics of this package are that:
 
 The component comes with the following props:
 
-| Name    | Type                                       | Default    | Description                                                                      |
-| ------- | ------------------------------------------ | ---------- | -------------------------------------------------------------------------------- |
-| `omex`  | String                                     | `null`     | The URL of the [OMEX file](https://combinearchive.org/) to use.                  |
-| `theme` | String: `'light'`, `'dark'`, or `'system'` | `'system'` | The theme to use. Note that it is set once and for all, i.e. it is not reactive. |
+| Name    | Type                                | Default    | Description                                                                             |
+| ------- | ----------------------------------- | ---------- | --------------------------------------------------------------------------------------- |
+| `omex`  | `string` \| `Uint8Array`            | `null`     | The [OMEX file](https://combinearchive.org/) to use, as a URL string or raw OMEX bytes. |
+| `theme` | `'light'` \| `'dark'` \| `'system'` | `'system'` | The theme to use. Note that it is set once and for all, i.e. it is not reactive.        |
 
 - **main.ts:**
 
