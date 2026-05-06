@@ -1,11 +1,11 @@
 # Prerequisites
 
-- [bun](https://bun.com/) (version 1.2+); and
+- [Bun](https://bun.com/) (version 1.2+); and
 - [C](<https://en.wikipedia.org/wiki/C_(programming_language)>)/[C++](https://en.wikipedia.org/wiki/C%2B%2B) toolchain.
 
 ## Installation
 
-1. **Install bun from [here](https://bun.com/docs/installation).**
+1. **Install Bun from [here](https://bun.com/docs/installation).**
 
 2. **Install a C/C++ toolchain:**
    - **[Windows](https://en.wikipedia.org/wiki/Microsoft_Windows):**

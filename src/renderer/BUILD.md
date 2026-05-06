@@ -1,10 +1,10 @@
 # Prerequisites
 
-- [bun](https://bun.com/) (version 1.2+).
+- [Bun](https://bun.com/) (version 1.2+).
 
 ## Installation
 
-1. **Install bun from [here](https://bun.com/docs/installation).**
+1. **Install Bun from [here](https://bun.com/docs/installation).**
 
 # Getting Started
 
