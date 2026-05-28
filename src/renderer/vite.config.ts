@@ -9,6 +9,8 @@ import vitePlugin from 'unplugin-vue-components/vite';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import * as vite from 'vite';
 
+import { libopencorVersion } from './scripts/libopencor.version';
+
 export default vite.defineConfig({
   base: './',
   build: {
@@ -21,6 +23,9 @@ export default vite.defineConfig({
       }
     },
     target: 'esnext'
+  },
+  define: {
+    __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion)
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
