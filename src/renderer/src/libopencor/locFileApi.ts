@@ -15,10 +15,7 @@ import {
 // FileManager API.
 
 interface IWasmFileManagerInstance {
-  files: {
-    size(): number;
-    get(index: number): IWasmFile;
-  };
+  files: Iterable<IWasmFile>;
   unmanage(file: IWasmFile): void;
 }
 
@@ -60,9 +57,7 @@ class FileManager {
     const fileManager = this.fileManager();
     const files = fileManager.files;
 
-    for (let i = 0; i < files.size(); ++i) {
-      const file = files.get(i);
-
+    for (const file of files) {
       if (file.path === path) {
         return new File(path, file.contents());
       }
@@ -78,9 +73,7 @@ class FileManager {
       const fileManager = this.fileManager();
       const files = fileManager.files;
 
-      for (let i = 0; i < files.size(); ++i) {
-        const file = files.get(i);
-
+      for (const file of files) {
         if (file.path === path) {
           fileManager.unmanage(file);
 

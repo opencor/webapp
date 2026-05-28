@@ -19,12 +19,9 @@ export default electronVite.defineConfig({
           format: 'cjs'
         }
       }
-    },
-    plugins: [electronVite.bytecodePlugin(), electronVite.externalizeDepsPlugin()]
+    }
   },
-  preload: {
-    plugins: [electronVite.externalizeDepsPlugin()]
-  },
+  preload: {},
   renderer: {
     build: {
       target: 'esnext'

@@ -16,20 +16,15 @@ interface IWasmIssue {
   description: string;
 }
 
-export interface IWasmIssues {
-  size(): number;
-  get(index: number): IWasmIssue;
-}
+export type IWasmIssues = Iterable<IWasmIssue>;
 
 export const wasmIssuesToIssues = (wasmIssues: IWasmIssues): IIssue[] => {
-  const res = [];
+  const res: IIssue[] = [];
 
-  for (let i = 0; i < wasmIssues.size(); ++i) {
-    const issue = wasmIssues.get(i);
-
+  for (const wasmIssue of wasmIssues) {
     res.push({
-      type: issue.type.value,
-      description: issue.description
+      type: wasmIssue.type.value,
+      description: wasmIssue.description
     });
   }
 
