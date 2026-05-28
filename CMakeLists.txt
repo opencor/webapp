@@ -10,7 +10,15 @@ endforeach()
 
 # Project details.
 
-project(libOpenCOR VERSION 0.20260302.0)
+project(libOpenCOR)
+
+# Retrieve the version of libOpenCOR.
+
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/package.json RENDERER_PACKAGE_JSON)
+
+string(REGEX MATCH "\"libopencorVersion\"[ \t]*:[ \t]*\"([^\"]+)\"" LIBOPENCOR_VERSION_MATCH ${RENDERER_PACKAGE_JSON})
+
+set(LIBOPENCOR_VERSION ${CMAKE_MATCH_1})
 
 # Enable C++20.
 
@@ -57,10 +65,10 @@ else()
     endif()
 endif()
 
-set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${PROJECT_VERSION}${PLATFORM}${ARCHITECTURE}-Static${MODE})
+set(LIBOPENCOR_FILE_NAME_WE ${CMAKE_PROJECT_NAME}-${LIBOPENCOR_VERSION}${PLATFORM}${ARCHITECTURE}-Static${MODE})
 set(LIBOPENCOR_FILE_NAME ${LIBOPENCOR_FILE_NAME_WE}${EXTENSION})
 
-file(DOWNLOAD https://github.com/opencor/libopencor/releases/download/v${PROJECT_VERSION}/${LIBOPENCOR_FILE_NAME}
+file(DOWNLOAD https://github.com/opencor/libopencor/releases/download/v${LIBOPENCOR_VERSION}/${LIBOPENCOR_FILE_NAME}
               ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME})
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ${CMAKE_BINARY_DIR}/${LIBOPENCOR_FILE_NAME}

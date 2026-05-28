@@ -1,6 +1,8 @@
 // TypeScript shims for Vite-style imports.
 // Note: `vue-tsc` needs to know how to treat `.vue` files and Vite-style asset imports.
 
+declare const __LIBOPENCOR_VERSION__: string;
+
 declare module '*.vue' {
   const component: import('vue').DefineComponent<Record<string, unknown>, Record<string, unknown>, unknown>;
 
