@@ -14,8 +14,6 @@ import { libopencorVersion } from './src/renderer/scripts/libopencor.version';
 export default electronVite.defineConfig({
   main: {
     build: {
-      bytecode: true,
-      externalizeDeps: true,
       rollupOptions: {
         output: {
           format: 'cjs'
@@ -23,12 +21,7 @@ export default electronVite.defineConfig({
       }
     }
   },
-  preload: {
-    build: {
-      bytecode: true,
-      externalizeDeps: true
-    }
-  },
+  preload: {},
   renderer: {
     build: {
       target: 'esnext'
