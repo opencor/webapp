@@ -14,16 +14,20 @@ import { libopencorVersion } from './src/renderer/scripts/libopencor.version';
 export default electronVite.defineConfig({
   main: {
     build: {
+      bytecode: true,
+      externalizeDeps: true,
       rollupOptions: {
         output: {
           format: 'cjs'
         }
       }
-    },
-    plugins: [electronVite.bytecodePlugin(), electronVite.externalizeDepsPlugin()]
+    }
   },
   preload: {
-    plugins: [electronVite.externalizeDepsPlugin()]
+    build: {
+      bytecode: true,
+      externalizeDeps: true
+    }
   },
   renderer: {
     build: {
