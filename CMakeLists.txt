@@ -10,7 +10,7 @@ endforeach()
 
 # Project details.
 
-project(libOpenCOR VERSION 0.20260302.0)
+project(libOpenCOR VERSION 0.20260528.0)
 
 # Enable C++20.
 
