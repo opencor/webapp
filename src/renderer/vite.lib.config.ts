@@ -6,7 +6,12 @@ import * as postcss from 'postcss';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
+import { libopencorVersion } from './scripts/libopencor.version';
+
 export default vite.defineConfig({
+  define: {
+    __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion)
+  },
   build: {
     lib: {
       entry: './index.ts',
