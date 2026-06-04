@@ -674,6 +674,7 @@ const interactiveSettings = vue.computed<ISimulationExperimentViewSettings>(() =
 
   return {
     simulation: {
+      initialPoint: interactiveUniformTimeCourse.initialTime(),
       startingPoint: interactiveUniformTimeCourse.outputStartTime(),
       endingPoint: interactiveUniformTimeCourse.outputEndTime(),
       pointInterval:
@@ -1845,7 +1846,7 @@ const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): v
 
   const oldCvodeMaximumStep = interactiveCvode.maximumStep();
 
-  interactiveUniformTimeCourse.setInitialTime(settings.simulation.startingPoint);
+  interactiveUniformTimeCourse.setInitialTime(settings.simulation.initialPoint);
   interactiveUniformTimeCourse.setOutputStartTime(settings.simulation.startingPoint);
   interactiveUniformTimeCourse.setOutputEndTime(settings.simulation.endingPoint);
   interactiveUniformTimeCourse.setNumberOfSteps(

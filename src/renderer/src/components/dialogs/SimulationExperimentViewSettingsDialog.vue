@@ -30,13 +30,25 @@
                 <i class="pi pi-clock text-primary"></i>
                 <div>
                   <h3 class="section-title">Simulation</h3>
-                  <p class="section-description">Configure the starting and ending points of the simulation, as well as its point interval.</p>
+                  <p class="section-description">Configure the initial, starting, and ending points of the simulation, as well as its point interval.</p>
                 </div>
               </div>
 
               <!-- Simulation settings -->
 
               <div class="settings-form">
+                <div class="form-row">
+                  <InputScientificNumber v-model="localSettings.simulation.initialPoint" class="form-field"
+                    :label="`Initial point (${voiUnit})`"
+                    size="small"
+                  />
+                  <div class="form-field self-stretch">
+                    <div v-if="!simulationSettingsIssues.length" class="form-field items-center text-muted-color text-sm">
+                      <i class="pi pi-info-circle mr-2"></i>
+                      <span>Data points between the initial and starting points will not be tracked.</span>
+                    </div>
+                  </div>
+                </div>
                 <div class="form-row">
                   <InputScientificNumber v-model="localSettings.simulation.startingPoint" class="form-field"
                     :label="`Starting point (${voiUnit})`"
@@ -905,6 +917,7 @@ import { useOpenCORToast } from '../OpenCORToast';
 
 export interface ISimulationExperimentViewSettings {
   simulation: {
+    initialPoint: number;
     startingPoint: number;
     endingPoint: number;
     pointInterval: number;
@@ -1042,6 +1055,13 @@ const simulationSettingsIssues = vue.computed<locApi.IIssue[]>(() => {
 
   const res: locApi.IIssue[] = [];
 
+  if (localSettings.value.simulation.initialPoint == null) {
+    res.push({
+      type: EIssueType.WARNING,
+      description: 'The initial point must be specified.'
+    });
+  }
+
   if (localSettings.value.simulation.startingPoint == null) {
     res.push({
       type: EIssueType.WARNING,
@@ -1053,6 +1073,17 @@ const simulationSettingsIssues = vue.computed<locApi.IIssue[]>(() => {
     res.push({
       type: EIssueType.WARNING,
       description: 'The ending point must be specified.'
+    });
+  }
+
+  if (
+    localSettings.value.simulation.initialPoint !== null &&
+    localSettings.value.simulation.startingPoint !== null &&
+    localSettings.value.simulation.startingPoint < localSettings.value.simulation.initialPoint
+  ) {
+    res.push({
+      type: EIssueType.WARNING,
+      description: 'The starting point must be greater or equal to the initial point.'
     });
   }
 
@@ -1500,6 +1531,7 @@ const onOk = () => {
 
   emit('ok', {
     simulation: {
+      initialPoint: localSettings.value.simulation.initialPoint,
       startingPoint: localSettings.value.simulation.startingPoint,
       endingPoint: localSettings.value.simulation.endingPoint,
       pointInterval: localSettings.value.simulation.pointInterval
