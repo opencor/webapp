@@ -7,7 +7,7 @@
         :aria-valuenow="currentNumericValue ?? undefined"
         :aria-valuemin="props.min ?? undefined"
         :aria-valuemax="props.max ?? undefined"
-        v-keyfilter="{ pattern: /^[+-]?(\d*(\.\d*)?|\.\d*)([eE][+-]?\d*)?$/, validateOnly: true }"
+        v-keyfilter="{ pattern: /^[+-]?(\d*(\.\d*)?|\.\d*)([eE][+-]?\d*)?$/ }"
         @update:model-value="onUpdateModelValue"
         @focus="onFocus"
         @blur="onBlur"
@@ -149,7 +149,7 @@ const currentNumericValue = vue.computed<number | undefined>(() => {
 const inferredNumericValue = vue.computed<number>(() => {
   const source = internalValue.value === '' ? (props.modelValue ?? props.min ?? 0) : parseFloat(internalValue.value);
 
-  return Number.isFinite(source) ? source : (props.modelValue ?? props.min ?? 0);
+  return Number.isFinite(source) ? source : (props.modelValue ?? 0);
 });
 const activeButton = vue.ref<'increment' | 'decrement' | null>(null);
 const minBoundary = vue.computed<boolean>(() => {
@@ -213,11 +213,16 @@ const onPaste = (event: ClipboardEvent) => {
 
   event.preventDefault();
 
-  const pastedValue = clipboardData.getData('text') || '';
+  const rawPastedValue = clipboardData.getData('text') || '';
 
-  if (pastedValue === '') {
+  if (rawPastedValue === '') {
     return;
   }
+
+  // Normalise Unicode minus signs to ASCII hyphen-minus so that negative numbers copied from text sources using
+  // typographic minus signs are handled correctly.
+
+  const pastedValue = rawPastedValue.replace(/[\u2212\u2213]/g, '-');
 
   // Try to extract a valid scientific-number pattern from the pasted text. Failing that, try to sanitise the pasted
   // text first by removing invalid characters, then extracting a scientific-number pattern from it.
@@ -393,9 +398,7 @@ const spin = (direction: 1 | -1): boolean => {
 
   const inferredBaseValue =
     internalValue.value === '' ? (props.modelValue ?? props.min ?? 0) : parseFloat(internalValue.value);
-  const safeCurrentValue = Number.isFinite(inferredBaseValue)
-    ? inferredBaseValue
-    : (props.modelValue ?? props.min ?? 0);
+  const safeCurrentValue = Number.isFinite(inferredBaseValue) ? inferredBaseValue : (props.modelValue ?? 0);
   const nextValue = validateValue(addWithPrecision(safeCurrentValue, step * direction));
 
   if (!Number.isFinite(nextValue) || nextValue === safeCurrentValue) {

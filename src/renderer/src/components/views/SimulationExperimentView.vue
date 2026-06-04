@@ -76,6 +76,10 @@
                     @change="updatePlot()"
                   />
                 </Fieldset>
+                <Fieldset v-if="preSimulationDuration" legend="Note" class="note">
+                  The simulation was run for <br/>
+                  <strong>{{ preSimulationDuration }} {{ interactiveInstanceTask ? interactiveInstanceTask.voiUnit() : '' }}</strong> prior to plotting.
+                </Fieldset>
               </ScrollPanel>
             </SplitterPanel>
             <SplitterPanel :size="75">
@@ -207,6 +211,10 @@
                     </p>
                   </div>
                 </div>
+              </Fieldset>
+              <Fieldset v-if="preSimulationDuration" legend="Note" class="note">
+                The simulation was run for <br/>
+                <strong>{{ preSimulationDuration }} {{ interactiveInstanceTask ? interactiveInstanceTask.voiUnit() : '' }}</strong> prior to plotting.
               </Fieldset>
             </ScrollPanel>
           </div>
@@ -674,6 +682,7 @@ const interactiveSettings = vue.computed<ISimulationExperimentViewSettings>(() =
 
   return {
     simulation: {
+      initialPoint: interactiveUniformTimeCourse.initialTime(),
       startingPoint: interactiveUniformTimeCourse.outputStartTime(),
       endingPoint: interactiveUniformTimeCourse.outputEndTime(),
       pointInterval:
@@ -691,6 +700,12 @@ const interactiveSettings = vue.computed<ISimulationExperimentViewSettings>(() =
     }
   };
 });
+const preSimulationDuration = vue.computed<number>(() => {
+  const settings = interactiveSettings.value;
+
+  return settings.simulation.startingPoint - settings.simulation.initialPoint;
+});
+
 const interactiveOldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(interactiveSettings.value)));
 
 // A helper function to generate a unique external data ID based on a candidate name and a set of already used IDs, by
@@ -1845,7 +1860,7 @@ const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): v
 
   const oldCvodeMaximumStep = interactiveCvode.maximumStep();
 
-  interactiveUniformTimeCourse.setInitialTime(settings.simulation.startingPoint);
+  interactiveUniformTimeCourse.setInitialTime(settings.simulation.initialPoint);
   interactiveUniformTimeCourse.setOutputStartTime(settings.simulation.startingPoint);
   interactiveUniformTimeCourse.setOutputEndTime(settings.simulation.endingPoint);
   interactiveUniformTimeCourse.setNumberOfSteps(
@@ -1981,6 +1996,21 @@ if (common.isDesktop()) {
 
 .empty-state-icon {
   font-size: 1.25rem;
+}
+
+.note {
+  color: var(--p-text-muted-color);
+  margin-top: 0.5rem;
+  border: 1px dashed var(--p-content-border-color);
+  padding: 0 0.5rem 0.5rem 0.5rem !important;
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.note :deep(.p-fieldset-legend) {
+  font-size: 0.875rem;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 :deep(.p-button-icon) {
