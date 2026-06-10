@@ -154,16 +154,12 @@
                     >
                       <div class="flex items-center">
                         <div class="w-1 h-6 rounded-xs mr-2" :style="`background-color: ${run.color};`"></div>
-                        <div class="grow text-sm"
+                        <Tooltip :content="run.isLiveRun ? '' : run.tooltip"
+                          class="grow text-sm"
                           :class="{ 'cursor-help': !run.isLiveRun, 'opacity-50': !run.isVisible }"
-                          v-tippy="!run.isLiveRun ? {
-                            allowHTML: true,
-                            content: run.tooltip,
-                            placement: 'bottom-start'
-                          } : undefined"
                         >
                           {{ run.isLiveRun ? 'Live run' : `Run #${index}` }}
-                        </div>
+                        </Tooltip>
                         <div class="flex items-center">
                           <Button class="p-0! w-5! h-5! run-action-button"
                             icon="pi pi-palette"
@@ -1748,7 +1744,7 @@ const onTrackRun = (): void => {
 
     tooltipRows.push(`<tr>
       <td>
-        <b>${input.name}:</b>
+        <strong>${input.name}:</strong>
       </td>
       <td style="padding-left: 8px;">
         ${inputValue}

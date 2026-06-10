@@ -134,7 +134,6 @@ import '../assets/app.css';
 import '../assets/primeicons-assets';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
-import * as dependencies from '../common/dependencies';
 import { electronApi } from '../common/electronApi';
 /* TODO: enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
@@ -445,8 +444,6 @@ provideOpenCORToast(addToast);
 
 // Finish initialising OpenCOR.
 
-const crtGlobalProperties = crtVueAppInstance?.config.globalProperties as Record<string, unknown> | undefined;
-const vueTippyInstalledFlag = 'opencorVueTippyInstalled';
 let postInitialisationDone = false;
 
 vue.watch(
@@ -454,24 +451,6 @@ vue.watch(
   async (newInitialisationDone: boolean) => {
     if (newInitialisationDone && !postInitialisationDone) {
       postInitialisationDone = true;
-
-      // OpenCOR is now fully initialised, so we can finalise a few things, namely let the current Vue app instance use
-      // VueTippy.
-
-      if (crtVueAppInstance && crtGlobalProperties && !crtGlobalProperties[vueTippyInstalledFlag]) {
-        // Append Tippy tooltips to `.opencor` rather than `document.body` so that they stay within the component's
-        // stacking context. This is critical when OpenCOR is embedded as a Vue 3 component in a host app in full-screen
-        // mode (`document.body` can be hidden behind the host's full-screen container, whereas `.opencor` lives inside
-        // it).
-
-        crtVueAppInstance.use(dependencies._vueTippy, {
-          defaultProps: {
-            appendTo: () => document.querySelector('.opencor') || document.body
-          }
-        });
-
-        crtGlobalProperties[vueTippyInstalledFlag] = true;
-      }
 
       // Now, we can hide the loading message (but after a long delay so that the user gets a chance to see that the
       // initialisation has reached 100%).

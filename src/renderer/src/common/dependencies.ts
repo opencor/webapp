@@ -7,7 +7,6 @@ export let _jsonSchema: Module = null;
 export let _jsZip: Module = null;
 export let _mathJs: Module = null;
 export let _plotlyJs: Module = null;
-export let _vueTippy: Module = null;
 export let _xxhash: Module = null;
 
 export const setJsonSchema = (module: Module): void => {
@@ -24,10 +23,6 @@ export const setMathJs = (module: Module): void => {
 
 export const setPlotlyJs = (module: Module): void => {
   _plotlyJs = module;
-};
-
-export const setVueTippy = (module: Module): void => {
-  _vueTippy = module;
 };
 
 export const initialiseXxhash: Promise<Module> = xxhash().then((module: Module) => {
