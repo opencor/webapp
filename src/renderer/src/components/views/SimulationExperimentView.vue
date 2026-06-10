@@ -61,6 +61,7 @@
                     :options="standardParameters"
                     size="small"
                     class="w-full"
+                    :appendTo="appendTarget"
                     @change="updatePlot()"
                   />
                 </Fieldset>
@@ -73,6 +74,7 @@
                     :options="standardParameters"
                     size="small"
                     class="w-full"
+                    :appendTo="appendTarget"
                     @change="updatePlot()"
                   />
                 </Fieldset>
@@ -234,7 +236,7 @@
       @ok="onInteractiveSettingsOk"
       @close="interactiveSettingsVisible = false"
     />
-    <Popover ref="interactiveRunColorPopoverRef" appendTo="self">
+    <Popover ref="interactiveRunColorPopoverRef" :appendTo="appendTarget">
       <div class="flex gap-2">
         <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
           v-for="(name, color) in colors.PALETTE" :key="color"
@@ -260,6 +262,7 @@ import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../
 import * as colors from '../../common/colors';
 import * as common from '../../common/common';
 import * as dependencies from '../../common/dependencies';
+import * as vueCommon from '../../common/vueCommon';
 import * as externalData from '../../common/externalData';
 import * as locCommon from '../../common/locCommon';
 import * as locApi from '../../libopencor/locApi';
@@ -612,6 +615,7 @@ let interactiveTrackedRunId = 0;
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
 const interactiveRunColorPopoverRef = vue.ref<InstanceType<typeof Popover> | undefined>();
 const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
+const appendTarget = vueCommon.useAppendTarget();
 const interactiveCompData = vue.computed<IGraphPanelData[]>(() => {
   // Combine the live data with the data from the tracked runs.
 

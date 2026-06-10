@@ -6,6 +6,7 @@
         :options="possibleValues"
         optionLabel="name"
         @change="selectChange"
+        :appendTo="appendTarget"
         class="w-full"
         size="small"
       />
@@ -32,6 +33,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
+import * as vueCommon from '../../common/vueCommon';
 import type * as locApi from '../../libopencor/locApi';
 
 const value = defineModel<number>({ required: true });
@@ -50,6 +52,8 @@ let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
   props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
+const appendTarget = vueCommon.useAppendTarget();
+
 const compStepValue = vue.computed<number>(() => {
   if (props.stepValue !== undefined) {
     return props.stepValue;

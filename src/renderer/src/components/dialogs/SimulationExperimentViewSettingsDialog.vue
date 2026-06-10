@@ -222,6 +222,7 @@
                                       optionValue="value"
                                       class="w-full"
                                       size="small"
+                                      :appendTo="issuesContainer"
                                     />
                                     <label>Type</label>
                                   </FloatLabel>
@@ -343,6 +344,7 @@
                                   size="small"
                                   filter filterMode="lenient"
                                   :options="editableModelParameters"
+                                  :appendTo="issuesContainer"
                                 />
                                 <label>Model parameter</label>
                               </FloatLabel>
@@ -417,6 +419,7 @@
                                   size="small"
                                   filter filterMode="lenient"
                                   :options="allModelParameters"
+                                  :appendTo="issuesContainer"
                                 />
                                 <label>Model parameter</label>
                               </FloatLabel>
@@ -562,6 +565,7 @@
                                         size="small"
                                         filter filterMode="lenient"
                                         :options="externalDataSeries(externalDataFile)"
+                                        :appendTo="issuesContainer"
                                       />
                                       <label>External data</label>
                                     </FloatLabel>
