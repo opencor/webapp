@@ -459,7 +459,16 @@ vue.watch(
       // VueTippy.
 
       if (crtVueAppInstance && crtGlobalProperties && !crtGlobalProperties[vueTippyInstalledFlag]) {
-        crtVueAppInstance.use(dependencies._vueTippy);
+        // Append Tippy tooltips to `.opencor` rather than `document.body` so that they stay within the component's
+        // stacking context. This is critical when OpenCOR is embedded as a Vue 3 component in a host app in full-screen
+        // mode (`document.body` can be hidden behind the host's full-screen container, whereas `.opencor` lives inside
+        // it).
+
+        crtVueAppInstance.use(dependencies._vueTippy, {
+          defaultProps: {
+            appendTo: () => document.querySelector('.opencor') || document.body
+          }
+        });
 
         crtGlobalProperties[vueTippyInstalledFlag] = true;
       }
