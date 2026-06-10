@@ -28,12 +28,12 @@ const externalDependencies: ExternalDependency[] = [
   },
   {
     name: 'Math.js',
-    url: 'https://cdn.jsdelivr.net/npm/mathjs@15.1.1/+esm',
+    url: 'https://cdn.jsdelivr.net/npm/mathjs@15.2.0/+esm',
     set: (m) => dependencies.setMathJs(m)
   },
   {
     name: 'Plotly.js',
-    url: 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.4.0/+esm',
+    url: 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.6.0/+esm',
     set: (m) => dependencies.setPlotlyJs(m)
   },
   {
