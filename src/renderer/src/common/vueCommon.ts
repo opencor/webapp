@@ -99,3 +99,20 @@ export const trackElementHeight = (
 
   return stopTrackingElementHeight;
 };
+
+// A composable that provides the `.opencor` element as an append target for overlays.
+// Note: this is needed when OpenCOR is embedded as a Vue 3 component in a host app that uses full-screen mode. In such
+//       a case, the Fullscreen API only renders the full-screen element and its descendants, so teleporting to
+//       `document.body` makes overlays invisible. Instead, teleporting to `.opencor` means that overlays are visible in
+//       full-screen mode. And, since `.opencor` is a child of the full-screen element, they are also visible in normal
+//       mode.
+
+export const useAppendTarget = () => {
+  const appendTarget = vue.shallowRef<HTMLElement | undefined>(undefined);
+
+  vue.onMounted(() => {
+    appendTarget.value = (document.querySelector('.opencor') as HTMLElement | null) ?? undefined;
+  });
+
+  return appendTarget;
+};
