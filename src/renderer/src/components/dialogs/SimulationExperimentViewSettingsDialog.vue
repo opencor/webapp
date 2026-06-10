@@ -348,16 +348,12 @@
                                 />
                                 <label>Model parameter</label>
                               </FloatLabel>
-                              <FloatLabel variant="on" class="flex-1">
-                                <InputText v-model="parameter.value" class="w-full" size="small"
-                                  v-tippy="{
-                                    allowHTML: true,
-                                    content: parameterValueTooltip(),
-                                    placement: 'bottom-start'
-                                  }"
-                                />
-                                <label>Value</label>
-                              </FloatLabel>
+                              <Tooltip :content="parameterValueTooltip()" class="flex-1">
+                                <FloatLabel variant="on" class="w-full">
+                                  <InputText v-model="parameter.value" class="w-full" size="small" />
+                                  <label>Value</label>
+                                </FloatLabel>
+                              </Tooltip>
                               <Button
                                 icon="pi pi-times"
                                 text rounded
@@ -524,26 +520,18 @@
                               <!-- Description and VOI expression -->
 
                                 <div class="form-row">
-                                  <FloatLabel variant="on" class="flex-1">
-                                    <InputText v-model="externalDataFile.description" class="w-full" size="small"
-                                      v-tippy="{
-                                        allowHTML: true,
-                                        content: externalDataDescriptionTooltip(),
-                                        placement: 'bottom-start'
-                                      }"
-                                    />
-                                    <label>Description (optional)</label>
-                                  </FloatLabel>
-                                  <FloatLabel variant="on" class="flex-1">
-                                    <InputText v-model="externalDataFile.voiExpression" class="w-full" size="small"
-                                      v-tippy="{
-                                        allowHTML: true,
-                                        content: externalDataVoiExpressionTooltip(),
-                                        placement: 'bottom-start'
-                                      }"
-                                    />
-                                    <label>VOI expression (optional)</label>
-                                  </FloatLabel>
+                                  <Tooltip :content="externalDataDescriptionTooltip()" class="flex-1">
+                                    <FloatLabel variant="on" class="w-full">
+                                      <InputText v-model="externalDataFile.description" class="w-full" size="small" />
+                                      <label>Description (optional)</label>
+                                    </FloatLabel>
+                                  </Tooltip>
+                                  <Tooltip :content="externalDataVoiExpressionTooltip()" class="flex-1">
+                                    <FloatLabel variant="on" class="w-full">
+                                      <InputText v-model="externalDataFile.voiExpression" class="w-full" size="small" />
+                                      <label>VOI expression (optional)</label>
+                                    </FloatLabel>
+                                  </Tooltip>
                                 </div>
 
                                 <!-- External data entries -->
@@ -675,38 +663,26 @@
                                       </div>
                                       <div class="w-full">
                                         <div class="mb-3">
-                                          <FloatLabel variant="on" class="flex-1">
-                                            <InputText v-model="plot.name" class="w-full" size="small"
-                                              v-tippy="{
-                                                allowHTML: true,
-                                                content: traceNameTooltip(),
-                                                placement: 'bottom-start'
-                                              }"
-                                            />
-                                            <label>Name (optional)</label>
-                                          </FloatLabel>
+                                          <Tooltip :content="traceNameTooltip()" class="flex-1">
+                                            <FloatLabel variant="on" class="w-full">
+                                              <InputText v-model="plot.name" class="w-full" size="small" />
+                                              <label>Name (optional)</label>
+                                            </FloatLabel>
+                                          </Tooltip>
                                         </div>
                                         <div class="entry-row">
-                                          <FloatLabel variant="on" class="flex-1">
-                                            <InputText v-model="plot.xValue" class="w-full" size="small"
-                                              v-tippy="{
-                                                allowHTML: true,
-                                                content: xyValueTooltip(true),
-                                                placement: 'bottom-start'
-                                              }"
-                                            />
-                                            <label>X value</label>
-                                          </FloatLabel>
-                                          <FloatLabel variant="on" class="flex-1">
-                                            <InputText v-model="plot.yValue" class="w-full" size="small"
-                                              v-tippy="{
-                                                allowHTML: true,
-                                                content: xyValueTooltip(false),
-                                                placement: 'bottom-start'
-                                              }"
-                                            />
-                                            <label>Y value</label>
-                                          </FloatLabel>
+                                          <Tooltip :content="xyValueTooltip(true)" class="flex-1">
+                                            <FloatLabel variant="on" class="w-full">
+                                              <InputText v-model="plot.xValue" class="w-full" size="small" />
+                                              <label>X value</label>
+                                            </FloatLabel>
+                                          </Tooltip>
+                                          <Tooltip :content="xyValueTooltip(false)" class="flex-1">
+                                            <FloatLabel variant="on" class="w-full">
+                                              <InputText v-model="plot.yValue" class="w-full" size="small" />
+                                              <label>Y value</label>
+                                            </FloatLabel>
+                                          </Tooltip>
                                         </div>
                                       </div>
                                       <Button
@@ -732,38 +708,26 @@
                                         </div>
                                         <div class="w-full">
                                           <div class="mb-3">
-                                            <FloatLabel variant="on" class="flex-1">
-                                              <InputText v-model="trace.name" class="w-full" size="small"
-                                                v-tippy="{
-                                                  allowHTML: true,
-                                                  content: traceNameTooltip(),
-                                                  placement: 'bottom-start'
-                                                }"
-                                              />
-                                              <label>Name (optional)</label>
-                                            </FloatLabel>
+                                            <Tooltip :content="traceNameTooltip()" class="flex-1">
+                                                <FloatLabel variant="on" class="w-full">
+                                                  <InputText v-model="trace.name" class="w-full" size="small" />
+                                                  <label>Name (optional)</label>
+                                                </FloatLabel>
+                                              </Tooltip>
                                           </div>
                                           <div class="entry-row">
-                                            <FloatLabel variant="on" class="flex-1">
-                                              <InputText v-model="trace.xValue" class="w-full" size="small"
-                                                v-tippy="{
-                                                  allowHTML: true,
-                                                  content: xyValueTooltip(true),
-                                                  placement: 'bottom-start'
-                                                }"
-                                              />
-                                              <label>X value</label>
-                                            </FloatLabel>
-                                            <FloatLabel variant="on" class="flex-1">
-                                              <InputText v-model="trace.yValue" class="w-full" size="small"
-                                                v-tippy="{
-                                                  allowHTML: true,
-                                                  content: xyValueTooltip(false),
-                                                  placement: 'bottom-start'
-                                                }"
-                                              />
-                                              <label>Y value</label>
-                                            </FloatLabel>
+                                            <Tooltip :content="xyValueTooltip(true)" class="flex-1">
+                                              <FloatLabel variant="on" class="w-full">
+                                                <InputText v-model="trace.xValue" class="w-full" size="small" />
+                                                <label>X value</label>
+                                              </FloatLabel>
+                                            </Tooltip>
+                                            <Tooltip :content="xyValueTooltip(false)" class="flex-1">
+                                              <FloatLabel variant="on" class="w-full">
+                                                <InputText v-model="trace.yValue" class="w-full" size="small" />
+                                                <label>Y value</label>
+                                              </FloatLabel>
+                                            </Tooltip>
                                           </div>
                                         </div>
                                         <Button

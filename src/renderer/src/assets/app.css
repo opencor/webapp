@@ -46,21 +46,6 @@ body {
       transition: none !important;
     }
 
-    .tippy-box[data-theme~='opencor'] ul {
-      list-style: disc;
-    }
-
-    .tippy-box[data-theme~='opencor'] {
-      background-color: var(--p-content-background);
-      color: var(--p-content-color);
-      box-shadow: 0 2px 8px var(--p-shadow-color, rgba(0, 0, 0, 0.15));
-      border-radius: var(--p-content-border-radius);
-    }
-
-    .tippy-box[data-theme~='opencor'] > .tippy-arrow {
-      color: var(--p-content-background);
-    }
-
     a {
       color: var(--p-button-link-color);
     }
@@ -69,8 +54,4 @@ body {
       outline: none !important;
     }
   }
-}
-
-html.opencor-dark-mode .opencor .tippy-box[data-theme~='opencor'] {
-  box-shadow: 0 2px 8px var(--p-shadow-color-dark, rgba(255, 255, 255, 0.15));
 }

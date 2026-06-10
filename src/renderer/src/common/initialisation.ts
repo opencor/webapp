@@ -35,12 +35,6 @@ const externalDependencies: ExternalDependency[] = [
     name: 'Plotly.js',
     url: 'https://cdn.jsdelivr.net/npm/plotly.js-gl2d-dist-min@3.6.0/+esm',
     set: (m) => dependencies.setPlotlyJs(m)
-  },
-  {
-    name: 'VueTippy',
-    url: 'https://cdn.jsdelivr.net/npm/vue-tippy@6.7.1/+esm',
-    set: (m) => dependencies.setVueTippy(m),
-    cssUrl: 'https://cdn.jsdelivr.net/npm/tippy.js@6.3.7/dist/tippy.css'
   }
 ];
 
