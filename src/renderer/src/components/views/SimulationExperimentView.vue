@@ -171,20 +171,6 @@
                             :title="`Change ${run.isLiveRun ? 'live run' : 'run'} colour`"
                             @click="onToggleRunColorPopover(index, $event)"
                           />
-                          <Popover :ref="(element: any) => interactiveRunColorPopoverRefs[index] = element"
-                            v-if="interactiveRunColorPopoverIndex === index"
-                          >
-                            <div class="flex gap-2">
-                              <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
-                                v-for="(name, color) in colors.PALETTE" :key="color"
-                                :style="`background-color: ${color};`"
-                                :class="{ 'color-swatch-selected': color === run.color }"
-                                :title="name"
-                                @click="onRunColorChange(index, color)"
-                              >
-                              </button>
-                            </div>
-                          </Popover>
                           <Button class="p-0! w-5! h-5! run-action-button"
                             :icon="run.isVisible ? 'pi pi-eye' : 'pi pi-eye-slash'"
                             text :severity="run.isVisible ? 'info' : 'secondary'"
@@ -248,6 +234,17 @@
       @ok="onInteractiveSettingsOk"
       @close="interactiveSettingsVisible = false"
     />
+    <Popover ref="interactiveRunColorPopoverRef" appendTo="self">
+      <div class="flex gap-2">
+        <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
+          v-for="(name, color) in colors.PALETTE" :key="color"
+          :style="`background-color: ${color};`"
+          :class="{ 'color-swatch-selected': color === interactiveRuns[interactiveRunColorPopoverIndex].color }"
+          :title="name"
+          @click="onRunColorChange(interactiveRunColorPopoverIndex, color)"
+        />
+      </div>
+    </Popover>
     </div>
   </div>
 </template>
@@ -613,7 +610,7 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
 ]);
 let interactiveTrackedRunId = 0;
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
-const interactiveRunColorPopoverRefs = vue.ref<Record<number, InstanceType<typeof Popover> | undefined>>({});
+const interactiveRunColorPopoverRef = vue.ref<InstanceType<typeof Popover> | undefined>();
 const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
 const interactiveCompData = vue.computed<IGraphPanelData[]>(() => {
   // Combine the live data with the data from the tracked runs.
@@ -1828,16 +1825,9 @@ const onRunColorChange = (index: number, color: string) => {
 };
 
 const onToggleRunColorPopover = (index: number, event: MouseEvent) => {
-  // Note: interactiveRunColorPopoverIndex is only used to ensure that the active popover gets properly hidden when the
-  //       window loses focus as a result of switching tabs (see onMounted below).
-
   interactiveRunColorPopoverIndex.value = index;
 
-  vue.nextTick(() => {
-    // Note: we do this in a next tick to ensure that the reference is available.
-
-    interactiveRunColorPopoverRefs.value[index]?.toggle(event);
-  });
+  interactiveRunColorPopoverRef.value?.toggle(event);
 };
 
 const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): void => {
@@ -1936,7 +1926,7 @@ vue.onMounted(() => {
     (isFocused) => {
       if (!isFocused) {
         if (interactiveRunColorPopoverIndex.value !== -1) {
-          interactiveRunColorPopoverRefs.value[interactiveRunColorPopoverIndex.value]?.hide();
+          interactiveRunColorPopoverRef.value?.hide();
 
           interactiveRunColorPopoverIndex.value = -1;
         }
