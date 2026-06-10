@@ -466,7 +466,8 @@ vue.watch(
 
         crtVueAppInstance.use(dependencies._vueTippy, {
           defaultProps: {
-            appendTo: () => document.querySelector('.opencor') || document.body
+            appendTo: () => document.querySelector('.opencor') || document.body,
+            theme: 'opencor'
           }
         });
 
