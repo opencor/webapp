@@ -139,13 +139,13 @@ const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget();
 const progressMessage = vue.inject<IProgressMessage>('progressMessage');
-let updatingMargins = false;
 let plotIsReady = false;
 let resizeQueued = false;
 let trackedWidth = 0;
 let trackedHeight = 0;
 let trackedMargins: IGraphPanelMargins | undefined;
 let stopTrackingContainerSize: (() => void) | undefined;
+let marginsRafId: number | undefined;
 let resizeRafId: number | undefined;
 
 // Context menu functionality.
@@ -623,22 +623,18 @@ const canMeasureMargins = (): boolean => {
 };
 
 const updateMarginsAsync = (): void => {
-  // Skip if we are already updating our margins.
+  // Coalesce multiple margin update requests into a single requestAnimationFrame() callback.
 
-  if (updatingMargins) {
+  if (marginsRafId !== undefined) {
     return;
   }
 
-  updatingMargins = true;
+  marginsRafId = requestAnimationFrame(() => {
+    marginsRafId = undefined;
 
-  // Use requestAnimationFrame for optimal timing.
-
-  requestAnimationFrame(() => {
     // Make sure that we can measure our margins before proceeding.
 
     if (!canMeasureMargins()) {
-      updatingMargins = false;
-
       return;
     }
 
@@ -673,8 +669,6 @@ const updateMarginsAsync = (): void => {
     if (Object.keys(relayoutUpdates).length) {
       dependencies._plotlyJs.relayout(mainDivRef.value, relayoutUpdates);
     }
-
-    updatingMargins = false;
   });
 };
 
