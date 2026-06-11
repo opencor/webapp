@@ -352,7 +352,9 @@ const exportToCsv = async (): Promise<void> => {
 
     // Headers.
 
-    const allXValuesEqual = props.data.traces.every((trace) => trace.xValue === firstTrace.xValue);
+    const allXValuesEqual = props.data.traces.every(
+      (trace: IGraphPanelPlotTrace) => trace.xValue === firstTrace.xValue
+    );
     const headerParts: string[] = [allXValuesEqual ? firstTrace.xValue : 'X'];
 
     for (const trace of props.data.traces) {
