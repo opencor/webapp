@@ -111,11 +111,21 @@ const resize = (): Promise<unknown> => {
     return Promise.resolve();
   }
 
-  return Promise.resolve(dependencies._plotlyJs.Plots.resize(mainDivRef.value)).then(() => {
-    trackSize();
+  if (resizeRafId !== undefined) {
+    return Promise.resolve();
+  }
 
-    updateMarginsAsync();
+  resizeRafId = requestAnimationFrame(() => {
+    resizeRafId = undefined;
+
+    dependencies._plotlyJs.Plots.resize(mainDivRef.value).then(() => {
+      trackSize();
+
+      updateMarginsAsync();
+    });
   });
+
+  return Promise.resolve();
 };
 
 defineExpose({
@@ -129,13 +139,14 @@ const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget();
 const progressMessage = vue.inject<IProgressMessage>('progressMessage');
-let updatingMargins = false;
 let plotIsReady = false;
 let resizeQueued = false;
 let trackedWidth = 0;
 let trackedHeight = 0;
 let trackedMargins: IGraphPanelMargins | undefined;
 let stopTrackingContainerSize: (() => void) | undefined;
+let marginsRafId: number | undefined;
+let resizeRafId: number | undefined;
 
 // Context menu functionality.
 
@@ -352,7 +363,9 @@ const exportToCsv = async (): Promise<void> => {
 
     // Headers.
 
-    const allXValuesEqual = props.data.traces.every((trace) => trace.xValue === firstTrace.xValue);
+    const allXValuesEqual = props.data.traces.every(
+      (trace: IGraphPanelPlotTrace) => trace.xValue === firstTrace.xValue
+    );
     const headerParts: string[] = [allXValuesEqual ? firstTrace.xValue : 'X'];
 
     for (const trace of props.data.traces) {
@@ -457,10 +470,20 @@ interface IThemeData {
   yaxis: IAxisThemeData;
 }
 
+let cachedThemeMode: boolean | undefined;
+let cachedThemeData: IThemeData | undefined;
+
 const themeData = (): IThemeData => {
-  // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+  // Use our cached theme data if the theme mode hasn't changed since the last time we generated it.
 
   const useLightMode = theme.useLightMode();
+
+  if (cachedThemeData !== undefined && cachedThemeMode === useLightMode) {
+    return cachedThemeData;
+  }
+
+  // Generate our theme data.
+  // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 
   const axisThemeData = (): IAxisThemeData => {
     return {
@@ -472,7 +495,8 @@ const themeData = (): IThemeData => {
     };
   };
 
-  return {
+  cachedThemeMode = useLightMode;
+  cachedThemeData = {
     paper_bgcolor: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
     plot_bgcolor: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
     font: {
@@ -482,6 +506,8 @@ const themeData = (): IThemeData => {
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };
+
+  return cachedThemeData;
 };
 
 interface IAxesDataAxis {
@@ -501,10 +527,29 @@ interface IAxesData {
   yaxis: IAxesDataAxis;
 }
 
+let cachedAxesData: IAxesData | undefined;
+let cachedXAxisTitle: string | undefined;
+let cachedYAxisTitle: string | undefined;
+
 const axesData = (): IAxesData => {
+  // Use our cached axes data if the axis titles haven't changed since the last time we generated it.
+
+  const xTitle = props.data.xAxisTitle;
+  const yTitle = props.data.yAxisTitle;
+
+  if (cachedAxesData !== undefined && cachedXAxisTitle === xTitle && cachedYAxisTitle === yTitle) {
+    return cachedAxesData;
+  }
+
+  // Generate our axes data.
+  // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+
+  cachedXAxisTitle = xTitle;
+  cachedYAxisTitle = yTitle;
+
   const axisTickFontSize = 10;
 
-  return {
+  cachedAxesData = {
     xaxis: {
       automargin: true,
       tickangle: 0,
@@ -513,7 +558,7 @@ const axesData = (): IAxesData => {
       },
       title: {
         standoff: 8,
-        text: props.data.xAxisTitle
+        text: xTitle
       }
     },
     yaxis: {
@@ -524,10 +569,12 @@ const axesData = (): IAxesData => {
       },
       title: {
         standoff: 8,
-        text: props.data.yAxisTitle
+        text: yTitle
       }
     }
   };
+
+  return cachedAxesData;
 };
 
 const resolvedMargin = (propValue: number | undefined, compValue: number): number => {
@@ -610,22 +657,18 @@ const canMeasureMargins = (): boolean => {
 };
 
 const updateMarginsAsync = (): void => {
-  // Skip if we are already updating our margins.
+  // Coalesce multiple margin update requests into a single requestAnimationFrame() callback.
 
-  if (updatingMargins) {
+  if (marginsRafId !== undefined) {
     return;
   }
 
-  updatingMargins = true;
+  marginsRafId = requestAnimationFrame(() => {
+    marginsRafId = undefined;
 
-  // Use requestAnimationFrame for optimal timing.
-
-  requestAnimationFrame(() => {
     // Make sure that we can measure our margins before proceeding.
 
     if (!canMeasureMargins()) {
-      updatingMargins = false;
-
       return;
     }
 
@@ -660,8 +703,6 @@ const updateMarginsAsync = (): void => {
     if (Object.keys(relayoutUpdates).length) {
       dependencies._plotlyJs.relayout(mainDivRef.value, relayoutUpdates);
     }
-
-    updatingMargins = false;
   });
 };
 
@@ -700,17 +741,25 @@ const updatePlot = (): void => {
     }
   }
 
-  const traces = props.data.traces.map((trace) => {
-    const traceKey = traceVisibilityKey(trace);
-    const visible = traceKey ? previousTraceVisibilityByKey[traceKey] : undefined;
+  // Pre-allocate the traces array and build each trace inline to avoid .map() closure overhead.
 
-    return {
-      ...trace,
-      visible,
-      line: { color: trace.color },
-      legendrank: trace.zorder
+  const dataTraces = props.data.traces;
+  const dataTraceCount = dataTraces.length;
+  const traces: unknown[] = new Array(dataTraceCount);
+
+  for (let i = 0; i < dataTraceCount; ++i) {
+    const dataTrace = dataTraces[i];
+    const dataTraceKey = traceVisibilityKey(dataTrace);
+
+    traces[i] = {
+      x: dataTrace.x,
+      y: dataTrace.y,
+      name: dataTrace.name,
+      visible: dataTraceKey ? previousTraceVisibilityByKey[dataTraceKey] : undefined,
+      line: { color: dataTrace.color },
+      legendrank: dataTrace.zorder
     };
-  });
+  }
 
   dependencies._plotlyJs
     .react(

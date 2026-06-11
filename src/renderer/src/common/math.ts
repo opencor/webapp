@@ -33,6 +33,7 @@ const ELEMENTWISE_REGEX = /\.([*/^])/g;
 export class Float64ArrayMath {
   private readonly math: IMathJsLike;
   private readonly compiledExpressions = new Map<string, ICompiledExpression>();
+  private readonly validatedTokens = new Map<string, true>();
 
   constructor() {
     this.math = dependencies._mathJs.create(dependencies._mathJs.all, {});
@@ -785,10 +786,11 @@ export class Float64ArrayMath {
     );
   }
 
-  // A method to reset the compiled expressions.
+  // Reset both the compiled expressions and the token validation cache.
 
   resetCompiledExpressions(): void {
     this.compiledExpressions.clear();
+    this.validatedTokens.clear();
   }
 
   // A method to compile expressions, normalising element-wise operators so that `.*`, `./`, and `.^` behave like `*`,
@@ -819,8 +821,6 @@ export class Float64ArrayMath {
   //       is used for expression results.
 
   evaluate(expression: string, scope: ExpressionScope): MathJsResult {
-    const tokens = expression.match(/[A-Za-z_$][A-Za-z0-9_$]*/g) ?? [];
-    const allowedVariables = new Set(Object.keys(scope));
     const allowedFunctions = new Set([
       // Note: this list must be kept in sync with the functions imported into Math.js in the constructor, as well as
       //       some constants.
@@ -870,18 +870,30 @@ export class Float64ArrayMath {
       'e',
       'pi'
     ]);
-    const seenTokens = new Set<string>();
 
-    for (const token of tokens) {
-      if (seenTokens.has(token)) {
-        continue;
+    // If this expression has already been validated and its scope-allowed variables haven't changed, skip token
+    // scanning entirely.
+
+    const normalisedExpression = this.normaliseExpression(expression);
+
+    if (!this.validatedTokens.has(normalisedExpression)) {
+      const tokens = expression.match(/[A-Za-z_$][A-Za-z0-9_$]*/g) ?? [];
+      const allowedVariables = new Set(Object.keys(scope));
+      const seenTokens = new Set<string>();
+
+      for (const token of tokens) {
+        if (seenTokens.has(token)) {
+          continue;
+        }
+
+        seenTokens.add(token);
+
+        if (!allowedVariables.has(token) && !allowedFunctions.has(token)) {
+          throw new MathError(expression, `Unknown symbol ${token}.`);
+        }
       }
 
-      seenTokens.add(token);
-
-      if (!allowedVariables.has(token) && !allowedFunctions.has(token)) {
-        throw new MathError(expression, `Unknown symbol ${token}.`);
-      }
+      this.validatedTokens.set(normalisedExpression, true);
     }
 
     return this.compile(expression).evaluate(scope);
