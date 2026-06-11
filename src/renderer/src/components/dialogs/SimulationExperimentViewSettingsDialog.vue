@@ -222,7 +222,7 @@
                                       optionValue="value"
                                       class="w-full"
                                       size="small"
-                                      :appendTo="issuesContainer"
+                                      :appendTo="appendTarget"
                                     />
                                     <label>Type</label>
                                   </FloatLabel>
@@ -344,7 +344,7 @@
                                   size="small"
                                   filter filterMode="lenient"
                                   :options="editableModelParameters"
-                                  :appendTo="issuesContainer"
+                                  :appendTo="appendTarget"
                                 />
                                 <label>Model parameter</label>
                               </FloatLabel>
@@ -415,7 +415,7 @@
                                   size="small"
                                   filter filterMode="lenient"
                                   :options="allModelParameters"
-                                  :appendTo="issuesContainer"
+                                  :appendTo="appendTarget"
                                 />
                                 <label>Model parameter</label>
                               </FloatLabel>
@@ -553,7 +553,7 @@
                                         size="small"
                                         filter filterMode="lenient"
                                         :options="externalDataSeries(externalDataFile)"
-                                        :appendTo="issuesContainer"
+                                        :appendTo="appendTarget"
                                       />
                                       <label>External data</label>
                                     </FloatLabel>
@@ -790,7 +790,7 @@
         <!-- Simulation issues -->
 
         <template v-if="activeTab === 'simulation'">
-          <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length" :appendTo="issuesContainer">
+          <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length" :appendTo="appendTarget">
             <div class="issues-popover-content">
               <IssuesView :issues="simulationSettingsIssues" :extraSpace="false" />
             </div>
@@ -813,7 +813,7 @@
         <!-- Solvers issues -->
 
         <template v-else-if="activeTab === 'solvers'">
-          <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length" :appendTo="issuesContainer">
+          <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length" :appendTo="appendTarget">
             <div class="issues-popover-content">
               <IssuesView :issues="solversSettingsIssues" :extraSpace="false" />
             </div>
@@ -836,7 +836,7 @@
         <!-- UI JSON issues -->
 
         <template v-else-if="activeTab === 'interactive'">
-          <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length" :appendTo="issuesContainer">
+          <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length" :appendTo="appendTarget">
             <div class="issues-popover-content">
               <IssuesView :issues="uiJsonIssues" :extraSpace="false" />
             </div>
@@ -873,10 +873,11 @@
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
-import * as locApi from '../../libopencor/locApi';
 import * as common from '../../common/common';
 import { TOAST_LIFE } from '../../common/constants';
 import * as externalData from '../../common/externalData';
+import * as vueCommon from '../../common/vueCommon';
+import * as locApi from '../../libopencor/locApi';
 import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 import { validateUiJson } from '../../libopencor/locUiJsonApi';
 import { EIssueType } from '../../libopencor/locLoggerApi';
@@ -958,7 +959,7 @@ vue.watch(
 const simulationSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const solversSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const uiJsonIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
-const issuesContainer = vue.ref<HTMLElement>();
+const appendTarget = vueCommon.useAppendTarget();
 const activeTab = vue.ref(DEFAULT_TAB);
 const activeInteractiveTab = vue.ref(DEFAULT_INTERACTIVE_TAB);
 const showSimulationSettingsIssuesPanel = vue.ref(false);
@@ -1549,15 +1550,6 @@ const toggleUiJsonIssues = (event: Event) => {
 
   showUiJsonIssuesPanel.value = !showUiJsonIssuesPanel.value;
 };
-
-vue.onMounted(() => {
-  // Set the popover append target to the main OpenCOR element ('.opencor') so that Tailwind styles scoped with
-  // `important: '.opencor'` in tailwind.config.ts are applied correctly.
-  // Note: it should never be null, but just in case we add a fallback to undefined (which will result in the popover
-  //       being wrongly styled but at least functional instead of not being displayed at all).
-
-  issuesContainer.value = (document.querySelector('.opencor') as HTMLElement | null) || undefined;
-});
 </script>
 
 <style scoped>
