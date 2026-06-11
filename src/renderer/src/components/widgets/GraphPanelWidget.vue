@@ -470,10 +470,20 @@ interface IThemeData {
   yaxis: IAxisThemeData;
 }
 
+let cachedThemeMode: boolean | undefined;
+let cachedThemeData: IThemeData | undefined;
+
 const themeData = (): IThemeData => {
-  // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+  // Use our cached theme data if the theme mode hasn't changed since the last time we generated it.
 
   const useLightMode = theme.useLightMode();
+
+  if (cachedThemeData !== undefined && cachedThemeMode === useLightMode) {
+    return cachedThemeData;
+  }
+
+  // Generate our theme data.
+  // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 
   const axisThemeData = (): IAxisThemeData => {
     return {
@@ -485,7 +495,8 @@ const themeData = (): IThemeData => {
     };
   };
 
-  return {
+  cachedThemeMode = useLightMode;
+  cachedThemeData = {
     paper_bgcolor: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
     plot_bgcolor: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
     font: {
@@ -495,6 +506,8 @@ const themeData = (): IThemeData => {
     xaxis: axisThemeData(),
     yaxis: axisThemeData()
   };
+
+  return cachedThemeData;
 };
 
 interface IAxesDataAxis {
