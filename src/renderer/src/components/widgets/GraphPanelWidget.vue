@@ -527,10 +527,29 @@ interface IAxesData {
   yaxis: IAxesDataAxis;
 }
 
+let cachedAxesData: IAxesData | undefined;
+let cachedXAxisTitle: string | undefined;
+let cachedYAxisTitle: string | undefined;
+
 const axesData = (): IAxesData => {
+  // Use our cached axes data if the axis titles haven't changed since the last time we generated it.
+
+  const xTitle = props.data.xAxisTitle;
+  const yTitle = props.data.yAxisTitle;
+
+  if (cachedAxesData !== undefined && cachedXAxisTitle === xTitle && cachedYAxisTitle === yTitle) {
+    return cachedAxesData;
+  }
+
+  // Generate our axes data.
+  // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+
+  cachedXAxisTitle = xTitle;
+  cachedYAxisTitle = yTitle;
+
   const axisTickFontSize = 10;
 
-  return {
+  cachedAxesData = {
     xaxis: {
       automargin: true,
       tickangle: 0,
@@ -539,7 +558,7 @@ const axesData = (): IAxesData => {
       },
       title: {
         standoff: 8,
-        text: props.data.xAxisTitle
+        text: xTitle
       }
     },
     yaxis: {
@@ -550,10 +569,12 @@ const axesData = (): IAxesData => {
       },
       title: {
         standoff: 8,
-        text: props.data.yAxisTitle
+        text: yTitle
       }
     }
   };
+
+  return cachedAxesData;
 };
 
 const resolvedMargin = (propValue: number | undefined, compValue: number): number => {
