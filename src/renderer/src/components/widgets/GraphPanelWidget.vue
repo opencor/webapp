@@ -111,11 +111,21 @@ const resize = (): Promise<unknown> => {
     return Promise.resolve();
   }
 
-  return Promise.resolve(dependencies._plotlyJs.Plots.resize(mainDivRef.value)).then(() => {
-    trackSize();
+  if (resizeRafId !== undefined) {
+    return Promise.resolve();
+  }
 
-    updateMarginsAsync();
+  resizeRafId = requestAnimationFrame(() => {
+    resizeRafId = undefined;
+
+    dependencies._plotlyJs.Plots.resize(mainDivRef.value).then(() => {
+      trackSize();
+
+      updateMarginsAsync();
+    });
   });
+
+  return Promise.resolve();
 };
 
 defineExpose({
@@ -136,6 +146,7 @@ let trackedWidth = 0;
 let trackedHeight = 0;
 let trackedMargins: IGraphPanelMargins | undefined;
 let stopTrackingContainerSize: (() => void) | undefined;
+let resizeRafId: number | undefined;
 
 // Context menu functionality.
 
