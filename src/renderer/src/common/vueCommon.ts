@@ -116,7 +116,14 @@ export const useAppendTarget = () => {
   const containerClass = 'opencor-overlay-container';
 
   vue.onMounted(() => {
-    const opencor = document.querySelector('.opencor');
+    // Find the closest .opencor ancestor so that each OpenCOR instance gets its own overlay container. This ensures
+    // that in a multi-instance setup, each instance's overlays stay within its own DOM tree. Falls back to
+    // document.querySelector for backward compatibility (e.g., when called outside a component setup function or when
+    // getCurrentInstance() returns null).
+
+    const instance = vue.getCurrentInstance();
+    const rootEl = instance?.vnode?.el;
+    const opencor = rootEl instanceof Element ? rootEl.closest('.opencor') : document.querySelector('.opencor');
 
     if (opencor) {
       let overlayContainer = opencor.querySelector(`.${containerClass}`) as HTMLElement | null;

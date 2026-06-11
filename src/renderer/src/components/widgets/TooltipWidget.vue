@@ -36,6 +36,7 @@ const onMouseLeave = () => {
 
 <style scoped>
 .tooltip {
+  width: max-content;
   max-width: 20rem;
   font-size: 0.8rem;
 }
