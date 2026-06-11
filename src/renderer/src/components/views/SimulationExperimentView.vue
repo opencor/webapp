@@ -340,14 +340,24 @@ const populateParameters = (
   parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
 };
 
+// Small helper to yield to the UI thread.
+
+const yieldToUi = (): Promise<void> => {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      setTimeout(resolve, 0);
+    });
+  });
+};
+
 // Event handlers.
 
-const onRun = (): void => {
+const onRun = async (): Promise<void> => {
   // Run either the standard or interactive simulation.
 
   if (!interactiveModeEnabled.value) {
     // Run the standard simulation, i.e. run the instance, output the simulation time to the console, and update the
-    // plot.
+    // plot. We yield to the UI thread between the simulation run and the plot update to keep the UI responsive.
 
     const simulationTime = standardInstance.run();
 
@@ -380,6 +390,8 @@ const onRun = (): void => {
         consoleElement.scrollTop = consoleElement.scrollHeight;
       }
     });
+
+    await yieldToUi();
 
     updatePlot();
 
