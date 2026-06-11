@@ -154,12 +154,12 @@
                     >
                       <div class="flex items-center">
                         <div class="w-1 h-6 rounded-xs mr-2" :style="`background-color: ${run.color};`"></div>
-                        <Tooltip :content="run.isLiveRun ? '' : run.tooltip"
+                        <TooltipWidget :content="run.isLiveRun ? '' : run.tooltip"
                           class="grow text-sm"
                           :class="{ 'cursor-help': !run.isLiveRun, 'opacity-50': !run.isVisible }"
                         >
                           {{ run.isLiveRun ? 'Live run' : `Run #${index}` }}
-                        </Tooltip>
+                        </TooltipWidget>
                         <div class="flex items-center">
                           <Button class="p-0! w-5! h-5! run-action-button"
                             icon="pi pi-palette"

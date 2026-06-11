@@ -38,7 +38,7 @@
 
               <div class="settings-form">
                 <div class="form-row">
-                  <InputScientificNumber v-model="localSettings.simulation.initialPoint" class="form-field"
+                  <InputScientificNumberWidget v-model="localSettings.simulation.initialPoint" class="form-field"
                     :label="`Initial point (${voiUnit})`"
                     size="small"
                   />
@@ -50,17 +50,17 @@
                   </div>
                 </div>
                 <div class="form-row">
-                  <InputScientificNumber v-model="localSettings.simulation.startingPoint" class="form-field"
+                  <InputScientificNumberWidget v-model="localSettings.simulation.startingPoint" class="form-field"
                     :label="`Starting point (${voiUnit})`"
                     size="small"
                   />
-                  <InputScientificNumber v-model="localSettings.simulation.endingPoint" class="form-field"
+                  <InputScientificNumberWidget v-model="localSettings.simulation.endingPoint" class="form-field"
                     :label="`Ending point (${voiUnit})`"
                     size="small"
                   />
                 </div>
                 <div class="form-row">
-                  <InputScientificNumber v-model="localSettings.simulation.pointInterval" class="form-field"
+                  <InputScientificNumberWidget v-model="localSettings.simulation.pointInterval" class="form-field"
                     :label="`Point interval (${voiUnit})`"
                     size="small"
                   />
@@ -93,7 +93,7 @@
 
               <div class="settings-form">
                 <div class="form-row">
-                  <InputScientificNumber v-model="localSettings.solvers.cvodeMaximumStep" class="form-field"
+                  <InputScientificNumberWidget v-model="localSettings.solvers.cvodeMaximumStep" class="form-field"
                     :label="`CVODE's maximum step (${voiUnit})`"
                     size="small"
                   />
@@ -200,7 +200,7 @@
                                   </FloatLabel>
                                 </div>
                                 <div class="form-row">
-                                  <InputScientificNumber v-model="input.defaultValue" class="form-field"
+                                  <InputScientificNumberWidget v-model="input.defaultValue" class="form-field"
                                     label="Default value"
                                     size="small"
                                   />
@@ -231,15 +231,15 @@
                                 <!-- Scalar model input fields -->
 
                                 <div v-if="locApi.isScalarInput(input)" class="form-row">
-                                  <InputScientificNumber v-model="input.minimumValue" class="form-field"
+                                  <InputScientificNumberWidget v-model="input.minimumValue" class="form-field"
                                     label="Minimum value"
                                     size="small"
                                   />
-                                  <InputScientificNumber v-model="input.maximumValue" class="form-field"
+                                  <InputScientificNumberWidget v-model="input.maximumValue" class="form-field"
                                     label="Maximum value"
                                     size="small"
                                   />
-                                  <InputScientificNumber v-model="input.stepValue" class="form-field"
+                                  <InputScientificNumberWidget v-model="input.stepValue" class="form-field"
                                     label="Step value (optional)"
                                     :allowEmpty="true"
                                     size="small"
@@ -271,7 +271,7 @@
                                         <InputText v-model="possibleValue.name" class="w-full" size="small" />
                                         <label>Name</label>
                                       </FloatLabel>
-                                      <InputScientificNumber v-model="possibleValue.value" class="form-field"
+                                      <InputScientificNumberWidget v-model="possibleValue.value" class="form-field"
                                         label="Value"
                                         size="small"
                                       />
@@ -348,12 +348,12 @@
                                 />
                                 <label>Model parameter</label>
                               </FloatLabel>
-                              <Tooltip :content="parameterValueTooltip()" class="flex-1">
+                              <TooltipWidget :content="parameterValueTooltip()" class="flex-1">
                                 <FloatLabel variant="on" class="w-full">
                                   <InputText v-model="parameter.value" class="w-full" size="small" />
                                   <label>Value</label>
                                 </FloatLabel>
-                              </Tooltip>
+                              </TooltipWidget>
                               <Button
                                 icon="pi pi-times"
                                 text rounded
@@ -520,18 +520,18 @@
                               <!-- Description and VOI expression -->
 
                                 <div class="form-row">
-                                  <Tooltip :content="externalDataDescriptionTooltip()" class="flex-1">
+                                  <TooltipWidget :content="externalDataDescriptionTooltip()" class="flex-1">
                                     <FloatLabel variant="on" class="w-full">
                                       <InputText v-model="externalDataFile.description" class="w-full" size="small" />
                                       <label>Description (optional)</label>
                                     </FloatLabel>
-                                  </Tooltip>
-                                  <Tooltip :content="externalDataVoiExpressionTooltip()" class="flex-1">
+                                  </TooltipWidget>
+                                  <TooltipWidget :content="externalDataVoiExpressionTooltip()" class="flex-1">
                                     <FloatLabel variant="on" class="w-full">
                                       <InputText v-model="externalDataFile.voiExpression" class="w-full" size="small" />
                                       <label>VOI expression (optional)</label>
                                     </FloatLabel>
-                                  </Tooltip>
+                                  </TooltipWidget>
                                 </div>
 
                                 <!-- External data entries -->
@@ -663,26 +663,26 @@
                                       </div>
                                       <div class="w-full">
                                         <div class="mb-3">
-                                          <Tooltip :content="traceNameTooltip()" class="flex-1">
+                                          <TooltipWidget :content="traceNameTooltip()" class="flex-1">
                                             <FloatLabel variant="on" class="w-full">
                                               <InputText v-model="plot.name" class="w-full" size="small" />
                                               <label>Name (optional)</label>
                                             </FloatLabel>
-                                          </Tooltip>
+                                          </TooltipWidget>
                                         </div>
                                         <div class="entry-row">
-                                          <Tooltip :content="xyValueTooltip(true)" class="flex-1">
+                                          <TooltipWidget :content="xyValueTooltip(true)" class="flex-1">
                                             <FloatLabel variant="on" class="w-full">
                                               <InputText v-model="plot.xValue" class="w-full" size="small" />
                                               <label>X value</label>
                                             </FloatLabel>
-                                          </Tooltip>
-                                          <Tooltip :content="xyValueTooltip(false)" class="flex-1">
+                                          </TooltipWidget>
+                                          <TooltipWidget :content="xyValueTooltip(false)" class="flex-1">
                                             <FloatLabel variant="on" class="w-full">
                                               <InputText v-model="plot.yValue" class="w-full" size="small" />
                                               <label>Y value</label>
                                             </FloatLabel>
-                                          </Tooltip>
+                                          </TooltipWidget>
                                         </div>
                                       </div>
                                       <Button
@@ -708,26 +708,26 @@
                                         </div>
                                         <div class="w-full">
                                           <div class="mb-3">
-                                            <Tooltip :content="traceNameTooltip()" class="flex-1">
+                                            <TooltipWidget :content="traceNameTooltip()" class="flex-1">
                                                 <FloatLabel variant="on" class="w-full">
                                                   <InputText v-model="trace.name" class="w-full" size="small" />
                                                   <label>Name (optional)</label>
                                                 </FloatLabel>
-                                              </Tooltip>
+                                              </TooltipWidget>
                                           </div>
                                           <div class="entry-row">
-                                            <Tooltip :content="xyValueTooltip(true)" class="flex-1">
+                                            <TooltipWidget :content="xyValueTooltip(true)" class="flex-1">
                                               <FloatLabel variant="on" class="w-full">
                                                 <InputText v-model="trace.xValue" class="w-full" size="small" />
                                                 <label>X value</label>
                                               </FloatLabel>
-                                            </Tooltip>
-                                            <Tooltip :content="xyValueTooltip(false)" class="flex-1">
+                                            </TooltipWidget>
+                                            <TooltipWidget :content="xyValueTooltip(false)" class="flex-1">
                                               <FloatLabel variant="on" class="w-full">
                                                 <InputText v-model="trace.yValue" class="w-full" size="small" />
                                                 <label>Y value</label>
                                               </FloatLabel>
-                                            </Tooltip>
+                                            </TooltipWidget>
                                           </div>
                                         </div>
                                         <Button
