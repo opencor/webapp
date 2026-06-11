@@ -741,17 +741,25 @@ const updatePlot = (): void => {
     }
   }
 
-  const traces = props.data.traces.map((trace) => {
-    const traceKey = traceVisibilityKey(trace);
-    const visible = traceKey ? previousTraceVisibilityByKey[traceKey] : undefined;
+  // Pre-allocate the traces array and build each trace inline to avoid .map() closure overhead.
 
-    return {
-      ...trace,
-      visible,
-      line: { color: trace.color },
-      legendrank: trace.zorder
+  const dataTraces = props.data.traces;
+  const dataTraceCount = dataTraces.length;
+  const traces: unknown[] = new Array(dataTraceCount);
+
+  for (let i = 0; i < dataTraceCount; ++i) {
+    const dataTrace = dataTraces[i];
+    const dataTraceKey = traceVisibilityKey(dataTrace);
+
+    traces[i] = {
+      x: dataTrace.x,
+      y: dataTrace.y,
+      name: dataTrace.name,
+      visible: dataTraceKey ? previousTraceVisibilityByKey[dataTraceKey] : undefined,
+      line: { color: dataTrace.color },
+      legendrank: dataTrace.zorder
     };
-  });
+  }
 
   dependencies._plotlyJs
     .react(
