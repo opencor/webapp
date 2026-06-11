@@ -1,5 +1,5 @@
 <template>
-  <SafeBlockUI ref="safeBlockUiRef" class="opencor" :class="isFullWebApp ? 'with-main-menu' : ''"
+  <SafeBlockUIWidget ref="safeBlockUiRef" class="opencor" :class="isFullWebApp ? 'with-main-menu' : ''"
     :blocked="compBlockUiEnabled"
     @click="activateInstance"
     @focus="activateInstance"
@@ -110,7 +110,7 @@
         @close="webUpdateAvailableVisible = false"
       />
     </div>
-  </SafeBlockUI>
+  </SafeBlockUIWidget>
 </template>
 
 <script setup lang="ts">
@@ -146,7 +146,7 @@ import ContentsComponent from '../components/ContentsComponent.vue';
 import * as locApi from '../libopencor/locApi';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
-import SafeBlockUI from './widgets/SafeBlockUI.vue';
+import SafeBlockUIWidget from './widgets/SafeBlockUIWidget.vue';
 import MainMenu from './MainMenu.vue';
 
 const props = defineProps<IOpenCORProps>();
@@ -273,7 +273,7 @@ defineExpose({
 
 const { isDialogActive } = provideDialogState();
 
-const safeBlockUiRef = vue.ref<InstanceType<typeof SafeBlockUI> | null>(null);
+const safeBlockUiRef = vue.ref<InstanceType<typeof SafeBlockUIWidget> | null>(null);
 const mainMenuRef = vue.ref<InstanceType<typeof MainMenu> | null>(null);
 const filesRef = vue.ref<HTMLElement | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
@@ -332,7 +332,7 @@ const compUiEnabled = vue.computed<boolean>(() => {
   return !compBlockUiEnabled.value && !isDialogActive.value;
 });
 
-// Remove any leftover SafeBlockUI masks when unblocking.
+// Remove any leftover SafeBlockUIWidget masks when unblocking.
 // Note: this is to ensure that we don't end up with leftover masks if the block event is emitted multiple times before
 //       the unblock event is emitted, which can lead to multiple masks being created and not properly removed.
 
@@ -340,7 +340,7 @@ vue.watch(
   compBlockUiEnabled,
   (newCompBlockUiEnabled: boolean) => {
     if (!newCompBlockUiEnabled) {
-      const safeBlockUi = safeBlockUiRef.value as unknown as InstanceType<typeof SafeBlockUI> | null;
+      const safeBlockUi = safeBlockUiRef.value as unknown as InstanceType<typeof SafeBlockUIWidget> | null;
 
       if (!safeBlockUi) {
         return;

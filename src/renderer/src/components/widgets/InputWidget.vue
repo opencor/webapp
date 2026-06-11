@@ -14,7 +14,7 @@
     </FloatLabel>
   </div>
   <div v-else>
-    <InputScientificNumber v-model="value"
+    <InputScientificNumberWidget v-model="value"
       :label="name"
       :min="minimumValue"
       :max="maximumValue"
