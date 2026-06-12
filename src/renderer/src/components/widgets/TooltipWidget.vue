@@ -47,17 +47,18 @@ const onMouseLeave = () => {
 }
 
 /* Styles for teleported v-html content.
- * Note: they must be global since scoped styles do not survive PrimeVue's Popover teleportation. Scoped under
- *       `.opencor` to prevent leaking into host apps that may have their own .tooltip-content class.
+ * Note: they must be global since scoped styles do not survive PrimeVue's Popover teleportation. Using
+ *       `.tooltip .tooltip-content` (the Popover's class) works regardless of append target (`document.body` or
+ *       `.opencor` fixed container) and avoids leaking into host apps.
  */
 
-.opencor .tooltip-content {
+.tooltip .tooltip-content {
   width: max-content;
   max-width: 20rem;
   font-size: 0.8rem;
 }
 
-.opencor .tooltip-content code {
+.tooltip .tooltip-content code {
   font-size: 0.85em;
   padding: 0.1em 0.25em;
   background-color: var(--p-form-field-background);
@@ -66,17 +67,17 @@ const onMouseLeave = () => {
   border-radius: 0.2em;
 }
 
-.opencor .tooltip-content b,
-.opencor .tooltip-content strong {
+.tooltip .tooltip-content b,
+.tooltip .tooltip-content strong {
   font-weight: 600;
 }
 
-.opencor .tooltip-content em,
-.opencor .tooltip-content i {
+.tooltip .tooltip-content em,
+.tooltip .tooltip-content i {
   font-style: italic;
 }
 
-.opencor .tooltip-content sub {
+.tooltip .tooltip-content sub {
   vertical-align: sub;
   font-size: smaller;
 }
