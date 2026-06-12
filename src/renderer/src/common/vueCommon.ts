@@ -100,26 +100,17 @@ export const trackElementHeight = (
   return stopTrackingElementHeight;
 };
 
-// A composable that provides a `position: fixed` overlay container inside `.opencor` as an append target for overlays.
-// This is needed when OpenCOR is embedded as a Vue 3 component in a host app that uses full-screen mode. In such a
-// case, the Fullscreen API only renders the full-screen element and its descendants, so teleporting to `document.body`
-// makes overlays invisible. Teleporting to `.opencor` (via this fixed container) keeps overlays visible in full-screen
-// mode.
-//
-// The `position: fixed` container at viewport origin (0, 0) also solves vertical offset issues when the host app has a
-// positioned ancestor (e.g., `position: relative` on a wrapper). PrimeVue's `absolutePosition()` computes
-// document-absolute coordinates, which rely on the offset parent being at document origin. A fixed container at (0, 0)
-// provides that reference frame, so overlays appear at the correct position.
+// Teleport the target inside `.opencor` so that it is visible in full-screen mode and not affected by PrimeVue's
+// `absolutePosition()` adding scroll offsets.
 
 export const useAppendTarget = () => {
   const appendTarget = vue.shallowRef<HTMLElement | undefined>(undefined);
   const containerClass = 'opencor-overlay-container';
 
   vue.onMounted(() => {
-    // Find the closest .opencor ancestor so that each OpenCOR instance gets its own overlay container. This ensures
-    // that in a multi-instance setup, each instance's overlays stay within its own DOM tree. Falls back to
-    // document.querySelector for backward compatibility (e.g., when called outside a component setup function or when
-    // getCurrentInstance() returns null).
+    // Find the `.opencor` element to append the target to. First try to find it from the current component's root
+    // element to support multiple instances of OpenCOR in the same page, and if that fails we fall back to searching
+    // the whole document.
 
     const instance = vue.getCurrentInstance();
     const rootEl = instance?.vnode?.el;
@@ -133,7 +124,7 @@ export const useAppendTarget = () => {
 
         overlayContainer.className = containerClass;
         overlayContainer.style.cssText =
-          'position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
+          'position: fixed; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
 
         // Restore pointer events for overlay content teleported into the container.
 
@@ -142,6 +133,16 @@ export const useAppendTarget = () => {
             textContent: `.${containerClass} > * { pointer-events: auto; }`
           })
         );
+
+        const container = overlayContainer;
+        const updateScrollOffset = () => {
+          container.style.top = `-${window.scrollY}px`;
+          container.style.left = `-${window.scrollX}px`;
+        };
+
+        updateScrollOffset();
+
+        window.addEventListener('scroll', updateScrollOffset, { passive: true });
 
         opencor.appendChild(overlayContainer);
       }
