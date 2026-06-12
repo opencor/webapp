@@ -1754,8 +1754,8 @@ const onTrackRun = (): void => {
       }
     }
 
-    tooltipRows.push(`<tr>
-      <td style="vertical-align: top; font-weight: bold;">
+    tooltipRows.push(`<tr style="vertical-align: top;">
+      <td style="font-weight: bold;">
         ${input.name}:
       </td>
       <td style="padding-left: 8px;">
