@@ -100,8 +100,11 @@ export const trackElementHeight = (
   return stopTrackingElementHeight;
 };
 
-// Teleport the target inside `.opencor` so that it is visible in full-screen mode and not affected by PrimeVue's
-// `absolutePosition()` adding scroll offsets.
+// Create a `position: fixed` overlay container inside `.opencor` to serve as PrimeVue's append target. This keeps
+// overlays visible in full-screen mode and counters PrimeVue's `absolutePosition()` which adds `windowScrollTop/Left`
+// to viewport-relative coordinates. The `getBoundingClientRect()`-based correction handles both plain scroll offsets
+// and cases where CSS ancestors (transform/will-change/filter/perspective) create new containing blocks for
+// `position: fixed`.
 
 export const useAppendTarget = () => {
   const appendTarget = vue.shallowRef<HTMLElement | undefined>(undefined);
@@ -124,7 +127,7 @@ export const useAppendTarget = () => {
 
         overlayContainer.className = containerClass;
         overlayContainer.style.cssText =
-          'position: fixed; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
+          'position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
 
         // Restore pointer events for overlay content teleported into the container.
 
@@ -134,17 +137,25 @@ export const useAppendTarget = () => {
           })
         );
 
+        opencor.appendChild(overlayContainer);
+
         const container = overlayContainer;
         const updateScrollOffset = () => {
-          container.style.top = `-${window.scrollY}px`;
-          container.style.left = `-${window.scrollX}px`;
+          const rect = container.getBoundingClientRect();
+          const oldTop = parseFloat(container.style.top) || 0;
+          const oldLeft = parseFloat(container.style.left) || 0;
+          const newTop = oldTop - rect.top - window.scrollY;
+          const newLeft = oldLeft - rect.left - window.scrollX;
+
+          if (Math.abs(newTop - oldTop) >= 0.5 || Math.abs(newLeft - oldLeft) >= 0.5) {
+            container.style.top = `${newTop}px`;
+            container.style.left = `${newLeft}px`;
+          }
         };
 
         updateScrollOffset();
 
         window.addEventListener('scroll', updateScrollOffset, { passive: true });
-
-        opencor.appendChild(overlayContainer);
       }
 
       appendTarget.value = overlayContainer;
