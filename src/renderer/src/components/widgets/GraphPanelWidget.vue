@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-row h-full">
+  <div ref="rootRef" class="flex flex-row h-full">
     <div v-if="showMarker" class="w-0.75 bg-primary" />
     <div ref="mainDivRef" class="grow h-full" @contextmenu="onContextMenu" />
     <ContextMenu ref="contextMenuRef" :model="contextMenuItems" :appendTo="appendTarget" />
@@ -133,11 +133,12 @@ defineExpose({
 });
 
 const instanceId = Symbol('GraphPanelWidget');
+const rootRef = vue.ref<HTMLElement | null>(null);
 const mainDivRef = vue.ref<HTMLElement | null>(null);
 const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
-const appendTarget = vueCommon.useAppendTarget();
+const appendTarget = vueCommon.useAppendTarget(rootRef);
 const progressMessage = vue.inject<IProgressMessage>('progressMessage');
 let plotIsReady = false;
 let resizeQueued = false;

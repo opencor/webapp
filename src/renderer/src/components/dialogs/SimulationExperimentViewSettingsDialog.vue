@@ -1,730 +1,686 @@
 <template>
-  <BaseDialog header="Interactive Mode Settings" class="w-270 h-210"
-    @keydown.prevent.enter="onOk"
-    @cancel="onCancel"
-  >
-    <div class="h-full flex flex-col">
-      <Tabs v-model:value="activeTab" class="settings-tabs min-h-0">
-        <TabList class="mb-2">
-          <Tab value="simulation">
-            <i class="pi pi-clock mr-2"></i>Simulation
-          </Tab>
-          <Tab value="solvers">
-            <i class="pi pi-calculator mr-2"></i>Solvers
-          </Tab>
-          <Tab value="interactive">
-            <i class="pi pi-sliders-h mr-2"></i>Interactive
-          </Tab>
-          <Tab value="miscellaneous">
-            <i class="pi pi-bars mr-2"></i>Miscellaneous
-          </Tab>
-        </TabList>
-        <TabPanels>
-          <!-- Simulation -->
+  <div ref="rootRef">
+    <BaseDialog v-bind="$attrs" header="Interactive Mode Settings" class="w-270 h-210"
+      @keydown.prevent.enter="onOk"
+      @cancel="onCancel"
+    >
+      <div class="h-full flex flex-col">
+        <Tabs v-model:value="activeTab" class="settings-tabs min-h-0">
+          <TabList class="mb-2">
+            <Tab value="simulation">
+              <i class="pi pi-clock mr-2"></i>Simulation
+            </Tab>
+            <Tab value="solvers">
+              <i class="pi pi-calculator mr-2"></i>Solvers
+            </Tab>
+            <Tab value="interactive">
+              <i class="pi pi-sliders-h mr-2"></i>Interactive
+            </Tab>
+            <Tab value="miscellaneous">
+              <i class="pi pi-bars mr-2"></i>Miscellaneous
+            </Tab>
+          </TabList>
+          <TabPanels>
+            <!-- Simulation -->
 
-          <TabPanel value="simulation" class="h-full">
-            <div class="settings-section h-full flex flex-col">
-              <!-- Section description -->
+            <TabPanel value="simulation" class="h-full">
+              <div class="settings-section h-full flex flex-col">
+                <!-- Section description -->
 
-              <div class="section-header">
-                <i class="pi pi-clock text-primary"></i>
-                <div>
-                  <h3 class="section-title">Simulation</h3>
-                  <p class="section-description">Configure the initial, starting, and ending points of the simulation, as well as its point interval.</p>
-                </div>
-              </div>
-
-              <!-- Simulation settings -->
-
-              <div class="settings-form">
-                <div class="form-row">
-                  <InputScientificNumberWidget v-model="localSettings.simulation.initialPoint" class="form-field"
-                    :label="`Initial point (${voiUnit})`"
-                    size="small"
-                  />
-                  <div class="form-field self-stretch">
-                    <div v-if="!simulationSettingsIssues.length" class="form-field items-center text-muted-color text-sm">
-                      <i class="pi pi-info-circle mr-2"></i>
-                      <span>Data points between the initial and starting points will not be tracked.</span>
-                    </div>
+                <div class="section-header">
+                  <i class="pi pi-clock text-primary"></i>
+                  <div>
+                    <h3 class="section-title">Simulation</h3>
+                    <p class="section-description">Configure the initial, starting, and ending points of the simulation, as well as its point interval.</p>
                   </div>
                 </div>
-                <div class="form-row">
-                  <InputScientificNumberWidget v-model="localSettings.simulation.startingPoint" class="form-field"
-                    :label="`Starting point (${voiUnit})`"
-                    size="small"
-                  />
-                  <InputScientificNumberWidget v-model="localSettings.simulation.endingPoint" class="form-field"
-                    :label="`Ending point (${voiUnit})`"
-                    size="small"
-                  />
-                </div>
-                <div class="form-row">
-                  <InputScientificNumberWidget v-model="localSettings.simulation.pointInterval" class="form-field"
-                    :label="`Point interval (${voiUnit})`"
-                    size="small"
-                  />
-                  <div class="form-field self-stretch">
-                    <div v-if="!simulationSettingsIssues.length" class="form-field items-center text-muted-color text-sm">
-                      <i class="pi pi-info-circle mr-2"></i>
-                      <span>This will result in {{ numberOfDataPoints }} data points.</span>
+
+                <!-- Simulation settings -->
+
+                <div class="settings-form">
+                  <div class="form-row">
+                    <InputScientificNumberWidget v-model="localSettings.simulation.initialPoint" class="form-field"
+                      :label="`Initial point (${voiUnit})`"
+                      size="small"
+                    />
+                    <div class="form-field self-stretch">
+                      <div v-if="!simulationSettingsIssues.length" class="form-field items-center text-muted-color text-sm">
+                        <i class="pi pi-info-circle mr-2"></i>
+                        <span>Data points between the initial and starting points will not be tracked.</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </TabPanel>
-
-          <!-- Solvers -->
-
-          <TabPanel value="solvers" class="h-full">
-            <div class="settings-section h-full flex flex-col">
-              <!-- Section description -->
-
-              <div class="section-header">
-                <i class="pi pi-calculator text-primary"></i>
-                <div>
-                  <h3 class="section-title">Solvers</h3>
-                  <p class="section-description">Configure CVODE's maximum step (additional settings will be added in the future).</p>
-                </div>
-              </div>
-
-              <!-- Solvers settings -->
-
-              <div class="settings-form">
-                <div class="form-row">
-                  <InputScientificNumberWidget v-model="localSettings.solvers.cvodeMaximumStep" class="form-field"
-                    :label="`CVODE's maximum step (${voiUnit})`"
-                    size="small"
-                  />
-                  <div class="form-field self-stretch flex items-center">
-                    <div class="form-field items-center text-muted-color text-sm">
-                      <i class="pi pi-info-circle mr-2"></i>
-                      Set to 0 to let CVODE choose a suitable step.
+                  <div class="form-row">
+                    <InputScientificNumberWidget v-model="localSettings.simulation.startingPoint" class="form-field"
+                      :label="`Starting point (${voiUnit})`"
+                      size="small"
+                    />
+                    <InputScientificNumberWidget v-model="localSettings.simulation.endingPoint" class="form-field"
+                      :label="`Ending point (${voiUnit})`"
+                      size="small"
+                    />
+                  </div>
+                  <div class="form-row">
+                    <InputScientificNumberWidget v-model="localSettings.simulation.pointInterval" class="form-field"
+                      :label="`Point interval (${voiUnit})`"
+                      size="small"
+                    />
+                    <div class="form-field self-stretch">
+                      <div v-if="!simulationSettingsIssues.length" class="form-field items-center text-muted-color text-sm">
+                        <i class="pi pi-info-circle mr-2"></i>
+                        <span>This will result in {{ numberOfDataPoints }} data points.</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </TabPanel>
+            </TabPanel>
 
-          <!-- Interactive -->
+            <!-- Solvers -->
 
-          <TabPanel value="interactive" class="h-full">
-            <div class="h-full flex flex-col">
-              <Tabs v-model:value="activeInteractiveTab" class="min-h-0">
-                <TabList class="mb-2">
-                  <Tab value="simulationInputs">
-                    <i class="pi pi-sign-in mr-2"></i>Simulation inputs
-                    <span class="ml-2 badge">{{ localSettings.interactive.uiJson.input.length }}</span>
-                  </Tab>
-                  <Tab value="modelParameters">
-                    <i class="pi pi-list mr-2"></i>Model parameters
-                    <span class="ml-2 badge">{{ localSettings.interactive.uiJson.parameters.length }}</span>
-                  </Tab>
-                  <Tab value="simulationData">
-                    <i class="pi pi-database mr-2"></i>Simulation data
-                    <span class="ml-2 badge">{{ localSettings.interactive.uiJson.output.data.length }}</span>
-                  </Tab>
-                  <Tab value="externalData">
-                    <i class="pi pi-download mr-2"></i>External data
-                    <span class="ml-2 badge">{{ externalDataCount }}</span>
-                  </Tab>
-                  <Tab value="plots">
-                    <i class="pi pi-chart-line mr-2"></i>Plots
-                    <span class="ml-2 badge">{{ localSettings.interactive.uiJson.output.plots.length }}</span>
-                  </Tab>
-                </TabList>
-                <TabPanels>
-                  <!-- Inputs -->
+            <TabPanel value="solvers" class="h-full">
+              <div class="settings-section h-full flex flex-col">
+                <!-- Section description -->
 
-                  <TabPanel value="simulationInputs" class="h-full">
-                    <div class="h-full flex flex-col">
-                      <div class="section-header section-header-interactive">
-                        <i class="pi pi-sliders-h text-primary"></i>
-                        <div>
-                          <h3 class="section-title">Simulation inputs</h3>
-                          <p class="section-description">
-                            Configure the simulation inputs that a user can modify and that will be made available for setting model parameters.
-                          </p>
-                        </div>
-                        <div class="flex-1"></div>
-                        <div class="flex-none">
-                          <Button
-                            icon="pi pi-plus"
-                            label="Add simulation input"
-                            outlined
-                            size="small"
-                            @click="addInput"
-                          />
-                        </div>
+                <div class="section-header">
+                  <i class="pi pi-calculator text-primary"></i>
+                  <div>
+                    <h3 class="section-title">Solvers</h3>
+                    <p class="section-description">Configure CVODE's maximum step (additional settings will be added in the future).</p>
+                  </div>
+                </div>
+
+                <!-- Solvers settings -->
+
+                <div class="settings-form">
+                  <div class="form-row">
+                    <InputScientificNumberWidget v-model="localSettings.solvers.cvodeMaximumStep" class="form-field"
+                      :label="`CVODE's maximum step (${voiUnit})`"
+                      size="small"
+                    />
+                    <div class="form-field self-stretch flex items-center">
+                      <div class="form-field items-center text-muted-color text-sm">
+                        <i class="pi pi-info-circle mr-2"></i>
+                        Set to 0 to let CVODE choose a suitable step.
                       </div>
-                      <ScrollPanel class="min-h-0">
-                        <div class="flex flex-col gap-4 mt-2">
-                          <!-- Empty state -->
-
-                          <div v-if="!localSettings.interactive.uiJson.input.length" class="empty-state">
-                            <i class="pi pi-info-circle empty-state-icon"></i>
-                            <p class="text-muted-color mb-2">No simulation inputs are configured.</p>
-                          </div>
-
-                          <!-- Simulation input cards -->
-
-                          <div v-for="(input, inputIndex) in localSettings.interactive.uiJson.input" :key="`input_${inputIndex}`">
-                            <div class="card-item">
-                              <div class="card-header">
-                                <div class="flex items-center gap-2">
-                                  <span class="item-badge">{{ Number(inputIndex) + 1 }}</span>
-                                  <span class="font-medium">{{ input.name }}</span>
-                                  <Tag :value="locApi.isDiscreteInput(input) ? 'Discrete' : 'Scalar'" severity="info" size="small" />
-                                </div>
-                                <Button
-                                  icon="pi pi-trash"
-                                  severity="danger"
-                                  text rounded
-                                  size="small"
-                                  @click="removeInput(inputIndex)"
-                                />
-                              </div>
-                              <div class="card-body">
-                                <!-- Common fields -->
-
-                                <div class="form-row">
-                                  <FloatLabel variant="on" class="form-field">
-                                    <InputText v-model="input.id" class="w-full" size="small" />
-                                    <label>ID</label>
-                                  </FloatLabel>
-                                  <FloatLabel variant="on" class="form-field">
-                                    <InputText v-model="input.name" class="w-full" size="small" />
-                                    <label>Name</label>
-                                  </FloatLabel>
-                                </div>
-                                <div class="form-row">
-                                  <InputScientificNumberWidget v-model="input.defaultValue" class="form-field"
-                                    label="Default value"
-                                    size="small"
-                                  />
-                                  <FloatLabel variant="on" class="form-field">
-                                    <InputText v-model="input.visible" class="w-full" size="small" />
-                                    <label>Visible (optional)</label>
-                                  </FloatLabel>
-                                </div>
-
-                                <!-- Type selector -->
-
-                                <div class="form-row">
-                                  <FloatLabel variant="on" class="form-field">
-                                    <Select
-                                      :modelValue="locApi.isDiscreteInput(input) ? 'discrete' : 'scalar'"
-                                      @update:modelValue="(val: string) => toggleInputType(inputIndex, val)"
-                                      :options="[{label: 'Discrete', value: 'discrete'}, {label: 'Scalar', value: 'scalar'}]"
-                                      optionLabel="label"
-                                      optionValue="value"
-                                      class="w-full"
-                                      size="small"
-                                      :appendTo="appendTarget"
-                                    />
-                                    <label>Type</label>
-                                  </FloatLabel>
-                                </div>
-
-                                <!-- Scalar model input fields -->
-
-                                <div v-if="locApi.isScalarInput(input)" class="form-row">
-                                  <InputScientificNumberWidget v-model="input.minimumValue" class="form-field"
-                                    label="Minimum value"
-                                    size="small"
-                                  />
-                                  <InputScientificNumberWidget v-model="input.maximumValue" class="form-field"
-                                    label="Maximum value"
-                                    size="small"
-                                  />
-                                  <InputScientificNumberWidget v-model="input.stepValue" class="form-field"
-                                    label="Step value (optional)"
-                                    :allowEmpty="true"
-                                    size="small"
-                                  />
-                                </div>
-
-                                <!-- Discrete model input fields -->
-
-                                <div v-if="locApi.isDiscreteInput(input)">
-                                  <div class="flex items-center justify-between mb-2">
-                                    <label class="text-sm font-medium text-muted-color">Possible values</label>
-                                    <Button
-                                      icon="pi pi-plus"
-                                      label="Add possible value"
-                                      outlined
-                                      severity="info"
-                                      size="small"
-                                      @click="addPossibleValue(inputIndex)"
-                                    />
-                                  </div>
-                                  <div v-if="!input.possibleValues.length" class="empty-state empty-state-tight">
-                                    <i class="pi pi-info-circle empty-state-icon"></i>
-                                    <p class="text-muted-color mb-2">No possible values are configured.</p>
-                                  </div>
-                                  <div v-else class="possible-values-list">
-                                    <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possible_value_${possibleValueIndex}`" class="entry-row">
-                                      <span class="index index-secondary">{{ Number(possibleValueIndex) + 1 }}</span>
-                                      <FloatLabel variant="on" class="flex-1">
-                                        <InputText v-model="possibleValue.name" class="w-full" size="small" />
-                                        <label>Name</label>
-                                      </FloatLabel>
-                                      <InputScientificNumberWidget v-model="possibleValue.value" class="form-field"
-                                        label="Value"
-                                        size="small"
-                                      />
-                                      <Button
-                                        icon="pi pi-times"
-                                        severity="secondary"
-                                        text rounded
-                                        size="small"
-                                        @click="removePossibleValue(inputIndex, possibleValueIndex)"
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </ScrollPanel>
                     </div>
-                  </TabPanel>
+                  </div>
+                </div>
+              </div>
+            </TabPanel>
 
-                  <!-- Model parameters -->
+            <!-- Interactive -->
 
-                  <TabPanel value="modelParameters" class="h-full">
-                    <div class="h-full flex flex-col">
-                      <div class="section-header section-header-interactive">
-                        <!-- Section description -->
+            <TabPanel value="interactive" class="h-full">
+              <div class="h-full flex flex-col">
+                <Tabs v-model:value="activeInteractiveTab" class="min-h-0">
+                  <TabList class="mb-2">
+                    <Tab value="simulationInputs">
+                      <i class="pi pi-sign-in mr-2"></i>Simulation inputs
+                      <span class="ml-2 badge">{{ localSettings.interactive.uiJson.input.length }}</span>
+                    </Tab>
+                    <Tab value="modelParameters">
+                      <i class="pi pi-list mr-2"></i>Model parameters
+                      <span class="ml-2 badge">{{ localSettings.interactive.uiJson.parameters.length }}</span>
+                    </Tab>
+                    <Tab value="simulationData">
+                      <i class="pi pi-database mr-2"></i>Simulation data
+                      <span class="ml-2 badge">{{ localSettings.interactive.uiJson.output.data.length }}</span>
+                    </Tab>
+                    <Tab value="externalData">
+                      <i class="pi pi-download mr-2"></i>External data
+                      <span class="ml-2 badge">{{ externalDataCount }}</span>
+                    </Tab>
+                    <Tab value="plots">
+                      <i class="pi pi-chart-line mr-2"></i>Plots
+                      <span class="ml-2 badge">{{ localSettings.interactive.uiJson.output.plots.length }}</span>
+                    </Tab>
+                  </TabList>
+                  <TabPanels>
+                    <!-- Inputs -->
 
-                        <i class="pi pi-list text-primary"></i>
-                        <div>
-                          <h3 class="section-title">Model parameters</h3>
-                          <p class="section-description">
-                            Configure the model parameters using the value of the simulation inputs.
-                          </p>
-                        </div>
-                        <div class="flex-1"></div>
-
-                        <!-- Add button -->
-
-                        <div class="flex-none">
-                          <Button
-                            icon="pi pi-plus"
-                            label="Add model parameter"
-                            outlined
-                            size="small"
-                            @click="addParameter"
-                          />
-                        </div>
-                      </div>
-
-                      <!-- Model parameters scroll panel -->
-
-                      <ScrollPanel class="min-h-0">
-                        <div class="flex flex-col gap-4 mt-2">
-                          <!-- Empty state -->
-
-                          <div v-if="!localSettings.interactive.uiJson.parameters.length" class="empty-state">
-                            <i class="pi pi-info-circle empty-state-icon"></i>
-                            <p class="text-muted-color mb-2">No model parameters are configured.</p>
+                    <TabPanel value="simulationInputs" class="h-full">
+                      <div class="h-full flex flex-col">
+                        <div class="section-header section-header-interactive">
+                          <i class="pi pi-sliders-h text-primary"></i>
+                          <div>
+                            <h3 class="section-title">Simulation inputs</h3>
+                            <p class="section-description">
+                              Configure the simulation inputs that a user can modify and that will be made available for setting model parameters.
+                            </p>
                           </div>
-
-                          <!-- Model parameter entries -->
-
-                          <div v-else class="entries-list">
-                            <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
-                              <span class="index">{{ Number(parameterIndex) + 1 }}</span>
-                              <FloatLabel variant="on" class="flex-1">
-                                <Select v-model="parameter.name"
-                                  class="w-full" panelClass="item-filter"
-                                  size="small"
-                                  filter filterMode="lenient"
-                                  :options="editableModelParameters"
-                                  :appendTo="appendTarget"
-                                />
-                                <label>Model parameter</label>
-                              </FloatLabel>
-                              <TooltipWidget :content="parameterValueTooltip()" class="flex-1">
-                                <FloatLabel variant="on" class="w-full">
-                                  <InputText v-model="parameter.value" class="w-full" size="small" />
-                                  <label>Value</label>
-                                </FloatLabel>
-                              </TooltipWidget>
-                              <Button
-                                icon="pi pi-times"
-                                text rounded
-                                severity="secondary"
-                                size="small"
-                                @click="removeParameter(parameterIndex)"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </ScrollPanel>
-                    </div>
-                  </TabPanel>
-
-                  <!-- Simulation data -->
-
-                  <TabPanel value="simulationData" class="h-full">
-                    <div class="h-full flex flex-col">
-                      <div class="section-header section-header-interactive">
-                        <i class="pi pi-database text-primary"></i>
-                        <div>
-                          <h3 class="section-title">Simulation data</h3>
-                          <p class="section-description">
-                            Configure the simulation data to be made available for plotting.
-                          </p>
-                        </div>
-                        <div class="flex-1"></div>
-                        <div class="flex-none">
-                          <Button
-                            icon="pi pi-plus"
-                            label="Add simulation data"
-                            outlined
-                            size="small"
-                            @click="addSimulationData"
-                          />
-                        </div>
-                      </div>
-                      <ScrollPanel class="min-h-0">
-                        <div class="flex flex-col gap-4 mt-2">
-                          <!-- Empty state -->
-
-                          <div v-if="!localSettings.interactive.uiJson.output.data.length" class="empty-state">
-                            <i class="pi pi-info-circle empty-state-icon"></i>
-                            <p class="text-muted-color mb-2">No simulation data is configured.</p>
-                          </div>
-
-                          <!-- Simulation data entries -->
-
-                          <div v-else class="entries-list">
-                            <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="`data_${dataIndex}`" class="entry-row">
-                              <span class="index">{{ Number(dataIndex) + 1 }}</span>
-                              <FloatLabel variant="on" class="flex-1">
-                                <InputText v-model="data.id" class="w-full" size="small" />
-                                <label>ID</label>
-                              </FloatLabel>
-                              <FloatLabel variant="on" class="flex-1">
-                                <Select v-model="data.name"
-                                  class="w-full" panelClass="item-filter"
-                                  size="small"
-                                  filter filterMode="lenient"
-                                  :options="allModelParameters"
-                                  :appendTo="appendTarget"
-                                />
-                                <label>Model parameter</label>
-                              </FloatLabel>
-                              <Button
-                                icon="pi pi-times"
-                                text rounded
-                                severity="secondary"
-                                size="small"
-                                @click="removeSimulationData(dataIndex)"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </ScrollPanel>
-                    </div>
-                  </TabPanel>
-
-                  <!-- External data -->
-
-                  <TabPanel value="externalData" class="h-full">
-                    <div class="h-full flex flex-col">
-                      <div class="section-header section-header-interactive">
-                        <i class="pi pi-download text-primary"></i>
-                        <div>
-                          <h3 class="section-title">External data</h3>
-                          <p class="section-description">
-                            Import and configure the external data to be made available for plotting.
-                          </p>
-                        </div>
-                        <div class="flex-1"></div>
-                        <div class="external-data-drop-zone" :class="{ 'external-data-drop-zone-active': externalDataFileDragging }"
-                          @dragover.prevent="onExternalDataFileDragOver"
-                          @drop.prevent="onExternalDataFileDrop"
-                          @dragleave="onExternalDataFileDragLeave"
-                        >
-                          <input ref="externalDataFileRef" class="hidden"
-                            type="file" multiple
-                            accept=".csv,text/csv"
-                            @change="onExternalDataFileInputChange"
-                          />
-                          <Button class="m-2"
-                            icon="pi pi-folder-open"
-                            label="Import"
-                            outlined
-                            size="small"
-                            @click="importExternalDataFromFile"
-                          />
-                          <div class="external-data-url" :class="{ 'external-data-url-active': externalDataFileDragging }">
-                            <FloatLabel variant="on" class="flex-1">
-                              <InputText v-model="externalDataUrl" class="w-full" size="small" />
-                              <label>URL</label>
-                            </FloatLabel>
+                          <div class="flex-1"></div>
+                          <div class="flex-none">
                             <Button
-                              icon="pi pi-link"
-                              label="Import"
+                              icon="pi pi-plus"
+                              label="Add simulation input"
                               outlined
                               size="small"
-                              :disabled="!isExternalDataUrlValid"
-                              @click="importExternalDataFromUrl"
+                              @click="addInput"
                             />
                           </div>
                         </div>
-                      </div>
-                      <ScrollPanel class="min-h-0 mt-1.25">
-                        <div class="flex flex-col gap-4">
-                          <!-- Empty state -->
+                        <ScrollPanel class="min-h-0">
+                          <div class="flex flex-col gap-4 mt-2">
+                            <!-- Empty state -->
 
-                          <div v-if="!(localSettings.interactive.uiJson.output.externalData ?? []).length" class="empty-state">
-                            <i class="pi pi-info-circle empty-state-icon"></i>
-                            <p class="text-muted-color mb-2">No external data is configured.</p>
-                          </div>
+                            <div v-if="!localSettings.interactive.uiJson.input.length" class="empty-state">
+                              <i class="pi pi-info-circle empty-state-icon"></i>
+                              <p class="text-muted-color mb-2">No simulation inputs are configured.</p>
+                            </div>
 
-                          <!-- External data files -->
+                            <!-- Simulation input cards -->
 
-                          <div v-for="(externalDataFile, externalDataFileIndex) in (localSettings.interactive.uiJson.output.externalData ?? [])" :key="`external_data_file_${externalDataFileIndex}`">
-                            <div class="card-item">
-                              <div class="card-header">
-                                <div class="flex items-center gap-2">
-                                  <span class="item-badge">{{ Number(externalDataFileIndex) + 1 }}</span>
-                                  <span class="font-medium">{{ externalDataDescription(externalDataFile, externalDataFileIndex) }}</span>
-                                  <Tag :value="`${externalDataSeries(externalDataFile).length} external data series`" severity="info" size="small" />
-                                </div>
-                                <div class="flex items-center gap-2">
-                                  <Button
-                                    icon="pi pi-plus"
-                                    label="Add external data"
-                                    outlined
-                                    severity="info"
-                                    size="small"
-                                    @click="addExternalData(externalDataFileIndex)"
-                                  />
+                            <div v-for="(input, inputIndex) in localSettings.interactive.uiJson.input" :key="`input_${inputIndex}`">
+                              <div class="card-item">
+                                <div class="card-header">
+                                  <div class="flex items-center gap-2">
+                                    <span class="item-badge">{{ Number(inputIndex) + 1 }}</span>
+                                    <span class="font-medium">{{ input.name }}</span>
+                                    <Tag :value="locApi.isDiscreteInput(input) ? 'Discrete' : 'Scalar'" severity="info" size="small" />
+                                  </div>
                                   <Button
                                     icon="pi pi-trash"
                                     severity="danger"
                                     text rounded
                                     size="small"
-                                    @click="removeExternalDataFile(externalDataFileIndex)"
+                                    @click="removeInput(inputIndex)"
                                   />
                                 </div>
-                              </div>
-                              <div class="card-body">
-                              <!-- Description and VOI expression -->
+                                <div class="card-body">
+                                  <!-- Common fields -->
 
-                                <div class="form-row">
-                                  <TooltipWidget :content="externalDataDescriptionTooltip()" class="flex-1">
-                                    <FloatLabel variant="on" class="w-full">
-                                      <InputText v-model="externalDataFile.description" class="w-full" size="small" />
-                                      <label>Description (optional)</label>
-                                    </FloatLabel>
-                                  </TooltipWidget>
-                                  <TooltipWidget :content="externalDataVoiExpressionTooltip()" class="flex-1">
-                                    <FloatLabel variant="on" class="w-full">
-                                      <InputText v-model="externalDataFile.voiExpression" class="w-full" size="small" />
-                                      <label>VOI expression (optional)</label>
-                                    </FloatLabel>
-                                  </TooltipWidget>
-                                </div>
-
-                                <!-- External data entries -->
-
-                                <div v-if="!externalDataEntries(externalDataFile).length" class="empty-state empty-state-tight">
-                                  <i class="pi pi-info-circle empty-state-icon"></i>
-                                  <p class="text-muted-color mb-2">No external data is configured for this CSV file.</p>
-                                </div>
-                                <div v-else class="entries-list">
-                                  <div v-for="(externalData, externalDataIndex) in externalDataEntries(externalDataFile)" :key="`external_data_${externalDataFileIndex}_${externalDataIndex}`" class="entry-row">
-                                    <span class="index index-secondary">{{ Number(externalDataIndex) + 1 }}</span>
-                                    <FloatLabel variant="on" class="flex-1">
-                                      <InputText v-model="externalData.id" class="w-full" size="small" />
+                                  <div class="form-row">
+                                    <FloatLabel variant="on" class="form-field">
+                                      <InputText v-model="input.id" class="w-full" size="small" />
                                       <label>ID</label>
                                     </FloatLabel>
-                                    <FloatLabel variant="on" class="flex-1">
-                                      <Select v-model="externalData.name"
-                                        class="w-full" panelClass="item-filter"
+                                    <FloatLabel variant="on" class="form-field">
+                                      <InputText v-model="input.name" class="w-full" size="small" />
+                                      <label>Name</label>
+                                    </FloatLabel>
+                                  </div>
+                                  <div class="form-row">
+                                    <InputScientificNumberWidget v-model="input.defaultValue" class="form-field"
+                                      label="Default value"
+                                      size="small"
+                                    />
+                                    <FloatLabel variant="on" class="form-field">
+                                      <InputText v-model="input.visible" class="w-full" size="small" />
+                                      <label>Visible (optional)</label>
+                                    </FloatLabel>
+                                  </div>
+
+                                  <!-- Type selector -->
+
+                                  <div class="form-row">
+                                    <FloatLabel variant="on" class="form-field">
+                                      <Select
+                                        :modelValue="locApi.isDiscreteInput(input) ? 'discrete' : 'scalar'"
+                                        @update:modelValue="(val: string) => toggleInputType(inputIndex, val)"
+                                        :options="[{label: 'Discrete', value: 'discrete'}, {label: 'Scalar', value: 'scalar'}]"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        class="w-full"
                                         size="small"
-                                        filter filterMode="lenient"
-                                        :options="externalDataSeries(externalDataFile)"
                                         :appendTo="appendTarget"
                                       />
-                                      <label>External data</label>
+                                      <label>Type</label>
                                     </FloatLabel>
-                                    <Button
-                                      icon="pi pi-times"
-                                      text rounded
-                                      severity="secondary"
+                                  </div>
+
+                                  <!-- Scalar model input fields -->
+
+                                  <div v-if="locApi.isScalarInput(input)" class="form-row">
+                                    <InputScientificNumberWidget v-model="input.minimumValue" class="form-field"
+                                      label="Minimum value"
                                       size="small"
-                                      @click="removeExternalData(externalDataFileIndex, externalDataIndex)"
                                     />
+                                    <InputScientificNumberWidget v-model="input.maximumValue" class="form-field"
+                                      label="Maximum value"
+                                      size="small"
+                                    />
+                                    <InputScientificNumberWidget v-model="input.stepValue" class="form-field"
+                                      label="Step value (optional)"
+                                      :allowEmpty="true"
+                                      size="small"
+                                    />
+                                  </div>
+
+                                  <!-- Discrete model input fields -->
+
+                                  <div v-if="locApi.isDiscreteInput(input)">
+                                    <div class="flex items-center justify-between mb-2">
+                                      <label class="text-sm font-medium text-muted-color">Possible values</label>
+                                      <Button
+                                        icon="pi pi-plus"
+                                        label="Add possible value"
+                                        outlined
+                                        severity="info"
+                                        size="small"
+                                        @click="addPossibleValue(inputIndex)"
+                                      />
+                                    </div>
+                                    <div v-if="!input.possibleValues.length" class="empty-state empty-state-tight">
+                                      <i class="pi pi-info-circle empty-state-icon"></i>
+                                      <p class="text-muted-color mb-2">No possible values are configured.</p>
+                                    </div>
+                                    <div v-else class="possible-values-list">
+                                      <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possible_value_${possibleValueIndex}`" class="entry-row">
+                                        <span class="index index-secondary">{{ Number(possibleValueIndex) + 1 }}</span>
+                                        <FloatLabel variant="on" class="flex-1">
+                                          <InputText v-model="possibleValue.name" class="w-full" size="small" />
+                                          <label>Name</label>
+                                        </FloatLabel>
+                                        <InputScientificNumberWidget v-model="possibleValue.value" class="form-field"
+                                          label="Value"
+                                          size="small"
+                                        />
+                                        <Button
+                                          icon="pi pi-times"
+                                          severity="secondary"
+                                          text rounded
+                                          size="small"
+                                          @click="removePossibleValue(inputIndex, possibleValueIndex)"
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </ScrollPanel>
-                    </div>
-                  </TabPanel>
-
-                  <!-- Plots -->
-
-                  <TabPanel value="plots" class="h-full">
-                    <div class="h-full flex flex-col">
-                      <div class="section-header section-header-interactive">
-                        <i class="pi pi-chart-line text-primary"></i>
-                        <div>
-                          <h3 class="section-title">Plots</h3>
-                          <p class="section-description">
-                            Configure the plots and the corresponding traces using the available simulation data.
-                          </p>
-                        </div>
-                        <div class="flex-1"></div>
-                        <div class="flex-none">
-                          <Button
-                            icon="pi pi-plus"
-                            label="Add plot"
-                            outlined
-                            size="small"
-                            @click="addPlot"
-                          />
-                        </div>
+                        </ScrollPanel>
                       </div>
-                      <ScrollPanel class="min-h-0">
-                        <div class="flex flex-col gap-4 mt-2">
-                          <!-- Empty state -->
+                    </TabPanel>
 
-                          <div v-if="!localSettings.interactive.uiJson.output.plots.length" class="empty-state">
-                            <i class="pi pi-info-circle empty-state-icon"></i>
-                            <p class="text-muted-color mb-2">No plots are configured.</p>
+                    <!-- Model parameters -->
+
+                    <TabPanel value="modelParameters" class="h-full">
+                      <div class="h-full flex flex-col">
+                        <div class="section-header section-header-interactive">
+                          <!-- Section description -->
+
+                          <i class="pi pi-list text-primary"></i>
+                          <div>
+                            <h3 class="section-title">Model parameters</h3>
+                            <p class="section-description">
+                              Configure the model parameters using the value of the simulation inputs.
+                            </p>
                           </div>
+                          <div class="flex-1"></div>
 
-                          <!-- Plot entries -->
+                          <!-- Add button -->
 
-                          <div v-for="(plot, plotIndex) in localSettings.interactive.uiJson.output.plots" :key="`plot_${plotIndex}`" class="plot-item-row">
-                            <div class="card-item">
-                              <div class="plot-card-header">
-                                <div class="flex items-center gap-2">
-                                  <span class="item-badge">{{ Number(plotIndex) + 1 }}</span>
-                                  <span class="font-medium text-sm">Plot #{{ Number(plotIndex) + 1 }}</span>
-                                  <Tag :value="plotTraceCount(plot) + ' trace' + (plotTraceCount(plot) !== 1 ? 's' : '')" severity="info" size="small" />
-                                </div>
-                                <div class="flex items-center gap-2">
-                                  <Button
-                                    icon="pi pi-plus"
-                                    label="Add trace"
-                                    outlined
-                                    severity="info"
+                          <div class="flex-none">
+                            <Button
+                              icon="pi pi-plus"
+                              label="Add model parameter"
+                              outlined
+                              size="small"
+                              @click="addParameter"
+                            />
+                          </div>
+                        </div>
+
+                        <!-- Model parameters scroll panel -->
+
+                        <ScrollPanel class="min-h-0">
+                          <div class="flex flex-col gap-4 mt-2">
+                            <!-- Empty state -->
+
+                            <div v-if="!localSettings.interactive.uiJson.parameters.length" class="empty-state">
+                              <i class="pi pi-info-circle empty-state-icon"></i>
+                              <p class="text-muted-color mb-2">No model parameters are configured.</p>
+                            </div>
+
+                            <!-- Model parameter entries -->
+
+                            <div v-else class="entries-list">
+                              <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
+                                <span class="index">{{ Number(parameterIndex) + 1 }}</span>
+                                <FloatLabel variant="on" class="flex-1">
+                                  <Select v-model="parameter.name"
+                                    class="w-full" panelClass="item-filter"
                                     size="small"
-                                    @click="addTrace(plotIndex)"
+                                    filter filterMode="lenient"
+                                    :options="editableModelParameters"
+                                    :appendTo="appendTarget"
                                   />
-                                  <Button
-                                    icon="pi pi-trash"
-                                    text rounded
-                                    severity="danger"
-                                    size="small"
-                                    @click="removePlot(plotIndex)"
-                                  />
-                                </div>
+                                  <label>Model parameter</label>
+                                </FloatLabel>
+                                <TooltipWidget :content="parameterValueTooltip()" class="flex-1">
+                                  <FloatLabel variant="on" class="w-full">
+                                    <InputText v-model="parameter.value" class="w-full" size="small" />
+                                    <label>Value</label>
+                                  </FloatLabel>
+                                </TooltipWidget>
+                                <Button
+                                  icon="pi pi-times"
+                                  text rounded
+                                  severity="secondary"
+                                  size="small"
+                                  @click="removeParameter(parameterIndex)"
+                                />
                               </div>
-                              <div class="plot-card-body">
-                                <!-- Axes settings -->
+                            </div>
+                          </div>
+                        </ScrollPanel>
+                      </div>
+                    </TabPanel>
 
-                                <div class="form-row">
-                                  <FloatLabel variant="on" class="flex-1">
-                                    <InputText v-model="plot.xAxisTitle" class="w-full" size="small" />
-                                    <label>X axis title (optional)</label>
-                                  </FloatLabel>
-                                  <FloatLabel variant="on" class="flex-1">
-                                    <InputText v-model="plot.yAxisTitle" class="w-full" size="small" />
-                                    <label>Y axis title (optional)</label>
-                                  </FloatLabel>
+                    <!-- Simulation data -->
+
+                    <TabPanel value="simulationData" class="h-full">
+                      <div class="h-full flex flex-col">
+                        <div class="section-header section-header-interactive">
+                          <i class="pi pi-database text-primary"></i>
+                          <div>
+                            <h3 class="section-title">Simulation data</h3>
+                            <p class="section-description">
+                              Configure the simulation data to be made available for plotting.
+                            </p>
+                          </div>
+                          <div class="flex-1"></div>
+                          <div class="flex-none">
+                            <Button
+                              icon="pi pi-plus"
+                              label="Add simulation data"
+                              outlined
+                              size="small"
+                              @click="addSimulationData"
+                            />
+                          </div>
+                        </div>
+                        <ScrollPanel class="min-h-0">
+                          <div class="flex flex-col gap-4 mt-2">
+                            <!-- Empty state -->
+
+                            <div v-if="!localSettings.interactive.uiJson.output.data.length" class="empty-state">
+                              <i class="pi pi-info-circle empty-state-icon"></i>
+                              <p class="text-muted-color mb-2">No simulation data is configured.</p>
+                            </div>
+
+                            <!-- Simulation data entries -->
+
+                            <div v-else class="entries-list">
+                              <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="`data_${dataIndex}`" class="entry-row">
+                                <span class="index">{{ Number(dataIndex) + 1 }}</span>
+                                <FloatLabel variant="on" class="flex-1">
+                                  <InputText v-model="data.id" class="w-full" size="small" />
+                                  <label>ID</label>
+                                </FloatLabel>
+                                <FloatLabel variant="on" class="flex-1">
+                                  <Select v-model="data.name"
+                                    class="w-full" panelClass="item-filter"
+                                    size="small"
+                                    filter filterMode="lenient"
+                                    :options="allModelParameters"
+                                    :appendTo="appendTarget"
+                                  />
+                                  <label>Model parameter</label>
+                                </FloatLabel>
+                                <Button
+                                  icon="pi pi-times"
+                                  text rounded
+                                  severity="secondary"
+                                  size="small"
+                                  @click="removeSimulationData(dataIndex)"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </ScrollPanel>
+                      </div>
+                    </TabPanel>
+
+                    <!-- External data -->
+
+                    <TabPanel value="externalData" class="h-full">
+                      <div class="h-full flex flex-col">
+                        <div class="section-header section-header-interactive">
+                          <i class="pi pi-download text-primary"></i>
+                          <div>
+                            <h3 class="section-title">External data</h3>
+                            <p class="section-description">
+                              Import and configure the external data to be made available for plotting.
+                            </p>
+                          </div>
+                          <div class="flex-1"></div>
+                          <div class="external-data-drop-zone" :class="{ 'external-data-drop-zone-active': externalDataFileDragging }"
+                            @dragover.prevent="onExternalDataFileDragOver"
+                            @drop.prevent="onExternalDataFileDrop"
+                            @dragleave="onExternalDataFileDragLeave"
+                          >
+                            <input ref="externalDataFileRef" class="hidden"
+                              type="file" multiple
+                              accept=".csv,text/csv"
+                              @change="onExternalDataFileInputChange"
+                            />
+                            <Button class="m-2"
+                              icon="pi pi-folder-open"
+                              label="Import"
+                              outlined
+                              size="small"
+                              @click="importExternalDataFromFile"
+                            />
+                            <div class="external-data-url" :class="{ 'external-data-url-active': externalDataFileDragging }">
+                              <FloatLabel variant="on" class="flex-1">
+                                <InputText v-model="externalDataUrl" class="w-full" size="small" />
+                                <label>URL</label>
+                              </FloatLabel>
+                              <Button
+                                icon="pi pi-link"
+                                label="Import"
+                                outlined
+                                size="small"
+                                :disabled="!isExternalDataUrlValid"
+                                @click="importExternalDataFromUrl"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <ScrollPanel class="min-h-0 mt-1.25">
+                          <div class="flex flex-col gap-4">
+                            <!-- Empty state -->
+
+                            <div v-if="!(localSettings.interactive.uiJson.output.externalData ?? []).length" class="empty-state">
+                              <i class="pi pi-info-circle empty-state-icon"></i>
+                              <p class="text-muted-color mb-2">No external data is configured.</p>
+                            </div>
+
+                            <!-- External data files -->
+
+                            <div v-for="(externalDataFile, externalDataFileIndex) in (localSettings.interactive.uiJson.output.externalData ?? [])" :key="`external_data_file_${externalDataFileIndex}`">
+                              <div class="card-item">
+                                <div class="card-header">
+                                  <div class="flex items-center gap-2">
+                                    <span class="item-badge">{{ Number(externalDataFileIndex) + 1 }}</span>
+                                    <span class="font-medium">{{ externalDataDescription(externalDataFile, externalDataFileIndex) }}</span>
+                                    <Tag :value="`${externalDataSeries(externalDataFile).length} external data series`" severity="info" size="small" />
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                    <Button
+                                      icon="pi pi-plus"
+                                      label="Add external data"
+                                      outlined
+                                      severity="info"
+                                      size="small"
+                                      @click="addExternalData(externalDataFileIndex)"
+                                    />
+                                    <Button
+                                      icon="pi pi-trash"
+                                      severity="danger"
+                                      text rounded
+                                      size="small"
+                                      @click="removeExternalDataFile(externalDataFileIndex)"
+                                    />
+                                  </div>
                                 </div>
+                                <div class="card-body">
+                                <!-- Description and VOI expression -->
 
-                                <!-- Traces -->
+                                  <div class="form-row">
+                                    <TooltipWidget :content="externalDataDescriptionTooltip()" class="flex-1">
+                                      <FloatLabel variant="on" class="w-full">
+                                        <InputText v-model="externalDataFile.description" class="w-full" size="small" />
+                                        <label>Description (optional)</label>
+                                      </FloatLabel>
+                                    </TooltipWidget>
+                                    <TooltipWidget :content="externalDataVoiExpressionTooltip()" class="flex-1">
+                                      <FloatLabel variant="on" class="w-full">
+                                        <InputText v-model="externalDataFile.voiExpression" class="w-full" size="small" />
+                                        <label>VOI expression (optional)</label>
+                                      </FloatLabel>
+                                    </TooltipWidget>
+                                  </div>
 
-                                <div class="traces-list">
-                                  <!-- Main trace -->
+                                  <!-- External data entries -->
 
-                                  <Fieldset class="entry-row">
-                                    <template #legend="scope">
-                                      <span v-html="traceName(plot, -1)" />
-                                    </template>
-                                    <div class="entry-row entry-row-trace">
-                                      <div>
-                                        <span class="index index-secondary">1</span>
-                                      </div>
-                                      <div class="w-full">
-                                        <div class="mb-3">
-                                          <TooltipWidget :content="traceNameTooltip()" class="flex-1">
-                                            <FloatLabel variant="on" class="w-full">
-                                              <InputText v-model="plot.name" class="w-full" size="small" />
-                                              <label>Name (optional)</label>
-                                            </FloatLabel>
-                                          </TooltipWidget>
-                                        </div>
-                                        <div class="entry-row">
-                                          <TooltipWidget :content="xyValueTooltip(true)" class="flex-1">
-                                            <FloatLabel variant="on" class="w-full">
-                                              <InputText v-model="plot.xValue" class="w-full" size="small" />
-                                              <label>X value</label>
-                                            </FloatLabel>
-                                          </TooltipWidget>
-                                          <TooltipWidget :content="xyValueTooltip(false)" class="flex-1">
-                                            <FloatLabel variant="on" class="w-full">
-                                              <InputText v-model="plot.yValue" class="w-full" size="small" />
-                                              <label>Y value</label>
-                                            </FloatLabel>
-                                          </TooltipWidget>
-                                        </div>
-                                      </div>
+                                  <div v-if="!externalDataEntries(externalDataFile).length" class="empty-state empty-state-tight">
+                                    <i class="pi pi-info-circle empty-state-icon"></i>
+                                    <p class="text-muted-color mb-2">No external data is configured for this CSV file.</p>
+                                  </div>
+                                  <div v-else class="entries-list">
+                                    <div v-for="(externalData, externalDataIndex) in externalDataEntries(externalDataFile)" :key="`external_data_${externalDataFileIndex}_${externalDataIndex}`" class="entry-row">
+                                      <span class="index index-secondary">{{ Number(externalDataIndex) + 1 }}</span>
+                                      <FloatLabel variant="on" class="flex-1">
+                                        <InputText v-model="externalData.id" class="w-full" size="small" />
+                                        <label>ID</label>
+                                      </FloatLabel>
+                                      <FloatLabel variant="on" class="flex-1">
+                                        <Select v-model="externalData.name"
+                                          class="w-full" panelClass="item-filter"
+                                          size="small"
+                                          filter filterMode="lenient"
+                                          :options="externalDataSeries(externalDataFile)"
+                                          :appendTo="appendTarget"
+                                        />
+                                        <label>External data</label>
+                                      </FloatLabel>
                                       <Button
                                         icon="pi pi-times"
                                         text rounded
                                         severity="secondary"
                                         size="small"
-                                        @click="removeTrace(plotIndex, -1)"
+                                        @click="removeExternalData(externalDataFileIndex, externalDataIndex)"
                                       />
                                     </div>
-                                  </Fieldset>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </ScrollPanel>
+                      </div>
+                    </TabPanel>
 
-                                  <!-- Additional traces -->
+                    <!-- Plots -->
 
-                                  <div v-for="(trace, traceIndex) in plot.additionalTraces" :key="`trace_${traceIndex}`" class="entry-row">
+                    <TabPanel value="plots" class="h-full">
+                      <div class="h-full flex flex-col">
+                        <div class="section-header section-header-interactive">
+                          <i class="pi pi-chart-line text-primary"></i>
+                          <div>
+                            <h3 class="section-title">Plots</h3>
+                            <p class="section-description">
+                              Configure the plots and the corresponding traces using the available simulation data.
+                            </p>
+                          </div>
+                          <div class="flex-1"></div>
+                          <div class="flex-none">
+                            <Button
+                              icon="pi pi-plus"
+                              label="Add plot"
+                              outlined
+                              size="small"
+                              @click="addPlot"
+                            />
+                          </div>
+                        </div>
+                        <ScrollPanel class="min-h-0">
+                          <div class="flex flex-col gap-4 mt-2">
+                            <!-- Empty state -->
+
+                            <div v-if="!localSettings.interactive.uiJson.output.plots.length" class="empty-state">
+                              <i class="pi pi-info-circle empty-state-icon"></i>
+                              <p class="text-muted-color mb-2">No plots are configured.</p>
+                            </div>
+
+                            <!-- Plot entries -->
+
+                            <div v-for="(plot, plotIndex) in localSettings.interactive.uiJson.output.plots" :key="`plot_${plotIndex}`" class="plot-item-row">
+                              <div class="card-item">
+                                <div class="plot-card-header">
+                                  <div class="flex items-center gap-2">
+                                    <span class="item-badge">{{ Number(plotIndex) + 1 }}</span>
+                                    <span class="font-medium text-sm">Plot #{{ Number(plotIndex) + 1 }}</span>
+                                    <Tag :value="plotTraceCount(plot) + ' trace' + (plotTraceCount(plot) !== 1 ? 's' : '')" severity="info" size="small" />
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                    <Button
+                                      icon="pi pi-plus"
+                                      label="Add trace"
+                                      outlined
+                                      severity="info"
+                                      size="small"
+                                      @click="addTrace(plotIndex)"
+                                    />
+                                    <Button
+                                      icon="pi pi-trash"
+                                      text rounded
+                                      severity="danger"
+                                      size="small"
+                                      @click="removePlot(plotIndex)"
+                                    />
+                                  </div>
+                                </div>
+                                <div class="plot-card-body">
+                                  <!-- Axes settings -->
+
+                                  <div class="form-row">
+                                    <FloatLabel variant="on" class="flex-1">
+                                      <InputText v-model="plot.xAxisTitle" class="w-full" size="small" />
+                                      <label>X axis title (optional)</label>
+                                    </FloatLabel>
+                                    <FloatLabel variant="on" class="flex-1">
+                                      <InputText v-model="plot.yAxisTitle" class="w-full" size="small" />
+                                      <label>Y axis title (optional)</label>
+                                    </FloatLabel>
+                                  </div>
+
+                                  <!-- Traces -->
+
+                                  <div class="traces-list">
+                                    <!-- Main trace -->
+
                                     <Fieldset class="entry-row">
                                       <template #legend="scope">
-                                        <span v-html="traceName(plot, traceIndex)" />
+                                        <span v-html="traceName(plot, -1)" />
                                       </template>
                                       <div class="entry-row entry-row-trace">
                                         <div>
-                                          <span class="index index-secondary">{{ Number(traceIndex) + 2 }}</span>
+                                          <span class="index index-secondary">1</span>
                                         </div>
                                         <div class="w-full">
                                           <div class="mb-3">
                                             <TooltipWidget :content="traceNameTooltip()" class="flex-1">
-                                                <FloatLabel variant="on" class="w-full">
-                                                  <InputText v-model="trace.name" class="w-full" size="small" />
-                                                  <label>Name (optional)</label>
-                                                </FloatLabel>
-                                              </TooltipWidget>
+                                              <FloatLabel variant="on" class="w-full">
+                                                <InputText v-model="plot.name" class="w-full" size="small" />
+                                                <label>Name (optional)</label>
+                                              </FloatLabel>
+                                            </TooltipWidget>
                                           </div>
                                           <div class="entry-row">
                                             <TooltipWidget :content="xyValueTooltip(true)" class="flex-1">
                                               <FloatLabel variant="on" class="w-full">
-                                                <InputText v-model="trace.xValue" class="w-full" size="small" />
+                                                <InputText v-model="plot.xValue" class="w-full" size="small" />
                                                 <label>X value</label>
                                               </FloatLabel>
                                             </TooltipWidget>
                                             <TooltipWidget :content="xyValueTooltip(false)" class="flex-1">
                                               <FloatLabel variant="on" class="w-full">
-                                                <InputText v-model="trace.yValue" class="w-full" size="small" />
+                                                <InputText v-model="plot.yValue" class="w-full" size="small" />
                                                 <label>Y value</label>
                                               </FloatLabel>
                                             </TooltipWidget>
@@ -735,138 +691,184 @@
                                           text rounded
                                           severity="secondary"
                                           size="small"
-                                          @click="removeTrace(plotIndex, traceIndex)"
+                                          @click="removeTrace(plotIndex, -1)"
                                         />
                                       </div>
                                     </Fieldset>
+
+                                    <!-- Additional traces -->
+
+                                    <div v-for="(trace, traceIndex) in plot.additionalTraces" :key="`trace_${traceIndex}`" class="entry-row">
+                                      <Fieldset class="entry-row">
+                                        <template #legend="scope">
+                                          <span v-html="traceName(plot, traceIndex)" />
+                                        </template>
+                                        <div class="entry-row entry-row-trace">
+                                          <div>
+                                            <span class="index index-secondary">{{ Number(traceIndex) + 2 }}</span>
+                                          </div>
+                                          <div class="w-full">
+                                            <div class="mb-3">
+                                              <TooltipWidget :content="traceNameTooltip()" class="flex-1">
+                                                  <FloatLabel variant="on" class="w-full">
+                                                    <InputText v-model="trace.name" class="w-full" size="small" />
+                                                    <label>Name (optional)</label>
+                                                  </FloatLabel>
+                                                </TooltipWidget>
+                                            </div>
+                                            <div class="entry-row">
+                                              <TooltipWidget :content="xyValueTooltip(true)" class="flex-1">
+                                                <FloatLabel variant="on" class="w-full">
+                                                  <InputText v-model="trace.xValue" class="w-full" size="small" />
+                                                  <label>X value</label>
+                                                </FloatLabel>
+                                              </TooltipWidget>
+                                              <TooltipWidget :content="xyValueTooltip(false)" class="flex-1">
+                                                <FloatLabel variant="on" class="w-full">
+                                                  <InputText v-model="trace.yValue" class="w-full" size="small" />
+                                                  <label>Y value</label>
+                                                </FloatLabel>
+                                              </TooltipWidget>
+                                            </div>
+                                          </div>
+                                          <Button
+                                            icon="pi pi-times"
+                                            text rounded
+                                            severity="secondary"
+                                            size="small"
+                                            @click="removeTrace(plotIndex, traceIndex)"
+                                          />
+                                        </div>
+                                      </Fieldset>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </ScrollPanel>
-                    </div>
-                  </TabPanel>
-                </TabPanels>
-              </Tabs>
-            </div>
-          </TabPanel>
-
-          <!-- Miscellaneous -->
-
-          <TabPanel value="miscellaneous" class="h-full">
-            <div class="settings-section">
-              <div class="section-header">
-                <i class="pi pi-bars text-primary"></i>
-                <div>
-                  <h3 class="section-title">Miscellaneous</h3>
-                  <p class="section-description">Configure miscellaneous settings.</p>
-                </div>
+                        </ScrollPanel>
+                      </div>
+                    </TabPanel>
+                  </TabPanels>
+                </Tabs>
               </div>
-              <div class="settings-form">
-                <div class="option-card flex items-center justify-between p-4 border rounded-lg">
+            </TabPanel>
+
+            <!-- Miscellaneous -->
+
+            <TabPanel value="miscellaneous" class="h-full">
+              <div class="settings-section">
+                <div class="section-header">
+                  <i class="pi pi-bars text-primary"></i>
                   <div>
-                    <div class="flex items-center gap-2">
-                      <i class="pi pi-sync"></i>
-                      <span class="font-medium">Live Updates</span>
-                    </div>
-                    <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when simulation inputs change.</p>
+                    <h3 class="section-title">Miscellaneous</h3>
+                    <p class="section-description">Configure miscellaneous settings.</p>
                   </div>
-                  <ToggleSwitch v-model="localSettings.miscellaneous.liveUpdates" />
+                </div>
+                <div class="settings-form">
+                  <div class="option-card flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <i class="pi pi-sync"></i>
+                        <span class="font-medium">Live Updates</span>
+                      </div>
+                      <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when simulation inputs change.</p>
+                    </div>
+                    <ToggleSwitch v-model="localSettings.miscellaneous.liveUpdates" />
+                  </div>
                 </div>
               </div>
-            </div>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </div>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </div>
 
-    <!-- Footer -->
+      <!-- Footer -->
 
-    <template #footer>
-      <div class="w-full flex flex-col gap-4">
+      <template #footer>
+        <div class="w-full flex flex-col gap-4">
 
-        <!-- Simulation issues -->
+          <!-- Simulation issues -->
 
-        <template v-if="activeTab === 'simulation'">
-          <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length" :appendTo="appendTarget">
-            <div class="issues-popover-content">
-              <IssuesView :issues="simulationSettingsIssues" :extraSpace="false" />
-            </div>
-          </Popover>
-          <div :class="simulationSettingsIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
-            <span :class="{ 'invisible': simulationSettingsIssues.length }" class="status-valid">
-              <i class="pi pi-check-circle"></i>
-              <span>Simulation settings are valid!</span>
-            </span>
-            <Button :class="{ 'invisible': !simulationSettingsIssues.length }" outlined severity="warn" size="small"
-              @click="toggleSimulationSettingsIssues"
-            >
-              <i class="pi pi-exclamation-triangle mr-2"></i>
-              <span>{{ simulationSettingsIssues.length }} issue{{ simulationSettingsIssues.length !== 1 ? 's' : '' }}</span>
-              <i :class="showSimulationSettingsIssuesPanel ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
-            </Button>
-          </div>
-        </template>
-
-        <!-- Solvers issues -->
-
-        <template v-else-if="activeTab === 'solvers'">
-          <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length" :appendTo="appendTarget">
-            <div class="issues-popover-content">
-              <IssuesView :issues="solversSettingsIssues" :extraSpace="false" />
-            </div>
-          </Popover>
-          <div :class="solversSettingsIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
-            <span :class="{ 'invisible': solversSettingsIssues.length }" class="status-valid">
-              <i class="pi pi-check-circle"></i>
-              <span>Solvers settings are valid!</span>
-            </span>
-            <Button :class="{ 'invisible': !solversSettingsIssues.length }" outlined severity="warn" size="small"
-              @click="toggleSolversSettingsIssues"
-            >
-              <i class="pi pi-exclamation-triangle mr-2"></i>
-              <span>{{ solversSettingsIssues.length }} issue{{ solversSettingsIssues.length !== 1 ? 's' : '' }}</span>
-              <i :class="showSolversSettingsIssuesPanel ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
-            </Button>
-          </div>
-        </template>
-
-        <!-- UI JSON issues -->
-
-        <template v-else-if="activeTab === 'interactive'">
-          <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length" :appendTo="appendTarget">
-            <div class="issues-popover-content">
-              <IssuesView :issues="uiJsonIssues" :extraSpace="false" />
-            </div>
-          </Popover>
-          <div class="actions">
-            <div :class="uiJsonIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
-              <span :class="{ 'invisible': uiJsonIssues.length }" class="status-valid">
+          <template v-if="activeTab === 'simulation'">
+            <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length" :appendTo="appendTarget">
+              <div class="issues-popover-content">
+                <IssuesView :issues="simulationSettingsIssues" :extraSpace="false" />
+              </div>
+            </Popover>
+            <div :class="simulationSettingsIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
+              <span :class="{ 'invisible': simulationSettingsIssues.length }" class="status-valid">
                 <i class="pi pi-check-circle"></i>
-                <span>Interactive settings are valid!</span>
+                <span>Simulation settings are valid!</span>
               </span>
-              <Button :class="{ 'invisible': !uiJsonIssues.length }" outlined severity="warn" size="small"
-                @click="toggleUiJsonIssues"
+              <Button :class="{ 'invisible': !simulationSettingsIssues.length }" outlined severity="warn" size="small"
+                @click="toggleSimulationSettingsIssues"
               >
                 <i class="pi pi-exclamation-triangle mr-2"></i>
-                <span>{{ uiJsonIssues.length }} issue{{ uiJsonIssues.length !== 1 ? 's' : '' }}</span>
-                <i :class="showUiJsonIssuesPanel ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
+                <span>{{ simulationSettingsIssues.length }} issue{{ simulationSettingsIssues.length !== 1 ? 's' : '' }}</span>
+                <i :class="showSimulationSettingsIssuesPanel ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
               </Button>
             </div>
+          </template>
+
+          <!-- Solvers issues -->
+
+          <template v-else-if="activeTab === 'solvers'">
+            <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length" :appendTo="appendTarget">
+              <div class="issues-popover-content">
+                <IssuesView :issues="solversSettingsIssues" :extraSpace="false" />
+              </div>
+            </Popover>
+            <div :class="solversSettingsIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
+              <span :class="{ 'invisible': solversSettingsIssues.length }" class="status-valid">
+                <i class="pi pi-check-circle"></i>
+                <span>Solvers settings are valid!</span>
+              </span>
+              <Button :class="{ 'invisible': !solversSettingsIssues.length }" outlined severity="warn" size="small"
+                @click="toggleSolversSettingsIssues"
+              >
+                <i class="pi pi-exclamation-triangle mr-2"></i>
+                <span>{{ solversSettingsIssues.length }} issue{{ solversSettingsIssues.length !== 1 ? 's' : '' }}</span>
+                <i :class="showSolversSettingsIssuesPanel ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
+              </Button>
+            </div>
+          </template>
+
+          <!-- UI JSON issues -->
+
+          <template v-else-if="activeTab === 'interactive'">
+            <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length" :appendTo="appendTarget">
+              <div class="issues-popover-content">
+                <IssuesView :issues="uiJsonIssues" :extraSpace="false" />
+              </div>
+            </Popover>
+            <div class="actions">
+              <div :class="uiJsonIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
+                <span :class="{ 'invisible': uiJsonIssues.length }" class="status-valid">
+                  <i class="pi pi-check-circle"></i>
+                  <span>Interactive settings are valid!</span>
+                </span>
+                <Button :class="{ 'invisible': !uiJsonIssues.length }" outlined severity="warn" size="small"
+                  @click="toggleUiJsonIssues"
+                >
+                  <i class="pi pi-exclamation-triangle mr-2"></i>
+                  <span>{{ uiJsonIssues.length }} issue{{ uiJsonIssues.length !== 1 ? 's' : '' }}</span>
+                  <i :class="showUiJsonIssuesPanel ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
+                </Button>
+              </div>
+            </div>
+          </template>
+
+          <!-- OK/Cancel -->
+
+          <div class="flex gap-4 justify-end">
+            <Button autofocus label="OK" @click="onOk" />
+            <Button label="Cancel" severity="secondary" @click="onCancel" />
           </div>
-        </template>
-
-        <!-- OK/Cancel -->
-
-        <div class="flex gap-4 justify-end">
-          <Button autofocus label="OK" @click="onOk" />
-          <Button label="Cancel" severity="secondary" @click="onCancel" />
         </div>
-      </div>
-    </template>
-  </BaseDialog>
+      </template>
+    </BaseDialog>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -959,7 +961,8 @@ vue.watch(
 const simulationSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const solversSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const uiJsonIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
-const appendTarget = vueCommon.useAppendTarget();
+const rootRef = vue.ref<HTMLElement | null>(null);
+const appendTarget = vueCommon.useAppendTarget(rootRef);
 const activeTab = vue.ref(DEFAULT_TAB);
 const activeInteractiveTab = vue.ref(DEFAULT_INTERACTIVE_TAB);
 const showSimulationSettingsIssuesPanel = vue.ref(false);

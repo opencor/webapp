@@ -100,65 +100,57 @@ export const trackElementHeight = (
   return stopTrackingElementHeight;
 };
 
-// Create a `position: fixed` overlay container inside `.opencor` to serve as PrimeVue's append target. This keeps
-// overlays visible in full-screen mode and counters PrimeVue's `absolutePosition()` which adds `windowScrollTop/Left`
-// to viewport-relative coordinates. The `getBoundingClientRect()`-based correction handles both plain scroll offsets
-// and cases where CSS ancestors (transform/will-change/filter/perspective) create new containing blocks for
-// `position: fixed`.
+// A composable that provides an overlay container as an append target for PrimeVue overlays. PrimeVue's
+// `absolutePosition()` computes document-absolute coordinates (viewport-relative `getBoundingClientRect()` plus
+// `windowScrollTop`/`windowScrollLeft`). The container uses `position: fixed` inside `.opencor`, and its `top`/`left`
+// are dynamically negated by the current scroll offset (`-scrollY`/`-scrollX`). This converts PrimeVue's
+// document-absolute coordinates back to viewport-relative, so overlays appear at the correct screen position regardless
+// of the host app's scroll state.
+//
+// Keeping the container inside `.opencor` also ensures that overlays are visible when the host app uses full-screen
+// mode (the Fullscreen API only renders the full-screen element and its CSS descendants), and that they inherit
+// `.opencor`'s CSS properties through the DOM tree.
 
-export const useAppendTarget = () => {
+export const useAppendTarget = (ancestorRef: vue.Ref<HTMLElement | null>) => {
   const appendTarget = vue.shallowRef<HTMLElement | undefined>(undefined);
   const containerClass = 'opencor-overlay-container';
 
   vue.onMounted(() => {
-    // Find the `.opencor` element to append the target to. First try to find it from the current component's root
-    // element to support multiple instances of OpenCOR in the same page, and if that fails we fall back to searching
-    // the whole document.
-
-    const instance = vue.getCurrentInstance();
-    const rootEl = instance?.vnode?.el;
-    const opencor = rootEl instanceof Element ? rootEl.closest('.opencor') : document.querySelector('.opencor');
+    const opencor = ancestorRef.value?.closest('.opencor');
 
     if (opencor) {
-      let overlayContainer = opencor.querySelector(`.${containerClass}`) as HTMLElement | null;
+      let container = opencor.querySelector(`.${containerClass}`) as HTMLElement | null;
 
-      if (!overlayContainer) {
-        overlayContainer = document.createElement('div');
+      if (!container) {
+        const divElement = document.createElement('div');
 
-        overlayContainer.className = containerClass;
-        overlayContainer.style.cssText =
+        divElement.className = containerClass;
+        divElement.style.cssText =
           'position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
 
         // Restore pointer events for overlay content teleported into the container.
 
-        overlayContainer.appendChild(
+        divElement.appendChild(
           Object.assign(document.createElement('style'), {
             textContent: `.${containerClass} > * { pointer-events: auto; }`
           })
         );
 
-        opencor.appendChild(overlayContainer);
+        opencor.appendChild(divElement);
 
-        const container = overlayContainer;
-        const updateScrollOffset = () => {
-          const rect = container.getBoundingClientRect();
-          const oldTop = parseFloat(container.style.top) || 0;
-          const oldLeft = parseFloat(container.style.left) || 0;
-          const newTop = oldTop - rect.top - window.scrollY;
-          const newLeft = oldLeft - rect.left - window.scrollX;
-
-          if (Math.abs(newTop - oldTop) >= 0.5 || Math.abs(newLeft - oldLeft) >= 0.5) {
-            container.style.top = `${newTop}px`;
-            container.style.left = `${newLeft}px`;
-          }
+        const updateOffset = (): void => {
+          divElement.style.top = `-${window.scrollY}px`;
+          divElement.style.left = `-${window.scrollX}px`;
         };
 
-        updateScrollOffset();
+        updateOffset();
 
-        window.addEventListener('scroll', updateScrollOffset, { passive: true });
+        window.addEventListener('scroll', updateOffset, { passive: true });
+
+        container = divElement;
       }
 
-      appendTarget.value = overlayContainer;
+      appendTarget.value = container;
     }
   });
 
