@@ -24,7 +24,8 @@
     "formatter": {
       "bracketSameLine": true,
       "enabled": true,
-      "selfCloseVoidElements": "always"
+      "selfCloseVoidElements": "always",
+      "whitespaceSensitivity": "ignore"
     }
   },
   "javascript": {
@@ -60,6 +61,15 @@
             "noUnusedVariables": "off"
           }
         }
+      }
+    },
+    {
+      "includes": ["src/assets/logo.svg"],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
       }
     }
   ],
