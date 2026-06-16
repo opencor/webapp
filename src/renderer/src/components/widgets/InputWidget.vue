@@ -1,5 +1,5 @@
 <template>
-  <div v-if="possibleValues">
+  <div ref="rootRef" v-if="possibleValues">
     <FloatLabel variant="on">
       <Select
         v-model="discreteValue"
@@ -13,7 +13,7 @@
       <label>{{ name }}</label>
     </FloatLabel>
   </div>
-  <div v-else>
+  <div ref="rootRef" v-else>
     <InputScientificNumberWidget v-model="value"
       :label="name"
       :min="minimumValue"
@@ -52,7 +52,8 @@ let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
   props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
-const appendTarget = vueCommon.useAppendTarget();
+const rootRef = vue.ref<HTMLElement | null>(null);
+const appendTarget = vueCommon.useAppendTarget(rootRef);
 
 const compStepValue = vue.computed<number>(() => {
   if (props.stepValue !== undefined) {

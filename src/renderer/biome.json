@@ -63,6 +63,15 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/assets/logo.svg"],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
+      }
     }
   ],
   "vcs": {

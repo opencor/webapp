@@ -100,99 +100,58 @@ export const trackElementHeight = (
   return stopTrackingElementHeight;
 };
 
-// Hybrid append target strategy for PrimeVue overlays:
-//  - Default: append to `document.body`. This avoids containing-block issues from CSS ancestors (e.g.,
-//    `position: relative` or `overflow: hidden`) that would clip the overlay. Even if an ancestor has
-//    `overflow: hidden`, the fixed container gets clipped entirely.
-//  - Full-screen fallback: when a non-`body` element enters full-screen mode, `body`-level overlays become hidden
-//    behind the full-screen container. In that case, we fall back to a `position: fixed` container inside `.opencor`
-//    (which is a descendant of the full-screen element). The `getBoundingClientRect()`-based correction handles both
-//    plain scroll offsets and any containing-block shifts from CSS ancestors.
+// A composable that provides an overlay container as an append target for PrimeVue overlays. PrimeVue's
+// `absolutePosition()` computes document-absolute coordinates (viewport-relative `getBoundingClientRect()` plus
+// `windowScrollTop`/`windowScrollLeft`). The container uses `position: fixed` inside `.opencor`, and its `top`/`left`
+// are dynamically negated by the current scroll offset (`-scrollY`/`-scrollX`). This converts PrimeVue's
+// document-absolute coordinates back to viewport-relative, so overlays appear at the correct screen position regardless
+// of the host app's scroll state.
+//
+// Keeping the container inside `.opencor` also ensures that overlays are visible when the host app uses full-screen
+// mode (the Fullscreen API only renders the full-screen element and its CSS descendants), and that they inherit
+// `.opencor`'s CSS properties through the DOM tree.
 
-export const useAppendTarget = () => {
+export const useAppendTarget = (ancestorRef: vue.Ref<HTMLElement | null>) => {
   const appendTarget = vue.shallowRef<HTMLElement | undefined>(undefined);
   const containerClass = 'opencor-overlay-container';
 
-  // Lazily create the fixed container inside `.opencor` (only needed for full-screen fallback).
-
-  const containerInsideOpencor = (instance: vue.ComponentInternalInstance | null): HTMLElement | undefined => {
-    const rootEl = instance?.vnode?.el;
-    const opencor = rootEl instanceof Element ? rootEl.closest('.opencor') : document.querySelector('.opencor');
-
-    if (!opencor) {
-      return undefined;
-    }
-
-    let overlayContainer = opencor.querySelector(`.${containerClass}`) as HTMLElement | null;
-
-    if (!overlayContainer) {
-      overlayContainer = document.createElement('div');
-
-      overlayContainer.className = containerClass;
-      overlayContainer.style.cssText =
-        'position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
-
-      // Restore pointer events for overlay content teleported into the container.
-
-      overlayContainer.appendChild(
-        Object.assign(document.createElement('style'), {
-          textContent: `.${containerClass} > * { pointer-events: auto; }`
-        })
-      );
-
-      opencor.appendChild(overlayContainer);
-
-      const container = overlayContainer;
-      const updateScrollOffset = () => {
-        const rect = container.getBoundingClientRect();
-        const oldTop = parseFloat(container.style.top) || 0;
-        const oldLeft = parseFloat(container.style.left) || 0;
-        const newTop = oldTop - rect.top - window.scrollY;
-        const newLeft = oldLeft - rect.left - window.scrollX;
-
-        if (Math.abs(newTop - oldTop) >= 0.5 || Math.abs(newLeft - oldLeft) >= 0.5) {
-          container.style.top = `${newTop}px`;
-          container.style.left = `${newLeft}px`;
-        }
-      };
-
-      updateScrollOffset();
-
-      window.addEventListener('scroll', updateScrollOffset, { passive: true });
-    }
-
-    return overlayContainer;
-  };
-
-  // Resolve the correct append target based on the full-screen state.
-
-  const resolveAppendTarget = (instance: vue.ComponentInternalInstance | null): HTMLElement => {
-    const fullscreenEl = document.fullscreenElement;
-
-    // If we're in full-screen mode and the full-screen element doesn't contain `body`, then `body` is hidden behind the
-    // full-screen container, in which case we use the fixed container inside `.opencor`.
-
-    if (fullscreenEl && !fullscreenEl.contains(document.body)) {
-      return containerInsideOpencor(instance) ?? document.body;
-    }
-
-    // In normal mode, we use `document.body` to avoid containing-block/clipping issues.
-
-    return document.body;
-  };
-
   vue.onMounted(() => {
-    const instance = vue.getCurrentInstance();
+    const opencor = ancestorRef.value?.closest('.opencor');
 
-    // Initial resolution.
+    if (opencor) {
+      let container = opencor.querySelector(`.${containerClass}`) as HTMLElement | null;
 
-    appendTarget.value = resolveAppendTarget(instance);
+      if (!container) {
+        const divElement = document.createElement('div');
 
-    // Re-resolve when full-screen state changes.
+        divElement.className = containerClass;
+        divElement.style.cssText =
+          'position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
 
-    document.addEventListener('fullscreenchange', () => {
-      appendTarget.value = resolveAppendTarget(instance);
-    });
+        // Restore pointer events for overlay content teleported into the container.
+
+        divElement.appendChild(
+          Object.assign(document.createElement('style'), {
+            textContent: `.${containerClass} > * { pointer-events: auto; }`
+          })
+        );
+
+        opencor.appendChild(divElement);
+
+        const updateOffset = (): void => {
+          divElement.style.top = `-${window.scrollY}px`;
+          divElement.style.left = `-${window.scrollX}px`;
+        };
+
+        updateOffset();
+
+        window.addEventListener('scroll', updateOffset, { passive: true });
+
+        container = divElement;
+      }
+
+      appendTarget.value = container;
+    }
   });
 
   return appendTarget;

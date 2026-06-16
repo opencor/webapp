@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full">
+  <div ref="rootRef" class="h-full">
     <IssuesView v-if="instanceIssues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="instanceIssues" />
     <div v-else class="w-full h-full flex flex-col">
     <Toolbar v-if="showToolbar" class="p-1! shrink-0">
@@ -294,6 +294,7 @@ const emit = defineEmits<{
   (event: 'simulationData'): void;
 }>();
 
+const rootRef = vue.ref<HTMLElement | null>(null);
 const editorRef = vue.ref<HTMLElement | null>(null);
 
 // Populate the parameters of the given instance task.
@@ -623,7 +624,7 @@ let interactiveTrackedRunId = 0;
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
 const interactiveRunColorPopoverRef = vue.ref<InstanceType<typeof Popover> | undefined>();
 const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
-const appendTarget = vueCommon.useAppendTarget();
+const appendTarget = vueCommon.useAppendTarget(rootRef);
 const interactiveCompData = vue.computed<IGraphPanelData[]>(() => {
   // Combine the live data with the data from the tracked runs.
 
