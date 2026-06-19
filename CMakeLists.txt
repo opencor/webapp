@@ -154,7 +154,7 @@ endif()
 # Link our native node module against cmake-js, a few Windows-specific libraries, and libOpenCOR.
 
 if(WIN32)
-    set(WINDOWS_LIBS bcrypt crypt32 iphlpapi version wldap32 ws2_32)
+    set(WINDOWS_LIBS bcrypt crypt32 iphlpapi ntdll version wldap32 ws2_32)
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
