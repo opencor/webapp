@@ -63,4 +63,5 @@ interface IWindow {
   electronApi: IElectronApi;
 }
 
-export const electronApi: IElectronApi | undefined = (window as unknown as IWindow).electronApi;
+export const electronApi: IElectronApi | undefined =
+  typeof window !== 'undefined' ? (window as unknown as IWindow).electronApi : undefined;

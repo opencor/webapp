@@ -5,8 +5,9 @@ import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
 
 import { fileURLToPath } from 'node:url';
-import vitePlugin from 'unplugin-vue-components/vite';
+import * as nodeFs from 'node:fs';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
+import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
 import { libopencorVersion } from './scripts/libopencor.version';
@@ -43,7 +44,15 @@ export default vite.defineConfig({
       }
     },
     tailwindcssPlugin(),
-    vuePlugin(),
+    vuePlugin({
+      script: {
+        fs: {
+          fileExists: (file: string) => nodeFs.existsSync(file),
+          readFile: (file: string) => nodeFs.readFileSync(file, 'utf-8'),
+          realpath: (file: string) => nodeFs.realpathSync(file)
+        }
+      }
+    }),
     vitePlugin({
       resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     }),
