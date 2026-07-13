@@ -5,6 +5,7 @@ import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
 
 import * as electronVite from 'electron-vite';
+import * as nodeFs from 'node:fs';
 import path from 'node:path';
 import vitePlugin from 'unplugin-vue-components/vite';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
@@ -46,7 +47,15 @@ export default electronVite.defineConfig({
         }
       },
       tailwindcssPlugin(),
-      vuePlugin(),
+      vuePlugin({
+        script: {
+          fs: {
+            fileExists: (file: string) => nodeFs.existsSync(file),
+            readFile: (file: string) => nodeFs.readFileSync(file, 'utf-8'),
+            realpath: (file: string) => nodeFs.realpathSync(file)
+          }
+        }
+      }),
       vitePlugin({
         resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
       }),

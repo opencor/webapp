@@ -5,6 +5,7 @@ import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
 
 import { fileURLToPath } from 'node:url';
+import * as nodeFs from 'node:fs';
 import vitePlugin from 'unplugin-vue-components/vite';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import * as vite from 'vite';
@@ -43,7 +44,15 @@ export default vite.defineConfig({
       }
     },
     tailwindcssPlugin(),
-    vuePlugin(),
+    vuePlugin({
+      script: {
+        fs: {
+          fileExists: (file: string) => nodeFs.existsSync(file),
+          readFile: (file: string) => nodeFs.readFileSync(file, 'utf-8'),
+          realpath: (file: string) => nodeFs.realpathSync(file)
+        }
+      }
+    }),
     vitePlugin({
       resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     }),
