@@ -20,6 +20,9 @@ export default electronVite.defineConfig({
           format: 'cjs'
         }
       }
+    },
+    ssr: {
+      external: ['electron']
     }
   },
   preload: {},
