@@ -7,8 +7,8 @@ import vuePlugin from '@vitejs/plugin-vue';
 import * as electronVite from 'electron-vite';
 import * as nodeFs from 'node:fs';
 import path from 'node:path';
-import vitePlugin from 'unplugin-vue-components/vite';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
+import vitePlugin from 'unplugin-vue-components/vite';
 
 import { libopencorVersion } from './src/renderer/scripts/libopencor.version';
 

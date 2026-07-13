@@ -6,8 +6,8 @@ import vuePlugin from '@vitejs/plugin-vue';
 
 import { fileURLToPath } from 'node:url';
 import * as nodeFs from 'node:fs';
-import vitePlugin from 'unplugin-vue-components/vite';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
+import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
 import { libopencorVersion } from './scripts/libopencor.version';
