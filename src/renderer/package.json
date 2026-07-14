@@ -42,20 +42,20 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20260714.0",
+  "version": "0.20260714.1",
   "libopencorVersion": "0.20260619.0",
   "scripts": {
-    "build": "vite build && bun scripts/generate.version.js",
-    "build:lib": "vite build --config vite.lib.config.ts && bun --bun scripts/type.check.js --project tsconfig.lib.types.json",
-    "clean": "bun scripts/clean.js",
-    "dependencies:update": "bun scripts/dependencies.update.js",
+    "build": "vite build && bun scripts/generate.version.ts",
+    "build:lib": "vite build --config vite.lib.config.ts && bun --bun scripts/type.check.ts --project tsconfig.lib.types.json",
+    "clean": "bun scripts/clean.ts",
+    "dependencies:update": "bun scripts/dependencies.update.ts",
     "dev": "vite dev",
     "format": "bunx --bun biome format --fix --max-diagnostics=none",
     "format:check": "bunx --bun biome format --max-diagnostics=none",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
-    "typecheck": "bun --bun scripts/type.check.js --noEmit",
-    "version:new": "bun scripts/version.new.js"
+    "typecheck": "bun --bun scripts/type.check.ts --noEmit",
+    "version:new": "bun scripts/version.new.ts"
   },
   "bun": {
     "overrides": {
@@ -66,10 +66,10 @@
     "vue": "3.4.21"
   },
   "dependencies": {
-    "@napi-rs/keyring": "^1.2.0",
+    "@napi-rs/keyring": "^1.3.0",
     "@primeuix/themes": "^2.0.3",
     "@primevue/auto-import-resolver": "4.2.5",
-    "@vueuse/core": "^14.2.1",
+    "@vueuse/core": "^14.3.0",
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
     "vue": "3.4.21",
@@ -92,7 +92,7 @@
     "tailwindcss": "^4.3.2",
     "tailwindcss-primeui": "^0.6.1",
     "typescript": "^7.0.2",
-    "typescript-6": "npm:typescript@^6.0.0",
+    "typescript-6": "npm:typescript@^6.0.3",
     "unplugin-vue-components": "^32.1.0",
     "vite": "^8.1.4",
     "vue-tsc": "^3.3.7"

@@ -16,7 +16,7 @@ const projectRoot =
     : currentWorkingDir;
 const origResolveFilename = Module._resolveFilename;
 
-Module._resolveFilename = function (request, parent, ...args) {
+Module._resolveFilename = function (request: string, parent: Module, ...args: unknown[]) {
   if (request === 'typescript/lib/tsc') {
     return path.join(projectRoot, 'node_modules', 'typescript-6', 'lib', 'tsc.js');
   }

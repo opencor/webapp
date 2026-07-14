@@ -23,28 +23,28 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20260714.0",
+  "version": "0.20260714.1",
   "engines": {
     "bun": ">=1.2.0"
   },
   "scripts": {
-    "archive:web": "bun src/renderer/scripts/archive.web.js",
-    "build": "bun src/renderer/scripts/libopencor.js && electron-vite build",
+    "archive:web": "bun src/renderer/scripts/archive.web.ts",
+    "build": "bun src/renderer/scripts/libopencor.ts && electron-vite build",
     "build:web": "bun --cwd src/renderer build",
-    "clean": "bun src/renderer/scripts/clean.js",
-    "dependencies:update": "bun src/renderer/scripts/dependencies.update.js",
-    "dev": "bun src/renderer/scripts/libopencor.js && electron-vite dev --watch",
+    "clean": "bun src/renderer/scripts/clean.ts",
+    "dependencies:update": "bun src/renderer/scripts/dependencies.update.ts",
+    "dev": "bun src/renderer/scripts/libopencor.ts && electron-vite dev --watch",
     "dev:web": "bun --cwd src/renderer dev",
     "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/renderer/src/libopencor/src/*",
     "format:check": "bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/renderer/src/libopencor/src/*",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
-    "postinstall": "bun src/renderer/scripts/ensure.electron.js",
-    "release": "bun src/renderer/scripts/libopencor.js && electron-builder",
-    "release:local": "bun src/renderer/scripts/libopencor.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.notarize=false --publish=never",
-    "start": "bun src/renderer/scripts/libopencor.js && electron-vite preview",
+    "postinstall": "bun src/renderer/scripts/ensure.electron.ts",
+    "release": "bun src/renderer/scripts/libopencor.ts && electron-builder",
+    "release:local": "bun src/renderer/scripts/libopencor.ts && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.notarize=false --publish=never",
+    "start": "bun src/renderer/scripts/libopencor.ts && electron-vite preview",
     "start:web": "bun --cwd src/renderer start",
-    "typecheck": "bun --bun src/renderer/scripts/type.check.js --noEmit -p tsconfig.app.json",
-    "version:new": "bun src/renderer/scripts/version.new.js"
+    "typecheck": "bun --bun src/renderer/scripts/type.check.ts --noEmit -p tsconfig.app.json",
+    "version:new": "bun src/renderer/scripts/version.new.ts"
   },
   "bun": {
     "overrides": {
@@ -55,10 +55,10 @@
     "vue": "3.4.21"
   },
   "dependencies": {
-    "@napi-rs/keyring": "^1.2.0",
+    "@napi-rs/keyring": "^1.3.0",
     "@primeuix/themes": "^2.0.3",
     "@primevue/auto-import-resolver": "4.2.5",
-    "@vueuse/core": "^14.2.1",
+    "@vueuse/core": "^14.3.0",
     "primeicons": "^7.0.0",
     "primevue": "4.2.5",
     "vue": "3.4.21",
@@ -92,7 +92,7 @@
     "tailwindcss-primeui": "^0.6.1",
     "tar": "^7.5.20",
     "typescript": "^7.0.2",
-    "typescript-6": "npm:typescript@^6.0.0",
+    "typescript-6": "npm:typescript@^6.0.3",
     "unplugin-vue-components": "^32.1.0",
     "vite": "^8.1.4",
     "vue-tsc": "^3.3.7"
