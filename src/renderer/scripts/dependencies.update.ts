@@ -6,9 +6,24 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as readline from 'node:readline/promises';
 
+type Dependency = {
+  packageName: string;
+  range: string;
+  alias: string | null;
+};
+
+type Candidate = {
+  name: string;
+  packageName: string;
+  range: string;
+  alias: string | null;
+  current: string | null;
+  latest: string;
+};
+
 // Run a command synchronously, inheriting stdio.  Exit on failure.
 
-const run = (command, args) => {
+const run = (command: string, args: string[]): void => {
   const res = spawnSync({
     cmd: [command, ...args],
     stdio: ['inherit', 'inherit', 'inherit']
@@ -23,34 +38,28 @@ const run = (command, args) => {
 
 // Check if a version string is pinned (i.e. starts with a digit) or is a range (i.e. starts with ^, ~, etc.).
 
-const isVersionPinned = (version) => {
+const isVersionPinned = (version: string): boolean => {
   return /^\d/.test(version);
 };
 
 // Parse a dependency into its components: package name, version range, and optional alias name (e.g.,
 // "npm:@scope/pkg@^1.2.3" -> { packageName: "@scope/pkg", range: "^1.2.3", alias: "npm" }).
 
-const parseDependency = (name, version) => {
+const parseDependency = (name: string, version: string): Dependency => {
   if (version.startsWith('npm:')) {
-    const at = version.indexOf('@', 4);
+    const at = version.lastIndexOf('@');
+    const packageName = at > 4 ? version.substring(4, at) : version.substring(4);
+    const range = at > 4 ? version.substring(at + 1) : 'latest';
 
-    return {
-      packageName: version.substring(4, at),
-      range: version.substring(at + 1),
-      alias: name
-    };
+    return { packageName, range, alias: name };
   }
 
-  return {
-    packageName: name,
-    range: version,
-    alias: null
-  };
+  return { packageName: name, range: version, alias: null };
 };
 
 // Compare two semver strings. Return 0 if v1 === v2, a positive number if v1 > v2, and a negative number if v1 < v2.
 
-const compareVersions = (v1, v2) => {
+const compareVersions = (v1: string, v2: string): number => {
   const v1List = v1.split('.').map(Number);
   const v2List = v2.split('.').map(Number);
 
@@ -65,7 +74,7 @@ const compareVersions = (v1, v2) => {
 
 // Extract the minimum concrete version from a range string (e.g., "^1.2.3" -> "1.2.3").
 
-const extractVersion = (range) => {
+const extractVersion = (range: string): string | null => {
   const match = range.match(/(\d+\.\d+\.\d+)/);
 
   return match ? match[1] : null;
@@ -74,7 +83,7 @@ const extractVersion = (range) => {
 // Build a new version range keeping the original prefix but pointing at a newer version (e.g., ("^6.0.0", "6.0.3") ->
 // "^6.0.3").
 
-const buildRange = (oldRange, newVersion) => {
+const buildRange = (oldRange: string, newVersion: string): string => {
   const prefix = oldRange.match(/^[~^><≥≤]+/)?.[0] || '';
 
   return `${prefix}${newVersion}`;
@@ -82,8 +91,12 @@ const buildRange = (oldRange, newVersion) => {
 
 // Check for updates to dependencies in a given directory.
 
-const checkUpdates = async (label, allDependencies, padEnd) => {
-  const candidates = [];
+const checkUpdates = async (
+  label: string,
+  allDependencies: Record<string, string>,
+  padEnd: number
+): Promise<Candidate[]> => {
+  const candidates: Candidate[] = [];
 
   console.log(`\n${label} dependencies:\n`);
 
@@ -95,21 +108,21 @@ const checkUpdates = async (label, allDependencies, padEnd) => {
       const dependency = parseDependency(name, version);
 
       try {
-        let latest;
+        let latest: string;
 
         if (name === 'typescript-6') {
           // Special case of a dependency for which we want to stick to the version range, even if a newer major version
           // is available.
 
           const dependencyVersion =
-            await $`npm view ${dependency.packageName}@${dependency.range} version --json 2>/dev/null`.text();
+            await $`npm view ${dependency.packageName}@${dependency.range} version --json`.text();
           const versions = JSON.parse(dependencyVersion.trim());
 
           latest = Array.isArray(versions) ? versions[versions.length - 1] : versions;
         } else {
           // Retrieve the absolute latest version of the dependency, which may be a major bump.
 
-          const dependencyVersion = await $`npm view ${dependency.packageName} version --json 2>/dev/null`.text();
+          const dependencyVersion = await $`npm view ${dependency.packageName} version --json`.text();
 
           latest = JSON.parse(dependencyVersion.trim());
         }
@@ -120,12 +133,12 @@ const checkUpdates = async (label, allDependencies, padEnd) => {
           dependency,
           current: extractVersion(dependency.range),
           latest,
-          ok: true
+          ok: true as const
         };
       } catch {
         return {
           name,
-          ok: false
+          ok: false as const
         };
       }
     })
@@ -165,10 +178,13 @@ const checkUpdates = async (label, allDependencies, padEnd) => {
   return candidates;
 };
 
-const updateDependencies = async (dir) => {
-  const label = dir.endsWith('/src/renderer') ? 'Renderer' : 'Root';
+const updateDependencies = async (dir: string): Promise<void> => {
+  const label = path.basename(dir) === 'renderer' ? 'Renderer' : 'Root';
   const packageJsonPath = path.join(dir, 'package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
   const allDependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
   const padEnd = Math.max(0, ...Object.keys(allDependencies).map((name) => name.length)) + 1;
 
@@ -208,7 +224,7 @@ const updateDependencies = async (dir) => {
     return;
   }
 
-  let selected;
+  let selected: Candidate[];
 
   if (answer.toLowerCase() === 'a') {
     selected = candidates;

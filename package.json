@@ -28,23 +28,23 @@
     "bun": ">=1.2.0"
   },
   "scripts": {
-    "archive:web": "bun src/renderer/scripts/archive.web.js",
-    "build": "bun src/renderer/scripts/libopencor.js && electron-vite build",
+    "archive:web": "bun src/renderer/scripts/archive.web.ts",
+    "build": "bun src/renderer/scripts/libopencor.ts && electron-vite build",
     "build:web": "bun --cwd src/renderer build",
-    "clean": "bun src/renderer/scripts/clean.js",
-    "dependencies:update": "bun src/renderer/scripts/dependencies.update.js",
-    "dev": "bun src/renderer/scripts/libopencor.js && electron-vite dev --watch",
+    "clean": "bun src/renderer/scripts/clean.ts",
+    "dependencies:update": "bun src/renderer/scripts/dependencies.update.ts",
+    "dev": "bun src/renderer/scripts/libopencor.ts && electron-vite dev --watch",
     "dev:web": "bun --cwd src/renderer dev",
     "format": "bunx --bun biome format --fix --max-diagnostics=none && clang-format -i src/renderer/src/libopencor/src/*",
     "format:check": "bunx --bun biome format --max-diagnostics=none && clang-format --dry-run -Werror src/renderer/src/libopencor/src/*",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
-    "postinstall": "bun src/renderer/scripts/ensure.electron.js",
-    "release": "bun src/renderer/scripts/libopencor.js && electron-builder",
-    "release:local": "bun src/renderer/scripts/libopencor.js && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.notarize=false --publish=never",
-    "start": "bun src/renderer/scripts/libopencor.js && electron-vite preview",
+    "postinstall": "bun src/renderer/scripts/ensure.electron.ts",
+    "release": "bun src/renderer/scripts/libopencor.ts && electron-builder",
+    "release:local": "bun src/renderer/scripts/libopencor.ts && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.notarize=false --publish=never",
+    "start": "bun src/renderer/scripts/libopencor.ts && electron-vite preview",
     "start:web": "bun --cwd src/renderer start",
-    "typecheck": "bun --bun src/renderer/scripts/type.check.js --noEmit -p tsconfig.app.json",
-    "version:new": "bun src/renderer/scripts/version.new.js"
+    "typecheck": "bun --bun src/renderer/scripts/type.check.ts --noEmit -p tsconfig.app.json",
+    "version:new": "bun src/renderer/scripts/version.new.ts"
   },
   "bun": {
     "overrides": {

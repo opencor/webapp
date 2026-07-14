@@ -8,8 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJsonPath = path.join(__dirname, '../package.json');
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
-const { version } = packageJson;
+const version = (JSON.parse(fs.readFileSync(packageJsonPath)) as { version: string }).version;
 
 // Make sure that the dist/assets folder exists.
 

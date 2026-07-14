@@ -45,17 +45,17 @@
   "version": "0.20260714.1",
   "libopencorVersion": "0.20260619.0",
   "scripts": {
-    "build": "vite build && bun scripts/generate.version.js",
-    "build:lib": "vite build --config vite.lib.config.ts && bun --bun scripts/type.check.js --project tsconfig.lib.types.json",
-    "clean": "bun scripts/clean.js",
-    "dependencies:update": "bun scripts/dependencies.update.js",
+    "build": "vite build && bun scripts/generate.version.ts",
+    "build:lib": "vite build --config vite.lib.config.ts && bun --bun scripts/type.check.ts --project tsconfig.lib.types.json",
+    "clean": "bun scripts/clean.ts",
+    "dependencies:update": "bun scripts/dependencies.update.ts",
     "dev": "vite dev",
     "format": "bunx --bun biome format --fix --max-diagnostics=none",
     "format:check": "bunx --bun biome format --max-diagnostics=none",
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "start": "bun run build && vite preview",
-    "typecheck": "bun --bun scripts/type.check.js --noEmit",
-    "version:new": "bun scripts/version.new.js"
+    "typecheck": "bun --bun scripts/type.check.ts --noEmit",
+    "version:new": "bun scripts/version.new.ts"
   },
   "bun": {
     "overrides": {

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 // Current version from our package.json file.
 
 const scriptDirName = path.dirname(fileURLToPath(import.meta.url));
-const oldVersion = JSON.parse(fs.readFileSync(`${scriptDirName}/../package.json`)).version;
+const oldVersion = (JSON.parse(fs.readFileSync(`${scriptDirName}/../package.json`)) as { version: string }).version;
 
 const oldVersionParts = oldVersion.split('.');
 const oldMajorVersion = oldVersionParts[0];
@@ -30,8 +30,8 @@ const newVersion = `${newMajorVersion}.${newMinorVersion}.${newPatchVersion}`;
 
 // Update our package.json files.
 
-const updatePackageJsonFile = (filePath) => {
-  const contents = JSON.parse(fs.readFileSync(filePath));
+const updatePackageJsonFile = (filePath: string): void => {
+  const contents = JSON.parse(fs.readFileSync(filePath)) as { version: string };
 
   contents.version = newVersion;
 
