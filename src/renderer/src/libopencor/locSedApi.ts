@@ -1,5 +1,16 @@
 import * as vue from 'vue';
 
+import type {
+  File as IWasmFile,
+  SedDocument as IWasmSedDocument,
+  SedInstance as IWasmSedInstance,
+  SedInstanceTask as IWasmSedInstanceTask,
+  SedModel as IWasmSedModel,
+  SedOneStep as IWasmSedOneStep,
+  SedUniformTimeCourse as IWasmSedUniformTimeCourse,
+  SolverCvode as IWasmSolverCvode
+} from '@opencor/libopencor-types';
+
 import {
   _cppLocApi,
   _wasmLocApi,
@@ -8,8 +19,6 @@ import {
   type File,
   fileManager,
   type IIssue,
-  type IWasmFile,
-  type IWasmIssues,
   wasmIssuesToIssues,
   wasmVersion
 } from './locApi';
@@ -22,16 +31,6 @@ class SedIndex {
   constructor(index: number) {
     this._index = index;
   }
-}
-
-export interface IWasmSedDocument {
-  issues: IWasmIssues;
-  modelCount: number;
-  model(index: number): IWasmSedModel;
-  simulationCount: number;
-  simulation(index: number): IWasmSedSimulation;
-  instantiate(): IWasmSedInstance;
-  serialise(): string;
 }
 
 export class SedDocument {
@@ -146,7 +145,7 @@ export class SedDocument {
     if (cppVersion()) {
       type = _cppLocApi.sedDocumentSimulationType(this._cppDocumentId, index);
     } else {
-      switch (this._wasmSedDocument.simulation(index).constructor.name) {
+      switch (this._wasmSedDocument.simulation(index)?.constructor.name) {
         case 'SedAnalysis':
           type = ESedSimulationType.ANALYSIS;
 
@@ -188,18 +187,6 @@ export class SedDocument {
   }
 }
 
-export interface IWasmSedChangeAttribute {
-  componentName: string;
-  variableName: string;
-  newValue: string;
-}
-
-interface IWasmSedModel {
-  file: IWasmFile;
-  addChange(change: IWasmSedChangeAttribute): void;
-  removeAllChanges(): void;
-}
-
 export class SedModel extends SedIndex {
   private _cppDocumentId: number;
   private _wasmSedModel: IWasmSedModel = {} as IWasmSedModel;
@@ -210,14 +197,16 @@ export class SedModel extends SedIndex {
     this._cppDocumentId = cppDocumentId;
 
     if (wasmVersion()) {
-      this._wasmSedModel = wasmSedDocument.model(index);
+      this._wasmSedModel = wasmSedDocument.model(index) as IWasmSedModel;
     }
   }
 
   file(): File | null {
-    return fileManager.file(
-      cppVersion() ? _cppLocApi.sedModelFilePath(this._cppDocumentId, this._index) : this._wasmSedModel.file.path
-    );
+    if (cppVersion()) {
+      return fileManager.file(_cppLocApi.sedModelFilePath(this._cppDocumentId, this._index));
+    }
+
+    return this._wasmSedModel.file?.path != null ? fileManager.file(this._wasmSedModel.file.path) : null;
   }
 
   addChange(componentName: string, variableName: string, newValue: string): void {
@@ -244,10 +233,6 @@ export enum ESedSimulationType {
   UNIFORM_TIME_COURSE
 }
 
-interface IWasmSedSimulation {
-  type: ESedSimulationType;
-}
-
 export class SedSimulation extends SedIndex {
   protected _cppDocumentId: number;
   private _type: ESedSimulationType;
@@ -268,10 +253,6 @@ export class SedAnalysis extends SedSimulation {}
 
 export class SedSteadyState extends SedSimulation {}
 
-interface IWasmSedOneStep extends IWasmSedSimulation {
-  step: number;
-}
-
 export class SedOneStep extends SedSimulation {
   private _wasmSedOneStep: IWasmSedOneStep = {} as IWasmSedOneStep;
 
@@ -286,14 +267,6 @@ export class SedOneStep extends SedSimulation {
   step(): number {
     return cppVersion() ? _cppLocApi.sedOneStepStep(this._cppDocumentId, this._index) : this._wasmSedOneStep.step;
   }
-}
-
-interface IWasmSedUniformTimeCourse extends IWasmSedSimulation {
-  initialTime: number;
-  outputStartTime: number;
-  outputEndTime: number;
-  numberOfSteps: number;
-  odeSolver: unknown;
 }
 
 export class SedUniformTimeCourse extends SedSimulation {
@@ -368,10 +341,6 @@ export class SedUniformTimeCourse extends SedSimulation {
   }
 }
 
-interface IWasmSolverCvode {
-  maximumStep: number;
-}
-
 export class SolverCvode extends SedIndex {
   private _cppDocumentId: number;
   private _wasmSolverCvode: IWasmSolverCvode = {} as IWasmSolverCvode;
@@ -403,13 +372,6 @@ export class SolverCvode extends SedIndex {
   }
 }
 
-interface IWasmSedInstance {
-  hasIssues: boolean;
-  issues: IWasmIssues;
-  task(index: number): IWasmSedInstanceTask;
-  run(): number;
-}
-
 export class SedInstance {
   private _cppInstanceId: number = -1;
   private _wasmSedInstance: IWasmSedInstance = {} as IWasmSedInstance;
@@ -418,7 +380,7 @@ export class SedInstance {
     if (cppVersion()) {
       this._cppInstanceId = _cppLocApi.sedDocumentInstantiate(cppDocumentId);
     } else {
-      this._wasmSedInstance = vue.markRaw(wasmSedDocument.instantiate());
+      this._wasmSedInstance = vue.markRaw(wasmSedDocument.instantiate() as IWasmSedInstance);
     }
   }
 
@@ -441,32 +403,6 @@ export class SedInstance {
   }
 }
 
-interface IWasmSedInstanceTask {
-  voiName: string;
-  voiUnit: string;
-  voiAsArray: Float64Array;
-  stateCount: number;
-  stateName(index: number): string;
-  stateUnit(index: number): string;
-  stateAsArray(index: number): Float64Array;
-  rateCount: number;
-  rateName(index: number): string;
-  rateUnit(index: number): string;
-  rateAsArray(index: number): Float64Array;
-  constantCount: number;
-  constantName(index: number): string;
-  constantUnit(index: number): string;
-  constantAsArray(index: number): Float64Array;
-  computedConstantCount: number;
-  computedConstantName(index: number): string;
-  computedConstantUnit(index: number): string;
-  computedConstantAsArray(index: number): Float64Array;
-  algebraicVariableCount: number;
-  algebraicVariableName(index: number): string;
-  algebraicVariableUnit(index: number): string;
-  algebraicVariableAsArray(index: number): Float64Array;
-}
-
 export class SedInstanceTask extends SedIndex {
   private _cppInstanceId: number;
   private _wasmSedInstanceTask: IWasmSedInstanceTask = {} as IWasmSedInstanceTask;
@@ -477,7 +413,7 @@ export class SedInstanceTask extends SedIndex {
     this._cppInstanceId = cppInstanceId;
 
     if (wasmVersion()) {
-      this._wasmSedInstanceTask = wasmSedInstance.task(index);
+      this._wasmSedInstanceTask = wasmSedInstance.task(index) as IWasmSedInstanceTask;
     }
   }
 
@@ -496,7 +432,7 @@ export class SedInstanceTask extends SedIndex {
   voi(): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskVoi(this._cppInstanceId, this._index)
-      : this._wasmSedInstanceTask.voiAsArray;
+      : this._wasmSedInstanceTask.voi;
   }
 
   stateCount(): number {
@@ -520,7 +456,7 @@ export class SedInstanceTask extends SedIndex {
   state(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskState(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.stateAsArray(index);
+      : this._wasmSedInstanceTask.state(index);
   }
 
   rateCount(): number {
@@ -544,7 +480,7 @@ export class SedInstanceTask extends SedIndex {
   rate(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskRate(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.rateAsArray(index);
+      : this._wasmSedInstanceTask.rate(index);
   }
 
   constantCount(): number {
@@ -568,7 +504,7 @@ export class SedInstanceTask extends SedIndex {
   constant(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskConstant(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.constantAsArray(index);
+      : this._wasmSedInstanceTask.constant(index);
   }
 
   computedConstantCount(): number {
@@ -592,7 +528,7 @@ export class SedInstanceTask extends SedIndex {
   computedConstant(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskComputedConstant(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.computedConstantAsArray(index);
+      : this._wasmSedInstanceTask.computedConstant(index);
   }
 
   algebraicVariableCount(): number {
@@ -616,6 +552,6 @@ export class SedInstanceTask extends SedIndex {
   algebraicVariable(index: number): Float64Array {
     return cppVersion()
       ? _cppLocApi.sedInstanceTaskAlgebraicVariable(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.algebraicVariableAsArray(index);
+      : this._wasmSedInstanceTask.algebraicVariable(index);
   }
 }

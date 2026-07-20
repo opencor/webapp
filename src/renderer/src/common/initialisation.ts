@@ -5,6 +5,9 @@ import * as dependencies from './dependencies';
 import { electronApi } from './electronApi';
 
 import * as locApi from '../libopencor/locApi';
+import type { MainModule as IWasmLocApi } from '@opencor/libopencor-types';
+
+type WasmFactory = (options?: unknown) => Promise<IWasmLocApi>;
 
 // Our different external dependencies.
 
@@ -72,7 +75,7 @@ export const initialiseLocApi = async (): Promise<void> => {
             `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.js`
           )
         )
-      ).default;
+      ).default as WasmFactory;
 
       ++crtNbOfSteps.value;
 

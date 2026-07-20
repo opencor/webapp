@@ -1,27 +1,19 @@
 import * as vue from 'vue';
 
+import type { File as IWasmFile, FileManager as IWasmFileManagerInstance } from '@opencor/libopencor-types';
+
 import {
   _cppLocApi,
   _wasmLocApi,
   cppVersion,
   type IIssue,
   type IUiJson,
-  type IWasmIssues,
   normaliseUiJson,
   SedDocument,
   wasmIssuesToIssues
 } from './locApi';
 
 // FileManager API.
-
-interface IWasmFileManagerInstance {
-  files: Iterable<IWasmFile>;
-  unmanage(file: IWasmFile): void;
-}
-
-export interface IWasmFileManager {
-  instance(): IWasmFileManagerInstance;
-}
 
 class FileManager {
   protected static _instance: FileManager | null = null;
@@ -37,7 +29,7 @@ class FileManager {
     // Have a private constructor so that we cannot instantiate this class directly.
   }
 
-  private fileManager() {
+  private fileManager(): IWasmFileManagerInstance {
     this._fileManager ??= _wasmLocApi.FileManager.instance();
 
     return this._fileManager;
@@ -58,6 +50,10 @@ class FileManager {
     const files = fileManager.files;
 
     for (const file of files) {
+      if (!file) {
+        continue;
+      }
+
       if (file.path === path) {
         return new File(path, file.contents());
       }
@@ -74,6 +70,10 @@ class FileManager {
       const files = fileManager.files;
 
       for (const file of files) {
+        if (!file) {
+          continue;
+        }
+
         if (file.path === path) {
           fileManager.unmanage(file);
 
@@ -94,15 +94,6 @@ export enum EFileType {
   SEDML_FILE,
   COMBINE_ARCHIVE,
   IRRETRIEVABLE_FILE
-}
-
-export interface IWasmFile {
-  type: { value: EFileType };
-  issues: IWasmIssues;
-  path: string;
-  contents(): Uint8Array;
-  setContents(contents: Uint8Array): void;
-  childFileFromFileName(fileName: string): File | null;
 }
 
 export class File {

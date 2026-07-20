@@ -57,7 +57,7 @@ napi_value issues(const Napi::CallbackInfo &pInfo, libOpenCOR::IssuePtrs pIssues
     return res;
 }
 
-napi_value doublesToNapiFloat64Array(const Napi::Env &pEnv, const std::vector<double> &pDoubles)
+napi_value doublesToNapiFloat64Array(const Napi::Env &pEnv, std::span<const double> pDoubles)
 {
     const size_t byteLength = pDoubles.size() * sizeof(double);
     auto buffer = Napi::ArrayBuffer::New(pEnv, byteLength);
