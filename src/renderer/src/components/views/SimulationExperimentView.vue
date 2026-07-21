@@ -341,16 +341,6 @@ const populateParameters = (
   parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
 };
 
-// Small helper to yield to the UI thread.
-
-const yieldToUi = (): Promise<void> => {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      setTimeout(resolve, 0);
-    });
-  });
-};
-
 // Event handlers.
 
 const onRun = async (): Promise<void> => {
@@ -391,8 +381,6 @@ const onRun = async (): Promise<void> => {
         consoleElement.scrollTop = consoleElement.scrollHeight;
       }
     });
-
-    await yieldToUi();
 
     updatePlot();
 
