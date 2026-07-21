@@ -398,8 +398,44 @@ export class SedInstance {
     return new SedInstanceTask(this._cppInstanceId, index, this._wasmSedInstance);
   }
 
-  run(): number {
-    return cppVersion() ? _cppLocApi.sedInstanceRun(this._cppInstanceId) : this._wasmSedInstance.run();
+  isRunning(): boolean {
+    return cppVersion() ? _cppLocApi.sedInstanceIsRunning(this._cppInstanceId) : this._wasmSedInstance.isRunning;
+  }
+
+  progress(): number {
+    return cppVersion() ? _cppLocApi.sedInstanceProgress(this._cppInstanceId) : this._wasmSedInstance.progress;
+  }
+
+  startRun(): boolean {
+    return cppVersion() ? _cppLocApi.sedInstanceStartRun(this._cppInstanceId) : this._wasmSedInstance.startRun();
+  }
+
+  waitForRun(): number {
+    return cppVersion() ? _cppLocApi.sedInstanceWaitForRun(this._cppInstanceId) : this._wasmSedInstance.waitForRun();
+  }
+
+  pauseRun(): void {
+    if (cppVersion()) {
+      _cppLocApi.sedInstancePauseRun(this._cppInstanceId);
+    } else {
+      this._wasmSedInstance.pauseRun();
+    }
+  }
+
+  resumeRun(): void {
+    if (cppVersion()) {
+      _cppLocApi.sedInstanceResumeRun(this._cppInstanceId);
+    } else {
+      this._wasmSedInstance.resumeRun();
+    }
+  }
+
+  stopRun(): void {
+    if (cppVersion()) {
+      _cppLocApi.sedInstanceStopRun(this._cppInstanceId);
+    } else {
+      this._wasmSedInstance.stopRun();
+    }
   }
 }
 

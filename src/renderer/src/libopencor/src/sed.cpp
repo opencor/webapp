@@ -224,11 +224,53 @@ napi_value sedInstanceIssues(const Napi::CallbackInfo &pInfo)
     return issues(pInfo, sedInstance->issues());
 }
 
-napi_value sedInstanceRun(const Napi::CallbackInfo &pInfo)
+napi_value sedInstanceIsRunning(const Napi::CallbackInfo &pInfo)
 {
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
 
-    return Napi::Number::New(pInfo.Env(), sedInstance->run());
+    return Napi::Boolean::New(pInfo.Env(), sedInstance->isRunning());
+}
+
+napi_value sedInstanceProgress(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+
+    return Napi::Number::New(pInfo.Env(), sedInstance->progress());
+}
+
+napi_value sedInstanceStartRun(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+
+    return Napi::Boolean::New(pInfo.Env(), sedInstance->startRun());
+}
+
+napi_value sedInstanceWaitForRun(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+
+    return Napi::Number::New(pInfo.Env(), sedInstance->waitForRun());
+}
+
+void sedInstancePauseRun(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+
+    sedInstance->pauseRun();
+}
+
+void sedInstanceResumeRun(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+
+    sedInstance->resumeRun();
+}
+
+void sedInstanceStopRun(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
+
+    sedInstance->stopRun();
 }
 
 // SedInstanceTask API.

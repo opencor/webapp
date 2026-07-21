@@ -69,29 +69,15 @@ export const initialiseLocApi = async (): Promise<void> => {
     const libopencorVersion = __LIBOPENCOR_VERSION__;
 
     try {
-      const libOpenCOR = (
-        await import(
-          /* @vite-ignore */ common.corsProxyUrl(
-            `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.js`
-          )
-        )
-      ).default as WasmFactory;
+      // Use a same-origin path (proxied to opencor.ws) since Emscripten's pthread requires same-origin classic workers
+      // (check src/renderer/vite.config.ts for the proxy setup).
+
+      const libOpenCOR = (await import(/* @vite-ignore */ `/libopencor-wasm/${libopencorVersion}/libopencor.js`))
+        .default as WasmFactory;
 
       ++crtNbOfSteps.value;
 
-      locApi.setWasmLocApi(
-        await libOpenCOR({
-          locateFile: (filename: string) => {
-            if (filename.endsWith('.wasm')) {
-              return common.corsProxyUrl(
-                `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.wasm`
-              );
-            }
-
-            return filename;
-          }
-        })
-      );
+      locApi.setWasmLocApi(await libOpenCOR());
 
       ++crtNbOfSteps.value;
     } catch (error: unknown) {

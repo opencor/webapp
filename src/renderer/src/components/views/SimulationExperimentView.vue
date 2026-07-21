@@ -257,6 +257,7 @@ import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../
 
 import * as colors from '../../common/colors';
 import * as common from '../../common/common';
+import { VERY_SHORT_DELAY } from '../../common/constants';
 import * as dependencies from '../../common/dependencies';
 import * as vueCommon from '../../common/vueCommon';
 import * as externalData from '../../common/externalData';
@@ -341,16 +342,36 @@ const populateParameters = (
   parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
 };
 
+// A helper function to wait while a simulation instance is running, yielding to the UI to keep it responsive.
+
+const waitWhileRunning = (instance: locSedApi.SedInstance): Promise<void> => {
+  return new Promise<void>((resolve) => {
+    const poll = (): void => {
+      if (instance.isRunning()) {
+        setTimeout(poll, VERY_SHORT_DELAY);
+      } else {
+        resolve();
+      }
+    };
+
+    setTimeout(poll, 0);
+  });
+};
+
 // Event handlers.
 
 const onRun = async (): Promise<void> => {
   // Run either the standard or interactive simulation.
 
   if (!interactiveModeEnabled.value) {
-    // Run the standard simulation, i.e. run the instance, output the simulation time to the console, and update the
-    // plot. We yield to the UI thread between the simulation run and the plot update to keep the UI responsive.
+    // Start the standard simulation in a background thread and yield to the UI to keep it responsive while the
+    // simulation runs, then retrieve the results.
 
-    const simulationTime = standardInstance.run();
+    standardInstance.startRun();
+
+    await waitWhileRunning(standardInstance);
+
+    const simulationTime = standardInstance.waitForRun();
 
     if (standardInstance.hasIssues()) {
       standardInstance.issues().forEach((issue: locApi.IIssue) => {
@@ -1310,7 +1331,7 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
 
 // Function to update our interactive simulation.
 
-const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
+const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promise<void> => {
   // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
   if (interactiveUiJsonIssues.value.length || (!interactiveLiveUpdatesEnabled.value && !forceUpdate)) {
@@ -1383,9 +1404,11 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Run the instance.
+  // Start the simulation in a background thread and yield to the UI to keep it responsive while the simulation runs.
 
-  interactiveInstance.run();
+  interactiveInstance.startRun();
+
+  await waitWhileRunning(interactiveInstance);
 
   if (interactiveInstance.hasIssues()) {
     interactiveInstanceIssues.value = interactiveInstance.issues();

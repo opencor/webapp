@@ -63,7 +63,13 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
 
     pExports.Set(Napi::String::New(pEnv, "sedInstanceHasIssues"), Napi::Function::New(pEnv, sedInstanceHasIssues));
     pExports.Set(Napi::String::New(pEnv, "sedInstanceIssues"), Napi::Function::New(pEnv, sedInstanceIssues));
-    pExports.Set(Napi::String::New(pEnv, "sedInstanceRun"), Napi::Function::New(pEnv, sedInstanceRun));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceIsRunning"), Napi::Function::New(pEnv, sedInstanceIsRunning));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceProgress"), Napi::Function::New(pEnv, sedInstanceProgress));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceStartRun"), Napi::Function::New(pEnv, sedInstanceStartRun));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceWaitForRun"), Napi::Function::New(pEnv, sedInstanceWaitForRun));
+    pExports.Set(Napi::String::New(pEnv, "sedInstancePauseRun"), Napi::Function::New(pEnv, sedInstancePauseRun));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceResumeRun"), Napi::Function::New(pEnv, sedInstanceResumeRun));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceStopRun"), Napi::Function::New(pEnv, sedInstanceStopRun));
 
     // SedInstanceTask API.
 
