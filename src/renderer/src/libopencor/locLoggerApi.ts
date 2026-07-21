@@ -1,3 +1,5 @@
+import type { IssuePtrs as IWasmIssues } from '@opencor/libopencor-types';
+
 // Logger API.
 
 export enum EIssueType {
@@ -11,17 +13,14 @@ export interface IIssue {
   description: string;
 }
 
-interface IWasmIssue {
-  type: { value: EIssueType };
-  description: string;
-}
-
-export type IWasmIssues = Iterable<IWasmIssue>;
-
 export const wasmIssuesToIssues = (wasmIssues: IWasmIssues): IIssue[] => {
   const res: IIssue[] = [];
 
   for (const wasmIssue of wasmIssues) {
+    if (!wasmIssue) {
+      continue;
+    }
+
     res.push({
       type: wasmIssue.type.value,
       description: wasmIssue.description

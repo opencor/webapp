@@ -1,6 +1,7 @@
-import type { EFileType, IWasmFile, IWasmFileManager } from './locFileApi';
+import type { MainModule as IWasmLocApi } from '@opencor/libopencor-types';
+
+import type { EFileType } from './locFileApi';
 import type { IIssue } from './locLoggerApi';
-import type { IWasmSedChangeAttribute, IWasmSedDocument } from './locSedApi';
 
 export interface ICppLocApi {
   // FileManager API.
@@ -95,35 +96,6 @@ export interface ICppLocApi {
   version: () => string;
 }
 
-export interface IWasmLocApi {
-  // Memory management.
-
-  HEAPU8: Uint8Array;
-  _malloc: (size: number) => number;
-  _free: (ptr: number) => void;
-
-  // FileManager API.
-
-  FileManager: IWasmFileManager;
-
-  // File API.
-
-  File: new (
-    path: string
-  ) => IWasmFile;
-
-  // SedDocument API
-
-  SedDocument: new (
-    wasmFile: IWasmFile
-  ) => IWasmSedDocument;
-  SedChangeAttribute: new (componentName: string, variableName: string, newValue: string) => IWasmSedChangeAttribute;
-
-  // Version API.
-
-  versionString: () => string;
-}
-
 // The C++ or WASM version of libOpenCOR that is to be used.
 
 export let _cppLocApi = {} as ICppLocApi;
@@ -139,11 +111,11 @@ export const setWasmLocApi = (api: IWasmLocApi): void => {
 
 // Logger API.
 
-export { EIssueType, type IIssue, type IWasmIssues, wasmIssuesToIssues } from './locLoggerApi';
+export { EIssueType, type IIssue, wasmIssuesToIssues } from './locLoggerApi';
 
 // File API.
 
-export { EFileType, File, fileManager, type IWasmFile } from './locFileApi';
+export { EFileType, File, fileManager } from './locFileApi';
 
 // SED-ML API.
 
