@@ -57,6 +57,8 @@ interface IPlotlyTraceState {
 export interface IGraphPanelData {
   xAxisTitle?: string;
   yAxisTitle?: string;
+  xAxisRange?: [number, number];
+  yAxisRange?: [number, number];
   traces: IGraphPanelPlotTrace[];
 }
 
@@ -513,6 +515,7 @@ const themeData = (): IThemeData => {
 
 interface IAxesDataAxis {
   automargin: boolean;
+  range?: [number, number];
   tickangle: number;
   tickfont: {
     size: number;
@@ -762,34 +765,43 @@ const updatePlot = (): void => {
     };
   }
 
+  // Incorporate any axis range constraints.
+
+  const layout = {
+    // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+
+    ...themeData(),
+    margin: {
+      t: 0,
+      l: resolvedMargin(props.margins?.left, margins.value.left),
+      b: props.data.xAxisTitle ? 35 : 20,
+      r: resolvedMargin(props.margins?.right, margins.value.right),
+      pad: 0
+    },
+    showlegend: props.showLegend,
+    ...axesData()
+  };
+
+  if (props.data.xAxisRange) {
+    layout.xaxis.range = props.data.xAxisRange;
+  }
+
+  if (props.data.yAxisRange) {
+    layout.yaxis.range = props.data.yAxisRange;
+  }
+
+  // Update the plot.
+
   dependencies._plotlyJs
-    .react(
-      mainDivRef.value,
-      traces,
-      {
-        // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+    .react(mainDivRef.value, traces, layout, {
+      // Note: the various keys can be found at https://plotly.com/javascript/configuration-options/.
 
-        ...themeData(),
-        margin: {
-          t: 0,
-          l: resolvedMargin(props.margins?.left, margins.value.left),
-          b: props.data.xAxisTitle ? 35 : 20,
-          r: resolvedMargin(props.margins?.right, margins.value.right),
-          pad: 0
-        },
-        showlegend: props.showLegend,
-        ...axesData()
-      },
-      {
-        // Note: the various keys can be found at https://plotly.com/javascript/configuration-options/.
-
-        responsive: true,
-        displayModeBar: false,
-        doubleClickDelay: 1000,
-        scrollZoom: true,
-        showTips: false
-      }
-    )
+      responsive: true,
+      displayModeBar: false,
+      doubleClickDelay: 1000,
+      scrollZoom: true,
+      showTips: false
+    })
     .then(() => {
       plotIsReady = true;
 

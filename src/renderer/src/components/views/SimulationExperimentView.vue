@@ -377,13 +377,38 @@ const onRun = async (): Promise<void> => {
   // Run either the standard or interactive simulation.
 
   if (!interactiveModeEnabled.value) {
-    // Start the standard simulation in a background thread and yield to the UI to keep it responsive while the
-    // simulation runs, then retrieve the results.
+    // Reset the plotting area before running the simulation.
+
+    standardData.value = NoGraphPanelData;
+
+    // Start the standard simulation.
 
     standardInstance.startRun();
 
+    // Wait for the simulation to finish, updating the plotting area and progress bar during the simulation.
+
+    const numberOfSteps = standardUniformTimeCourse.numberOfSteps();
+    let lastPlottingAreaUpdateTime = Date.now();
+
     await waitWhileRunning(standardInstance, (progress: number) => {
+      // Update the progress bar.
+
       standardProgress.value = progress;
+
+      // Update the plotting area only if the progress has changed and a certain amount of time has passed since the
+      // last update (to avoid excessive updates).
+
+      if (progress === 0) {
+        return;
+      }
+
+      const now = Date.now();
+
+      if (now - lastPlottingAreaUpdateTime >= MEDIUM_DELAY) {
+        updatePlot(Math.round(0.01 * progress * numberOfSteps) + 1);
+
+        lastPlottingAreaUpdateTime = now;
+      }
     });
 
     const simulationTime = standardInstance.waitForRun();
@@ -539,23 +564,43 @@ const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
     : NoSimulationDataInfo;
 });
 
-const updatePlot = () => {
+const updatePlot = (dataSize: number = 0) => {
   if (!standardInstanceTask) {
     standardData.value = NoGraphPanelData;
 
     return;
   }
 
+  // Specify the range of the X and Y axes if they are the variable of integration. Otherwise, leave the range undefined
+  // so that Plotly can automatically determine the range based on the data.
+
+  const xAxisRange: [number, number] | undefined =
+    xInfo.value.type === locCommon.ESimulationDataInfoType.VOI
+      ? [standardUniformTimeCourse.outputStartTime(), standardUniformTimeCourse.outputEndTime()]
+      : undefined;
+
+  const yAxisRange: [number, number] | undefined =
+    yInfo.value.type === locCommon.ESimulationDataInfoType.VOI
+      ? [standardUniformTimeCourse.outputStartTime(), standardUniformTimeCourse.outputEndTime()]
+      : undefined;
+
+  // Retrieve the data for the selected X and Y parameters and update the plot.
+
+  const xData = locCommon.simulationDataValue(standardInstanceTask, xInfo.value).data;
+  const yData = locCommon.simulationDataValue(standardInstanceTask, yInfo.value).data;
+
   standardData.value = {
     xAxisTitle: standardXParameter.value,
     yAxisTitle: standardYParameter.value,
+    xAxisRange,
+    yAxisRange,
     traces: [
       {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
         xValue: standardXParameter.value,
-        x: new Float64Array(locCommon.simulationDataValue(standardInstanceTask, xInfo.value).data),
+        x: dataSize > 0 ? new Float64Array(xData.slice(0, dataSize)) : new Float64Array(xData),
         yValue: standardYParameter.value,
-        y: new Float64Array(locCommon.simulationDataValue(standardInstanceTask, yInfo.value).data),
+        y: dataSize > 0 ? new Float64Array(yData.slice(0, dataSize)) : new Float64Array(yData),
         color: colors.DEFAULT_COLOR
       }
     ]
