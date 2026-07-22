@@ -379,7 +379,11 @@ const onRun = async (): Promise<void> => {
   if (!interactiveModeEnabled.value) {
     // Reset the plotting area before running the simulation.
 
-    standardData.value = NoGraphPanelData;
+    standardData.value = {
+      xAxisTitle: standardXParameter.value,
+      yAxisTitle: standardYParameter.value,
+      traces: []
+    };
 
     // Start the standard simulation.
 
@@ -513,11 +517,6 @@ const updateInteractiveUi = () => {
 const instanceIssues = vue.ref<locApi.IIssue[]>([]);
 let hasInstanceIssues = false;
 
-const NoGraphPanelData = {
-  xAxisTitle: undefined,
-  yAxisTitle: undefined,
-  traces: []
-};
 const NoSimulationDataInfo: locCommon.ISimulationDataInfo = {
   type: locCommon.ESimulationDataInfoType.UNKNOWN,
   index: -1
@@ -541,7 +540,11 @@ const standardInstanceTask = hasInstanceIssues ? null : standardInstance.task(0)
 const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask ? standardInstanceTask.voiName() : '');
 const standardYParameter = vue.ref(standardInstanceTask ? standardInstanceTask.stateName(0) : '');
-const standardData = vue.ref<IGraphPanelData>(NoGraphPanelData);
+const standardData = vue.ref<IGraphPanelData>({
+  xAxisTitle: standardInstanceTask ? standardXParameter.value : undefined,
+  yAxisTitle: standardInstanceTask ? standardYParameter.value : undefined,
+  traces: []
+});
 const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`);
 const standardProgress = vue.ref<number>(0);
 
@@ -566,7 +569,11 @@ const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
 
 const updatePlot = (dataSize: number = 0) => {
   if (!standardInstanceTask) {
-    standardData.value = NoGraphPanelData;
+    standardData.value = {
+      xAxisTitle: undefined,
+      yAxisTitle: undefined,
+      traces: []
+    };
 
     return;
   }
