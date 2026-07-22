@@ -40,8 +40,8 @@
         </div>
       </template>
     </Toolbar>
-    <div v-if="!interactiveModeEnabled" class="grow h-full min-h-0">
-      <Splitter class="border-none! h-full m-0" layout="vertical">
+    <div v-if="!interactiveModeEnabled" class="grow flex flex-col min-h-0">
+      <Splitter class="border-none! flex-1 m-0 min-h-0" layout="vertical">
         <SplitterPanel :size="simulationOnly ? 100 : 89">
           <Splitter>
             <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
@@ -97,6 +97,7 @@
           <div ref="editorRef" class="h-full console overflow-y-auto px-2 py-1 leading-[1.42] text-[13px]" aria-readonly="true" v-html="standardConsoleContents"></div>
         </SplitterPanel>
       </Splitter>
+      <ProgressBar class="h-0.75!" :showValue="false" :value="standardProgress" />
     </div>
     <div v-else class="grow min-h-0">
       <div class="flex h-full">
@@ -257,7 +258,7 @@ import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../
 
 import * as colors from '../../common/colors';
 import * as common from '../../common/common';
-import { VERY_SHORT_DELAY } from '../../common/constants';
+import { MEDIUM_DELAY, VERY_SHORT_DELAY } from '../../common/constants';
 import * as dependencies from '../../common/dependencies';
 import * as vueCommon from '../../common/vueCommon';
 import * as externalData from '../../common/externalData';
@@ -344,12 +345,24 @@ const populateParameters = (
 
 // A helper function to wait while a simulation instance is running, yielding to the UI to keep it responsive.
 
-const waitWhileRunning = (instance: locSedApi.SedInstance): Promise<void> => {
+const waitWhileRunning = (instance: locSedApi.SedInstance, onProgress?: (progress: number) => void): Promise<void> => {
   return new Promise<void>((resolve) => {
     const poll = (): void => {
       if (instance.isRunning()) {
+        onProgress?.(100 * instance.progress());
+
         setTimeout(poll, VERY_SHORT_DELAY);
       } else {
+        if (onProgress) {
+          onProgress(100);
+
+          // Reset the progress bar after a short delay.
+
+          setTimeout(() => {
+            onProgress?.(0);
+          }, MEDIUM_DELAY);
+        }
+
         resolve();
       }
     };
@@ -369,7 +382,9 @@ const onRun = async (): Promise<void> => {
 
     standardInstance.startRun();
 
-    await waitWhileRunning(standardInstance);
+    await waitWhileRunning(standardInstance, (progress: number) => {
+      standardProgress.value = progress;
+    });
 
     const simulationTime = standardInstance.waitForRun();
 
@@ -503,6 +518,7 @@ const standardXParameter = vue.ref(standardInstanceTask ? standardInstanceTask.v
 const standardYParameter = vue.ref(standardInstanceTask ? standardInstanceTask.stateName(0) : '');
 const standardData = vue.ref<IGraphPanelData>(NoGraphPanelData);
 const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`);
+const standardProgress = vue.ref<number>(0);
 
 if (standardInstanceTask) {
   populateParameters(standardParameters, standardInstanceTask);
@@ -2061,6 +2077,10 @@ if (common.isDesktop()) {
   border: none;
   border-radius: 0;
   border-bottom: 1px solid var(--p-content-border-color);
+}
+
+:deep(.p-progressbar-value) {
+  transition: none !important;
 }
 
 .run-action-button {
