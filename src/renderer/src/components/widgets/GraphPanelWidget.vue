@@ -805,9 +805,17 @@ const updatePlot = (): void => {
     .then(() => {
       plotIsReady = true;
 
-      // Force Plotly to recalculate the layout after each react() call to keep the graph aligned with sibling panels.
+      // Ensure the plot is properly sized.
+      // Note: we skip the resize if the container dimensions are unchanged since the last measurement, avoiding
+      //       unnecessary layout recalculations during rapid updates (e.g., during a standard mode simulation).
 
-      queueResize();
+      if (
+        !mainDivRef.value ||
+        mainDivRef.value.clientWidth !== trackedWidth ||
+        mainDivRef.value.clientHeight !== trackedHeight
+      ) {
+        queueResize();
+      }
     });
 };
 
