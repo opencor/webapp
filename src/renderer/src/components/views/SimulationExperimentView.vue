@@ -553,9 +553,9 @@ const updatePlot = () => {
       {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
         xValue: standardXParameter.value,
-        x: locCommon.simulationDataValue(standardInstanceTask, xInfo.value).data,
+        x: new Float64Array(locCommon.simulationDataValue(standardInstanceTask, xInfo.value).data),
         yValue: standardYParameter.value,
-        y: locCommon.simulationDataValue(standardInstanceTask, yInfo.value).data,
+        y: new Float64Array(locCommon.simulationDataValue(standardInstanceTask, yInfo.value).data),
         color: colors.DEFAULT_COLOR
       }
     ]
