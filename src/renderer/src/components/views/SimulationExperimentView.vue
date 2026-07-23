@@ -780,6 +780,7 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
   }
 ]);
 let interactiveTrackedRunId = 0;
+let interactiveSimulationGeneration = 0;
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
 const interactiveRunColorPopoverRef = vue.ref<InstanceType<typeof Popover> | undefined>();
 const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
@@ -1479,12 +1480,35 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
   return res;
 };
 
+// A helper function to reinstantiate our interactive instance.
+
+const reinstantiateInteractiveInstance = (): void => {
+  interactiveInstance = interactiveDocument.instantiate();
+  interactiveInstanceTask = interactiveInstance.task(0);
+};
+
 // Function to update our interactive simulation.
 
 const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promise<void> => {
   // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
   if (interactiveUiJsonIssues.value.length || (!interactiveLiveUpdatesEnabled.value && !forceUpdate)) {
+    return;
+  }
+
+  // Increment the simulation generation so that we can cancel any previous simulation runs that are still in progress.
+
+  const currentSimulationGeneration = ++interactiveSimulationGeneration;
+
+  // Stop the current simulation if it is still running or paused.
+
+  if (interactiveInstance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+    interactiveInstance.stopRun();
+  }
+
+  // Check if we have been superseded by a newer call.
+
+  if (currentSimulationGeneration !== interactiveSimulationGeneration) {
     return;
   }
 
@@ -1554,11 +1578,31 @@ const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promis
     return;
   }
 
+  // Check if we have been superseded by a newer call while we were setting up the model.
+
+  if (currentSimulationGeneration !== interactiveSimulationGeneration) {
+    return;
+  }
+
+  // Create a fresh instance for the new simulation run.
+  // Note: this ensures that the instance picks up the latest model changes and avoids reusing an instance which
+  //       internal state may have been corrupted by a previous cancellation.
+
+  reinstantiateInteractiveInstance();
+
   // Start the simulation in a background thread and yield to the UI to keep it responsive while the simulation runs.
 
   interactiveInstance.startRun();
 
   await waitWhileRunning(interactiveInstance);
+
+  // Check if we have been superseded by a newer call while the simulation was running.
+
+  if (currentSimulationGeneration !== interactiveSimulationGeneration) {
+    return;
+  }
+
+  // Make sure that we haven't come across any issues during the simulation.
 
   if (interactiveInstance.hasIssues()) {
     interactiveInstanceIssues.value = interactiveInstance.issues();
@@ -2056,8 +2100,7 @@ const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): v
   // Reinstantiate our instance in case we modified CVODE's maximum step.
 
   if (interactiveCvode.maximumStep() !== oldCvodeMaximumStep) {
-    interactiveInstance = interactiveDocument.instantiate(); // So that we can run the simulation again.
-    interactiveInstanceTask = interactiveInstance.task(0); // So that we can retrieve our "new" simulation results.
+    reinstantiateInteractiveInstance();
   }
 
   // Update our UI.
