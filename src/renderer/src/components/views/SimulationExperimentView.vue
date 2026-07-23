@@ -1768,7 +1768,7 @@ const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promis
       continue;
     }
 
-    let xMain: math.FloatArray = new Float64Array(0);
+    let xMain: math.FloatArray = common.EMPTY_FLOAT64_ARRAY;
 
     try {
       xMain = evaluateExpression(plot.xValue, modelScope);
@@ -1779,7 +1779,7 @@ const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promis
       });
     }
 
-    let yMain: math.FloatArray = new Float64Array(0);
+    let yMain: math.FloatArray = common.EMPTY_FLOAT64_ARRAY;
 
     try {
       yMain = evaluateExpression(plot.yValue, modelScope);
@@ -1815,7 +1815,7 @@ const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promis
         continue;
       }
 
-      let xAdditional: math.FloatArray = new Float64Array(0);
+      let xAdditional: math.FloatArray = common.EMPTY_FLOAT64_ARRAY;
 
       try {
         xAdditional = evaluateExpression(additionalTrace.xValue, modelScope);
@@ -1826,7 +1826,7 @@ const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promis
         });
       }
 
-      let yAdditional: math.FloatArray = new Float64Array(0);
+      let yAdditional: math.FloatArray = common.EMPTY_FLOAT64_ARRAY;
 
       try {
         yAdditional = evaluateExpression(additionalTrace.yValue, modelScope);
