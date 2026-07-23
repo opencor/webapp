@@ -351,11 +351,21 @@ const populateParameters = (
 };
 
 // A helper function to wait while a simulation instance is running, yielding to the UI to keep it responsive.
+// Note: we return a promise (that resolves when the simulation is idle) and a cancel function to clear any pending
+//       progress reset timer (e.g., on component unmount).
 
-const waitWhileRunning = (instance: locSedApi.SedInstance, onProgress?: (progress: number) => void): Promise<void> => {
+const waitWhileRunning = (
+  instance: locSedApi.SedInstance,
+  onProgress?: (progress: number) => void
+): { promise: Promise<void>; cancel: () => void } => {
   let lastStatus: number | undefined;
+  let progressResetTimer: ReturnType<typeof setTimeout> | undefined;
 
-  return new Promise<void>((resolve) => {
+  const cancel = (): void => {
+    clearTimeout(progressResetTimer);
+  };
+
+  const promise = new Promise<void>((resolve) => {
     const poll = (): void => {
       const status = instance.status();
 
@@ -385,7 +395,7 @@ const waitWhileRunning = (instance: locSedApi.SedInstance, onProgress?: (progres
 
             // Reset the progress bar after a short delay.
 
-            setTimeout(() => {
+            progressResetTimer = setTimeout(() => {
               onProgress?.(0);
             }, MEDIUM_DELAY);
           }
@@ -396,6 +406,8 @@ const waitWhileRunning = (instance: locSedApi.SedInstance, onProgress?: (progres
 
     setTimeout(poll, 0);
   });
+
+  return { promise, cancel };
 };
 
 // Event handlers.
@@ -448,7 +460,7 @@ const onRunPause = async (): Promise<void> => {
         const numberOfSteps = standardUniformTimeCourse.numberOfSteps();
         let lastPlottingAreaUpdateTime = Date.now();
 
-        await waitWhileRunning(standardInstance, (progress: number) => {
+        const { promise: runPromise, cancel: runCancel } = waitWhileRunning(standardInstance, (progress: number) => {
           // Update the progress bar.
 
           standardProgress.value = progress;
@@ -468,6 +480,15 @@ const onRunPause = async (): Promise<void> => {
             lastPlottingAreaUpdateTime = now;
           }
         });
+
+        // We store the cancel function in a variable so that we can call it on component unmount to avoid writing to
+        // stale references after the component is torn down.
+
+        standardProgressResetCancel = runCancel;
+
+        await runPromise;
+
+        standardProgressResetCancel = undefined;
 
         // Update the console with any issues that occurred during the simulation, or display the simulation time if it
         // completed successfully.
@@ -498,7 +519,9 @@ const onRunPause = async (): Promise<void> => {
           if (standardRunAborted) {
             // Reset the progress bar after a short delay (mimicking the normal end of a simulation).
 
-            setTimeout(() => {
+            standardAbortProgressTimer = setTimeout(() => {
+              standardAbortProgressTimer = undefined;
+
               standardProgress.value = 0;
             }, MEDIUM_DELAY);
           }
@@ -630,6 +653,8 @@ const standardSimulationSettingsDisabled = vue.computed<boolean>(() => {
   return standardSimulationStatus.value !== locSedApi.ESedInstanceStatus.IDLE;
 });
 let standardRunAborted = false;
+let standardProgressResetCancel: (() => void) | undefined;
+let standardAbortProgressTimer: ReturnType<typeof setTimeout> | undefined;
 
 if (standardInstanceTask) {
   populateParameters(standardParameters, standardInstanceTask);
@@ -1595,7 +1620,7 @@ const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promis
 
   interactiveInstance.startRun();
 
-  await waitWhileRunning(interactiveInstance);
+  await waitWhileRunning(interactiveInstance).promise;
 
   // Check if we have been superseded by a newer call while the simulation was running.
 
@@ -2151,6 +2176,14 @@ vue.onMounted(() => {
       }
     }
   );
+});
+
+// Cancel any pending progress reset timers to avoid writing to stale refs after the component is torn down.
+
+vue.onUnmounted(() => {
+  standardProgressResetCancel?.();
+
+  clearTimeout(standardAbortProgressTimer);
 });
 
 // Keyboard shortcuts.
