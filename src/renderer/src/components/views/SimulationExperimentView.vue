@@ -531,7 +531,8 @@ const onStop = (): void => {
 
   standardInstance.stopRun();
 
-  standardSimulationStatus.value = locSedApi.ESedInstanceStatus.IDLE;
+  // Note: the simulation status will be updated by the next poll cycle of waitWhileRunning(), so we don't set it here
+  //       to avoid a race window where the user could re-trigger a run before the C++ thread has fully stopped.
 };
 
 const onDownloadCombineArchive = (): void => {
