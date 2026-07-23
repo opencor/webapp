@@ -26,7 +26,7 @@ export default vite.defineConfig({
     target: 'esnext'
   },
   define: {
-    __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion)
+    __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`/libopencor/downloads/wasm/${libopencorVersion}`)
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
@@ -64,6 +64,22 @@ export default vite.defineConfig({
   server: {
     fs: {
       allow: [fileURLToPath(new URL('../..', import.meta.url))]
+    },
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp'
+    },
+    proxy: {
+      // See src/renderer/src/common/initialisation.ts for the rationale behind this proxy.
+      '/libopencor/downloads/wasm': {
+        target: 'https://opencor.ws',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes) => {
+            proxyRes.headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
+          });
+        }
+      }
     }
   }
 });

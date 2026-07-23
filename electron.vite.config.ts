@@ -31,7 +31,7 @@ export default electronVite.defineConfig({
       target: 'esnext'
     },
     define: {
-      __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion)
+      __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`/libopencor/downloads/wasm/${libopencorVersion}`)
     },
     envDir: path.join(import.meta.dirname, 'src/renderer'),
     plugins: [
@@ -70,6 +70,22 @@ export default electronVite.defineConfig({
     server: {
       fs: {
         allow: [path.join(import.meta.dirname, '..')]
+      },
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp'
+      },
+      proxy: {
+        // See src/renderer/src/common/initialisation.ts for the rationale behind this proxy.
+        '/libopencor/downloads/wasm': {
+          target: 'https://opencor.ws',
+          changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('proxyRes', (proxyRes) => {
+              proxyRes.headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
+            });
+          }
+        }
       }
     }
   }

@@ -66,32 +66,17 @@ export const initialiseLocApi = async (): Promise<void> => {
   } else {
     // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
 
-    const libopencorVersion = __LIBOPENCOR_VERSION__;
-
     try {
-      const libOpenCOR = (
-        await import(
-          /* @vite-ignore */ common.corsProxyUrl(
-            `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.js`
-          )
-        )
-      ).default as WasmFactory;
+      // Use a configurable base URL (set via Vite `define`). The default is a same-origin path proxied to opencor.ws
+      // during development. Production web deployments can override this at build time to point to wherever the
+      // libOpenCOR WASM build is hosted (e.g. a CDN or a local path served by the web server).
+
+      const libOpenCOR = (await import(/* @vite-ignore */ `${__LIBOPENCOR_WASM_BASE_URL__}/libopencor.js`))
+        .default as WasmFactory;
 
       ++crtNbOfSteps.value;
 
-      locApi.setWasmLocApi(
-        await libOpenCOR({
-          locateFile: (filename: string) => {
-            if (filename.endsWith('.wasm')) {
-              return common.corsProxyUrl(
-                `https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}/libopencor.wasm`
-              );
-            }
-
-            return filename;
-          }
-        })
-      );
+      locApi.setWasmLocApi(await libOpenCOR());
 
       ++crtNbOfSteps.value;
     } catch (error: unknown) {

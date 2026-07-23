@@ -372,6 +372,12 @@ export class SolverCvode extends SedIndex {
   }
 }
 
+export enum ESedInstanceStatus {
+  IDLE,
+  RUNNING,
+  PAUSED
+}
+
 export class SedInstance {
   private _cppInstanceId: number = -1;
   private _wasmSedInstance: IWasmSedInstance = {} as IWasmSedInstance;
@@ -398,8 +404,44 @@ export class SedInstance {
     return new SedInstanceTask(this._cppInstanceId, index, this._wasmSedInstance);
   }
 
-  run(): number {
-    return cppVersion() ? _cppLocApi.sedInstanceRun(this._cppInstanceId) : this._wasmSedInstance.run();
+  status(): ESedInstanceStatus {
+    return cppVersion() ? _cppLocApi.sedInstanceStatus(this._cppInstanceId) : this._wasmSedInstance.status.value;
+  }
+
+  progress(): number {
+    return cppVersion() ? _cppLocApi.sedInstanceProgress(this._cppInstanceId) : this._wasmSedInstance.progress;
+  }
+
+  startRun(): boolean {
+    return cppVersion() ? _cppLocApi.sedInstanceStartRun(this._cppInstanceId) : this._wasmSedInstance.startRun();
+  }
+
+  waitForRun(): number {
+    return cppVersion() ? _cppLocApi.sedInstanceWaitForRun(this._cppInstanceId) : this._wasmSedInstance.waitForRun();
+  }
+
+  pauseRun(): void {
+    if (cppVersion()) {
+      _cppLocApi.sedInstancePauseRun(this._cppInstanceId);
+    } else {
+      this._wasmSedInstance.pauseRun();
+    }
+  }
+
+  resumeRun(): void {
+    if (cppVersion()) {
+      _cppLocApi.sedInstanceResumeRun(this._cppInstanceId);
+    } else {
+      this._wasmSedInstance.resumeRun();
+    }
+  }
+
+  stopRun(): void {
+    if (cppVersion()) {
+      _cppLocApi.sedInstanceStopRun(this._cppInstanceId);
+    } else {
+      this._wasmSedInstance.stopRun();
+    }
   }
 }
 

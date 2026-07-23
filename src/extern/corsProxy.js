@@ -1,107 +1,100 @@
 // A simple CORS proxy handler for Cloudflare Workers (see https://workers.cloudflare.com/).
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'false'
+};
+
+const extractTargetUrl = (url) => url.searchParams.get('url');
+
+const isValidTargetUrl = (targetUrl) => {
+  try {
+    const parsedUrl = new URL(targetUrl);
+    const allowedHosts = ['cellml.org', 'figshare.com', 'opencor.ws', 'physiomeproject.org'];
+    const allowedExtensions = ['.cellml', '.sedml', '.omex', '.csv'];
+
+    if (
+      !allowedHosts.some((host) => parsedUrl.hostname.endsWith(host)) &&
+      !allowedExtensions.some((extension) => parsedUrl.pathname.toLowerCase().endsWith(extension))
+    ) {
+      return false;
+    }
+
+    return ['http:', 'https:'].includes(parsedUrl.protocol);
+  } catch {
+    return false;
+  }
+};
+
+const forwardRequest = async (targetUrl, request) => {
+  const forwardHeaders = new Headers(request.headers);
+
+  for (const header of [
+    'authorization',
+    'cookie',
+    'connection',
+    'keep-alive',
+    'proxy-authenticate',
+    'proxy-authorization',
+    'te',
+    'trailers',
+    'transfer-encoding',
+    'upgrade'
+  ]) {
+    forwardHeaders.delete(header);
+  }
+
+  const response = await fetch(targetUrl, {
+    method: request.method,
+    headers: forwardHeaders,
+    body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : null
+  });
+
+  const newHeaders = new Headers(response.headers);
+
+  for (const [name, value] of Object.entries(CORS_HEADERS)) {
+    newHeaders.set(name, value);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    headers: newHeaders
+  });
+};
+
 export default {
   async fetch(request) {
     try {
-      // Make sure that a target URL was provided.
-
       const url = new URL(request.url);
-      const targetUrl = url.searchParams.get('url');
+
+      if (request.method === 'OPTIONS') {
+        return new Response(null, {
+          status: 204, // No Content.
+          headers: CORS_HEADERS
+        });
+      }
+
+      const targetUrl = extractTargetUrl(url);
 
       if (!targetUrl) {
         return new Response('Missing "url" query parameter.', { status: 400 });
       }
 
-      // Validate and restrict the target URL.
-
-      const parsedUrl = new URL(targetUrl);
-      const allowedHosts = ['cellml.org', 'figshare.com', 'opencor.ws', 'physiomeproject.org'];
-      const allowedExtensions = ['.cellml', '.sedml', '.omex', '.csv'];
-
-      if (
-        !allowedHosts.some((host) => parsedUrl.hostname.endsWith(host)) &&
-        !allowedExtensions.some((extension) => parsedUrl.pathname.toLowerCase().endsWith(extension))
-      ) {
+      if (!isValidTargetUrl(targetUrl)) {
         return new Response('Target URL is not allowed.', { status: 403 });
       }
 
-      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-        return new Response('Invalid target URL scheme.', { status: 400 });
-      }
-
-      // Handle the preflight OPTIONS request.
-
-      if (request.method === 'OPTIONS') {
-        return new Response(null, {
-          status: 204, // No Content.
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Allow-Credentials': 'false'
-          }
-        });
-      }
-
-      // Limit the methods that can be proxied.
-
-      const allowedMethods = ['GET', 'POST'];
-
-      if (!allowedMethods.includes(request.method)) {
+      if (!['GET', 'POST'].includes(request.method)) {
         return new Response('Method not allowed.', { status: 405 });
       }
 
-      // Forward the request to the target URL.
-
-      const forwardHeaders = new Headers(request.headers);
-
-      for (const header of [
-        'authorization',
-        'cookie',
-        'connection',
-        'keep-alive',
-        'proxy-authenticate',
-        'proxy-authorization',
-        'te',
-        'trailers',
-        'transfer-encoding',
-        'upgrade'
-      ]) {
-        forwardHeaders.delete(header);
-      }
-
-      const response = await fetch(
-        new Request(targetUrl, {
-          method: request.method,
-          headers: forwardHeaders,
-          body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : null
-        })
-      );
-
-      // Modify the response to include/correct CORS headers.
-
-      const newHeaders = new Headers(response.headers);
-
-      newHeaders.set('Access-Control-Allow-Origin', '*');
-      newHeaders.set('Access-Control-Allow-Methods', 'GET, POST');
-      newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      newHeaders.set('Access-Control-Allow-Credentials', 'false');
-
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: newHeaders
-      });
+      return await forwardRequest(targetUrl, request);
     } catch (error) {
-      // Something went wrong, so return a 500 response (i.e. an internal server error).
+      const message = error instanceof Error ? error.message : String(error);
 
-      let errorMessage = error.message.charAt(0).toLowerCase() + error.message.slice(1);
-
-      if (!errorMessage.endsWith('.')) {
-        errorMessage += '.';
-      }
-
-      return new Response(`An error occurred: ${errorMessage}`, { status: 500 });
+      return new Response(`An error occurred: ${message}`, { status: 500 });
     }
   }
 };

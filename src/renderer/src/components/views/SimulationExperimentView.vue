@@ -6,10 +6,17 @@
       <template #start>
         <div :class="{ 'invisible': interactiveModeEnabled && interactiveLiveUpdatesEnabled }">
           <Button class="p-1! toolbar-button"
-            icon="pi pi-play-circle"
+            :icon="standardSimulationStatus !== locSedApi.ESedInstanceStatus.RUNNING ? 'pi pi-play-circle' : 'pi pi-pause-circle'"
             text severity="secondary"
-            title="Run simulation (F9)"
-            @click="onRun"
+            :title="(standardSimulationStatus === locSedApi.ESedInstanceStatus.IDLE ? 'Run' : standardSimulationStatus === locSedApi.ESedInstanceStatus.RUNNING ? 'Pause' : 'Resume') + ' simulation (F9)'"
+            @click="onRunPause"
+          />
+          <Button class="p-1! toolbar-button"
+            icon="pi pi-stop-circle"
+            text severity="secondary"
+            title="Stop simulation"
+            :disabled="standardSimulationStatus === locSedApi.ESedInstanceStatus.IDLE"
+            @click="onStop"
           />
         </div>
       </template>
@@ -40,13 +47,13 @@
         </div>
       </template>
     </Toolbar>
-    <div v-if="!interactiveModeEnabled" class="grow h-full min-h-0">
-      <Splitter class="border-none! h-full m-0" layout="vertical">
+    <div v-if="!interactiveModeEnabled" class="grow flex flex-col min-h-0">
+      <Splitter class="border-none! flex-1 m-0 min-h-0" layout="vertical">
         <SplitterPanel :size="simulationOnly ? 100 : 89">
           <Splitter>
             <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
               <ScrollPanel class="h-full">
-                <SimulationPropertyEditor v-if="standardInstanceTask" :uniformTimeCourse="standardUniformTimeCourse" :instanceTask="standardInstanceTask" />
+                <SimulationPropertyEditor v-if="standardInstanceTask" :uniformTimeCourse="standardUniformTimeCourse" :instanceTask="standardInstanceTask" :disabled="standardSimulationSettingsDisabled" />
                 <!--
                     <SolversPropertyEditor />
                     <GraphsPropertyEditor />
@@ -97,6 +104,7 @@
           <div ref="editorRef" class="h-full console overflow-y-auto px-2 py-1 leading-[1.42] text-[13px]" aria-readonly="true" v-html="standardConsoleContents"></div>
         </SplitterPanel>
       </Splitter>
+      <ProgressBar class="h-0.75!" :showValue="false" :value="standardProgress" />
     </div>
     <div v-else class="grow min-h-0">
       <div class="flex h-full">
@@ -257,6 +265,7 @@ import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../
 
 import * as colors from '../../common/colors';
 import * as common from '../../common/common';
+import { MEDIUM_DELAY, VERY_SHORT_DELAY } from '../../common/constants';
 import * as dependencies from '../../common/dependencies';
 import * as vueCommon from '../../common/vueCommon';
 import * as externalData from '../../common/externalData';
@@ -341,60 +350,210 @@ const populateParameters = (
   parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
 };
 
-// Small helper to yield to the UI thread.
+// A helper function to wait while a simulation instance is running, yielding to the UI to keep it responsive.
+// Note: we return a promise (that resolves when the simulation is idle) and a cancel function to clear any pending
+//       progress reset timer (e.g., on component unmount).
 
-const yieldToUi = (): Promise<void> => {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      setTimeout(resolve, 0);
-    });
+const waitWhileRunning = (
+  instance: locSedApi.SedInstance,
+  onProgress?: (progress: number) => void,
+  onStatusChange?: (status: locSedApi.ESedInstanceStatus) => void
+): { promise: Promise<void>; cancel: () => void } => {
+  let lastStatus: number | undefined;
+  let progressResetTimer: ReturnType<typeof setTimeout> | undefined;
+  let cancelled = false;
+
+  const cancel = (): void => {
+    cancelled = true;
+
+    clearTimeout(progressResetTimer);
+  };
+
+  const promise = new Promise<void>((resolve) => {
+    const poll = (): void => {
+      if (cancelled) {
+        resolve();
+
+        return;
+      }
+
+      const status = instance.status();
+
+      if (status !== lastStatus) {
+        lastStatus = status;
+
+        onStatusChange?.(status);
+      }
+
+      // Update the progress bar and keep polling while the simulation is running or paused, and resolve when the
+      // simulation is idle.
+
+      switch (status) {
+        case locSedApi.ESedInstanceStatus.RUNNING:
+          onProgress?.(100 * instance.progress());
+
+          setTimeout(poll, VERY_SHORT_DELAY);
+
+          break;
+        case locSedApi.ESedInstanceStatus.PAUSED:
+          setTimeout(poll, VERY_SHORT_DELAY);
+
+          break;
+        default: // locSedApi.ESedInstanceStatus.IDLE:
+          if (onProgress && !standardRunAborted) {
+            onProgress(100);
+
+            // Reset the progress bar after a short delay.
+
+            progressResetTimer = setTimeout(() => {
+              if (!cancelled) {
+                onProgress?.(0);
+              }
+            }, MEDIUM_DELAY);
+          }
+
+          resolve();
+      }
+    };
+
+    setTimeout(poll, 0);
   });
+
+  return { promise, cancel };
 };
 
 // Event handlers.
 
-const onRun = async (): Promise<void> => {
+const onRunPause = async (): Promise<void> => {
   // Run either the standard or interactive simulation.
 
   if (!interactiveModeEnabled.value) {
-    // Run the standard simulation, i.e. run the instance, output the simulation time to the console, and update the
-    // plot. We yield to the UI thread between the simulation run and the plot update to keep the UI responsive.
+    // Standard mode: toggle between run, pause, and resume.
 
-    const simulationTime = standardInstance.run();
+    switch (standardInstance.status()) {
+      case locSedApi.ESedInstanceStatus.RUNNING:
+        // Pause the simulation.
 
-    if (standardInstance.hasIssues()) {
-      standardInstance.issues().forEach((issue: locApi.IIssue) => {
-        const color =
-          issue.type === locApi.EIssueType.ERROR
-            ? colors.REVERTED_PALETTE.Red
-            : issue.type === locApi.EIssueType.WARNING
-              ? colors.REVERTED_PALETTE.Orange
-              : colors.REVERTED_PALETTE.Blue;
-        const issueType =
-          issue.type === locApi.EIssueType.ERROR
-            ? 'Error'
-            : issue.type === locApi.EIssueType.WARNING
-              ? 'Warning'
-              : 'Info';
-        const issueDescription = issue.description.replace('Task | ', '');
+        standardInstance.pauseRun();
 
-        standardConsoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`;
-      });
-    } else {
-      standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>`;
-    }
+        standardSimulationStatus.value = locSedApi.ESedInstanceStatus.PAUSED;
 
-    vue.nextTick(() => {
-      const consoleElement = editorRef.value;
+        break;
+      case locSedApi.ESedInstanceStatus.PAUSED:
+        // Resume the simulation.
 
-      if (consoleElement) {
-        consoleElement.scrollTop = consoleElement.scrollHeight;
+        standardInstance.resumeRun();
+
+        standardSimulationStatus.value = locSedApi.ESedInstanceStatus.RUNNING;
+
+        break;
+      default: {
+        // locSedApi.ESedInstanceStatus.IDLE:
+        // Reset our abort flag.
+
+        standardRunAborted = false;
+
+        // Start the standard simulation.
+
+        if (!standardInstance.startRun()) {
+          standardSimulationStatus.value = standardInstance.status();
+
+          return;
+        }
+
+        standardSimulationStatus.value = standardInstance.status();
+
+        // Wait for the simulation to finish, handling pause/resume cycles asynchronously so that the UI remains responsive.
+
+        const numberOfSteps = standardUniformTimeCourse.numberOfSteps();
+        let lastPlottingAreaUpdateTime = Date.now();
+
+        const { promise: runPromise, cancel: runCancel } = waitWhileRunning(
+          standardInstance,
+          (progress: number) => {
+            // Update the progress bar.
+
+            standardProgress.value = progress;
+
+            // Update the plotting area only if the progress has changed and a certain amount of time has passed since the
+            // last update (to avoid excessive updates).
+
+            if (progress === 0) {
+              return;
+            }
+
+            const now = Date.now();
+
+            if (now - lastPlottingAreaUpdateTime >= MEDIUM_DELAY) {
+              updatePlot(Math.round(0.01 * progress * numberOfSteps) + 1);
+
+              lastPlottingAreaUpdateTime = now;
+            }
+          },
+          (status) => {
+            standardSimulationStatus.value = status;
+          }
+        );
+
+        // We store the cancel function in a variable so that we can call it on component unmount to avoid writing to
+        // stale references after the component is torn down.
+
+        standardProgressResetCancel = runCancel;
+
+        await runPromise;
+
+        standardProgressResetCancel = undefined;
+
+        // Update the console with any issues that occurred during the simulation, or display the simulation time if it
+        // completed successfully.
+
+        if (standardInstance.hasIssues()) {
+          standardInstance.issues().forEach((issue: locApi.IIssue) => {
+            const color =
+              issue.type === locApi.EIssueType.ERROR
+                ? colors.REVERTED_PALETTE.Red
+                : issue.type === locApi.EIssueType.WARNING
+                  ? colors.REVERTED_PALETTE.Orange
+                  : colors.REVERTED_PALETTE.Blue;
+            const issueType =
+              issue.type === locApi.EIssueType.ERROR
+                ? 'Error'
+                : issue.type === locApi.EIssueType.WARNING
+                  ? 'Warning'
+                  : 'Info';
+            const issueDescription = issue.description.replace('Task | ', '');
+
+            standardConsoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`;
+          });
+        } else {
+          const simulationTime = standardInstance.waitForRun();
+
+          standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>`;
+
+          if (standardRunAborted) {
+            // Reset the progress bar after a short delay (mimicking the normal end of a simulation).
+
+            standardAbortProgressTimer = setTimeout(() => {
+              standardAbortProgressTimer = undefined;
+
+              standardProgress.value = 0;
+            }, MEDIUM_DELAY);
+          }
+        }
+
+        if (!standardRunAborted) {
+          updatePlot();
+        }
+
+        vue.nextTick(() => {
+          const consoleElement = editorRef.value;
+
+          if (consoleElement) {
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+          }
+        });
       }
-    });
-
-    await yieldToUi();
-
-    updatePlot();
+    }
 
     return;
   }
@@ -402,6 +561,15 @@ const onRun = async (): Promise<void> => {
   // Run the interactive simulation.
 
   updateInteractiveSimulation(true);
+};
+
+const onStop = (): void => {
+  standardRunAborted = true;
+
+  standardInstance.stopRun();
+
+  // Note: the simulation status will be updated by the next poll cycle of waitWhileRunning(), so we don't set it here
+  //       to avoid a race window where the user could re-trigger a run before the C++ thread has fully stopped.
 };
 
 const onDownloadCombineArchive = (): void => {
@@ -464,11 +632,6 @@ const updateInteractiveUi = () => {
 const instanceIssues = vue.ref<locApi.IIssue[]>([]);
 let hasInstanceIssues = false;
 
-const NoGraphPanelData = {
-  xAxisTitle: undefined,
-  yAxisTitle: undefined,
-  traces: []
-};
 const NoSimulationDataInfo: locCommon.ISimulationDataInfo = {
   type: locCommon.ESimulationDataInfoType.UNKNOWN,
   index: -1
@@ -492,8 +655,20 @@ const standardInstanceTask = hasInstanceIssues ? null : standardInstance.task(0)
 const standardParameters = vue.ref<string[]>([]);
 const standardXParameter = vue.ref(standardInstanceTask ? standardInstanceTask.voiName() : '');
 const standardYParameter = vue.ref(standardInstanceTask ? standardInstanceTask.stateName(0) : '');
-const standardData = vue.ref<IGraphPanelData>(NoGraphPanelData);
+const standardData = vue.ref<IGraphPanelData>({
+  xAxisTitle: standardInstanceTask ? standardXParameter.value : undefined,
+  yAxisTitle: standardInstanceTask ? standardYParameter.value : undefined,
+  traces: []
+});
 const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`);
+const standardProgress = vue.ref<number>(0);
+const standardSimulationStatus = vue.ref<locSedApi.ESedInstanceStatus>(standardInstance.status());
+const standardSimulationSettingsDisabled = vue.computed<boolean>(() => {
+  return standardSimulationStatus.value !== locSedApi.ESedInstanceStatus.IDLE;
+});
+let standardRunAborted = false;
+let standardProgressResetCancel: (() => void) | undefined;
+let standardAbortProgressTimer: ReturnType<typeof setTimeout> | undefined;
 
 if (standardInstanceTask) {
   populateParameters(standardParameters, standardInstanceTask);
@@ -514,23 +689,47 @@ const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
     : NoSimulationDataInfo;
 });
 
-const updatePlot = () => {
+const updatePlot = (dataSize: number = 0) => {
   if (!standardInstanceTask) {
-    standardData.value = NoGraphPanelData;
+    standardData.value = {
+      xAxisTitle: undefined,
+      yAxisTitle: undefined,
+      traces: []
+    };
 
     return;
   }
 
+  // Specify the range of the X and Y axes if they are the variable of integration. Otherwise, leave the range undefined
+  // so that Plotly can automatically determine the range based on the data.
+
+  const xAxisRange: [number, number] | undefined =
+    xInfo.value.type === locCommon.ESimulationDataInfoType.VOI
+      ? [standardUniformTimeCourse.outputStartTime(), standardUniformTimeCourse.outputEndTime()]
+      : undefined;
+
+  const yAxisRange: [number, number] | undefined =
+    yInfo.value.type === locCommon.ESimulationDataInfoType.VOI
+      ? [standardUniformTimeCourse.outputStartTime(), standardUniformTimeCourse.outputEndTime()]
+      : undefined;
+
+  // Retrieve the data for the selected X and Y parameters and update the plot.
+
+  const xData = locCommon.simulationDataValue(standardInstanceTask, xInfo.value).data;
+  const yData = locCommon.simulationDataValue(standardInstanceTask, yInfo.value).data;
+
   standardData.value = {
     xAxisTitle: standardXParameter.value,
     yAxisTitle: standardYParameter.value,
+    xAxisRange,
+    yAxisRange,
     traces: [
       {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
         xValue: standardXParameter.value,
-        x: locCommon.simulationDataValue(standardInstanceTask, xInfo.value).data,
+        x: dataSize > 0 ? xData.slice(0, dataSize) : xData.slice(),
         yValue: standardYParameter.value,
-        y: locCommon.simulationDataValue(standardInstanceTask, yInfo.value).data,
+        y: dataSize > 0 ? yData.slice(0, dataSize) : yData.slice(),
         color: colors.DEFAULT_COLOR
       }
     ]
@@ -621,6 +820,7 @@ const interactiveRuns = vue.ref<ISimulationRun[]>([
   }
 ]);
 let interactiveTrackedRunId = 0;
+let interactiveSimulationGeneration = 0;
 const interactiveRunColorPopoverIndex = vue.ref<number>(-1);
 const interactiveRunColorPopoverRef = vue.ref<InstanceType<typeof Popover> | undefined>();
 const interactiveGraphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
@@ -1320,12 +1520,35 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
   return res;
 };
 
+// A helper function to reinstantiate our interactive instance.
+
+const reinstantiateInteractiveInstance = (): void => {
+  interactiveInstance = interactiveDocument.instantiate();
+  interactiveInstanceTask = interactiveInstance.task(0);
+};
+
 // Function to update our interactive simulation.
 
-const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
+const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promise<void> => {
   // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
 
   if (interactiveUiJsonIssues.value.length || (!interactiveLiveUpdatesEnabled.value && !forceUpdate)) {
+    return;
+  }
+
+  // Increment the simulation generation so that we can cancel any previous simulation runs that are still in progress.
+
+  const currentSimulationGeneration = ++interactiveSimulationGeneration;
+
+  // Stop the current simulation if it is still running or paused.
+
+  if (interactiveInstance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+    interactiveInstance.stopRun();
+  }
+
+  // Check if we have been superseded by a newer call.
+
+  if (currentSimulationGeneration !== interactiveSimulationGeneration) {
     return;
   }
 
@@ -1395,9 +1618,33 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
     return;
   }
 
-  // Run the instance.
+  // Check if we have been superseded by a newer call while we were setting up the model.
 
-  interactiveInstance.run();
+  if (currentSimulationGeneration !== interactiveSimulationGeneration) {
+    return;
+  }
+
+  // Create a fresh instance for the new simulation run.
+  // Note: this ensures that the instance picks up the latest model changes and avoids reusing an instance which
+  //       internal state may have been corrupted by a previous cancellation.
+
+  reinstantiateInteractiveInstance();
+
+  // Start the simulation in a background thread and yield to the UI to keep it responsive while the simulation runs.
+
+  if (!interactiveInstance.startRun()) {
+    return;
+  }
+
+  await waitWhileRunning(interactiveInstance).promise;
+
+  // Check if we have been superseded by a newer call while the simulation was running.
+
+  if (currentSimulationGeneration !== interactiveSimulationGeneration) {
+    return;
+  }
+
+  // Make sure that we haven't come across any issues during the simulation.
 
   if (interactiveInstance.hasIssues()) {
     interactiveInstanceIssues.value = interactiveInstance.issues();
@@ -1562,7 +1809,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
       continue;
     }
 
-    let xMain: math.FloatArray = new Float64Array(0);
+    let xMain: math.FloatArray = common.EMPTY_FLOAT64_ARRAY;
 
     try {
       xMain = evaluateExpression(plot.xValue, modelScope);
@@ -1573,7 +1820,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
       });
     }
 
-    let yMain: math.FloatArray = new Float64Array(0);
+    let yMain: math.FloatArray = common.EMPTY_FLOAT64_ARRAY;
 
     try {
       yMain = evaluateExpression(plot.yValue, modelScope);
@@ -1609,7 +1856,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         continue;
       }
 
-      let xAdditional: math.FloatArray = new Float64Array(0);
+      let xAdditional: math.FloatArray = common.EMPTY_FLOAT64_ARRAY;
 
       try {
         xAdditional = evaluateExpression(additionalTrace.xValue, modelScope);
@@ -1620,7 +1867,7 @@ const updateInteractiveSimulation = (forceUpdate: boolean = false): void => {
         });
       }
 
-      let yAdditional: math.FloatArray = new Float64Array(0);
+      let yAdditional: math.FloatArray = common.EMPTY_FLOAT64_ARRAY;
 
       try {
         yAdditional = evaluateExpression(additionalTrace.yValue, modelScope);
@@ -1895,8 +2142,7 @@ const onInteractiveSettingsOk = (settings: ISimulationExperimentViewSettings): v
   // Reinstantiate our instance in case we modified CVODE's maximum step.
 
   if (interactiveCvode.maximumStep() !== oldCvodeMaximumStep) {
-    interactiveInstance = interactiveDocument.instantiate(); // So that we can run the simulation again.
-    interactiveInstanceTask = interactiveInstance.task(0); // So that we can retrieve our "new" simulation results.
+    reinstantiateInteractiveInstance();
   }
 
   // Update our UI.
@@ -1948,6 +2194,14 @@ vue.onMounted(() => {
   );
 });
 
+// Cancel any pending progress reset timers to avoid writing to stale refs after the component is torn down.
+
+vue.onUnmounted(() => {
+  standardProgressResetCancel?.();
+
+  clearTimeout(standardAbortProgressTimer);
+});
+
 // Keyboard shortcuts.
 
 if (common.isDesktop()) {
@@ -1967,7 +2221,7 @@ if (common.isDesktop()) {
     ) {
       event.preventDefault();
 
-      onRun();
+      onRunPause();
     }
   });
 }
@@ -2052,6 +2306,10 @@ if (common.isDesktop()) {
   border-bottom: 1px solid var(--p-content-border-color);
 }
 
+:deep(.p-progressbar-value) {
+  transition: none !important;
+}
+
 .run-action-button {
   opacity: 0.75;
 }
@@ -2070,7 +2328,7 @@ if (common.isDesktop()) {
   border-color: var(--p-primary-color);
 }
 
-.toolbar-button:hover {
+.toolbar-button:not(:disabled):hover {
   background-color: var(--p-surface-hover) !important;
   transform: scale(1.15);
 }

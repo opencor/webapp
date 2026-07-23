@@ -270,7 +270,13 @@ electron.contextBridge.exposeInMainWorld('locApi', {
 
   sedInstanceHasIssues: (instanceId: number) => loc.sedInstanceHasIssues(instanceId),
   sedInstanceIssues: (instanceId: number) => loc.sedInstanceIssues(instanceId),
-  sedInstanceRun: (instanceId: number) => loc.sedInstanceRun(instanceId),
+  sedInstanceStatus: (instanceId: number) => loc.sedInstanceStatus(instanceId),
+  sedInstanceProgress: (instanceId: number) => loc.sedInstanceProgress(instanceId),
+  sedInstanceStartRun: (instanceId: number) => loc.sedInstanceStartRun(instanceId),
+  sedInstanceWaitForRun: (instanceId: number) => loc.sedInstanceWaitForRun(instanceId),
+  sedInstancePauseRun: (instanceId: number) => loc.sedInstancePauseRun(instanceId),
+  sedInstanceResumeRun: (instanceId: number) => loc.sedInstanceResumeRun(instanceId),
+  sedInstanceStopRun: (instanceId: number) => loc.sedInstanceStopRun(instanceId),
 
   // SedInstanceTask API.
 
