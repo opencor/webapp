@@ -26,7 +26,7 @@ export default vite.defineConfig({
     target: 'esnext'
   },
   define: {
-    __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion)
+    __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`/libopencor-wasm/${libopencorVersion}`)
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.

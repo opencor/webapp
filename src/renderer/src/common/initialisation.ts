@@ -66,13 +66,12 @@ export const initialiseLocApi = async (): Promise<void> => {
   } else {
     // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
 
-    const libopencorVersion = __LIBOPENCOR_VERSION__;
-
     try {
-      // Use a same-origin path (proxied to opencor.ws) since Emscripten's pthread requires same-origin classic workers
-      // (check src/renderer/vite.config.ts for the proxy setup).
+      // Use a configurable base URL (set via Vite `define`). The default is a same-origin path proxied to opencor.ws
+      // during development. Production web deployments can override this at build time to point to wherever the
+      // libOpenCOR WASM build is hosted (e.g. a CDN or a local path served by the web server).
 
-      const libOpenCOR = (await import(/* @vite-ignore */ `/libopencor-wasm/${libopencorVersion}/libopencor.js`))
+      const libOpenCOR = (await import(/* @vite-ignore */ `${__LIBOPENCOR_WASM_BASE_URL__}/libopencor.js`))
         .default as WasmFactory;
 
       ++crtNbOfSteps.value;

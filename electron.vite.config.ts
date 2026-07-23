@@ -31,7 +31,7 @@ export default electronVite.defineConfig({
       target: 'esnext'
     },
     define: {
-      __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion)
+      __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`/libopencor-wasm/${libopencorVersion}`)
     },
     envDir: path.join(import.meta.dirname, 'src/renderer'),
     plugins: [
