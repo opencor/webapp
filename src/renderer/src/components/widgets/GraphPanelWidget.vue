@@ -805,17 +805,10 @@ const updatePlot = (): void => {
     .then(() => {
       plotIsReady = true;
 
-      // Ensure the plot is properly sized.
-      // Note: we skip the resize if the container dimensions are unchanged since the last measurement, avoiding
-      //       unnecessary layout recalculations during rapid updates (e.g., during a standard mode simulation).
+      // Recompute margins after every plot update.
+      // Note: this ensures sibling panels in interactive mode stay aligned when simulation data changes.
 
-      if (
-        !mainDivRef.value ||
-        mainDivRef.value.clientWidth !== trackedWidth ||
-        mainDivRef.value.clientHeight !== trackedHeight
-      ) {
-        queueResize();
-      }
+      updateMarginsAsync();
     });
 };
 
