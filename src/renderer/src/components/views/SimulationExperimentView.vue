@@ -356,7 +356,8 @@ const populateParameters = (
 
 const waitWhileRunning = (
   instance: locSedApi.SedInstance,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  onStatusChange?: (status: locSedApi.ESedInstanceStatus) => void
 ): { promise: Promise<void>; cancel: () => void } => {
   let lastStatus: number | undefined;
   let progressResetTimer: ReturnType<typeof setTimeout> | undefined;
@@ -372,7 +373,7 @@ const waitWhileRunning = (
       if (status !== lastStatus) {
         lastStatus = status;
 
-        standardSimulationStatus.value = status;
+        onStatusChange?.(status);
       }
 
       // Update the progress bar and keep polling while the simulation is running or paused, and resolve when the
@@ -460,26 +461,32 @@ const onRunPause = async (): Promise<void> => {
         const numberOfSteps = standardUniformTimeCourse.numberOfSteps();
         let lastPlottingAreaUpdateTime = Date.now();
 
-        const { promise: runPromise, cancel: runCancel } = waitWhileRunning(standardInstance, (progress: number) => {
-          // Update the progress bar.
+        const { promise: runPromise, cancel: runCancel } = waitWhileRunning(
+          standardInstance,
+          (progress: number) => {
+            // Update the progress bar.
 
-          standardProgress.value = progress;
+            standardProgress.value = progress;
 
-          // Update the plotting area only if the progress has changed and a certain amount of time has passed since the
-          // last update (to avoid excessive updates).
+            // Update the plotting area only if the progress has changed and a certain amount of time has passed since the
+            // last update (to avoid excessive updates).
 
-          if (progress === 0) {
-            return;
+            if (progress === 0) {
+              return;
+            }
+
+            const now = Date.now();
+
+            if (now - lastPlottingAreaUpdateTime >= MEDIUM_DELAY) {
+              updatePlot(Math.round(0.01 * progress * numberOfSteps) + 1);
+
+              lastPlottingAreaUpdateTime = now;
+            }
+          },
+          (status) => {
+            standardSimulationStatus.value = status;
           }
-
-          const now = Date.now();
-
-          if (now - lastPlottingAreaUpdateTime >= MEDIUM_DELAY) {
-            updatePlot(Math.round(0.01 * progress * numberOfSteps) + 1);
-
-            lastPlottingAreaUpdateTime = now;
-          }
-        });
+        );
 
         // We store the cancel function in a variable so that we can call it on component unmount to avoid writing to
         // stale references after the component is torn down.
