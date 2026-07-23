@@ -452,7 +452,11 @@ const onRunPause = async (): Promise<void> => {
 
         // Start the standard simulation.
 
-        standardInstance.startRun();
+        if (!standardInstance.startRun()) {
+          standardSimulationStatus.value = standardInstance.status();
+
+          return;
+        }
 
         standardSimulationStatus.value = standardInstance.status();
 
@@ -1625,7 +1629,9 @@ const updateInteractiveSimulation = async (forceUpdate: boolean = false): Promis
 
   // Start the simulation in a background thread and yield to the UI to keep it responsive while the simulation runs.
 
-  interactiveInstance.startRun();
+  if (!interactiveInstance.startRun()) {
+    return;
+  }
 
   await waitWhileRunning(interactiveInstance).promise;
 
