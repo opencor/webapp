@@ -361,13 +361,22 @@ const waitWhileRunning = (
 ): { promise: Promise<void>; cancel: () => void } => {
   let lastStatus: number | undefined;
   let progressResetTimer: ReturnType<typeof setTimeout> | undefined;
+  let cancelled = false;
 
   const cancel = (): void => {
+    cancelled = true;
+
     clearTimeout(progressResetTimer);
   };
 
   const promise = new Promise<void>((resolve) => {
     const poll = (): void => {
+      if (cancelled) {
+        resolve();
+
+        return;
+      }
+
       const status = instance.status();
 
       if (status !== lastStatus) {
@@ -397,7 +406,9 @@ const waitWhileRunning = (
             // Reset the progress bar after a short delay.
 
             progressResetTimer = setTimeout(() => {
-              onProgress?.(0);
+              if (!cancelled) {
+                onProgress?.(0);
+              }
             }, MEDIUM_DELAY);
           }
 
