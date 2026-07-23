@@ -170,4 +170,4 @@ jobs:
         # disabled, but we prefer to be open.)
         run: |
           cd src/renderer
-          npm publish --access public --no-git-checks
+          npm publish --access public
