@@ -53,7 +53,7 @@
           <Splitter>
             <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
               <ScrollPanel class="h-full">
-                <SimulationPropertyEditor v-if="standardInstanceTask" :uniformTimeCourse="standardUniformTimeCourse" :instanceTask="standardInstanceTask" />
+                <SimulationPropertyEditor v-if="standardInstanceTask" :uniformTimeCourse="standardUniformTimeCourse" :instanceTask="standardInstanceTask" :disabled="standardSimulationSettingsDisabled" />
                 <!--
                     <SolversPropertyEditor />
                     <GraphsPropertyEditor />
@@ -625,6 +625,9 @@ const standardData = vue.ref<IGraphPanelData>({
 const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`);
 const standardProgress = vue.ref<number>(0);
 const standardSimulationStatus = vue.ref<locSedApi.ESedInstanceStatus>(standardInstance.status());
+const standardSimulationSettingsDisabled = vue.computed<boolean>(() => {
+  return standardSimulationStatus.value !== locSedApi.ESedInstanceStatus.IDLE;
+});
 let standardRunAborted = false;
 
 if (standardInstanceTask) {

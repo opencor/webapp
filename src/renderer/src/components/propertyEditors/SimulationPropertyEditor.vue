@@ -1,5 +1,5 @@
 <template>
-  <PropertyEditor name="Simulation" :properties="properties" @propertyUpdated="onPropertyUpdated" />
+  <PropertyEditor name="Simulation" :properties="properties" :disabled="disabled" @propertyUpdated="onPropertyUpdated" />
 </template>
 
 <script setup lang="ts">
@@ -10,6 +10,7 @@ import type * as locApi from '../../libopencor/locApi';
 const props = defineProps<{
   uniformTimeCourse: locApi.SedUniformTimeCourse;
   instanceTask: locApi.SedInstanceTask;
+  disabled?: boolean;
 }>();
 
 const voiUnit = props.instanceTask.voiUnit();

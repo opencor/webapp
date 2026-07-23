@@ -1,7 +1,7 @@
 <template>
   <Fieldset :legend="name">
     <DataTable
-      editMode="cell"
+      :editMode="disabled ? undefined : 'cell'"
       resizableColumns
       showGridlines
       size="small"
@@ -13,7 +13,7 @@
         <template #body="{ data, field }">
           {{ data[field as string] }}
         </template>
-        <template #editor="{ data, field }">
+        <template v-if="!disabled" #editor="{ data, field }">
           <InputNumber fluid :maxFractionDigits="15" v-model="data[field]" size="small" />
         </template>
       </Column>
@@ -28,6 +28,7 @@ import type { DataTableCellEditCompleteEvent } from 'primevue/datatable';
 const props = withDefaults(
   defineProps<{
     name: string;
+    disabled?: boolean;
     hasUnits?: boolean;
     properties: {
       property: string;
