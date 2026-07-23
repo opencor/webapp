@@ -783,11 +783,11 @@ const updatePlot = (): void => {
   };
 
   if (props.data.xAxisRange) {
-    layout.xaxis.range = props.data.xAxisRange;
+    layout.xaxis = { ...layout.xaxis, range: props.data.xAxisRange };
   }
 
   if (props.data.yAxisRange) {
-    layout.yaxis.range = props.data.yAxisRange;
+    layout.yaxis = { ...layout.yaxis, range: props.data.yAxisRange };
   }
 
   // Update the plot.
