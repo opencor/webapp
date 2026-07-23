@@ -453,14 +453,6 @@ const onRunPause = async (): Promise<void> => {
 
         standardRunAborted = false;
 
-        // Reset the plotting area before running the simulation.
-
-        standardData.value = {
-          xAxisTitle: standardXParameter.value,
-          yAxisTitle: standardYParameter.value,
-          traces: []
-        };
-
         // Start the standard simulation.
 
         if (!standardInstance.startRun()) {
