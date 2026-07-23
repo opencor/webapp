@@ -46,6 +46,8 @@ export const startRendererServer = async (): Promise<string> => {
 
     response.setHeader('Content-Type', MIME_TYPES[ext] ?? 'application/octet-stream');
     response.setHeader('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable');
+    response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
 
     // Create and pipe the read stream.
 
