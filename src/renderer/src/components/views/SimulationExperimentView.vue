@@ -688,9 +688,9 @@ const updatePlot = (dataSize: number = 0) => {
       {
         name: traceName(undefined, standardXParameter.value, standardYParameter.value),
         xValue: standardXParameter.value,
-        x: dataSize > 0 ? new Float64Array(xData.slice(0, dataSize)) : new Float64Array(xData),
+        x: dataSize > 0 ? xData.slice(0, dataSize) : xData.slice(),
         yValue: standardYParameter.value,
-        y: dataSize > 0 ? new Float64Array(yData.slice(0, dataSize)) : new Float64Array(yData),
+        y: dataSize > 0 ? yData.slice(0, dataSize) : yData.slice(),
         color: colors.DEFAULT_COLOR
       }
     ]
