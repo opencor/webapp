@@ -43,7 +43,7 @@ void solverCvodeSetMaximumStep(const Napi::CallbackInfo &pInfo);
 
 napi_value sedInstanceHasIssues(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceIssues(const Napi::CallbackInfo &pInfo);
-napi_value sedInstanceIsRunning(const Napi::CallbackInfo &pInfo);
+napi_value sedInstanceStatus(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceProgress(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceStartRun(const Napi::CallbackInfo &pInfo);
 napi_value sedInstanceWaitForRun(const Napi::CallbackInfo &pInfo);

@@ -6,10 +6,17 @@
       <template #start>
         <div :class="{ 'invisible': interactiveModeEnabled && interactiveLiveUpdatesEnabled }">
           <Button class="p-1! toolbar-button"
-            icon="pi pi-play-circle"
+            :icon="standardSimulationStatus !== locSedApi.ESedInstanceStatus.RUNNING ? 'pi pi-play-circle' : 'pi pi-pause-circle'"
             text severity="secondary"
-            title="Run simulation (F9)"
-            @click="onRun"
+            :title="(standardSimulationStatus === locSedApi.ESedInstanceStatus.IDLE ? 'Run' : standardSimulationStatus === locSedApi.ESedInstanceStatus.RUNNING ? 'Pause' : 'Resume') + ' simulation (F9)'"
+            @click="onRunPause"
+          />
+          <Button class="p-1! toolbar-button"
+            icon="pi pi-stop-circle"
+            text severity="secondary"
+            title="Stop simulation"
+            :disabled="standardSimulationStatus === locSedApi.ESedInstanceStatus.IDLE"
+            @click="onStop"
           />
         </div>
       </template>
@@ -346,24 +353,44 @@ const populateParameters = (
 // A helper function to wait while a simulation instance is running, yielding to the UI to keep it responsive.
 
 const waitWhileRunning = (instance: locSedApi.SedInstance, onProgress?: (progress: number) => void): Promise<void> => {
+  let lastStatus: number | undefined;
+
   return new Promise<void>((resolve) => {
     const poll = (): void => {
-      if (instance.isRunning()) {
-        onProgress?.(100 * instance.progress());
+      const status = instance.status();
 
-        setTimeout(poll, VERY_SHORT_DELAY);
-      } else {
-        if (onProgress) {
-          onProgress(100);
+      if (status !== lastStatus) {
+        lastStatus = status;
 
-          // Reset the progress bar after a short delay.
+        standardSimulationStatus.value = status;
+      }
 
-          setTimeout(() => {
-            onProgress?.(0);
-          }, MEDIUM_DELAY);
-        }
+      // Update the progress bar and keep polling while the simulation is running or paused, and resolve when the
+      // simulation is idle.
 
-        resolve();
+      switch (status) {
+        case locSedApi.ESedInstanceStatus.RUNNING:
+          onProgress?.(100 * instance.progress());
+
+          setTimeout(poll, VERY_SHORT_DELAY);
+
+          break;
+        case locSedApi.ESedInstanceStatus.PAUSED:
+          setTimeout(poll, VERY_SHORT_DELAY);
+
+          break;
+        default: // locSedApi.ESedInstanceStatus.IDLE:
+          if (onProgress && !standardRunAborted) {
+            onProgress(100);
+
+            // Reset the progress bar after a short delay.
+
+            setTimeout(() => {
+              onProgress?.(0);
+            }, MEDIUM_DELAY);
+          }
+
+          resolve();
       }
     };
 
@@ -373,81 +400,123 @@ const waitWhileRunning = (instance: locSedApi.SedInstance, onProgress?: (progres
 
 // Event handlers.
 
-const onRun = async (): Promise<void> => {
+const onRunPause = async (): Promise<void> => {
   // Run either the standard or interactive simulation.
 
   if (!interactiveModeEnabled.value) {
-    // Reset the plotting area before running the simulation.
+    // Standard mode: toggle between run, pause, and resume.
 
-    standardData.value = {
-      xAxisTitle: standardXParameter.value,
-      yAxisTitle: standardYParameter.value,
-      traces: []
-    };
+    switch (standardInstance.status()) {
+      case locSedApi.ESedInstanceStatus.RUNNING:
+        // Pause the simulation.
 
-    // Start the standard simulation.
+        standardInstance.pauseRun();
 
-    standardInstance.startRun();
+        standardSimulationStatus.value = locSedApi.ESedInstanceStatus.PAUSED;
 
-    // Wait for the simulation to finish, updating the plotting area and progress bar during the simulation.
+        break;
+      case locSedApi.ESedInstanceStatus.PAUSED:
+        // Resume the simulation.
 
-    const numberOfSteps = standardUniformTimeCourse.numberOfSteps();
-    let lastPlottingAreaUpdateTime = Date.now();
+        standardInstance.resumeRun();
 
-    await waitWhileRunning(standardInstance, (progress: number) => {
-      // Update the progress bar.
+        standardSimulationStatus.value = locSedApi.ESedInstanceStatus.RUNNING;
 
-      standardProgress.value = progress;
+        break;
+      default: {
+        // locSedApi.ESedInstanceStatus.IDLE:
+        // Reset our abort flag.
 
-      // Update the plotting area only if the progress has changed and a certain amount of time has passed since the
-      // last update (to avoid excessive updates).
+        standardRunAborted = false;
 
-      if (progress === 0) {
-        return;
+        // Reset the plotting area before running the simulation.
+
+        standardData.value = {
+          xAxisTitle: standardXParameter.value,
+          yAxisTitle: standardYParameter.value,
+          traces: []
+        };
+
+        // Start the standard simulation.
+
+        standardInstance.startRun();
+
+        standardSimulationStatus.value = standardInstance.status();
+
+        // Wait for the simulation to finish, handling pause/resume cycles asynchronously so that the UI remains responsive.
+
+        const numberOfSteps = standardUniformTimeCourse.numberOfSteps();
+        let lastPlottingAreaUpdateTime = Date.now();
+
+        await waitWhileRunning(standardInstance, (progress: number) => {
+          // Update the progress bar.
+
+          standardProgress.value = progress;
+
+          // Update the plotting area only if the progress has changed and a certain amount of time has passed since the
+          // last update (to avoid excessive updates).
+
+          if (progress === 0) {
+            return;
+          }
+
+          const now = Date.now();
+
+          if (now - lastPlottingAreaUpdateTime >= MEDIUM_DELAY) {
+            updatePlot(Math.round(0.01 * progress * numberOfSteps) + 1);
+
+            lastPlottingAreaUpdateTime = now;
+          }
+        });
+
+        // Update the console with any issues that occurred during the simulation, or display the simulation time if it
+        // completed successfully.
+
+        if (standardInstance.hasIssues()) {
+          standardInstance.issues().forEach((issue: locApi.IIssue) => {
+            const color =
+              issue.type === locApi.EIssueType.ERROR
+                ? colors.REVERTED_PALETTE.Red
+                : issue.type === locApi.EIssueType.WARNING
+                  ? colors.REVERTED_PALETTE.Orange
+                  : colors.REVERTED_PALETTE.Blue;
+            const issueType =
+              issue.type === locApi.EIssueType.ERROR
+                ? 'Error'
+                : issue.type === locApi.EIssueType.WARNING
+                  ? 'Warning'
+                  : 'Info';
+            const issueDescription = issue.description.replace('Task | ', '');
+
+            standardConsoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`;
+          });
+        } else {
+          const simulationTime = standardInstance.waitForRun();
+
+          standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>`;
+
+          if (standardRunAborted) {
+            // Reset the progress bar after a short delay (mimicking the normal end of a simulation).
+
+            setTimeout(() => {
+              standardProgress.value = 0;
+            }, MEDIUM_DELAY);
+          }
+        }
+
+        if (!standardRunAborted) {
+          updatePlot();
+        }
+
+        vue.nextTick(() => {
+          const consoleElement = editorRef.value;
+
+          if (consoleElement) {
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+          }
+        });
       }
-
-      const now = Date.now();
-
-      if (now - lastPlottingAreaUpdateTime >= MEDIUM_DELAY) {
-        updatePlot(Math.round(0.01 * progress * numberOfSteps) + 1);
-
-        lastPlottingAreaUpdateTime = now;
-      }
-    });
-
-    const simulationTime = standardInstance.waitForRun();
-
-    if (standardInstance.hasIssues()) {
-      standardInstance.issues().forEach((issue: locApi.IIssue) => {
-        const color =
-          issue.type === locApi.EIssueType.ERROR
-            ? colors.REVERTED_PALETTE.Red
-            : issue.type === locApi.EIssueType.WARNING
-              ? colors.REVERTED_PALETTE.Orange
-              : colors.REVERTED_PALETTE.Blue;
-        const issueType =
-          issue.type === locApi.EIssueType.ERROR
-            ? 'Error'
-            : issue.type === locApi.EIssueType.WARNING
-              ? 'Warning'
-              : 'Info';
-        const issueDescription = issue.description.replace('Task | ', '');
-
-        standardConsoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`;
-      });
-    } else {
-      standardConsoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>`;
     }
-
-    vue.nextTick(() => {
-      const consoleElement = editorRef.value;
-
-      if (consoleElement) {
-        consoleElement.scrollTop = consoleElement.scrollHeight;
-      }
-    });
-
-    updatePlot();
 
     return;
   }
@@ -455,6 +524,14 @@ const onRun = async (): Promise<void> => {
   // Run the interactive simulation.
 
   updateInteractiveSimulation(true);
+};
+
+const onStop = (): void => {
+  standardRunAborted = true;
+
+  standardInstance.stopRun();
+
+  standardSimulationStatus.value = locSedApi.ESedInstanceStatus.IDLE;
 };
 
 const onDownloadCombineArchive = (): void => {
@@ -547,6 +624,8 @@ const standardData = vue.ref<IGraphPanelData>({
 });
 const standardConsoleContents = vue.ref<string>(`<b>${standardFile.path()}</b>`);
 const standardProgress = vue.ref<number>(0);
+const standardSimulationStatus = vue.ref<locSedApi.ESedInstanceStatus>(standardInstance.status());
+let standardRunAborted = false;
 
 if (standardInstanceTask) {
   populateParameters(standardParameters, standardInstanceTask);
@@ -2046,7 +2125,7 @@ if (common.isDesktop()) {
     ) {
       event.preventDefault();
 
-      onRun();
+      onRunPause();
     }
   });
 }
@@ -2153,7 +2232,7 @@ if (common.isDesktop()) {
   border-color: var(--p-primary-color);
 }
 
-.toolbar-button:hover {
+.toolbar-button:not(:disabled):hover {
   background-color: var(--p-surface-hover) !important;
   transform: scale(1.15);
 }

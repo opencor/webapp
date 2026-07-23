@@ -63,7 +63,7 @@ export interface ICppLocApi {
 
   sedInstanceHasIssues: (instanceId: number) => boolean;
   sedInstanceIssues: (instanceId: number) => IIssue[];
-  sedInstanceIsRunning: (instanceId: number) => boolean;
+  sedInstanceStatus: (instanceId: number) => number;
   sedInstanceProgress: (instanceId: number) => number;
   sedInstanceStartRun: (instanceId: number) => boolean;
   sedInstanceWaitForRun: (instanceId: number) => number;

@@ -372,6 +372,12 @@ export class SolverCvode extends SedIndex {
   }
 }
 
+export enum ESedInstanceStatus {
+  IDLE,
+  RUNNING,
+  PAUSED
+}
+
 export class SedInstance {
   private _cppInstanceId: number = -1;
   private _wasmSedInstance: IWasmSedInstance = {} as IWasmSedInstance;
@@ -398,8 +404,8 @@ export class SedInstance {
     return new SedInstanceTask(this._cppInstanceId, index, this._wasmSedInstance);
   }
 
-  isRunning(): boolean {
-    return cppVersion() ? _cppLocApi.sedInstanceIsRunning(this._cppInstanceId) : this._wasmSedInstance.isRunning;
+  status(): ESedInstanceStatus {
+    return cppVersion() ? _cppLocApi.sedInstanceStatus(this._cppInstanceId) : this._wasmSedInstance.status.value;
   }
 
   progress(): number {

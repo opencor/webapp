@@ -224,11 +224,11 @@ napi_value sedInstanceIssues(const Napi::CallbackInfo &pInfo)
     return issues(pInfo, sedInstance->issues());
 }
 
-napi_value sedInstanceIsRunning(const Napi::CallbackInfo &pInfo)
+napi_value sedInstanceStatus(const Napi::CallbackInfo &pInfo)
 {
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
 
-    return Napi::Boolean::New(pInfo.Env(), sedInstance->isRunning());
+    return Napi::Number::New(pInfo.Env(), static_cast<int>(sedInstance->status()));
 }
 
 napi_value sedInstanceProgress(const Napi::CallbackInfo &pInfo)
