@@ -64,13 +64,9 @@ export const initialiseLocApi = async (): Promise<void> => {
     // @ts-expect-error (window.locApi is defined)
     locApi.setCppLocApi(window.locApi);
   } else {
-    // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module.
+    // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module and instantiate it.
 
     try {
-      // Use a configurable base URL (set via Vite `define`). The default is a same-origin path proxied to opencor.ws
-      // during development. Production web deployments can override this at build time to point to wherever the
-      // libOpenCOR WASM build is hosted (e.g. a CDN or a local path served by the web server).
-
       const libOpenCOR = (await import(/* @vite-ignore */ `${__LIBOPENCOR_WASM_BASE_URL__}/libopencor.js`))
         .default as WasmFactory;
 
