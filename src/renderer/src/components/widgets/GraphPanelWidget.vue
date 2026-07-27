@@ -759,6 +759,7 @@ const updatePlot = (): void => {
       x: dataTrace.x,
       y: dataTrace.y,
       name: dataTrace.name,
+      traceId: dataTrace.traceId,
       visible: dataTraceKey ? previousTraceVisibilityByKey[dataTraceKey] : undefined,
       line: { color: dataTrace.color },
       legendrank: dataTrace.zorder
