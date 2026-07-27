@@ -58,11 +58,12 @@ The exact steps depend on your Web server. Here are the steps for Apache:
 
 If you serve libOpenCOR (`.js` and `.wasm` files) from the same origin as the HTML page, then they are covered by the document's cross-origin isolation policy and require no additional headers.
 
-On the other hand, if you serve it from a different path on a different origin, then they need a way to signal that they can be loaded cross-origin under COEP. In practice, a straightforward approach that works across server setups is to set the same `Cross-Origin-Embedder-Policy` header already used on the HTML page. While COEP is semantically a document-level policy, Web browsers ignore it on subresource responses, so setting it here is harmless and avoids subtle server-specific issues with other headers. With Apache, place a `.htaccess` file in the download directory (or one of its parent directories):
+On the other hand, if you serve it from a different path on a different origin, then you need to set the following headers on `.js` and `.wasm` files:
 
 ```apache
 <IfModule mod_headers.c>
     <FilesMatch "\.(js|wasm)$">
+        Header set Access-Control-Allow-Origin "*"
         Header set Cross-Origin-Embedder-Policy "require-corp"
     </FilesMatch>
 </IfModule>
