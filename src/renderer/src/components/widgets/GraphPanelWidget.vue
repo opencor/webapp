@@ -134,6 +134,8 @@ defineExpose({
   resize
 });
 
+const DOUBLE_CLICK_DELAY = 300;
+
 const instanceId = Symbol('GraphPanelWidget');
 const rootRef = vue.ref<HTMLElement | null>(null);
 const mainDivRef = vue.ref<HTMLElement | null>(null);
@@ -150,6 +152,8 @@ let trackedMargins: IGraphPanelMargins | undefined;
 let stopTrackingContainerSize: (() => void) | undefined;
 let marginsRafId: number | undefined;
 let resizeRafId: number | undefined;
+let lastLegendClickIndex: number | undefined;
+let lastLegendClickTime = 0;
 
 // Context menu functionality.
 
@@ -710,6 +714,10 @@ const updateMarginsAsync = (): void => {
   });
 };
 
+const plotlyTraceData = (): IPlotlyTraceState[] | undefined => {
+  return (mainDivRef.value as unknown as { data?: IPlotlyTraceState[] })?.data;
+};
+
 const updatePlot = (): void => {
   plotIsReady = false;
 
@@ -735,7 +743,7 @@ const updatePlot = (): void => {
   };
 
   const previousTraceVisibilityByKey: Record<string, PlotlyTraceVisible> = {};
-  const previousPlotlyData = (mainDivRef.value as unknown as { data?: IPlotlyTraceState[] })?.data;
+  const previousPlotlyData = plotlyTraceData();
 
   for (const plotlyTrace of previousPlotlyData ?? []) {
     const plotlyTraceKey = traceVisibilityKey(plotlyTrace);
@@ -799,7 +807,7 @@ const updatePlot = (): void => {
 
       responsive: true,
       displayModeBar: false,
-      doubleClickDelay: 1000,
+      doubleClickDelay: DOUBLE_CLICK_DELAY,
       scrollZoom: true,
       showTips: false
     })
@@ -874,6 +882,98 @@ vue.onMounted(() => {
       if (eventData && ('xaxis.range[0]' in eventData || 'yaxis.range[0]' in eventData)) {
         emit('resetMargins');
       }
+    });
+
+    // Intercept legend single-click to toggle trace visibility immediately, bypassing Plotly's setTimeout()-based
+    // handler.
+
+    plotlyElement.on('plotly_legendclick', (...args: unknown[]) => {
+      const eventData = args[0] as { curveNumber?: number } | undefined;
+      const curveNumber = eventData?.curveNumber;
+
+      if (curveNumber === undefined) {
+        return;
+      }
+
+      const now = Date.now();
+
+      // If this is a rapid second click on the same trace, a double-click is in progress, so skip toggling and let
+      // plotly_legenddoubleclick() handle isolation.
+
+      if (curveNumber === lastLegendClickIndex && now - lastLegendClickTime < DOUBLE_CLICK_DELAY) {
+        lastLegendClickIndex = undefined;
+
+        return false;
+      }
+
+      // Toggle the trace visibility immediately.
+
+      const plotlyData = plotlyTraceData();
+
+      if (!plotlyData || curveNumber >= plotlyData.length) {
+        return false;
+      }
+
+      const currentVisibility = plotlyData[curveNumber]?.visible;
+      const newVisibility = currentVisibility === 'legendonly' ? true : 'legendonly';
+
+      dependencies._plotlyJs.restyle(mainDivRef.value, 'visible', newVisibility, [curveNumber]);
+
+      lastLegendClickIndex = curveNumber;
+      lastLegendClickTime = now;
+
+      // Return false to cancel Plotly's own setTimeout()-based handler.
+
+      return false;
+    });
+
+    // Intercept legend double-click to implement trace isolation (show only the clicked trace) immediately, since we
+    // already cancelled the single-click path.
+
+    plotlyElement.on('plotly_legenddoubleclick', (...args: unknown[]) => {
+      const eventData = args[0] as { curveNumber?: number } | undefined;
+      const curveNumber = eventData?.curveNumber;
+
+      if (curveNumber === undefined) {
+        return false;
+      }
+
+      lastLegendClickIndex = undefined;
+
+      const plotlyData = plotlyTraceData();
+
+      if (!plotlyData || curveNumber >= plotlyData.length) {
+        return false;
+      }
+
+      // Collect the indices of visible (not 'legendonly') traces.
+
+      const visibleIndices: number[] = [];
+
+      for (let i = 0; i < plotlyData.length; ++i) {
+        if (plotlyData[i] && plotlyData[i].visible !== 'legendonly' && plotlyData[i].visible !== false) {
+          visibleIndices.push(i);
+        }
+      }
+
+      // If the clicked trace is the only one visible, then show all traces again. Otherwise, isolate the clicked trace
+      // by hiding all the other traces (by setting them to 'legendonly').
+
+      const isSoleVisible = visibleIndices.length === 1 && visibleIndices[0] === curveNumber;
+
+      if (isSoleVisible) {
+        dependencies._plotlyJs.restyle(mainDivRef.value, 'visible', true);
+      } else {
+        const visibilityUpdates: PlotlyTraceVisible[] = new Array(plotlyData.length);
+
+        for (let i = 0; i < plotlyData.length; ++i) {
+          visibilityUpdates[i] = i === curveNumber ? true : 'legendonly';
+        }
+
+        dependencies._plotlyJs.restyle(mainDivRef.value, 'visible', visibilityUpdates);
+      }
+
+      return false;
     });
   });
 });
