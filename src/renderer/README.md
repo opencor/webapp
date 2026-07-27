@@ -14,6 +14,60 @@ Key characteristics:
 - Can be used as a standalone Web app or embedded in a Vue 3 application.
 - Uses [CSS containment](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Containment) to prevent CSS leakage when OpenCOR is embedded in an application that doesn't use [PrimeVue](https://www.primefaces.org/primevue/) as its UI framework.
 
+## Deployment
+
+OpenCOR's Web app requires **cross-origin isolation** to use features like `SharedArrayBuffer` (needed by libOpenCOR). This is done by sending the following HTTP headers on the HTML page that loads the Web app:
+
+```http
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Without these headers, the Web app will fail to initialise libOpenCOR and will not function.
+
+### Server configuration
+
+The exact steps depend on your Web server. Here are the steps for Apache:
+
+1. **Enable `mod_headers`**. Ensure the `headers` module is enabled (e.g., `a2enmod headers` or add it to your modules list).
+2. **Set headers on the HTML path**. In your virtual host config, add:
+
+   ```apache
+   <Location "/app">
+       Header set Cross-Origin-Opener-Policy "same-origin"
+       Header set Cross-Origin-Embedder-Policy "require-corp"
+   </Location>
+   ```
+
+   Adjust the `Location` path to match the URL prefix where the Web app is served (here, we use `/app` assuming the Web app is served from `https://your-domain.com/app`).
+3. **Reload Apache**. Apply the changes with `sudo apachectl reload` or the equivalent for your distribution.
+4. **Verify**. Check the response headers on your deployed HTML page (the trailing slash is important):
+
+   ```bash
+   curl -I https://your-domain.com/app/
+   ```
+
+   You should see:
+
+   ```http
+   cross-origin-opener-policy: same-origin
+   cross-origin-embedder-policy: require-corp
+   ```
+
+### Serving libOpenCOR downloads
+
+If you serve libOpenCOR (`.js` and `.wasm` files) from the same origin as the HTML page, then they are covered by the document's cross-origin isolation policy and require no additional headers.
+
+On the other hand, if you serve it from a different path on a different origin, then they need a way to signal that they can be loaded cross-origin under COEP. In practice, a straightforward approach that works across server setups is to set the same `Cross-Origin-Embedder-Policy` header already used on the HTML page. While COEP is semantically a document-level policy, Web browsers ignore it on subresource responses, so setting it here is harmless and avoids subtle server-specific issues with other headers. With Apache, place a `.htaccess` file in the download directory (or one of its parent directories):
+
+```apache
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|wasm)$">
+        Header set Cross-Origin-Embedder-Policy "require-corp"
+    </FilesMatch>
+</IfModule>
+```
+
 ## Usage
 
 OpenCOR accepts the following props:
