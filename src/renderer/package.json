@@ -42,7 +42,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20260724.1",
+  "version": "0.20260727.0",
   "libopencorVersion": "1.20260723.2",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.ts",
@@ -86,7 +86,7 @@
     "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.5.4",
     "esbuild": "^0.28.1",
-    "postcss": "^8.5.22",
+    "postcss": "^8.5.23",
     "rollup-plugin-visualizer": "^7.0.1",
     "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",
