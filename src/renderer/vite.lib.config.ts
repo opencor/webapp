@@ -7,6 +7,8 @@ import * as postcss from 'postcss';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
+import { libopencorVersion } from './scripts/libopencor.version';
+
 export default vite.defineConfig({
   build: {
     lib: {
@@ -32,6 +34,9 @@ export default vite.defineConfig({
       }
     },
     target: 'esnext'
+  },
+  define: {
+    __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`https://opencor.ws/libopencor/downloads/wasm/${libopencorVersion}`)
   },
   plugins: [
     // Note: this must be in sync with vite.config.ts, except for the process-css-layers plugin which is only needed for
