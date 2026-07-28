@@ -123,8 +123,9 @@ const checkUpdates = async (
           // Retrieve the absolute latest version of the dependency, which may be a major bump.
 
           const dependencyVersion = await $`npm view ${dependency.packageName} version --json`.text();
+          const parsed = JSON.parse(dependencyVersion.trim());
 
-          latest = JSON.parse(dependencyVersion.trim());
+          latest = Array.isArray(parsed) ? parsed[parsed.length - 1] : parsed;
         }
 
         return {
