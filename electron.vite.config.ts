@@ -76,15 +76,9 @@ export default electronVite.defineConfig({
         'Cross-Origin-Embedder-Policy': 'require-corp'
       },
       proxy: {
-        // See src/renderer/src/common/initialisation.ts for the rationale behind this proxy.
         '/libopencor/downloads/wasm': {
           target: 'https://opencor.ws',
-          changeOrigin: true,
-          configure: (proxy) => {
-            proxy.on('proxyRes', (proxyRes) => {
-              proxyRes.headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
-            });
-          }
+          changeOrigin: true
         }
       }
     }
