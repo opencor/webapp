@@ -16,18 +16,20 @@ Key characteristics:
 
 ## Deployment
 
-OpenCOR's Web app requires **cross-origin isolation** to use features like `SharedArrayBuffer` (needed by libOpenCOR). This is done by sending the following HTTP headers on the HTML page that loads the Web app:
+### Cross-origin isolation
+
+OpenCOR's Web app relies on libOpenCOR's threaded WebAssembly (WASM) to run simulations in the browser. Threaded WASM requires [`SharedArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer), which in turn requires the page to be served with **cross-origin isolation** headers.
+
+When deploying OpenCOR's Web app, your Web server **must** send the following headers with the HTML document:
 
 ```http
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Without these headers, the Web app will fail to initialise libOpenCOR and will not function.
+Without these headers, OpenCOR's Web app will fail to initialise libOpenCOR and will not function.
 
-### Server configuration
-
-The exact steps depend on your Web server. Here are the steps for Apache:
+The exact steps to set these headers depend on your Web server. Here are the steps for Apache:
 
 1. **Enable `mod_headers`**. Ensure the `headers` module is enabled (e.g., `a2enmod headers` or add it to your modules list).
 2. **Set headers on the HTML path**. In your virtual host config, add:
@@ -41,7 +43,7 @@ The exact steps depend on your Web server. Here are the steps for Apache:
 
    Adjust the `Location` path to match the URL prefix where the Web app is served (here, we use `/app` assuming the Web app is served from `https://your-domain.com/app`).
 3. **Reload Apache**. Apply the changes with `sudo apachectl reload` or the equivalent for your distribution.
-4. **Verify**. Check the response headers on your deployed HTML page (the trailing slash is important):
+4. **Verify**. Check the response headers on your deployed HTML page using:
 
    ```bash
    curl -I https://your-domain.com/app/
@@ -54,7 +56,7 @@ The exact steps depend on your Web server. Here are the steps for Apache:
    cross-origin-embedder-policy: require-corp
    ```
 
-### Serving libOpenCOR downloads
+### Serving libOpenCOR with cross-origin headers
 
 If you serve libOpenCOR (`.js` and `.wasm` files) from the same origin as the HTML page, then they are covered by the document's cross-origin isolation policy and require no additional headers.
 
@@ -65,9 +67,12 @@ On the other hand, if you serve it from a different path on a different origin, 
     <FilesMatch "\.(js|wasm)$">
         Header set Access-Control-Allow-Origin "*"
         Header set Cross-Origin-Embedder-Policy "require-corp"
+        Header set Cross-Origin-Resource-Policy "cross-origin"
     </FilesMatch>
 </IfModule>
 ```
+
+With `Cross-Origin-Resource-Policy: cross-origin`, the resource can be fetched cross-origin, which is required for the page to load the library when served from a different origin.
 
 ## Usage
 
