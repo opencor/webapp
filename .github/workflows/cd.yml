@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   releases:
+    if: ${{ github.repository == 'opencor/webapp' }}
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -129,6 +130,7 @@ jobs:
         with:
           files: dist/OpenCOR-*-WebApp.tar.gz
   npm:
+    if: ${{ github.repository == 'opencor/webapp' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Set the timezone to New Zealand
