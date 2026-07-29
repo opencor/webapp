@@ -56,23 +56,33 @@ The exact steps to set these headers depend on your Web server. Here are the ste
    cross-origin-embedder-policy: require-corp
    ```
 
-### Serving libOpenCOR with cross-origin headers
+### libOpenCOR static files
 
-If you serve libOpenCOR (`.js` and `.wasm` files) from the same origin as the HTML page, then they are covered by the document's cross-origin isolation policy and require no additional headers.
+OpenCOR's Web app bundles `libopencor.js` in its static assets during the build process. This file is downloaded from `https://opencor.ws/libopencor/downloads/wasm/<version>/libopencor.js` at build time and placed under the app's `public/` directory. As a result, it is served from the **same origin** as the HTML page, which is needed to run simulations in their own thread.
 
-On the other hand, if you serve it from a different path on a different origin, then you need to set the following headers on `.js` and `.wasm` files:
+The threaded WASM file is **not** bundled. Instead, `libopencor.js` dynamically loads it at runtime from:
 
-```apache
-<IfModule mod_headers.c>
-    <FilesMatch "\.(js|wasm)$">
-        Header set Access-Control-Allow-Origin "*"
-        Header set Cross-Origin-Embedder-Policy "require-corp"
-        Header set Cross-Origin-Resource-Policy "cross-origin"
-    </FilesMatch>
-</IfModule>
+```
+https://opencor.ws/libopencor/downloads/wasm/<version>/libopencor.wasm
 ```
 
-With `Cross-Origin-Resource-Policy: cross-origin`, the resource can be fetched cross-origin, which is required for the page to load the library when served from a different origin.
+Because this is a cross-origin request, the server at `opencor.ws` sends the following headers on WASM files:
+
+```http
+Access-Control-Allow-Origin: *
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Resource-Policy: cross-origin
+```
+
+If you wish to self-host the WASM file (e.g., to avoid depending on `opencor.ws`), then you must serve it with the same headers. You can do this by placing a `.htaccess` file in the same directory as the WASM file with the following content:
+
+```apache
+Header set Access-Control-Allow-Origin "*"
+Header set Cross-Origin-Embedder-Policy "require-corp"
+Header set Cross-Origin-Resource-Policy "cross-origin"
+```
+
+In addition, you will need to update the `locateFile` callback in `src/renderer/src/common/initialisation.ts` to point to your own URL.
 
 ## Usage
 
