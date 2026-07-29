@@ -2,7 +2,7 @@ import * as electronToolkitUtils from '@electron-toolkit/utils';
 
 import electron from 'electron';
 import { Conf as ElectronConf } from 'electron-conf';
-import * as nodeChildProcess from 'node:child_process';
+import * as childProcess from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -139,9 +139,9 @@ MimeType=x-scheme-handler/${URI_SCHEME}`;
     // Update the desktop database.
 
     if (updateDesktopDatabase) {
-      nodeChildProcess.exec(
+      childProcess.exec(
         'update-desktop-database ~/.local/share/applications',
-        (error: nodeChildProcess.ExecException | null) => {
+        (error: childProcess.ExecException | null) => {
           if (error) {
             console.warn('OpenCOR: failed to update the desktop database:', formatError(error));
           }
