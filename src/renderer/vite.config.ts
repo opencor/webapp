@@ -56,10 +56,14 @@ export default vite.defineConfig({
     vitePlugin({
       resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     }),
-    visualizerPlugin({
-      filename: 'dist/stats.html',
-      gzipSize: true
-    })
+    ...(process.env.NODE_ENV !== 'production'
+      ? [
+          visualizerPlugin({
+            filename: 'dist/stats.html',
+            gzipSize: true
+          })
+        ]
+      : [])
   ],
   server: {
     fs: {
