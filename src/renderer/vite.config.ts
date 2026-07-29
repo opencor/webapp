@@ -4,13 +4,17 @@ import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
 import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as nodeFs from 'node:fs';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
+import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js';
 import { libopencorVersion } from './scripts/libopencor.version';
+
+await downloadLibopencorJsIfNeeded(path.join(import.meta.dirname, 'public', 'libopencor', 'wasm', libopencorVersion));
 
 export default vite.defineConfig({
   base: './',
@@ -25,8 +29,10 @@ export default vite.defineConfig({
     },
     target: 'esnext'
   },
+  publicDir: path.join(import.meta.dirname, 'public'),
   define: {
-    __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`/libopencor/downloads/wasm/${libopencorVersion}`)
+    __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`./libopencor/wasm/${libopencorVersion}`),
+    __LIBOPENCOR_WASM_VERSION__: JSON.stringify(libopencorVersion)
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
@@ -47,9 +53,9 @@ export default vite.defineConfig({
     vuePlugin({
       script: {
         fs: {
-          fileExists: (file: string) => nodeFs.existsSync(file),
-          readFile: (file: string) => nodeFs.readFileSync(file, 'utf-8'),
-          realpath: (file: string) => nodeFs.realpathSync(file)
+          fileExists: (file: string) => fs.existsSync(file),
+          readFile: (file: string) => fs.readFileSync(file, 'utf-8'),
+          realpath: (file: string) => fs.realpathSync(file)
         }
       }
     }),
@@ -72,12 +78,6 @@ export default vite.defineConfig({
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp'
-    },
-    proxy: {
-      '/libopencor/downloads/wasm': {
-        target: 'https://opencor.ws',
-        changeOrigin: true
-      }
     }
   }
 });

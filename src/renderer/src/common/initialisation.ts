@@ -67,12 +67,24 @@ export const initialiseLocApi = async (): Promise<void> => {
     // We are running OpenCOR's Web app, so we must import libOpenCOR's WebAssembly module and instantiate it.
 
     try {
-      const libOpenCOR = (await import(/* @vite-ignore */ `${__LIBOPENCOR_WASM_BASE_URL__}/libopencor.js`))
-        .default as WasmFactory;
+      const libOpenCOR = (
+        await import(
+          /* @vite-ignore */ new URL(`${__LIBOPENCOR_WASM_BASE_URL__}/libopencor.js`, window.location.href).href
+        )
+      ).default as WasmFactory;
 
       ++crtNbOfSteps.value;
 
-      locApi.setWasmLocApi(await libOpenCOR());
+      locApi.setWasmLocApi(
+        await libOpenCOR({
+          locateFile: (path: string) => {
+            // Note: the only file that is loaded by libOpenCOR is its threaded WASM, hence fetching it directly from
+            //       https://opencor.ws.
+
+            return `https://opencor.ws/libopencor/downloads/wasm/${__LIBOPENCOR_WASM_VERSION__}/${path}`;
+          }
+        })
+      );
 
       ++crtNbOfSteps.value;
     } catch (error: unknown) {

@@ -5,7 +5,7 @@ import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
 
 import * as electronVite from 'electron-vite';
-import * as nodeFs from 'node:fs';
+import * as fs from 'node:fs';
 import path from 'node:path';
 import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import vitePlugin from 'unplugin-vue-components/vite';
@@ -31,7 +31,8 @@ export default electronVite.defineConfig({
       target: 'esnext'
     },
     define: {
-      __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`/libopencor/downloads/wasm/${libopencorVersion}`)
+      __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`./libopencor/wasm/${libopencorVersion}`),
+      __LIBOPENCOR_WASM_VERSION__: JSON.stringify(libopencorVersion)
     },
     envDir: path.join(import.meta.dirname, 'src/renderer'),
     plugins: [
@@ -53,9 +54,9 @@ export default electronVite.defineConfig({
       vuePlugin({
         script: {
           fs: {
-            fileExists: (file: string) => nodeFs.existsSync(file),
-            readFile: (file: string) => nodeFs.readFileSync(file, 'utf-8'),
-            realpath: (file: string) => nodeFs.realpathSync(file)
+            fileExists: (file: string) => fs.existsSync(file),
+            readFile: (file: string) => fs.readFileSync(file, 'utf-8'),
+            realpath: (file: string) => fs.realpathSync(file)
           }
         }
       }),
@@ -78,12 +79,6 @@ export default electronVite.defineConfig({
       headers: {
         'Cross-Origin-Opener-Policy': 'same-origin',
         'Cross-Origin-Embedder-Policy': 'require-corp'
-      },
-      proxy: {
-        '/libopencor/downloads/wasm': {
-          target: 'https://opencor.ws',
-          changeOrigin: true
-        }
       }
     }
   }
