@@ -47,6 +47,7 @@
   "scripts": {
     "build": "vite build && bun scripts/generate.version.ts",
     "build:lib": "vite build --config vite.lib.config.ts && bun --bun scripts/type.check.ts --project tsconfig.lib.types.json",
+    "build:stats": "STATS=true vite build && bun scripts/generate.version.ts",
     "clean": "bun scripts/clean.ts",
     "dependencies:update": "bun scripts/dependencies.update.ts",
     "dev": "vite dev",

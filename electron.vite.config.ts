@@ -7,7 +7,6 @@ import vuePlugin from '@vitejs/plugin-vue';
 import * as electronVite from 'electron-vite';
 import * as fs from 'node:fs';
 import path from 'node:path';
-import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import vitePlugin from 'unplugin-vue-components/vite';
 
 import { libopencorVersion } from './src/renderer/scripts/libopencor.version';
@@ -62,15 +61,7 @@ export default electronVite.defineConfig({
       }),
       vitePlugin({
         resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
-      }),
-      ...(process.env.NODE_ENV !== 'production'
-        ? [
-            visualizerPlugin({
-              filename: 'dist/stats.html',
-              gzipSize: true
-            })
-          ]
-        : [])
+      })
     ],
     server: {
       fs: {
