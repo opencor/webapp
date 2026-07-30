@@ -62,7 +62,7 @@ export default vite.defineConfig({
     vitePlugin({
       resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
     }),
-    ...(process.env.NODE_ENV !== 'production'
+    ...(process.env.STATS === 'true'
       ? [
           visualizerPlugin({
             filename: 'dist/stats.html',

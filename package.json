@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "0.20260729.0",
+  "version": "0.20260730.0",
   "engines": {
     "bun": ">=1.2.0"
   },
@@ -31,6 +31,7 @@
     "archive:web": "bun src/renderer/scripts/archive.web.ts",
     "build": "bun src/renderer/scripts/libopencor.ts && electron-vite build",
     "build:web": "bun --cwd src/renderer build",
+    "build:web:stats": "bun --cwd src/renderer build:stats",
     "clean": "bun src/renderer/scripts/clean.ts",
     "dependencies:update": "bun src/renderer/scripts/dependencies.update.ts",
     "dev": "bun src/renderer/scripts/libopencor.ts && electron-vite dev --watch",
