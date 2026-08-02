@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 // Current version from our package.json file.
 
 const scriptDirName = path.dirname(fileURLToPath(import.meta.url));
-const oldVersion = (JSON.parse(fs.readFileSync(`${scriptDirName}/../package.json`)) as { version: string }).version;
+const oldVersion = (JSON.parse(fs.readFileSync(`${scriptDirName}/../package.json`, 'utf8')) as { version: string })
+  .version;
 
 const oldVersionParts = oldVersion.split('.');
 const oldMajorVersion = oldVersionParts[0];
@@ -17,9 +18,26 @@ const oldPatchVersion = oldVersionParts[2];
 // Determine the new version based on the current version and the current date.
 
 const now = new Date();
+const dateTimeParts = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Pacific/Auckland',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+}).formatToParts(now);
+const datePart = (type: Intl.DateTimeFormatPartTypes): string => {
+  const part = dateTimeParts.find((candidate) => {
+    return candidate.type === type;
+  });
+
+  if (!part) {
+    throw new Error(`Failed to find date part '${type}' in the formatted date parts.`);
+  }
+
+  return part.value;
+};
 
 const newMajorVersion = oldMajorVersion;
-const newMinorVersion = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+const newMinorVersion = `${datePart('year')}${datePart('month')}${datePart('day')}`;
 let newPatchVersion = 0;
 
 if (oldMinorVersion === newMinorVersion) {
@@ -31,7 +49,7 @@ const newVersion = `${newMajorVersion}.${newMinorVersion}.${newPatchVersion}`;
 // Update our package.json files.
 
 const updatePackageJsonFile = (filePath: string): void => {
-  const contents = JSON.parse(fs.readFileSync(filePath)) as { version: string };
+  const contents = JSON.parse(fs.readFileSync(filePath, 'utf8')) as { version: string };
 
   contents.version = newVersion;
 

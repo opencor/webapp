@@ -42,8 +42,8 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "0.20260730.0",
-  "libopencorVersion": "1.20260723.2",
+  "version": "0.20260803.0",
+  "libopencorVersion": "1.20260803.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.ts",
     "build:lib": "vite build --config vite.lib.config.ts && bun --bun scripts/type.check.ts --project tsconfig.lib.types.json",
@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@napi-rs/keyring": "^1.3.0",
-    "@opencor/libopencor-types": "^1.20260723.2",
+    "@opencor/libopencor-types": "^1.20260803.0",
     "@primeuix/themes": "2.0.3",
     "@primevue/auto-import-resolver": "4.2.5",
     "@vueuse/core": "12.8.2",
@@ -97,6 +97,6 @@
     "typescript-6": "npm:typescript@^6.0.3",
     "unplugin-vue-components": "^32.1.0",
     "vite": "7.3.6",
-    "vue-tsc": "^3.3.8"
+    "vue-tsc": "^3.3.9"
   }
 }
