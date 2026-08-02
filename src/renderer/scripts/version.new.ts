@@ -18,9 +18,26 @@ const oldPatchVersion = oldVersionParts[2];
 // Determine the new version based on the current version and the current date.
 
 const now = new Date();
+const dateTimeParts = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Pacific/Auckland',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+}).formatToParts(now);
+const datePart = (type: Intl.DateTimeFormatPartTypes): string => {
+  const part = dateTimeParts.find((candidate) => {
+    return candidate.type === type;
+  });
+
+  if (!part) {
+    throw new Error(`Failed to find date part '${type}' in the formatted date parts.`);
+  }
+
+  return part.value;
+};
 
 const newMajorVersion = oldMajorVersion;
-const newMinorVersion = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+const newMinorVersion = `${datePart('year')}${datePart('month')}${datePart('day')}`;
 let newPatchVersion = 0;
 
 if (oldMinorVersion === newMinorVersion) {
