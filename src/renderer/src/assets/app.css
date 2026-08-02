@@ -42,10 +42,6 @@ body {
     -moz-osx-font-smoothing: grayscale;
     user-select: none;
 
-    .p-component {
-      transition: none !important;
-    }
-
     .p-contextmenu-item-content,
     .p-contextmenu-item-link {
       color: var(--p-contextmenu-item-color, var(--p-text-color));
