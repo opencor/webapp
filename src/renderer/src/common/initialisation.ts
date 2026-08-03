@@ -122,7 +122,7 @@ const createLazyInitialiser = (
           const response = await fetch(/* @vite-ignore */ cssUrl, { mode: 'cors' });
 
           if (!response.ok) {
-            throw new Error(`Failed to load ${name ?? 'stylesheet'}: ${response.statusText}`);
+            throw new Error(`Failed to load ${name ?? 'stylesheet'} (${response.status}: ${response.statusText}).`);
           }
 
           const style = document.createElement('style');

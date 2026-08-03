@@ -22,7 +22,7 @@ export const downloadLibopencorJsIfNeeded = async (destDir: string): Promise<voi
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to download ${url} (${response.status}: ${response.statusText}).`);
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
