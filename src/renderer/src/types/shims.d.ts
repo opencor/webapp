@@ -1,7 +1,6 @@
 // TypeScript shims for Vite-style imports.
 // Note: `vue-tsc` needs to know how to treat `.vue` files and Vite-style asset imports.
 
-declare const __LIBOPENCOR_WASM_BASE_URL__: string;
 declare const __LIBOPENCOR_WASM_VERSION__: string;
 
 declare module '*.vue' {

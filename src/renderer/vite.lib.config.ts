@@ -11,7 +11,9 @@ import * as vite from 'vite';
 import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js';
 import { libopencorVersion } from './scripts/libopencor.version';
 
-await downloadLibopencorJsIfNeeded(path.join(import.meta.dirname, 'public', 'libopencor', 'wasm', libopencorVersion));
+await downloadLibopencorJsIfNeeded(
+  path.join(import.meta.dirname, 'public', 'libopencor', 'downloads', 'wasm', libopencorVersion)
+);
 
 export default vite.defineConfig({
   build: {
@@ -41,7 +43,6 @@ export default vite.defineConfig({
   },
   publicDir: path.join(import.meta.dirname, 'public'),
   define: {
-    __LIBOPENCOR_WASM_BASE_URL__: JSON.stringify(`./libopencor/wasm/${libopencorVersion}`),
     __LIBOPENCOR_WASM_VERSION__: JSON.stringify(libopencorVersion)
   },
   plugins: [
