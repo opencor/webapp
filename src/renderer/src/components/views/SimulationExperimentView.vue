@@ -1013,7 +1013,7 @@ const addExternalData = async (
 
       if (!response.ok) {
         return Promise.resolve(
-          issueEvent([`Could not retrieve the CSV file from ${csv} (status: ${response.status}).`])
+          issueEvent([`Could not retrieve the CSV file from ${csv} (${response.status}: ${response.statusText}).`])
         );
       }
 
