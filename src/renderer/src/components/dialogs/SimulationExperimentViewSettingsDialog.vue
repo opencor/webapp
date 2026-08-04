@@ -1,6 +1,6 @@
 <template>
   <div ref="rootRef">
-    <BaseDialog v-bind="$attrs" header="Interactive Mode Settings" class="w-270 h-210"
+    <BaseDialog v-bind="$attrs" header=" " class="w-270 h-210"
       @keydown.prevent.enter="onOk"
       @cancel="onCancel"
     >
