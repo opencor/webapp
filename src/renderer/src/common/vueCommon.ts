@@ -4,6 +4,10 @@ import * as vue from 'vue';
 
 import type { OpenCORTheme } from '../../index';
 
+import * as locSedApi from '../libopencor/locSedApi';
+
+import { MEDIUM_DELAY, VERY_SHORT_DELAY } from './constants';
+
 // A constant to know the UID of the active instance of OpenCOR.
 
 export const activeInstanceUid = vueusecore.createGlobalState(() => vue.ref<string | null>(null));
@@ -155,4 +159,127 @@ export const useAppendTarget = (ancestorRef: vue.Ref<HTMLElement | null>) => {
   });
 
   return appendTarget;
+};
+
+// Populate the parameters of the given instance task.
+
+export const populateParameters = (
+  parameters: vue.Ref<string[]>,
+  instanceTask: locSedApi.SedInstanceTask,
+  onlyEditableModelParameters = false
+): void => {
+  const addParameter = (param: string): void => {
+    parameters.value.push(param);
+  };
+
+  if (!onlyEditableModelParameters) {
+    addParameter(instanceTask.voiName());
+  }
+
+  for (let i = 0; i < instanceTask.stateCount(); i++) {
+    addParameter(instanceTask.stateName(i));
+  }
+
+  if (!onlyEditableModelParameters) {
+    for (let i = 0; i < instanceTask.rateCount(); i++) {
+      addParameter(instanceTask.rateName(i));
+    }
+  }
+
+  for (let i = 0; i < instanceTask.constantCount(); i++) {
+    addParameter(instanceTask.constantName(i));
+  }
+
+  if (!onlyEditableModelParameters) {
+    for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+      addParameter(instanceTask.computedConstantName(i));
+    }
+
+    for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
+      addParameter(instanceTask.algebraicVariableName(i));
+    }
+  }
+
+  // Sort the parameters alphabetically.
+
+  parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
+};
+
+// A helper function to wait while a simulation instance is running, yielding to the UI to keep it responsive.
+// Note: we return a promise (that resolves when the simulation is idle) and a cancel function to clear any pending
+//       progress reset timer (e.g., on component unmount).
+
+export const waitWhileRunning = (
+  instance: locSedApi.SedInstance,
+  onProgress?: (progress: number) => void,
+  onStatusChange?: (status: locSedApi.ESedInstanceStatus) => void,
+  runAbortedRef?: vue.Ref<boolean>
+): { promise: Promise<void>; cancel: () => void } => {
+  let lastStatus: number | undefined;
+  let progressResetTimer: ReturnType<typeof setTimeout> | undefined;
+  let cancelled = false;
+
+  const cancel = (): void => {
+    cancelled = true;
+
+    clearTimeout(progressResetTimer);
+  };
+
+  const promise = new Promise<void>((resolve) => {
+    const poll = (): void => {
+      if (cancelled) {
+        resolve();
+
+        return;
+      }
+
+      const status = instance.status();
+
+      if (status !== lastStatus) {
+        lastStatus = status;
+
+        onStatusChange?.(status);
+      }
+
+      // Update the progress bar and keep polling while the simulation is running or paused, and resolve when the
+      // simulation is idle.
+
+      switch (status) {
+        case locSedApi.ESedInstanceStatus.RUNNING:
+          onProgress?.(100 * instance.progress());
+
+          setTimeout(poll, VERY_SHORT_DELAY);
+
+          break;
+        case locSedApi.ESedInstanceStatus.PAUSED:
+          setTimeout(poll, VERY_SHORT_DELAY);
+
+          break;
+        default: // locSedApi.ESedInstanceStatus.IDLE:
+          if (onProgress && !runAbortedRef?.value) {
+            onProgress(100);
+
+            // Reset the progress bar after a short delay.
+
+            progressResetTimer = setTimeout(() => {
+              if (!cancelled) {
+                onProgress?.(0);
+              }
+            }, MEDIUM_DELAY);
+          }
+
+          resolve();
+      }
+    };
+
+    setTimeout(poll, 0);
+  });
+
+  return { promise, cancel };
+};
+
+// A helper function to generate a trace name from optional name and X/Y values.
+
+export const traceName = (name: string | undefined, xValue: string, yValue: string): string => {
+  return name ?? `${yValue} <i>vs.</i> ${xValue}`;
 };

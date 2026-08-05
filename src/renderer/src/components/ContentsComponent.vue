@@ -4,7 +4,15 @@
       <IssuesView v-if="fileTab.file.issues().length" class="m-4" style="height: calc(100% - 2rem);"
         :issues="fileTab.file.issues()"
       />
-      <SimulationExperimentView v-else ref="simulationExperimentViewRef" class="h-full"
+      <SimulationExperimentStandardView v-else-if="!fileTab.interactiveMode" class="h-full"
+        :isActive="isActive"
+        :uiEnabled="uiEnabled"
+        :file="fileTab.file"
+        :isActiveFile="fileTab.file.path() === activeFile"
+        :simulationOnly="simulationOnly"
+        @switchMode="fileTab.interactiveMode = true"
+      />
+      <SimulationExperimentInteractiveView v-else ref="simulationExperimentInteractiveViewRef" class="h-full"
         :isActive="isActive"
         :uiEnabled="uiEnabled"
         :file="fileTab.file"
@@ -12,6 +20,7 @@
         :simulationOnly="simulationOnly"
         :uiJson="fileTab.uiJson!"
         @simulationData="$emit('simulationData')"
+        @switchMode="fileTab.interactiveMode = false"
       />
     </div>
   </div>
@@ -47,13 +56,21 @@
           <IssuesView v-if="fileTab.file.issues().length" class="m-4" style="height: calc(100% - 2rem);"
             :issues="fileTab.file.issues()"
           />
-          <SimulationExperimentView v-else
+          <SimulationExperimentStandardView v-else-if="!fileTab.interactiveMode"
+            :isActive="isActive"
+            :uiEnabled="uiEnabled"
+            :file="fileTab.file"
+            :isActiveFile="fileTab.file.path() === activeFile"
+            @switchMode="fileTab.interactiveMode = true"
+          />
+          <SimulationExperimentInteractiveView v-else
             :isActive="isActive"
             :uiEnabled="uiEnabled"
             :file="fileTab.file"
             :isActiveFile="fileTab.file.path() === activeFile"
             :uiJson="fileTab.uiJson!"
             @error="$emit('error', $event)"
+            @switchMode="fileTab.interactiveMode = false"
           />
         </TabPanel>
       </TabPanels>
@@ -66,16 +83,19 @@ import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
 
+import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../index';
+
 import * as common from '../common/common';
 import { electronApi } from '../common/electronApi';
 import * as locApi from '../libopencor/locApi';
 
-import SimulationExperimentView from './views/SimulationExperimentView.vue';
-import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../index';
+import SimulationExperimentInteractiveView from './views/SimulationExperimentInteractiveView.vue';
+import SimulationExperimentStandardView from './views/SimulationExperimentStandardView.vue';
 
 interface IFileTab {
   file: locApi.File;
   uiJson?: locApi.IUiJson;
+  interactiveMode: boolean;
 }
 
 const props = defineProps<{
@@ -91,7 +111,7 @@ const emit = defineEmits<{
   (event: 'simulationData'): void;
 }>();
 
-const simulationExperimentViewRef = vue.ref<InstanceType<typeof SimulationExperimentView>[]>([]);
+const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof SimulationExperimentInteractiveView>[]>([]);
 const fileTabs = vue.ref<IFileTab[]>([]);
 const activeFile = vue.ref<string>('');
 
@@ -176,7 +196,8 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file: file,
-    uiJson: file.uiJson()
+    uiJson: file.uiJson(),
+    interactiveMode: !!file.uiJson()
   });
 
   if (wait) {
@@ -233,9 +254,9 @@ const addExternalData = async (
   voiExpression: string | undefined,
   modelParameters: string[]
 ): Promise<IOpenCORExternalDataEvent> => {
-  const simulationExperimentViews = simulationExperimentViewRef.value;
+  const simulationExperimentInteractiveViews = simulationExperimentInteractiveViewRef.value;
 
-  if (!simulationExperimentViews.length) {
+  if (!simulationExperimentInteractiveViews.length) {
     return Promise.resolve({
       type: 'issue',
       csv,
@@ -243,13 +264,15 @@ const addExternalData = async (
     });
   }
 
-  return simulationExperimentViews[0].addExternalData(csv, voiExpression, modelParameters).catch((error: unknown) => {
-    return {
-      type: 'issue',
-      csv,
-      issues: [common.formatError(error)]
-    };
-  });
+  return simulationExperimentInteractiveViews[0]
+    .addExternalData(csv, voiExpression, modelParameters)
+    .catch((error: unknown) => {
+      return {
+        type: 'issue',
+        csv,
+        issues: [common.formatError(error)]
+      };
+    });
 };
 
 // Retrieve some simulation data from the current simulation experiment view.
@@ -263,9 +286,9 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     });
   }
 
-  const simulationExperimentViews = simulationExperimentViewRef.value;
+  const simulationExperimentInteractiveViews = simulationExperimentInteractiveViewRef.value;
 
-  if (!simulationExperimentViews.length) {
+  if (!simulationExperimentInteractiveViews.length) {
     return Promise.resolve({
       type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
@@ -273,7 +296,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     });
   }
 
-  return simulationExperimentViews[0].simulationData(modelParameters).catch((error: unknown) => {
+  return simulationExperimentInteractiveViews[0].simulationData(modelParameters).catch((error: unknown) => {
     return {
       type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),

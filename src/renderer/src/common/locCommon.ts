@@ -273,12 +273,22 @@ export interface ISimulationDataInfo {
   index: number;
 }
 
+// A sentinel value to represent the absence of simulation data information.
+
+export const NoSimulationDataInfo: ISimulationDataInfo = {
+  type: ESimulationDataInfoType.UNKNOWN,
+  index: -1
+};
+
+// A method to check whether the given simulation data information is the sentinel value.
+
+export const isNoSimulationDataInfo = (info: ISimulationDataInfo): boolean => {
+  return info === NoSimulationDataInfo;
+};
+
 export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: string): ISimulationDataInfo => {
   if (!name) {
-    return {
-      type: ESimulationDataInfoType.UNKNOWN,
-      index: -1
-    };
+    return NoSimulationDataInfo;
   }
 
   if (name === instanceTask.voiName()) {
@@ -333,10 +343,7 @@ export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: s
     }
   }
 
-  return {
-    type: ESimulationDataInfoType.UNKNOWN,
-    index: -1
-  };
+  return NoSimulationDataInfo;
 };
 
 // A method to retrieve the simulation data value for a given name from an instance task.
