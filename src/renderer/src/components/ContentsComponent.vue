@@ -13,10 +13,7 @@
         @switchMode="fileTab.interactiveMode = true"
       />
       <SimulationExperimentInteractiveView v-else ref="simulationExperimentInteractiveViewRef" class="h-full"
-        :isActive="isActive"
-        :uiEnabled="uiEnabled"
         :file="fileTab.file"
-        :isActiveFile="fileTab.file.path() === activeFile"
         :simulationOnly="simulationOnly"
         :uiJson="fileTab.uiJson!"
         @simulationData="$emit('simulationData')"
@@ -64,10 +61,7 @@
             @switchMode="fileTab.interactiveMode = true"
           />
           <SimulationExperimentInteractiveView v-else
-            :isActive="isActive"
-            :uiEnabled="uiEnabled"
             :file="fileTab.file"
-            :isActiveFile="fileTab.file.path() === activeFile"
             :uiJson="fileTab.uiJson!"
             @error="$emit('error', $event)"
             @switchMode="fileTab.interactiveMode = false"

@@ -16,9 +16,6 @@
             <Tab value="interactive">
               <i class="pi pi-sliders-h mr-2"></i>Interactive
             </Tab>
-            <Tab value="miscellaneous">
-              <i class="pi pi-bars mr-2"></i>Miscellaneous
-            </Tab>
           </TabList>
           <TabPanels>
             <!-- Simulation -->
@@ -753,32 +750,6 @@
                 </Tabs>
               </div>
             </TabPanel>
-
-            <!-- Miscellaneous -->
-
-            <TabPanel value="miscellaneous" class="h-full">
-              <div class="settings-section">
-                <div class="section-header">
-                  <i class="pi pi-bars text-primary"></i>
-                  <div>
-                    <h3 class="section-title">Miscellaneous</h3>
-                    <p class="section-description">Configure miscellaneous settings.</p>
-                  </div>
-                </div>
-                <div class="settings-form">
-                  <div class="option-card flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div class="flex items-center gap-2">
-                        <i class="pi pi-sync"></i>
-                        <span class="font-medium">Live Updates</span>
-                      </div>
-                      <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when simulation inputs change.</p>
-                    </div>
-                    <ToggleSwitch v-model="localSettings.miscellaneous.liveUpdates" />
-                  </div>
-                </div>
-              </div>
-            </TabPanel>
           </TabPanels>
         </Tabs>
       </div>
@@ -898,9 +869,6 @@ export interface ISimulationExperimentInteractiveViewSettingsDialog {
   };
   interactive: {
     uiJson: locUiJsonApi.IUiJson;
-  };
-  miscellaneous: {
-    liveUpdates: boolean;
   };
 }
 
@@ -1516,9 +1484,6 @@ const onOk = () => {
     },
     interactive: {
       uiJson: localSettings.value.interactive.uiJson
-    },
-    miscellaneous: {
-      liveUpdates: localSettings.value.miscellaneous.liveUpdates
     }
   });
 };
@@ -1705,10 +1670,6 @@ const toggleUiJsonIssues = (event: Event) => {
   background-color: var(--p-button-primary-background);
   color: var(--p-primary-contrast-color);
   border-radius: 0.375rem;
-}
-
-.option-card {
-  border-color: var(--p-content-border-color);
 }
 
 .outputs-section {

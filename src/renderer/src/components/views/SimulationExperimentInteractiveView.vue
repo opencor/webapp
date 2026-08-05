@@ -4,18 +4,12 @@
     <template v-else>
       <Toolbar class="p-1! shrink-0">
         <template #start>
-          <div :class="{ 'invisible': liveUpdatesEnabled }">
+          <div class="flex gap-1 invisible">
             <Button class="p-1! toolbar-button"
               icon="pi pi-play-circle"
-              text severity="secondary"
-              title="Run simulation (F9)"
-              @click="onRunPause"
             />
             <Button class="p-1! toolbar-button"
               icon="pi pi-stop-circle"
-              text severity="secondary"
-              title="Stop simulation"
-              @click="onStop"
             />
           </div>
         </template>
@@ -234,10 +228,7 @@ interface IExternalDataValues {
 
 const props = defineProps<{
   file: locApi.File;
-  isActive: boolean;
-  isActiveFile: boolean;
   simulationOnly?: boolean;
-  uiEnabled: boolean;
   uiJson?: locApi.IUiJson;
 }>();
 
@@ -248,7 +239,6 @@ const emit = defineEmits<{
 }>();
 
 const rootRef = vue.ref<HTMLElement | null>(null);
-const liveUpdatesEnabled = vue.ref<boolean>(true);
 const settingsVisible = vue.ref<boolean>(false);
 const document = props.file.document();
 const uniformTimeCourse = document.simulation(0) as locApi.SedUniformTimeCourse;
@@ -406,7 +396,7 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
 });
 
 const settings = vue.computed<ISimulationExperimentInteractiveViewSettingsDialog>(() => {
-  const uiJsonVal = actualUiJson.value;
+  const actualUiJsonVal = actualUiJson.value;
 
   return {
     simulation: {
@@ -420,10 +410,7 @@ const settings = vue.computed<ISimulationExperimentInteractiveViewSettingsDialog
       cvodeMaximumStep: cvode.maximumStep()
     },
     interactive: {
-      actualUiJson: uiJsonVal
-    },
-    miscellaneous: {
-      liveUpdates: liveUpdatesEnabled.value
+      uiJson: actualUiJsonVal
     }
   };
 });
@@ -1059,10 +1046,10 @@ const reinstantiateInstance = (): void => {
 
 // Run the interactive simulation.
 
-const updateSimulation = async (forceUpdate: boolean = false): Promise<void> => {
-  // Make sure that there are no issues with the UI JSON and that live updates are enabled (unless forced).
+const updateSimulation = async (): Promise<void> => {
+  // Make sure that there are no issues with the UI JSON.
 
-  if (uiJsonIssues.value.length || (!liveUpdatesEnabled.value && !forceUpdate)) {
+  if (uiJsonIssues.value.length) {
     return;
   }
 
@@ -1700,12 +1687,11 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
   cvode.setMaximumStep(updatedSettings.solvers.cvodeMaximumStep);
 
   actualUiJson.value = locApi.cleanUiJson(updatedSettings.interactive.uiJson);
-  liveUpdatesEnabled.value = updatedSettings.miscellaneous.liveUpdates;
   settingsVisible.value = false;
 
   // Validate the new UI JSON settings.
 
-  uiJsonIssues.value = locApi.validateUiJson(updatedSettings.interactive.actualUiJson, {
+  uiJsonIssues.value = locApi.validateUiJson(updatedSettings.interactive.uiJson, {
     allModelParameters: allModelParameters.value,
     editableModelParameters: editableModelParameters.value
   });
@@ -1740,18 +1726,6 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
   onResetMargins();
 };
 
-// Event handlers.
-
-const onRunPause = (): void => {
-  updateSimulation(true);
-};
-
-const onStop = (): void => {
-  if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
-    instance.stopRun();
-  }
-};
-
 // Various things that need to be done once we are mounted.
 
 vue.onMounted(() => {
@@ -1772,30 +1746,6 @@ vue.onMounted(() => {
     }
   );
 });
-
-// Keyboard shortcut (F9).
-
-if (common.isDesktop()) {
-  vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled) {
-      return;
-    }
-
-    if (
-      props.isActiveFile &&
-      !hasInstanceIssues &&
-      !event.ctrlKey &&
-      !event.shiftKey &&
-      !event.metaKey &&
-      event.code === 'F9' &&
-      !liveUpdatesEnabled.value
-    ) {
-      event.preventDefault();
-
-      onRunPause();
-    }
-  });
-}
 </script>
 
 <style scoped>
