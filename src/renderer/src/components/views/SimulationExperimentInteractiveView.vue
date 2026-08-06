@@ -1746,6 +1746,15 @@ vue.onMounted(() => {
     }
   );
 });
+
+// Make sure that our toggle button reflects the fact that we are the interactive simulation experiment view.
+// Note: if the view is wrapped in a KeepAlive element, then toggleValue will not be reset when we are deactivated and
+//       reactivated, which means that the toggle button will not reflect the fact that we are the interactive
+//       simulation experiment view. To fix this, we set toggleValue to true when we are activated.
+
+vue.onActivated(() => {
+  toggleValue.value = true;
+});
 </script>
 
 <style scoped>

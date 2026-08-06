@@ -113,7 +113,7 @@ import './simulation-experiment-view.css';
 
 const props = defineProps<{
   file: locApi.File;
-  isActive: boolean;
+  isActiveApp: boolean;
   isActiveFile: boolean;
   simulationOnly?: boolean;
   uiEnabled: boolean;
@@ -377,11 +377,29 @@ vue.onUnmounted(() => {
   clearTimeout(abortProgressTimer);
 });
 
+// Whether the view is the currently active view. Also, make sure that our toggle button reflects the fact that we are
+// the standard simulation experiment view.
+// Note: if the view is wrapped in a KeepAlive element, then toggleValue will not be reset when we are deactivated and
+//       reactivated, which means that the toggle button will not reflect the fact that we are the standard simulation
+//       experiment view. To fix this, we set toggleValue to false when we are activated.
+
+let isActiveView = true;
+
+vue.onActivated(() => {
+  isActiveView = true;
+
+  toggleValue.value = false;
+});
+
+vue.onDeactivated(() => {
+  isActiveView = false;
+});
+
 // Keyboard shortcuts.
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled) {
+    if (!props.isActiveApp || !isActiveView || !props.uiEnabled) {
       return;
     }
 

@@ -7,7 +7,7 @@
     @keydown="activateInstance"
     @mousedown="activateInstance"
   >
-    <Toast :id="toastId" :class="compIsActive ? 'visible' : 'invisible'"
+    <Toast :id="toastId" :class="compIsActiveApp ? 'visible' : 'invisible'"
       :group="toastId"
       :pt:root:style="{ position: 'absolute' }"
     />
@@ -31,7 +31,7 @@
         <DragNDropComponent v-if="dragAndDropCounter" />
       </Transition>
       <MainMenu ref="mainMenuRef" v-if="isFullWebApp"
-        :isActive="compIsActive"
+        :isActiveApp="compIsActiveApp"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
         @about="onAboutMenu"
@@ -58,7 +58,7 @@
       </div>
       -->
       <ContentsComponent ref="contentsRef" class="grow min-h-0"
-        :isActive="compIsActive"
+        :isActiveApp="compIsActiveApp"
         :uiEnabled="compUiEnabled"
         :simulationOnly="!!omex"
         @error="onError"
@@ -301,7 +301,7 @@ const activateInstance = (): void => {
   activeInstanceUid.value = crtInstanceUid;
 };
 
-const compIsActive = vue.computed<boolean>(() => {
+const compIsActiveApp = vue.computed<boolean>(() => {
   return activeInstanceUid.value === crtInstanceUid;
 });
 

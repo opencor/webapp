@@ -1,15 +1,17 @@
 <template>
   <div v-if="simulationOnly" class="h-full">
     <template v-for="fileTab in fileTabs" :key="`tabPanel_${fileTab.file.path()}`">
-      <component
-        :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
-        :ref="(element: unknown) => captureSimulationExperimentInteractiveViewRef(element, fileTab.activeViewId)"
-        :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : 'h-full'"
-        :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
-        v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
-        @switchView="onSwitchView(fileTab)"
-        @simulationData="$emit('simulationData')"
-      />
+      <KeepAlive>
+        <component
+          :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
+          :ref="(element: unknown) => captureSimulationExperimentInteractiveViewRef(element, fileTab.activeViewId)"
+          :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : 'h-full'"
+          :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
+          v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
+          @switchView="onSwitchView(fileTab)"
+          @simulationData="$emit('simulationData')"
+        />
+      </KeepAlive>
     </template>
   </div>
   <div v-else class="h-full flex flex-col">
@@ -41,14 +43,16 @@
           :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
-          <component
-            :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
-            :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
-            :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
-            v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
-            @switchView="onSwitchView(fileTab)"
-            @error="$emit('error', $event)"
-          />
+          <KeepAlive>
+            <component
+              :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
+              :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
+              :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
+              v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
+              @switchView="onSwitchView(fileTab)"
+              @error="$emit('error', $event)"
+            />
+          </KeepAlive>
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -76,7 +80,7 @@ interface IFileTab {
 }
 
 const props = defineProps<{
-  isActive: boolean;
+  isActiveApp: boolean;
   simulationOnly?: boolean;
   uiEnabled: boolean;
 }>();
@@ -119,10 +123,10 @@ const viewProps = (fileTab: IFileTab, viewDescription: IViewDescriptor | null): 
       return { issues: fileTab.file.issues() };
     case 'simulation-experiment-standard':
       return {
-        isActive: props.isActive,
+        isActiveApp: props.isActiveApp,
         uiEnabled: props.uiEnabled,
         file: fileTab.file,
-        isActiveFile: fileTab.file.path() === activeFile.value,
+        isActiveFile: props.simulationOnly || fileTab.file.path() === activeFile.value,
         simulationOnly: props.simulationOnly
       };
     case 'simulation-experiment-interactive':
@@ -359,7 +363,7 @@ vue.watch(activeFile, (newActiveFile: string) => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled || !fileTabs.value.length) {
+    if (!props.isActiveApp || !props.uiEnabled || !fileTabs.value.length) {
       return;
     }
 
