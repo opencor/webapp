@@ -141,11 +141,15 @@ import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 import * as initialisation from '../common/initialisation';
 import * as locCommon from '../common/locCommon';
 import * as version from '../common/version';
+import { useViewRegistry, ViewCategory } from '../common/viewRegistry';
 import * as vueCommon from '../common/vueCommon';
 import ContentsComponent from '../components/ContentsComponent.vue';
 import * as locApi from '../libopencor/locApi';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
+import IssuesView from './views/IssuesView.vue';
+import SimulationExperimentInteractiveView from './views/SimulationExperimentInteractiveView.vue';
+import SimulationExperimentStandardView from './views/SimulationExperimentStandardView.vue';
 import SafeBlockUIWidget from './widgets/SafeBlockUIWidget.vue';
 import MainMenu from './MainMenu.vue';
 
@@ -1039,6 +1043,33 @@ vue.onMounted(() => {
       safeBlockUiElement.appendChild(toastElement);
     }
   }, SHORT_DELAY);
+
+  // Register our views with the view registry.
+  // Note: this must be done in onMounted so that all components are available.
+
+  const viewRegistry = useViewRegistry();
+
+  viewRegistry.register({
+    id: 'issues',
+    component: IssuesView,
+    isAvailable: (file: locApi.File) => file.issues().length > 0
+  });
+
+  viewRegistry.register({
+    id: 'simulation-experiment-interactive',
+    category: ViewCategory.Simulation,
+    label: 'Interactive Simulation Experiment',
+    component: SimulationExperimentInteractiveView,
+    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+  });
+
+  viewRegistry.register({
+    id: 'simulation-experiment-standard',
+    category: ViewCategory.Simulation,
+    label: 'Standard Simulation Experiment',
+    component: SimulationExperimentStandardView,
+    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+  });
 });
 
 // Track the height of our main menu.

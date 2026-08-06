@@ -19,7 +19,7 @@
             v-model="toggleValue"
             onLabel="Interactive mode"
             offLabel="Standard mode"
-            @change="onToggleMode"
+            @change="onToggleView"
           />
         </template>
         <template #end>
@@ -235,7 +235,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'error', message: string): void;
   (event: 'simulationData'): void;
-  (event: 'switchMode'): void;
+  (event: 'switchView'): void;
 }>();
 
 const rootRef = vue.ref<HTMLElement | null>(null);
@@ -253,8 +253,8 @@ const voiName = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const voiId = vue.ref(instanceTask ? (voiName.value.split('/')[1] ?? '') : '');
 const toggleValue = vue.ref(true);
 
-const onToggleMode = (): void => {
-  emit('switchMode');
+const onToggleView = (): void => {
+  emit('switchView');
 };
 
 const actualUiJson = vue.ref<locApi.IUiJson>(

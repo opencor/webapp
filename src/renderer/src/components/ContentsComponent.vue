@@ -1,25 +1,16 @@
 <template>
   <div v-if="simulationOnly" class="h-full">
-    <div v-for="fileTab in fileTabs" :key="`tabPanel_${fileTab.file.path()}`" class="h-full" :value="fileTab.file.path()">
-      <IssuesView v-if="fileTab.file.issues().length" class="m-4" style="height: calc(100% - 2rem);"
-        :issues="fileTab.file.issues()"
-      />
-      <SimulationExperimentStandardView v-else-if="!fileTab.interactiveMode" class="h-full"
-        :isActive="isActive"
-        :uiEnabled="uiEnabled"
-        :file="fileTab.file"
-        :isActiveFile="fileTab.file.path() === activeFile"
-        :simulationOnly="simulationOnly"
-        @switchMode="fileTab.interactiveMode = true"
-      />
-      <SimulationExperimentInteractiveView v-else ref="simulationExperimentInteractiveViewRef" class="h-full"
-        :file="fileTab.file"
-        :simulationOnly="simulationOnly"
-        :uiJson="fileTab.uiJson!"
+    <template v-for="fileTab in fileTabs" :key="`tabPanel_${fileTab.file.path()}`">
+      <component
+        :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
+        :ref="(element: unknown) => captureSimulationExperimentInteractiveViewRef(element, fileTab.activeViewId)"
+        :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : 'h-full'"
+        :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
+        v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
+        @switchView="onSwitchView(fileTab)"
         @simulationData="$emit('simulationData')"
-        @switchMode="fileTab.interactiveMode = false"
       />
-    </div>
+    </template>
   </div>
   <div v-else class="h-full flex flex-col">
     <BackgroundComponent v-show="!fileTabs.length" class="h-full" />
@@ -50,21 +41,13 @@
           :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
-          <IssuesView v-if="fileTab.file.issues().length" class="m-4" style="height: calc(100% - 2rem);"
-            :issues="fileTab.file.issues()"
-          />
-          <SimulationExperimentStandardView v-else-if="!fileTab.interactiveMode"
-            :isActive="isActive"
-            :uiEnabled="uiEnabled"
-            :file="fileTab.file"
-            :isActiveFile="fileTab.file.path() === activeFile"
-            @switchMode="fileTab.interactiveMode = true"
-          />
-          <SimulationExperimentInteractiveView v-else
-            :file="fileTab.file"
-            :uiJson="fileTab.uiJson!"
+          <component
+            :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
+            :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
+            :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
+            v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
+            @switchView="onSwitchView(fileTab)"
             @error="$emit('error', $event)"
-            @switchMode="fileTab.interactiveMode = false"
           />
         </TabPanel>
       </TabPanels>
@@ -81,15 +64,15 @@ import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../
 
 import * as common from '../common/common';
 import { electronApi } from '../common/electronApi';
+import { type IViewDescriptor, useViewRegistry } from '../common/viewRegistry';
 import * as locApi from '../libopencor/locApi';
 
 import SimulationExperimentInteractiveView from './views/SimulationExperimentInteractiveView.vue';
-import SimulationExperimentStandardView from './views/SimulationExperimentStandardView.vue';
 
 interface IFileTab {
   file: locApi.File;
   uiJson?: locApi.IUiJson;
-  interactiveMode: boolean;
+  activeViewId: string;
 }
 
 const props = defineProps<{
@@ -105,7 +88,10 @@ const emit = defineEmits<{
   (event: 'simulationData'): void;
 }>();
 
-const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof SimulationExperimentInteractiveView>[]>([]);
+const viewRegistry = useViewRegistry();
+const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof SimulationExperimentInteractiveView> | null>(
+  null
+);
 const fileTabs = vue.ref<IFileTab[]>([]);
 const activeFile = vue.ref<string>('');
 
@@ -119,7 +105,43 @@ const filePaths = vue.computed<string[]>(() => {
   return res;
 });
 
-// Some methods to handle files and file tabs.
+const captureSimulationExperimentInteractiveViewRef = (element: unknown, viewId: string): void => {
+  if (viewId === 'simulation-experiment-interactive') {
+    simulationExperimentInteractiveViewRef.value = element as InstanceType<
+      typeof SimulationExperimentInteractiveView
+    > | null;
+  }
+};
+
+const viewProps = (fileTab: IFileTab, viewDescription: IViewDescriptor | null): Record<string, unknown> => {
+  switch (viewDescription?.id) {
+    case 'issues':
+      return { issues: fileTab.file.issues() };
+    case 'simulation-experiment-standard':
+      return {
+        isActive: props.isActive,
+        uiEnabled: props.uiEnabled,
+        file: fileTab.file,
+        isActiveFile: fileTab.file.path() === activeFile.value,
+        simulationOnly: props.simulationOnly
+      };
+    case 'simulation-experiment-interactive':
+      return {
+        file: fileTab.file,
+        simulationOnly: props.simulationOnly,
+        uiJson: fileTab.uiJson
+      };
+    default:
+      return {};
+  }
+};
+
+const onSwitchView = (fileTab: IFileTab): void => {
+  fileTab.activeViewId =
+    fileTab.activeViewId === 'simulation-experiment-standard'
+      ? 'simulation-experiment-interactive'
+      : 'simulation-experiment-standard';
+};
 
 const hasFile = (filePath: string): boolean => {
   if (props.simulationOnly) {
@@ -191,7 +213,7 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file: file,
     uiJson: file.uiJson(),
-    interactiveMode: !!file.uiJson()
+    activeViewId: file.uiJson() ? 'simulation-experiment-interactive' : 'simulation-experiment-standard'
   });
 
   if (wait) {
@@ -248,9 +270,9 @@ const addExternalData = async (
   voiExpression: string | undefined,
   modelParameters: string[]
 ): Promise<IOpenCORExternalDataEvent> => {
-  const simulationExperimentInteractiveViews = simulationExperimentInteractiveViewRef.value;
+  const simulationExperimentInteractiveView = simulationExperimentInteractiveViewRef.value;
 
-  if (!simulationExperimentInteractiveViews.length) {
+  if (!simulationExperimentInteractiveView) {
     return Promise.resolve({
       type: 'issue',
       csv,
@@ -258,7 +280,7 @@ const addExternalData = async (
     });
   }
 
-  return simulationExperimentInteractiveViews[0]
+  return simulationExperimentInteractiveView
     .addExternalData(csv, voiExpression, modelParameters)
     .catch((error: unknown) => {
       return {
@@ -280,9 +302,9 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     });
   }
 
-  const simulationExperimentInteractiveViews = simulationExperimentInteractiveViewRef.value;
+  const simulationExperimentInteractiveView = simulationExperimentInteractiveViewRef.value;
 
-  if (!simulationExperimentInteractiveViews.length) {
+  if (!simulationExperimentInteractiveView) {
     return Promise.resolve({
       type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
@@ -290,7 +312,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     });
   }
 
-  return simulationExperimentInteractiveViews[0].simulationData(modelParameters).catch((error: unknown) => {
+  return simulationExperimentInteractiveView.simulationData(modelParameters).catch((error: unknown) => {
     return {
       type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),

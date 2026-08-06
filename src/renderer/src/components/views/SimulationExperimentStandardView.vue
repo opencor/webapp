@@ -24,7 +24,7 @@
             v-model="toggleValue"
             onLabel="Interactive mode"
             offLabel="Standard mode"
-            @change="onToggleMode"
+            @change="onToggleView"
           />
         </template>
         <template #end>
@@ -121,7 +121,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'simulationData'): void;
-  (event: 'switchMode'): void;
+  (event: 'switchView'): void;
 }>();
 
 const rootRef = vue.ref<HTMLElement | null>(null);
@@ -130,8 +130,8 @@ const instanceIssues = vue.ref<locApi.IIssue[]>([]);
 let hasInstanceIssues = false;
 const toggleValue = vue.ref(false);
 
-const onToggleMode = (): void => {
-  emit('switchMode');
+const onToggleView = (): void => {
+  emit('switchView');
 };
 
 const document = props.file.document();
