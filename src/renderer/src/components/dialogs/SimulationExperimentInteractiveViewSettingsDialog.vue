@@ -1,6 +1,6 @@
 <template>
   <div ref="rootRef">
-    <BaseDialog v-bind="$attrs" header="Interactive Mode Settings" class="w-270 h-210"
+    <BaseDialog v-bind="$attrs" header=" " class="w-270 h-210"
       @keydown.prevent.enter="onOk"
       @cancel="onCancel"
     >
@@ -15,9 +15,6 @@
             </Tab>
             <Tab value="interactive">
               <i class="pi pi-sliders-h mr-2"></i>Interactive
-            </Tab>
-            <Tab value="miscellaneous">
-              <i class="pi pi-bars mr-2"></i>Miscellaneous
             </Tab>
           </TabList>
           <TabPanels>
@@ -753,32 +750,6 @@
                 </Tabs>
               </div>
             </TabPanel>
-
-            <!-- Miscellaneous -->
-
-            <TabPanel value="miscellaneous" class="h-full">
-              <div class="settings-section">
-                <div class="section-header">
-                  <i class="pi pi-bars text-primary"></i>
-                  <div>
-                    <h3 class="section-title">Miscellaneous</h3>
-                    <p class="section-description">Configure miscellaneous settings.</p>
-                  </div>
-                </div>
-                <div class="settings-form">
-                  <div class="option-card flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div class="flex items-center gap-2">
-                        <i class="pi pi-sync"></i>
-                        <span class="font-medium">Live Updates</span>
-                      </div>
-                      <p class="text-muted-color text-sm mt-1">Automatically re-run the simulation when simulation inputs change.</p>
-                    </div>
-                    <ToggleSwitch v-model="localSettings.miscellaneous.liveUpdates" />
-                  </div>
-                </div>
-              </div>
-            </TabPanel>
           </TabPanels>
         </Tabs>
       </div>
@@ -886,7 +857,7 @@ import { EIssueType } from '../../libopencor/locLoggerApi';
 
 import { useOpenCORToast } from '../OpenCORToast';
 
-export interface ISimulationExperimentViewSettings {
+export interface ISimulationExperimentInteractiveViewSettingsDialog {
   simulation: {
     initialPoint: number;
     startingPoint: number;
@@ -899,13 +870,10 @@ export interface ISimulationExperimentViewSettings {
   interactive: {
     uiJson: locUiJsonApi.IUiJson;
   };
-  miscellaneous: {
-    liveUpdates: boolean;
-  };
 }
 
 const props = defineProps<{
-  settings: ISimulationExperimentViewSettings;
+  settings: ISimulationExperimentInteractiveViewSettingsDialog;
   voiId: string;
   voiName: string;
   voiUnit: string;
@@ -915,20 +883,22 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'close'): void;
-  (event: 'ok', settings: ISimulationExperimentViewSettings): void;
+  (event: 'ok', settings: ISimulationExperimentInteractiveViewSettingsDialog): void;
 }>();
 
 const DEFAULT_TAB = 'interactive';
 const DEFAULT_INTERACTIVE_TAB = 'simulationInputs';
 
-function deepCloneSettings(settings: ISimulationExperimentViewSettings): ISimulationExperimentViewSettings {
+function deepCloneSettings(
+  settings: ISimulationExperimentInteractiveViewSettingsDialog
+): ISimulationExperimentInteractiveViewSettingsDialog {
   // Perform a deep clone of our settings using JSON serialisation.
   // Note: we use our custom replacer to make sure that any typed arrays (e.g., Float64Array) in our UI JSON are
   //       correctly serialised and deserialised.
 
   const deepClonedSettings = JSON.parse(
     JSON.stringify(settings, locApi.uiJsonReplacer)
-  ) as ISimulationExperimentViewSettings;
+  ) as ISimulationExperimentInteractiveViewSettingsDialog;
 
   // Make sure that our UI JSON has the expected structure.
 
@@ -946,7 +916,7 @@ function deepCloneSettings(settings: ISimulationExperimentViewSettings): ISimula
 }
 
 const addToast = useOpenCORToast();
-const localSettings = vue.ref<ISimulationExperimentViewSettings>(deepCloneSettings(props.settings));
+const localSettings = vue.ref<ISimulationExperimentInteractiveViewSettingsDialog>(deepCloneSettings(props.settings));
 // Note: we need to do a deep copy here to make sure that any changes made to nested objects in our local settings are
 //       not reflected in the original settings while preserving any typed arrays in the UI JSON.
 
@@ -962,7 +932,7 @@ const simulationSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> 
 const solversSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const uiJsonIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const rootRef = vue.ref<HTMLElement | null>(null);
-const appendTarget = vueCommon.useAppendTarget(rootRef);
+const appendTarget = vueCommon.useAppendTarget(rootRef as unknown as vue.Ref<HTMLElement | null>);
 const activeTab = vue.ref(DEFAULT_TAB);
 const activeInteractiveTab = vue.ref(DEFAULT_INTERACTIVE_TAB);
 const showSimulationSettingsIssuesPanel = vue.ref(false);
@@ -971,6 +941,7 @@ const showUiJsonIssuesPanel = vue.ref(false);
 const externalDataFileRef = vue.ref<HTMLInputElement | null>(null);
 const externalDataFileDragging = vue.ref(false);
 const externalDataUrl = vue.ref('');
+
 const isExternalDataUrlValid = vue.computed<boolean>(() => {
   const url = externalDataUrl.value.trim();
 
@@ -1513,9 +1484,6 @@ const onOk = () => {
     },
     interactive: {
       uiJson: localSettings.value.interactive.uiJson
-    },
-    miscellaneous: {
-      liveUpdates: localSettings.value.miscellaneous.liveUpdates
     }
   });
 };
@@ -1702,10 +1670,6 @@ const toggleUiJsonIssues = (event: Event) => {
   background-color: var(--p-button-primary-background);
   color: var(--p-primary-contrast-color);
   border-radius: 0.375rem;
-}
-
-.option-card {
-  border-color: var(--p-content-border-color);
 }
 
 .outputs-section {
