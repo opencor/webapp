@@ -764,7 +764,7 @@
           <template v-if="activeTab === 'simulation'">
             <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length" :appendTo="appendTarget">
               <div class="issues-popover-content">
-                <IssuesView :issues="simulationSettingsIssues" :extraSpace="false" />
+                <IssuesView class="border-none" :issues="simulationSettingsIssues" :extraSpace="false" />
               </div>
             </Popover>
             <div :class="simulationSettingsIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
@@ -787,7 +787,7 @@
           <template v-else-if="activeTab === 'solvers'">
             <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length" :appendTo="appendTarget">
               <div class="issues-popover-content">
-                <IssuesView :issues="solversSettingsIssues" :extraSpace="false" />
+                <IssuesView class="border-none" :issues="solversSettingsIssues" :extraSpace="false" />
               </div>
             </Popover>
             <div :class="solversSettingsIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
@@ -810,7 +810,7 @@
           <template v-else-if="activeTab === 'interactive'">
             <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length" :appendTo="appendTarget">
               <div class="issues-popover-content">
-                <IssuesView :issues="uiJsonIssues" :extraSpace="false" />
+                <IssuesView class="border-none" :issues="uiJsonIssues" :extraSpace="false" />
               </div>
             </Popover>
             <div class="actions">
