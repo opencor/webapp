@@ -173,7 +173,7 @@
         @close="settingsVisible = false"
       />
       <Popover ref="runColorPopoverRef" :appendTo="appendTarget">
-        <div class="flex gap-2">
+        <div class="flex p-1.5 gap-2">
           <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
             v-for="(name, color) in colors.PALETTE" :key="color"
             :style="`background-color: ${color};`"
@@ -1770,6 +1770,10 @@ vue.onActivated(() => {
 
 .color-swatch-selected {
   outline-color: var(--p-text-color);
+}
+
+.color-swatch-selected:focus {
+  outline: 2px solid var(--p-text-color) !important;
 }
 
 .empty-state {
