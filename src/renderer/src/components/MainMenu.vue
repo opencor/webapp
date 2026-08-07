@@ -42,7 +42,7 @@ import * as version from '../common/version';
 
 const props = defineProps<{
   id?: string;
-  isActive: boolean;
+  isActiveApp: boolean;
   hasFiles: boolean;
   uiEnabled: boolean;
 }>();
@@ -197,7 +197,7 @@ vue.onMounted(() => {
 
 if (common.isDesktop()) {
   vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActive || !props.uiEnabled) {
+    if (!props.isActiveApp || !props.uiEnabled) {
       return;
     }
 

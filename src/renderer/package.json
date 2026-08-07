@@ -42,7 +42,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "1.20260806.0",
+  "version": "1.20260808.0",
   "libopencorVersion": "1.20260803.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.ts",
@@ -82,12 +82,12 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.1.2",
-    "@types/plotly.js": "^3.0.12",
+    "@types/plotly.js": "^3.0.13",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.5.4",
     "esbuild": "^0.28.1",
-    "postcss": "^8.5.25",
+    "postcss": "^8.5.26",
     "rollup-plugin-visualizer": "^7.0.1",
     "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",

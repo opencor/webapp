@@ -707,11 +707,11 @@
                                           <div class="w-full">
                                             <div class="mb-3">
                                               <TooltipWidget :content="traceNameTooltip()" class="flex-1">
-                                                  <FloatLabel variant="on" class="w-full">
-                                                    <InputText v-model="trace.name" class="w-full" size="small" />
-                                                    <label>Name (optional)</label>
-                                                  </FloatLabel>
-                                                </TooltipWidget>
+                                                <FloatLabel variant="on" class="w-full">
+                                                  <InputText v-model="trace.name" class="w-full" size="small" />
+                                                  <label>Name (optional)</label>
+                                                </FloatLabel>
+                                              </TooltipWidget>
                                             </div>
                                             <div class="entry-row">
                                               <TooltipWidget :content="xyValueTooltip(true)" class="flex-1">
@@ -764,7 +764,7 @@
           <template v-if="activeTab === 'simulation'">
             <Popover ref="simulationSettingsIssuesPopoverRef" v-if="simulationSettingsIssues.length" :appendTo="appendTarget">
               <div class="issues-popover-content">
-                <IssuesView :issues="simulationSettingsIssues" :extraSpace="false" />
+                <IssuesView class="border-none" :issues="simulationSettingsIssues" :extraSpace="false" />
               </div>
             </Popover>
             <div :class="simulationSettingsIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
@@ -787,7 +787,7 @@
           <template v-else-if="activeTab === 'solvers'">
             <Popover ref="solversSettingsIssuesPopoverRef" v-if="solversSettingsIssues.length" :appendTo="appendTarget">
               <div class="issues-popover-content">
-                <IssuesView :issues="solversSettingsIssues" :extraSpace="false" />
+                <IssuesView class="border-none" :issues="solversSettingsIssues" :extraSpace="false" />
               </div>
             </Popover>
             <div :class="solversSettingsIssues.length ? 'flex-row-reverse' : 'flex-row'" class="actions">
@@ -805,12 +805,12 @@
             </div>
           </template>
 
-          <!-- UI JSON issues -->
+          <!-- Interactive issues -->
 
           <template v-else-if="activeTab === 'interactive'">
             <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length" :appendTo="appendTarget">
               <div class="issues-popover-content">
-                <IssuesView :issues="uiJsonIssues" :extraSpace="false" />
+                <IssuesView class="border-none" :issues="uiJsonIssues" :extraSpace="false" />
               </div>
             </Popover>
             <div class="actions">
@@ -1686,8 +1686,9 @@ const toggleUiJsonIssues = (event: Event) => {
 }
 
 :global(.p-popover .issues-popover-content) {
+  width: max-content;
   max-height: 30rem;
-  max-width: 35rem;
+  max-width: 50rem;
   overflow-y: auto;
 }
 

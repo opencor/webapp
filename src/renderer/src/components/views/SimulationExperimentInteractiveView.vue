@@ -19,7 +19,7 @@
             v-model="toggleValue"
             onLabel="Interactive mode"
             offLabel="Standard mode"
-            @change="onToggleMode"
+            @change="onToggleView"
           />
         </template>
         <template #end>
@@ -173,7 +173,7 @@
         @close="settingsVisible = false"
       />
       <Popover ref="runColorPopoverRef" :appendTo="appendTarget">
-        <div class="flex gap-2">
+        <div class="flex p-1.5 gap-2">
           <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
             v-for="(name, color) in colors.PALETTE" :key="color"
             :style="`background-color: ${color};`"
@@ -235,7 +235,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'error', message: string): void;
   (event: 'simulationData'): void;
-  (event: 'switchMode'): void;
+  (event: 'switchView'): void;
 }>();
 
 const rootRef = vue.ref<HTMLElement | null>(null);
@@ -253,8 +253,8 @@ const voiName = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const voiId = vue.ref(instanceTask ? (voiName.value.split('/')[1] ?? '') : '');
 const toggleValue = vue.ref(true);
 
-const onToggleMode = (): void => {
-  emit('switchMode');
+const onToggleView = (): void => {
+  emit('switchView');
 };
 
 const actualUiJson = vue.ref<locApi.IUiJson>(
@@ -1746,6 +1746,15 @@ vue.onMounted(() => {
     }
   );
 });
+
+// Make sure that our toggle button reflects the fact that we are the interactive simulation experiment view.
+// Note: if the view is wrapped in a KeepAlive element, then toggleValue will not be reset when we are deactivated and
+//       reactivated, which means that the toggle button will not reflect the fact that we are the interactive
+//       simulation experiment view. To fix this, we set toggleValue to true when we are activated.
+
+vue.onActivated(() => {
+  toggleValue.value = true;
+});
 </script>
 
 <style scoped>
@@ -1761,6 +1770,10 @@ vue.onMounted(() => {
 
 .color-swatch-selected {
   outline-color: var(--p-text-color);
+}
+
+.color-swatch-selected:focus {
+  outline: 2px solid var(--p-text-color) !important;
 }
 
 .empty-state {
