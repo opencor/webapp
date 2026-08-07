@@ -31,6 +31,11 @@ export interface IViewDescriptor {
 
   label?: string;
 
+  // PrimeIcons icon class for the view (e.g., 'pi pi-play').
+  // Note: it is optional to allow for IssuesView which is not tied to a specific category.
+
+  icon?: string;
+
   // The Vue component to render.
 
   component: vue.Component;
@@ -115,5 +120,5 @@ export const useViewRegistry = vueusecore.createGlobalState(() => {
     return _descriptors.filter((descriptor) => descriptor.category === category);
   }
 
-  return { descriptors, register, resolve };
+  return { descriptors, isApplicable, register, resolve };
 });

@@ -20,24 +20,6 @@
     display: none;
   }
 
-  .p-togglebutton {
-    background-color: var(--p-primary-color) !important;
-    color: var(--p-primary-contrast-color) !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-  }
-
-  .p-togglebutton:hover {
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .p-togglebutton:hover {
-      box-shadow: 0 2px 8px rgb(255 255 255 / 15%);
-    }
-  }
-
   .p-toolbar {
     border: none;
     border-radius: 0;

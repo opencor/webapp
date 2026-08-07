@@ -13,15 +13,6 @@
             />
           </div>
         </template>
-        <template v-if="!simulationOnly" #center>
-          <ToggleButton
-            size="small"
-            v-model="toggleValue"
-            onLabel="Interactive mode"
-            offLabel="Standard mode"
-            @change="onToggleView"
-          />
-        </template>
         <template #end>
           <div class="flex gap-1">
             <Button class="p-1! toolbar-button"
@@ -235,7 +226,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'error', message: string): void;
   (event: 'simulationData'): void;
-  (event: 'switchView'): void;
 }>();
 
 const rootRef = vue.ref<HTMLElement | null>(null);
@@ -251,11 +241,6 @@ const allModelParameters = vue.ref<string[]>([]);
 const editableModelParameters = vue.ref<string[]>([]);
 const voiName = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const voiId = vue.ref(instanceTask ? (voiName.value.split('/')[1] ?? '') : '');
-const toggleValue = vue.ref(true);
-
-const onToggleView = (): void => {
-  emit('switchView');
-};
 
 const actualUiJson = vue.ref<locApi.IUiJson>(
   props.uiJson
@@ -1745,15 +1730,6 @@ vue.onMounted(() => {
       }
     }
   );
-});
-
-// Make sure that our toggle button reflects the fact that we are the interactive simulation experiment view.
-// Note: if the view is wrapped in a KeepAlive element, then toggleValue will not be reset when we are deactivated and
-//       reactivated, which means that the toggle button will not reflect the fact that we are the interactive
-//       simulation experiment view. To fix this, we set toggleValue to true when we are activated.
-
-vue.onActivated(() => {
-  toggleValue.value = true;
 });
 </script>
 
