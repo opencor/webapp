@@ -4,7 +4,7 @@
       <KeepAlive>
         <component
           :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
-          :ref="(element: unknown) => captureSimulationExperimentInteractiveViewRef(element, fileTab.activeViewId)"
+          :ref="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component === SimulationExperimentInteractiveView ? captureSimulationExperimentInteractiveViewRef : undefined"
           :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : 'h-full'"
           :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
           v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
@@ -109,12 +109,10 @@ const filePaths = vue.computed<string[]>(() => {
   return res;
 });
 
-const captureSimulationExperimentInteractiveViewRef = (element: unknown, viewId: string): void => {
-  if (viewId === 'simulation-experiment-interactive') {
-    simulationExperimentInteractiveViewRef.value = element as InstanceType<
-      typeof SimulationExperimentInteractiveView
-    > | null;
-  }
+const captureSimulationExperimentInteractiveViewRef = (element: unknown): void => {
+  simulationExperimentInteractiveViewRef.value = element as InstanceType<
+    typeof SimulationExperimentInteractiveView
+  > | null;
 };
 
 const viewProps = (fileTab: IFileTab, viewDescription: IViewDescriptor | null): Record<string, unknown> => {
