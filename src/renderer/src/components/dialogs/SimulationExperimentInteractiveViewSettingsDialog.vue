@@ -805,7 +805,7 @@
             </div>
           </template>
 
-          <!-- UI JSON issues -->
+          <!-- Interactive issues -->
 
           <template v-else-if="activeTab === 'interactive'">
             <Popover ref="uiJsonIssuesPopoverRef" v-if="uiJsonIssues.length" :appendTo="appendTarget">
