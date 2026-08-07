@@ -882,8 +882,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'close'): void;
-  (event: 'ok', settings: ISimulationExperimentInteractiveViewSettingsDialog): void;
+  close: [];
+  ok: [settings: ISimulationExperimentInteractiveViewSettingsDialog];
 }>();
 
 const DEFAULT_TAB = 'interactive';

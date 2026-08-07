@@ -93,10 +93,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'error', message: string): void;
-  (event: 'fileClosed', filePath: string): void;
-  (event: 'fileOpened', filePath: string): void;
-  (event: 'simulationData'): void;
+  error: [message: string];
+  fileClosed: [filePath: string];
+  fileOpened: [filePath: string];
+  simulationData: [];
 }>();
 
 const viewRegistry = useViewRegistry();

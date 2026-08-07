@@ -224,8 +224,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'error', message: string): void;
-  (event: 'simulationData'): void;
+  error: [message: string];
+  simulationData: [];
 }>();
 
 const rootRef = vue.ref<HTMLElement | null>(null);

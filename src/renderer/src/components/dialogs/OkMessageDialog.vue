@@ -8,7 +8,9 @@
 </template>
 
 <script setup lang="ts">
-defineEmits<(event: 'ok') => void>();
+defineEmits<{
+  ok: [];
+}>();
 
 defineProps<{
   title: string;

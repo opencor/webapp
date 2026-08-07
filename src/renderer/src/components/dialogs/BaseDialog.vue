@@ -24,7 +24,9 @@ import * as vue from 'vue';
 
 import { enableDisableMainMenu } from '../../common/common';
 
-const emit = defineEmits<(event: 'cancel') => void>();
+const emit = defineEmits<{
+  cancel: [];
+}>();
 
 const { incrementDialogs, decrementDialogs } = useDialogState();
 

@@ -48,14 +48,14 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'about'): void;
-  (event: 'close'): void;
-  (event: 'closeAll'): void;
-  (event: 'open'): void;
-  (event: 'openRemote'): void;
-  (event: 'openSampleLorenz'): void;
-  (event: 'settings'): void;
-  (event: 'updateAvailable'): void;
+  about: [];
+  close: [];
+  closeAll: [];
+  open: [];
+  openRemote: [];
+  openSampleLorenz: [];
+  settings: [];
+  updateAvailable: [];
 }>();
 
 const isWindowsOrLinux = common.isWindows() || common.isLinux();

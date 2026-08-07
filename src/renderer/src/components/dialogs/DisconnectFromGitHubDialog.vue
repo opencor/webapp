@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 defineEmits<{
-  (event: 'yes'): void;
-  (event: 'no'): void;
+  yes: [];
+  no: [];
 }>();
 </script>

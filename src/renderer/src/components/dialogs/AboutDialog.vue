@@ -48,5 +48,7 @@ import { COPYRIGHT } from '../../common/constants';
 import { electronApi } from '../../common/electronApi';
 import * as locApi from '../../libopencor/locApi';
 
-defineEmits<(event: 'close') => void>();
+defineEmits<{
+  close: [];
+}>();
 </script>
