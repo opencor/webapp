@@ -1056,18 +1056,20 @@ vue.onMounted(() => {
   });
 
   viewRegistry.register({
-    id: 'simulation-experiment-interactive',
+    id: 'simulation-experiment-standard',
     category: ViewCategory.Simulation,
-    label: 'Interactive Simulation Experiment',
-    component: SimulationExperimentInteractiveView,
+    label: 'Standard Simulation Experiment',
+    icon: 'pi pi-chart-line',
+    component: SimulationExperimentStandardView,
     fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
   });
 
   viewRegistry.register({
-    id: 'simulation-experiment-standard',
+    id: 'simulation-experiment-interactive',
     category: ViewCategory.Simulation,
-    label: 'Standard Simulation Experiment',
-    component: SimulationExperimentStandardView,
+    label: 'Interactive Simulation Experiment',
+    icon: 'pi pi-sliders-h',
+    component: SimulationExperimentInteractiveView,
     fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
   });
 });

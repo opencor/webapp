@@ -23,7 +23,9 @@
 import * as common from '../../common/common';
 import { latestVersion } from '../../common/version';
 
-defineEmits<(event: 'close') => void>();
+defineEmits<{
+  close: [];
+}>();
 </script>
 
 <style scoped>

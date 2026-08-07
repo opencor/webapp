@@ -72,7 +72,9 @@ const props = defineProps<{
   step?: number;
 }>();
 
-const emit = defineEmits<(event: 'update:modelValue', value: number | undefined) => void>();
+const emit = defineEmits<{
+  'update:modelValue': [value: number | undefined];
+}>();
 
 const attrs = vue.useAttrs();
 const internalValue = vue.ref<string>('');

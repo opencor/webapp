@@ -8,7 +8,6 @@
           :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : 'h-full'"
           :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
           v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
-          @switchView="onSwitchView(fileTab)"
           @simulationData="$emit('simulationData')"
         />
       </KeepAlive>
@@ -43,16 +42,24 @@
           :key="`tabPanel_${fileTab.file.path()}`"
           :value="fileTab.file.path()"
         >
-          <KeepAlive>
-            <component
-              :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
-              :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
-              :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
-              v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
-              @switchView="onSwitchView(fileTab)"
-              @error="$emit('error', $event)"
+          <div class="flex h-full">
+            <ViewSwitcherComponent
+              :activeViewId="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id"
+              :file="fileTab.file"
+              @selectView="onSelectView(fileTab, $event)"
             />
-          </KeepAlive>
+            <div class="grow min-w-0">
+              <KeepAlive>
+                <component
+                  :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
+                  :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
+                  :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
+                  v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
+                  @error="$emit('error', $event)"
+                />
+              </KeepAlive>
+            </div>
+          </div>
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -86,10 +93,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'error', message: string): void;
-  (event: 'fileClosed', filePath: string): void;
-  (event: 'fileOpened', filePath: string): void;
-  (event: 'simulationData'): void;
+  error: [message: string];
+  fileClosed: [filePath: string];
+  fileOpened: [filePath: string];
+  simulationData: [];
 }>();
 
 const viewRegistry = useViewRegistry();
@@ -138,11 +145,8 @@ const viewProps = (fileTab: IFileTab, viewDescription: IViewDescriptor | null): 
   }
 };
 
-const onSwitchView = (fileTab: IFileTab): void => {
-  fileTab.activeViewId =
-    fileTab.activeViewId === 'simulation-experiment-standard'
-      ? 'simulation-experiment-interactive'
-      : 'simulation-experiment-standard';
+const onSelectView = (fileTab: IFileTab, viewId: string): void => {
+  fileTab.activeViewId = viewId;
 };
 
 const hasFile = (filePath: string): boolean => {

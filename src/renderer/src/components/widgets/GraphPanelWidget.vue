@@ -85,8 +85,8 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  (event: 'marginsUpdated', newMargins: IGraphPanelMargins): void;
-  (event: 'resetMargins'): void;
+  marginsUpdated: [newMargins: IGraphPanelMargins];
+  resetMargins: [];
 }>();
 
 const trackSize = (): void => {

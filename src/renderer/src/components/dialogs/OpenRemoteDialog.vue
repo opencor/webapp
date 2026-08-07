@@ -17,8 +17,8 @@
 import * as vue from 'vue';
 
 const emit = defineEmits<{
-  (event: 'openRemote', url: string): void;
-  (event: 'close'): void;
+  openRemote: [url: string];
+  close: [];
 }>();
 
 const url = vue.ref<string>('');

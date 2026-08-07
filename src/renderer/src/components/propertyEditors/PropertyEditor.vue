@@ -41,7 +41,9 @@ const props = withDefaults(
   }
 );
 
-const emit = defineEmits<(event: 'propertyUpdated', index: number, newValue: number) => void>();
+const emit = defineEmits<{
+  propertyUpdated: [index: number, newValue: number];
+}>();
 
 const columnWidth = `width: calc(100% / ${props.hasUnits ? '3' : '2'});`;
 

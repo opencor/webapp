@@ -42,7 +42,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "1.20260808.0",
+  "version": "1.20260808.1",
   "libopencorVersion": "1.20260803.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.ts",
@@ -81,7 +81,7 @@
     "@biomejs/biome": "^2.5.7",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "@types/plotly.js": "^3.0.13",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",

@@ -46,7 +46,9 @@ const props = defineProps<{
   stepValue?: number;
 }>();
 
-const emits = defineEmits<(event: 'change', name: string, newValue: number) => void>();
+const emits = defineEmits<{
+  change: [name: string, newValue: number];
+}>();
 
 let oldValue = value.value;
 const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(

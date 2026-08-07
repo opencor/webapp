@@ -18,15 +18,6 @@
             @click="onStop"
           />
         </template>
-        <template v-if="!simulationOnly" #center>
-          <ToggleButton
-            size="small"
-            v-model="toggleValue"
-            onLabel="Interactive mode"
-            offLabel="Standard mode"
-            @change="onToggleView"
-          />
-        </template>
         <template #end>
           <div class="flex gap-1 invisible">
             <Button class="p-1! toolbar-button"
@@ -120,19 +111,13 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (event: 'simulationData'): void;
-  (event: 'switchView'): void;
+  simulationData: [];
 }>();
 
 const rootRef = vue.ref<HTMLElement | null>(null);
 const editorRef = vue.ref<HTMLElement | null>(null);
 const instanceIssues = vue.ref<locApi.IIssue[]>([]);
 let hasInstanceIssues = false;
-const toggleValue = vue.ref(false);
-
-const onToggleView = (): void => {
-  emit('switchView');
-};
 
 const document = props.file.document();
 const uniformTimeCourse = document.simulation(0) as locApi.SedUniformTimeCourse;
@@ -377,18 +362,12 @@ vue.onUnmounted(() => {
   clearTimeout(abortProgressTimer);
 });
 
-// Whether the view is the currently active view. Also, make sure that our toggle button reflects the fact that we are
-// the standard simulation experiment view.
-// Note: if the view is wrapped in a KeepAlive element, then toggleValue will not be reset when we are deactivated and
-//       reactivated, which means that the toggle button will not reflect the fact that we are the standard simulation
-//       experiment view. To fix this, we set toggleValue to false when we are activated.
+// Track whether the view is the currently active view for keyboard shortcut handling.
 
 let isActiveView = true;
 
 vue.onActivated(() => {
   isActiveView = true;
-
-  toggleValue.value = false;
 });
 
 vue.onDeactivated(() => {
