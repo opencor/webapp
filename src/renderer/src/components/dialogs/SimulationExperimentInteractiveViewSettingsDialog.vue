@@ -707,11 +707,11 @@
                                           <div class="w-full">
                                             <div class="mb-3">
                                               <TooltipWidget :content="traceNameTooltip()" class="flex-1">
-                                                  <FloatLabel variant="on" class="w-full">
-                                                    <InputText v-model="trace.name" class="w-full" size="small" />
-                                                    <label>Name (optional)</label>
-                                                  </FloatLabel>
-                                                </TooltipWidget>
+                                                <FloatLabel variant="on" class="w-full">
+                                                  <InputText v-model="trace.name" class="w-full" size="small" />
+                                                  <label>Name (optional)</label>
+                                                </FloatLabel>
+                                              </TooltipWidget>
                                             </div>
                                             <div class="entry-row">
                                               <TooltipWidget :content="xyValueTooltip(true)" class="flex-1">
