@@ -1686,8 +1686,9 @@ const toggleUiJsonIssues = (event: Event) => {
 }
 
 :global(.p-popover .issues-popover-content) {
+  width: max-content;
   max-height: 30rem;
-  max-width: 35rem;
+  max-width: 50rem;
   overflow-y: auto;
 }
 
