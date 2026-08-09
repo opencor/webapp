@@ -239,12 +239,21 @@ if (common.isDesktop()) {
 }
 
 .p-menubar
-  > .p-menubar-root-list
+  > :deep(.p-menubar-root-list)
   > .p-menubar-item
   > .p-menubar-item-content
   > .p-menubar-item-link
   .p-menubar-submenu-icon {
   display: none;
+}
+
+:deep(.p-menubar-root-list > .p-menubar-item > .p-menubar-item-content > .p-menubar-item-link) {
+  transition: background-color 0.15s ease;
+  border-radius: var(--p-menubar-item-border-radius);
+}
+
+:deep(.p-menubar-root-list > .p-menubar-item > .p-menubar-item-content > .p-menubar-item-link:hover) {
+  background-color: var(--p-content-hover-background);
 }
 
 :deep(.p-menubar-submenu .p-menubar-item-link:hover:not(:has(.p-menubar-submenu))) {
