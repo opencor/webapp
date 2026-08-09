@@ -894,8 +894,14 @@ const onChange = (event: Event): void => {
 
 const dragAndDropCounter = vue.ref<number>(0);
 
-const onDragEnter = (): void => {
+const onDragEnter = (event: DragEvent): void => {
   if (!compUiEnabled.value || props.omex) {
+    return;
+  }
+
+  // Only react to external (file) drags, not internal ones (e.g., tab reorder drags).
+
+  if (!event.dataTransfer?.types.includes('Files')) {
     return;
   }
 
