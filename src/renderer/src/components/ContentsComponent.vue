@@ -13,56 +13,54 @@
       </KeepAlive>
     </template>
   </div>
-  <div v-else class="h-full flex flex-col">
+  <div v-else class="h-full flex flex-col"
+    @dragover.prevent="onDragOver"
+    @drop="onDrop"
+  >
     <BackgroundComponent v-show="!fileTabs.length" class="h-full" />
-    <Tabs v-show="fileTabs.length" id="fileTabs" class="h-full flex flex-col"
-      v-model:value="activeFile"
-      :scrollable="true"
-      :selectOnFocus="true"
+    <div v-show="fileTabs.length" ref="fileTabBarRef" class="file-tab-bar shrink-0 border-b border-b-primary flex overflow-x-auto"
+      @wheel.prevent="onWheel"
     >
-      <TabList class="border-b border-b-primary shrink-0">
-        <Tab
-          v-for="fileTab in fileTabs"
-          :id="`tab_${fileTab.file.path()}`"
-          :key="`tab_${fileTab.file.path()}`"
-          :value="fileTab.file.path()"
-        >
-          <div class="flex gap-2 items-center">
-            <div>
-              {{
-                common.fileName(fileTab.file.path())
-              }}
-            </div>
-            <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
+      <div v-show="dropIndicatorLeft !== null" class="file-tab-drop-indicator"
+        :style="{ left: `${dropIndicatorLeft}px` }"
+      />
+      <div v-for="fileTab in fileTabs" :key="`tab_${fileTab.file.path()}`" :ref="(element) => setFileTabRef(fileTab.file.path(), element as HTMLElement | null)"
+        class="file-tab"
+        :class="{
+          'file-tab-active': fileTab.file.path() === activeFile,
+          'file-tab-dragging': dragState?.filePath === fileTab.file.path()
+        }"
+        :draggable="true"
+        @click="selectFile(fileTab.file.path())"
+        @dragstart="onDragStart($event, fileTab.file.path())"
+        @dragend="onDragEnd"
+      >
+        <span class="file-tab-label">{{ common.fileName(fileTab.file.path()) }}</span>
+        <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
+      </div>
+    </div>
+    <div class="grow min-h-0 relative">
+      <template v-for="fileTab in fileTabs" :key="`panel_${fileTab.file.path()}`">
+        <div class="absolute inset-0 flex h-full" :class="{ 'invisible pointer-events-none': fileTab.file.path() !== activeFile }">
+          <ViewSwitcherComponent
+            :activeViewId="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id"
+            :file="fileTab.file"
+            @selectView="onSelectView(fileTab, $event)"
+          />
+          <div class="grow min-w-0">
+            <KeepAlive>
+              <component
+                :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
+                :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
+                :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
+                v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
+                @error="$emit('error', $event)"
+              />
+            </KeepAlive>
           </div>
-        </Tab>
-      </TabList>
-      <TabPanels class="p-0! grow min-h-0">
-        <TabPanel v-for="fileTab in fileTabs" class="h-full"
-          :key="`tabPanel_${fileTab.file.path()}`"
-          :value="fileTab.file.path()"
-        >
-          <div class="flex h-full">
-            <ViewSwitcherComponent
-              :activeViewId="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id"
-              :file="fileTab.file"
-              @selectView="onSelectView(fileTab, $event)"
-            />
-            <div class="grow min-w-0">
-              <KeepAlive>
-                <component
-                  :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
-                  :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
-                  :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
-                  v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
-                  @error="$emit('error', $event)"
-                />
-              </KeepAlive>
-            </div>
-          </div>
-        </TabPanel>
-      </TabPanels>
-    </Tabs>
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -104,6 +102,7 @@ const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof Simul
   null
 );
 const fileTabs = vue.ref<IFileTab[]>([]);
+const fileTabRefs: Record<string, HTMLElement | null> = {};
 const activeFile = vue.ref<string>('');
 
 const filePaths = vue.computed<string[]>(() => {
@@ -115,6 +114,16 @@ const filePaths = vue.computed<string[]>(() => {
 
   return res;
 });
+
+interface IDragState {
+  filePath: string;
+  dropPosition: 'before' | 'after' | null;
+  dropTarget: string | null;
+}
+
+const dragState = vue.ref<IDragState | null>(null);
+const fileTabBarRef = vue.ref<HTMLElement | null>(null);
+const dropIndicatorLeft = vue.ref<number | null>(null);
 
 const captureSimulationExperimentInteractiveViewRef = (element: unknown): void => {
   simulationExperimentInteractiveViewRef.value = element as InstanceType<
@@ -214,17 +223,13 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
   const filePath = file.path();
   const prevActiveFile = activeFile.value;
 
-  await selectFile(filePath);
-
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file: file,
     uiJson: file.uiJson(),
     activeViewId: file.uiJson() ? 'simulation-experiment-interactive' : 'simulation-experiment-standard'
   });
 
-  if (wait) {
-    await waitForTabsUpdate();
-  }
+  await selectFile(filePath, wait);
 
   electronApi?.fileOpened(filePath);
 
@@ -267,6 +272,172 @@ const closeAllFiles = async (): Promise<void> => {
   while (fileTabs.value.length) {
     await closeCurrentFile();
   }
+};
+
+const setFileTabRef = (filePath: string, element: HTMLElement | null): void => {
+  if (element) {
+    fileTabRefs[filePath] = element;
+  } else {
+    // The file tab has been unmounted, so remove the reference to avoid keeping stale keys (and elements) around.
+
+    delete fileTabRefs[filePath];
+  }
+};
+
+const onDragStart = (event: DragEvent, filePath: string): void => {
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', filePath);
+  }
+
+  if (activeFile.value !== filePath) {
+    // Make sure that the dragged file tab is selected.
+
+    activeFile.value = filePath;
+  }
+
+  dragState.value = {
+    filePath,
+    dropTarget: null,
+    dropPosition: null
+  };
+};
+
+const onDragOver = (event: DragEvent): void => {
+  if (!dragState.value || !event.dataTransfer) {
+    return;
+  }
+
+  event.dataTransfer.dropEffect = 'move';
+
+  // Only show the drop indicator when the mouse is within the file tab bar bounds.
+
+  const fileTabBar = fileTabBarRef.value;
+  const fileTabBarRect = fileTabBar?.getBoundingClientRect();
+
+  if (fileTabBarRect) {
+    const tolerance = 4;
+
+    if (event.clientY < fileTabBarRect.top - tolerance || event.clientY > fileTabBarRect.bottom + tolerance) {
+      dragState.value = {
+        ...dragState.value,
+        dropPosition: null,
+        dropTarget: null
+      };
+      dropIndicatorLeft.value = null;
+
+      return;
+    }
+  }
+
+  // Find the file tab which horizontal centre is closest to the mouse.
+
+  const draggedFilePath = dragState.value.filePath;
+  let closestFileTab: string | null = null;
+  let closestDistance = Infinity;
+  let dropPosition: 'before' | 'after' = 'before';
+
+  for (const fileTab of fileTabs.value) {
+    const filePath = fileTab.file.path();
+
+    if (filePath === draggedFilePath) {
+      continue;
+    }
+
+    const element = fileTabRefs[filePath];
+
+    if (!element) {
+      continue;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const middleX = rect.left + 0.5 * rect.width;
+    const distance = Math.abs(event.clientX - middleX);
+
+    if (distance < closestDistance) {
+      closestFileTab = filePath;
+      closestDistance = distance;
+      dropPosition = event.clientX < middleX ? 'before' : 'after';
+    }
+  }
+
+  dragState.value = {
+    ...dragState.value,
+    dropPosition: closestFileTab ? dropPosition : null,
+    dropTarget: closestFileTab
+  };
+
+  // Compute the pixel position for the standalone drop indicator.
+
+  if (fileTabBar && fileTabBarRect && closestFileTab) {
+    const targetElement = fileTabRefs[closestFileTab];
+
+    if (targetElement) {
+      const targetRect = targetElement.getBoundingClientRect();
+
+      dropIndicatorLeft.value =
+        (dropPosition === 'before' ? targetRect.left : targetRect.right) - fileTabBarRect.left + fileTabBar.scrollLeft;
+    }
+  } else {
+    dropIndicatorLeft.value = null;
+  }
+};
+
+const onDrop = (event: DragEvent): void => {
+  event.preventDefault();
+
+  if (!dragState.value) {
+    return;
+  }
+
+  const { filePath: draggedFilePath, dropPosition, dropTarget } = dragState.value;
+
+  dragState.value = null;
+  dropIndicatorLeft.value = null;
+
+  if (!draggedFilePath || !dropPosition || !dropTarget || draggedFilePath === dropTarget) {
+    return;
+  }
+
+  const draggedIndex = fileTabs.value.findIndex((fileTab) => {
+    return fileTab.file.path() === draggedFilePath;
+  });
+  let targetIndex = fileTabs.value.findIndex((fileTab) => {
+    return fileTab.file.path() === dropTarget;
+  });
+
+  if (draggedIndex === -1 || targetIndex === -1) {
+    return;
+  }
+
+  // Remove the dragged item.
+
+  const [draggedItem] = fileTabs.value.splice(draggedIndex, 1);
+
+  // Recalculate the target index after the removal.
+
+  targetIndex = fileTabs.value.findIndex((fileTab) => {
+    return fileTab.file.path() === dropTarget;
+  });
+
+  // Insert the dragged item at the correct position.
+
+  fileTabs.value.splice(dropPosition === 'before' ? targetIndex : targetIndex + 1, 0, draggedItem);
+};
+
+const onDragEnd = (): void => {
+  dragState.value = null;
+  dropIndicatorLeft.value = null;
+};
+
+const onWheel = (event: WheelEvent): void => {
+  const fileTabBar = fileTabBarRef.value;
+
+  if (!fileTabBar) {
+    return;
+  }
+
+  fileTabBar.scrollLeft += event.deltaY;
 };
 
 // Add some external data to the current simulation experiment view.
@@ -359,6 +530,28 @@ vue.watch(activeFile, (newActiveFile: string) => {
   //       people know that a file has been selected.
 
   electronApi?.fileSelected(newActiveFile);
+
+  if (!dragState.value) {
+    // Make sure that the selected file tab is visible in the file tab bar.
+
+    vue.nextTick(() => {
+      const fileTabBar = fileTabBarRef.value;
+      const activeFileTab = fileTabRefs[newActiveFile];
+
+      if (!fileTabBar || !activeFileTab) {
+        return;
+      }
+
+      const fileTabBarRect = fileTabBar.getBoundingClientRect();
+      const activeFileTabRect = activeFileTab.getBoundingClientRect();
+
+      if (activeFileTabRect.left < fileTabBarRect.left) {
+        fileTabBar.scrollLeft += activeFileTabRect.left - fileTabBarRect.left;
+      } else if (activeFileTabRect.right > fileTabBarRect.right) {
+        fileTabBar.scrollLeft += activeFileTabRect.right - fileTabBarRect.right;
+      }
+    });
+  }
 });
 
 // Keyboard shortcuts.
@@ -383,36 +576,63 @@ if (common.isDesktop()) {
 </script>
 
 <style scoped>
-.p-tab {
+.file-tab {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
   padding: 0.125rem 0.5rem;
   border-right: 1px solid var(--p-content-border-color);
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
 }
 
-.p-tab:first-of-type {
+.file-tab:first-of-type {
   border-left: 1px solid var(--p-content-border-color);
 }
 
-.p-tab:hover {
+.file-tab:hover {
   background-color: var(--p-content-hover-background) !important;
 }
 
-.p-tab .remove-button {
+.file-tab .remove-button {
   visibility: hidden;
 }
 
-.p-tab:hover .remove-button,
-.p-tab-active .remove-button {
+.file-tab:hover .remove-button,
+.file-tab-active .remove-button {
   visibility: visible;
 }
 
-.p-tab-active,
-.p-tab-active:hover {
+.file-tab-active,
+.file-tab-active:hover {
   background-color: var(--p-primary-color) !important;
   color: var(--p-primary-contrast-color);
 }
 
-:deep(.p-tablist-active-bar) {
+.file-tab-bar {
+  position: relative;
+  scrollbar-width: none;
+}
+
+.file-tab-bar::-webkit-scrollbar {
   display: none;
+}
+
+.file-tab-dragging {
+  opacity: 0.4;
+}
+
+.file-tab-drop-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--p-primary-color);
+  pointer-events: none;
+  z-index: 10;
 }
 
 .remove-button {
