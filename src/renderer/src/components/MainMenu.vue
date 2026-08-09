@@ -21,8 +21,8 @@
       </a>
     </template>
     <template #end>
-      <button v-if="updateAvailable" class="update-link flex mr-1 text-xs px-1.5 py-0.5 cursor-pointer rounded-sm border border-transparent bg-transparent"
-        type="button" title="Click to reload and update"
+      <button v-if="updateAvailable" class="update-link flex items-center px-1.5 py-0.5 text-xs cursor-pointer rounded-full transition-colors duration-150 mr-1"
+        type="button"
         @click="emit('updateAvailable')"
       >
         New version available!
@@ -294,10 +294,11 @@ if (common.isDesktop()) {
 
 .update-link {
   color: var(--p-primary-color);
+  font-weight: 500;
+  font-size: 0.6875rem;
 }
 
 .update-link:hover {
-  background-color: var(--p-content-hover-background);
-  border-color: var(--p-content-border-color);
+  background-color: color-mix(in srgb, var(--p-primary-color) 10%, transparent);
 }
 </style>
