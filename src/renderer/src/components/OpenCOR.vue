@@ -1056,12 +1056,6 @@ vue.onMounted(() => {
   const viewRegistry = useViewRegistry();
 
   viewRegistry.register({
-    id: 'issues',
-    component: IssuesView,
-    isAvailable: (file: locApi.File) => file.issues().length > 0
-  });
-
-  viewRegistry.register({
     id: 'simulation-experiment-standard',
     category: ViewCategory.Simulation,
     label: 'Standard Simulation Experiment',

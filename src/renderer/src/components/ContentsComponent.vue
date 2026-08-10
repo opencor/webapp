@@ -5,8 +5,7 @@
         <component
           :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
           :ref="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component === SimulationExperimentInteractiveView ? captureSimulationExperimentInteractiveViewRef : undefined"
-          :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : 'h-full'"
-          :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
+          class="h-full"
           v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
           @simulationData="$emit('simulationData')"
         />
@@ -51,8 +50,6 @@
             <KeepAlive>
               <component
                 :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
-                :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
-                :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
                 v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
                 @error="$emit('error', $event)"
               />
@@ -133,8 +130,6 @@ const captureSimulationExperimentInteractiveViewRef = (element: unknown): void =
 
 const viewProps = (fileTab: IFileTab, viewDescription: IViewDescriptor | null): Record<string, unknown> => {
   switch (viewDescription?.id) {
-    case 'issues':
-      return { issues: fileTab.file.issues() };
     case 'simulation-experiment-standard':
       return {
         isActiveApp: props.isActiveApp,

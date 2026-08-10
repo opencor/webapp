@@ -16,7 +16,7 @@
         :title="view.label"
         @click="$emit('selectView', view.id)"
       >
-        <i :class="view.icon ?? 'pi pi-circle'" class="text-lg" />
+        <i :class="view.icon" class="text-lg" />
       </button>
     </template>
   </nav>
