@@ -1,6 +1,6 @@
 <template>
   <div ref="rootRef" class="simulation-experiment-view h-full flex flex-col">
-    <IssuesView v-if="instanceIssues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="instanceIssues" />
+    <IssuesView v-if="issues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="issues" />
     <template v-else>
       <Toolbar class="p-1! shrink-0">
         <template #start>
@@ -231,12 +231,13 @@ const emit = defineEmits<{
 const rootRef = vue.ref<HTMLElement | null>(null);
 const settingsVisible = vue.ref<boolean>(false);
 const document = props.file.document();
+const documentIssues = document.issues();
+const isDocumentValid = documentIssues.length === 0;
 const uniformTimeCourse = document.simulation(0) as locApi.SedUniformTimeCourse;
-const cvode = uniformTimeCourse.cvode();
-let instance = document.instantiate();
-const instanceIssues = vue.ref<locApi.IIssue[]>(instance.issues());
-const hasInstanceIssues = instanceIssues.value.length > 0;
-let instanceTask = hasInstanceIssues ? null : instance.task(0);
+const cvode = isDocumentValid ? uniformTimeCourse.cvode() : null;
+let instance = isDocumentValid ? document.instantiate() : null;
+const issues = documentIssues.length > 0 ? documentIssues : (instance?.issues() ?? []);
+let instanceTask = issues.length > 0 ? null : (instance?.task(0) ?? null);
 const allModelParameters = vue.ref<string[]>([]);
 const editableModelParameters = vue.ref<string[]>([]);
 const voiName = vue.ref(instanceTask ? instanceTask.voiName() : '');
@@ -385,14 +386,15 @@ const settings = vue.computed<ISimulationExperimentInteractiveViewSettingsDialog
 
   return {
     simulation: {
-      initialPoint: uniformTimeCourse.initialTime(),
-      startingPoint: uniformTimeCourse.outputStartTime(),
-      endingPoint: uniformTimeCourse.outputEndTime(),
-      pointInterval:
-        (uniformTimeCourse.outputEndTime() - uniformTimeCourse.outputStartTime()) / uniformTimeCourse.numberOfSteps()
+      initialPoint: isDocumentValid ? uniformTimeCourse.initialTime() : 0,
+      startingPoint: isDocumentValid ? uniformTimeCourse.outputStartTime() : 0,
+      endingPoint: isDocumentValid ? uniformTimeCourse.outputEndTime() : 0,
+      pointInterval: isDocumentValid
+        ? (uniformTimeCourse.outputEndTime() - uniformTimeCourse.outputStartTime()) / uniformTimeCourse.numberOfSteps()
+        : 1
     },
     solvers: {
-      cvodeMaximumStep: cvode.maximumStep()
+      cvodeMaximumStep: cvode ? cvode.maximumStep() : 0
     },
     interactive: {
       uiJson: actualUiJsonVal
@@ -1024,14 +1026,22 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
 
 // A helper function to reinstantiate our instance.
 
-const reinstantiateInstance = (): void => {
+const reinstantiateInstance = (): locApi.SedInstance => {
   instance = document.instantiate();
   instanceTask = instance.task(0);
+
+  return instance;
 };
 
 // Run the interactive simulation.
 
 const updateSimulation = async (): Promise<void> => {
+  // Make sure that the view is usable, i.e. that we have an instance.
+
+  if (!instance) {
+    return;
+  }
+
   // Make sure that there are no issues with the UI JSON.
 
   if (uiJsonIssues.value.length) {
@@ -1130,15 +1140,15 @@ const updateSimulation = async (): Promise<void> => {
   // Note: this ensures that the instance picks up the latest model changes and avoids reusing an instance which
   //       internal state may have been corrupted by a previous cancellation.
 
-  reinstantiateInstance();
+  const crtInstance = reinstantiateInstance();
 
   // Start the simulation in a background thread and yield to the UI to keep it responsive while the simulation runs.
 
-  if (!instance.startRun()) {
+  if (!crtInstance.startRun()) {
     return;
   }
 
-  await vueCommon.waitWhileRunning(instance).promise;
+  await vueCommon.waitWhileRunning(crtInstance).promise;
 
   // Check if we have been superseded by a newer call while the simulation was running.
 
@@ -1148,8 +1158,8 @@ const updateSimulation = async (): Promise<void> => {
 
   // Make sure that we haven't come across any issues during the simulation.
 
-  if (instance.hasIssues()) {
-    simulationIssues.value = instance.issues();
+  if (crtInstance.hasIssues()) {
+    simulationIssues.value = crtInstance.issues();
 
     return;
   }
@@ -1637,6 +1647,12 @@ const onDownloadCombineArchive = (): void => {
 // Settings dialog event handler.
 
 const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSettingsDialog): void => {
+  if (!cvode) {
+    settingsVisible.value = false;
+
+    return;
+  }
+
   const newSettingsJson = JSON.stringify(vue.toRaw(updatedSettings));
   const settingsHaveChanges = newSettingsJson !== oldSettings.value;
 

@@ -150,6 +150,7 @@ import { provideDialogState } from './dialogs/BaseDialog.vue';
 import IssuesView from './views/IssuesView.vue';
 import SimulationExperimentInteractiveView from './views/SimulationExperimentInteractiveView.vue';
 import SimulationExperimentStandardView from './views/SimulationExperimentStandardView.vue';
+import UnsupportedFileTypeView from './views/UnsupportedFileTypeView.vue';
 import SafeBlockUIWidget from './widgets/SafeBlockUIWidget.vue';
 import MainMenu from './MainMenu.vue';
 
@@ -758,18 +759,12 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
     if (
       fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
-      fileType === locApi.EFileType.UNKNOWN_FILE ||
-      fileType === locApi.EFileType.SEDML_FILE ||
       (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
     ) {
       const issueMessage =
         fileType === locApi.EFileType.IRRETRIEVABLE_FILE
           ? 'The file could not be retrieved.'
-          : fileType === locApi.EFileType.SEDML_FILE && !props.omex
-            ? 'SED-ML files are not currently supported.'
-            : props.omex
-              ? 'Only COMBINE archives are supported.'
-              : 'Only CellML files and COMBINE archives are supported.';
+          : 'Only COMBINE archives are supported.';
 
       if (props.omex) {
         vue.nextTick(() => {
@@ -1061,7 +1056,7 @@ vue.onMounted(() => {
     label: 'Standard Simulation Experiment',
     icon: 'pi pi-chart-line',
     component: SimulationExperimentStandardView,
-    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.SEDML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
   });
 
   viewRegistry.register({
@@ -1070,7 +1065,16 @@ vue.onMounted(() => {
     label: 'Interactive Simulation Experiment',
     icon: 'pi pi-sliders-h',
     component: SimulationExperimentInteractiveView,
-    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.SEDML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+  });
+
+  viewRegistry.register({
+    id: 'unsupported-file-type',
+    category: ViewCategory.Simulation,
+    label: 'Unsupported File Type',
+    icon: 'pi pi-file',
+    component: UnsupportedFileTypeView,
+    fileTypes: [locApi.EFileType.UNKNOWN_FILE]
   });
 });
 

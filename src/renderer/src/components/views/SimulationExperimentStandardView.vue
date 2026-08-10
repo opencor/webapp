@@ -1,6 +1,6 @@
 <template>
   <div ref="rootRef" class="simulation-experiment-view h-full flex flex-col">
-    <IssuesView v-if="instanceIssues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="instanceIssues" />
+    <IssuesView v-if="issues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="issues" />
     <template v-else>
       <Toolbar class="p-1! shrink-0">
         <template #start>
@@ -116,17 +116,13 @@ const emit = defineEmits<{
 
 const rootRef = vue.ref<HTMLElement | null>(null);
 const editorRef = vue.ref<HTMLElement | null>(null);
-const instanceIssues = vue.ref<locApi.IIssue[]>([]);
-let hasInstanceIssues = false;
-
 const document = props.file.document();
-const uniformTimeCourse = document.simulation(0) as locApi.SedUniformTimeCourse;
-const instance = document.instantiate();
-
-instanceIssues.value = instance.issues();
-hasInstanceIssues = instanceIssues.value.length > 0;
-
-const instanceTask = hasInstanceIssues ? null : instance.task(0);
+const documentIssues = document.issues();
+const isDocumentValid = documentIssues.length === 0;
+const uniformTimeCourse = isDocumentValid ? (document.simulation(0) as locApi.SedUniformTimeCourse) : null;
+const instance = isDocumentValid ? document.instantiate() : null;
+const issues = documentIssues.length > 0 ? documentIssues : (instance?.issues() ?? []);
+const instanceTask = issues.length > 0 ? null : (instance?.task(0) ?? null);
 const parameters = vue.ref<string[]>([]);
 const xParameter = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const yParameter = vue.ref(instanceTask ? instanceTask.stateName(0) : '');
@@ -139,7 +135,7 @@ const data = vue.ref<IGraphPanelData>({
 
 const consoleContents = vue.ref<string>(`<b>${props.file.path()}</b>`);
 const progress = vue.ref<number>(0);
-const simulationStatus = vue.ref<locSedApi.ESedInstanceStatus>(instance.status());
+const simulationStatus = vue.ref<locSedApi.ESedInstanceStatus>(instance?.status() ?? locSedApi.ESedInstanceStatus.IDLE);
 
 const simulationSettingsDisabled = vue.computed<boolean>(() => {
   return simulationStatus.value !== locSedApi.ESedInstanceStatus.IDLE;
@@ -177,12 +173,12 @@ const updatePlot = (dataSize: number = 0): void => {
   // so that Plotly can automatically determine the range based on the data.
 
   const xAxisRange: [number, number] | undefined =
-    xInfo.value.type === locCommon.ESimulationDataInfoType.VOI
+    uniformTimeCourse && xInfo.value.type === locCommon.ESimulationDataInfoType.VOI
       ? [uniformTimeCourse.outputStartTime(), uniformTimeCourse.outputEndTime()]
       : undefined;
 
   const yAxisRange: [number, number] | undefined =
-    yInfo.value.type === locCommon.ESimulationDataInfoType.VOI
+    uniformTimeCourse && yInfo.value.type === locCommon.ESimulationDataInfoType.VOI
       ? [uniformTimeCourse.outputStartTime(), uniformTimeCourse.outputEndTime()]
       : undefined;
 
@@ -212,7 +208,7 @@ const updatePlot = (dataSize: number = 0): void => {
 // Event handlers.
 
 const onRunPause = async (): Promise<void> => {
-  switch (instance.status()) {
+  switch (instance?.status()) {
     case locSedApi.ESedInstanceStatus.RUNNING:
       // Pause the simulation.
 
@@ -237,17 +233,17 @@ const onRunPause = async (): Promise<void> => {
 
       // Start the simulation.
 
-      if (!instance.startRun()) {
-        simulationStatus.value = instance.status();
+      if (!instance?.startRun()) {
+        simulationStatus.value = instance?.status() ?? locSedApi.ESedInstanceStatus.IDLE;
 
         return;
       }
 
-      simulationStatus.value = instance.status();
+      simulationStatus.value = instance?.status() ?? locSedApi.ESedInstanceStatus.IDLE;
 
       // Wait for the simulation to finish, handling pause/resume cycles asynchronously so that the UI remains responsive.
 
-      const numberOfSteps = uniformTimeCourse.numberOfSteps();
+      const numberOfSteps = uniformTimeCourse?.numberOfSteps() ?? 0;
       let lastPlottingAreaUpdateTime = Date.now();
 
       const { promise: runPromise, cancel: runCancel } = vueCommon.waitWhileRunning(
@@ -342,7 +338,7 @@ const onRunPause = async (): Promise<void> => {
 const onStop = (): void => {
   runAborted.value = true;
 
-  instance.stopRun();
+  instance?.stopRun();
 
   // Note: the simulation status will be updated by the next poll cycle of waitWhileRunning(), so we don't set it here
   //       to avoid a race window where the user could re-trigger a run before the C++ thread has fully stopped.
@@ -384,7 +380,7 @@ if (common.isDesktop()) {
 
     if (
       props.isActiveFile &&
-      !hasInstanceIssues &&
+      issues.length === 0 &&
       !event.ctrlKey &&
       !event.shiftKey &&
       !event.metaKey &&
