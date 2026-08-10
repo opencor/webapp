@@ -233,8 +233,8 @@ const settingsVisible = vue.ref<boolean>(false);
 const document = props.file.document();
 const documentIssues = document.issues();
 const isDocumentValid = documentIssues.length === 0;
-const uniformTimeCourse = document.simulation(0) as locApi.SedUniformTimeCourse;
-const cvode = isDocumentValid ? uniformTimeCourse.cvode() : null;
+const uniformTimeCourse = isDocumentValid ? (document.simulation(0) as locApi.SedUniformTimeCourse) : null;
+const cvode = uniformTimeCourse?.cvode() ?? null;
 let instance = isDocumentValid ? document.instantiate() : null;
 const issues = documentIssues.length > 0 ? documentIssues : (instance?.issues() ?? []);
 let instanceTask = issues.length > 0 ? null : (instance?.task(0) ?? null);
@@ -386,15 +386,15 @@ const settings = vue.computed<ISimulationExperimentInteractiveViewSettingsDialog
 
   return {
     simulation: {
-      initialPoint: isDocumentValid ? uniformTimeCourse.initialTime() : 0,
-      startingPoint: isDocumentValid ? uniformTimeCourse.outputStartTime() : 0,
-      endingPoint: isDocumentValid ? uniformTimeCourse.outputEndTime() : 0,
-      pointInterval: isDocumentValid
+      initialPoint: uniformTimeCourse?.initialTime() ?? 0,
+      startingPoint: uniformTimeCourse?.outputStartTime() ?? 0,
+      endingPoint: uniformTimeCourse?.outputEndTime() ?? 0,
+      pointInterval: uniformTimeCourse
         ? (uniformTimeCourse.outputEndTime() - uniformTimeCourse.outputStartTime()) / uniformTimeCourse.numberOfSteps()
         : 1
     },
     solvers: {
-      cvodeMaximumStep: cvode ? cvode.maximumStep() : 0
+      cvodeMaximumStep: cvode?.maximumStep() ?? 0
     },
     interactive: {
       uiJson: actualUiJsonVal
@@ -1647,7 +1647,7 @@ const onDownloadCombineArchive = (): void => {
 // Settings dialog event handler.
 
 const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSettingsDialog): void => {
-  if (!cvode) {
+  if (!uniformTimeCourse || !cvode) {
     settingsVisible.value = false;
 
     return;

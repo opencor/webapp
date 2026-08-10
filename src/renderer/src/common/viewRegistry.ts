@@ -7,9 +7,18 @@ import type { EFileType, File } from '../libopencor/locApi';
 // View categories.
 
 export const ViewCategory = {
-  Editing: 'editing',
-  Simulation: 'simulation',
-  Analysis: 'analysis'
+  Editing: {
+    id: 'editing',
+    color: 'var(--p-blue-500)'
+  },
+  Simulation: {
+    id: 'simulation',
+    color: 'var(--p-green-500)'
+  },
+  Analysis: {
+    id: 'analysis',
+    color: 'var(--p-red-500)'
+  }
 } as const;
 
 export type ViewCategory = (typeof ViewCategory)[keyof typeof ViewCategory];
@@ -41,7 +50,7 @@ export const useViewRegistry = vueusecore.createGlobalState(() => {
 
     if (descriptorIndex === undefined) {
       _descriptors.push(descriptor);
-      _descriptorIndices.set(descriptor.id, _descriptors.length);
+      _descriptorIndices.set(descriptor.id, _descriptors.length - 1);
     } else {
       _descriptors[descriptorIndex] = descriptor;
     }
@@ -54,22 +63,13 @@ export const useViewRegistry = vueusecore.createGlobalState(() => {
   };
 
   // Resolve the view to show for a file.
-  // Note: the user's chosen view takes precedence and then the first applicable view for the file's type.
+  // Note: the user's chosen view is always returned, whether or not it is applicable to the file (in which case it is
+  //       up to the caller to indicate that the view is not supported for the given file type).
 
-  function resolve(file: File, activeViewId: string | undefined): IViewDescriptor | null {
-    if (activeViewId) {
-      const activeView = _descriptors.find((descriptor) => {
-        return descriptor.id === activeViewId && isApplicable(descriptor, file);
-      });
-
-      if (activeView) {
-        return activeView;
-      }
-    }
-
+  function resolve(activeViewId: string | undefined): IViewDescriptor | null {
     return (
       _descriptors.find((descriptor) => {
-        return isApplicable(descriptor, file);
+        return descriptor.id === activeViewId;
       }) ?? null
     );
   }

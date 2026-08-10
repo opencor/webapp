@@ -150,7 +150,6 @@ import { provideDialogState } from './dialogs/BaseDialog.vue';
 import IssuesView from './views/IssuesView.vue';
 import SimulationExperimentInteractiveView from './views/SimulationExperimentInteractiveView.vue';
 import SimulationExperimentStandardView from './views/SimulationExperimentStandardView.vue';
-import UnsupportedFileTypeView from './views/UnsupportedFileTypeView.vue';
 import SafeBlockUIWidget from './widgets/SafeBlockUIWidget.vue';
 import MainMenu from './MainMenu.vue';
 
@@ -1066,15 +1065,6 @@ vue.onMounted(() => {
     icon: 'pi pi-sliders-h',
     component: SimulationExperimentInteractiveView,
     fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.SEDML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
-  });
-
-  viewRegistry.register({
-    id: 'unsupported-file-type',
-    category: ViewCategory.Simulation,
-    label: 'Unsupported File Type',
-    icon: 'pi pi-file',
-    component: UnsupportedFileTypeView,
-    fileTypes: [locApi.EFileType.UNKNOWN_FILE]
   });
 });
 
