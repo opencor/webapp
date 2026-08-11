@@ -2,7 +2,7 @@
   <nav class="w-14 h-full shrink-0 flex flex-col overflow-y-auto py-1"
     :style="{ borderRight: '1px solid var(--p-content-border-color)' }"
   >
-    <template v-for="([category, views], categoryIndex) in categoriesWithViews" :key="category">
+    <template v-for="([category, views], categoryIndex) in categoriesWithViews" :key="category.id">
       <div v-if="categoryIndex > 0" class="mx-2 my-1 border-t"
         style="border-color: var(--p-content-border-color);"
       />
@@ -10,13 +10,13 @@
         type="button"
         :class="[
           'view-icon flex items-center justify-center mx-1 my-0.5 rounded-r-md transition-colors duration-150',
-          `view-category-${category}`,
           { 'view-icon-active': view.id === activeViewId }
         ]"
+        :style="{ '--view-category-color': category.color }"
         :title="view.label"
         @click="$emit('selectView', view.id)"
       >
-        <i :class="view.icon ?? 'pi pi-circle'" class="text-lg" />
+        <i :class="view.icon" class="text-lg" />
       </button>
     </template>
   </nav>
@@ -31,11 +31,9 @@ import {
   ViewCategory,
   type ViewCategory as ViewCategoryType
 } from '../common/viewRegistry';
-import type * as locApi from '../libopencor/locApi';
 
-const props = defineProps<{
+defineProps<{
   activeViewId?: string;
-  file: locApi.File;
 }>();
 
 defineEmits<{
@@ -48,9 +46,7 @@ const categoriesWithViews = vue.computed<Array<[ViewCategoryType, IViewDescripto
   const res: Array<[ViewCategoryType, IViewDescriptor[]]> = [];
 
   for (const category of Object.values(ViewCategory)) {
-    const views = viewRegistry
-      .descriptors(category)
-      .filter((descriptor) => viewRegistry.isApplicable(descriptor, props.file));
+    const views = viewRegistry.descriptors(category);
 
     if (views.length > 0) {
       res.push([category, views]);
@@ -62,18 +58,6 @@ const categoriesWithViews = vue.computed<Array<[ViewCategoryType, IViewDescripto
 </script>
 
 <style scoped>
-.view-category-analysis {
-  --view-category-color: var(--p-red-500);
-}
-
-.view-category-editing {
-  --view-category-color: var(--p-blue-500);
-}
-
-.view-category-simulation {
-  --view-category-color: var(--p-green-500);
-}
-
 .view-icon {
   width: 44px;
   height: 44px;

@@ -758,18 +758,12 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
     if (
       fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
-      fileType === locApi.EFileType.UNKNOWN_FILE ||
-      fileType === locApi.EFileType.SEDML_FILE ||
       (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
     ) {
       const issueMessage =
         fileType === locApi.EFileType.IRRETRIEVABLE_FILE
           ? 'The file could not be retrieved.'
-          : fileType === locApi.EFileType.SEDML_FILE && !props.omex
-            ? 'SED-ML files are not currently supported.'
-            : props.omex
-              ? 'Only COMBINE archives are supported.'
-              : 'Only CellML files and COMBINE archives are supported.';
+          : 'Only COMBINE archives are supported.';
 
       if (props.omex) {
         vue.nextTick(() => {
@@ -1056,18 +1050,12 @@ vue.onMounted(() => {
   const viewRegistry = useViewRegistry();
 
   viewRegistry.register({
-    id: 'issues',
-    component: IssuesView,
-    isAvailable: (file: locApi.File) => file.issues().length > 0
-  });
-
-  viewRegistry.register({
     id: 'simulation-experiment-standard',
     category: ViewCategory.Simulation,
     label: 'Standard Simulation Experiment',
     icon: 'pi pi-chart-line',
     component: SimulationExperimentStandardView,
-    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.SEDML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
   });
 
   viewRegistry.register({
@@ -1076,7 +1064,7 @@ vue.onMounted(() => {
     label: 'Interactive Simulation Experiment',
     icon: 'pi pi-sliders-h',
     component: SimulationExperimentInteractiveView,
-    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.SEDML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
   });
 });
 

@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "1.20260810.0",
+  "version": "1.20260811.0",
   "engines": {
     "bun": ">=1.2.0"
   },
@@ -67,7 +67,7 @@
     "xxhash-wasm": "^1.1.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.7",
+    "@biomejs/biome": "^2.5.8",
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/postcss": "^4.3.3",

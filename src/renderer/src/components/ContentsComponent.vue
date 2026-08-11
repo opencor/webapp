@@ -3,11 +3,10 @@
     <template v-for="fileTab in fileTabs" :key="`tabPanel_${fileTab.file.path()}`">
       <KeepAlive>
         <component
-          :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
-          :ref="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component === SimulationExperimentInteractiveView ? captureSimulationExperimentInteractiveViewRef : undefined"
-          :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : 'h-full'"
-          :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
-          v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
+          :is="view(fileTab).component"
+          :ref="view(fileTab).component === SimulationExperimentInteractiveView ? captureSimulationExperimentInteractiveViewRef : undefined"
+          class="h-full"
+          v-bind="view(fileTab).props"
           @simulationData="$emit('simulationData')"
         />
       </KeepAlive>
@@ -43,17 +42,14 @@
       <template v-for="fileTab in fileTabs" :key="`panel_${fileTab.file.path()}`">
         <div class="absolute inset-0 flex h-full" :class="{ 'invisible pointer-events-none': fileTab.file.path() !== activeFile }">
           <ViewSwitcherComponent
-            :activeViewId="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id"
-            :file="fileTab.file"
+            :activeViewId="fileTab.activeViewId"
             @selectView="onSelectView(fileTab, $event)"
           />
           <div class="grow min-w-0">
             <KeepAlive>
               <component
-                :is="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.component"
-                :class="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? 'm-4' : undefined"
-                :style="viewRegistry.resolve(fileTab.file, fileTab.activeViewId)?.id === 'issues' ? { height: 'calc(100% - 2rem)' } : undefined"
-                v-bind="viewProps(fileTab, viewRegistry.resolve(fileTab.file, fileTab.activeViewId))"
+                :is="view(fileTab).component"
+                v-bind="view(fileTab).props"
                 @error="$emit('error', $event)"
               />
             </KeepAlive>
@@ -73,10 +69,11 @@ import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../
 
 import * as common from '../common/common';
 import { electronApi } from '../common/electronApi';
-import { type IViewDescriptor, useViewRegistry } from '../common/viewRegistry';
+import { useViewRegistry } from '../common/viewRegistry';
 import * as locApi from '../libopencor/locApi';
 
 import SimulationExperimentInteractiveView from './views/SimulationExperimentInteractiveView.vue';
+import UnsupportedFileTypeView from './views/UnsupportedFileTypeView.vue';
 
 interface IFileTab {
   file: locApi.File;
@@ -131,26 +128,60 @@ const captureSimulationExperimentInteractiveViewRef = (element: unknown): void =
   > | null;
 };
 
-const viewProps = (fileTab: IFileTab, viewDescription: IViewDescriptor | null): Record<string, unknown> => {
-  switch (viewDescription?.id) {
-    case 'issues':
-      return { issues: fileTab.file.issues() };
+interface IView {
+  component: vue.Component | null;
+  props: Record<string, unknown>;
+}
+
+const view = (fileTab: IFileTab): IView => {
+  // Resolve the view to show for a file, along with the props to pass to it.
+  // Note: if the view does not support the file's type, then we show a view saying so.
+
+  const viewDescriptor = viewRegistry.resolve(fileTab.activeViewId);
+
+  if (!viewDescriptor) {
+    return {
+      component: null,
+      props: {}
+    };
+  }
+
+  if (!viewRegistry.isApplicable(viewDescriptor, fileTab.file)) {
+    return {
+      component: UnsupportedFileTypeView,
+      props: {
+        viewName: viewDescriptor.label,
+        viewCategory: viewDescriptor.category
+      }
+    };
+  }
+
+  switch (viewDescriptor.id) {
     case 'simulation-experiment-standard':
       return {
-        isActiveApp: props.isActiveApp,
-        uiEnabled: props.uiEnabled,
-        file: fileTab.file,
-        isActiveFile: props.simulationOnly || fileTab.file.path() === activeFile.value,
-        simulationOnly: props.simulationOnly
+        component: viewDescriptor.component,
+        props: {
+          isActiveApp: props.isActiveApp,
+          uiEnabled: props.uiEnabled,
+          file: fileTab.file,
+          isActiveFile: props.simulationOnly || fileTab.file.path() === activeFile.value,
+          simulationOnly: props.simulationOnly
+        }
       };
     case 'simulation-experiment-interactive':
       return {
-        file: fileTab.file,
-        simulationOnly: props.simulationOnly,
-        uiJson: fileTab.uiJson
+        component: viewDescriptor.component,
+        props: {
+          file: fileTab.file,
+          simulationOnly: props.simulationOnly,
+          uiJson: fileTab.uiJson
+        }
       };
     default:
-      return {};
+      return {
+        component: viewDescriptor.component,
+        props: {}
+      };
   }
 };
 
