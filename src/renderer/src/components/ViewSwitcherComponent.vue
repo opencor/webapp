@@ -1,6 +1,7 @@
 <template>
   <nav class="w-14 h-full shrink-0 flex flex-col overflow-y-auto py-1"
     :style="{ borderRight: '1px solid var(--p-content-border-color)' }"
+    @wheel.prevent="onWheel"
   >
     <template v-for="([category, views], categoryIndex) in categoriesWithViews" :key="category.id">
       <div v-if="categoryIndex > 0" class="mx-2 my-1 border-t"
@@ -8,6 +9,7 @@
       />
       <button v-for="view in views" :key="view.id"
         type="button"
+        :ref="(element) => setViewButtonRef(view.id, element)"
         :class="[
           'view-icon flex items-center justify-center mx-1 my-0.5 rounded-r-md transition-colors duration-150',
           { 'view-icon-active': view.id === activeViewId }
@@ -32,15 +34,17 @@ import {
   type ViewCategory as ViewCategoryType
 } from '../common/viewRegistry';
 
-defineProps<{
-  activeViewId?: string;
+const props = defineProps<{
+  activeViewId: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   selectView: [viewId: string];
 }>();
 
 const viewRegistry = useViewRegistry();
+
+// Compute the list of view categories that have at least one view, along with their corresponding views.
 
 const categoriesWithViews = vue.computed<Array<[ViewCategoryType, IViewDescriptor[]]>>(() => {
   const res: Array<[ViewCategoryType, IViewDescriptor[]]> = [];
@@ -55,6 +59,87 @@ const categoriesWithViews = vue.computed<Array<[ViewCategoryType, IViewDescripto
 
   return res;
 });
+
+// Compute the list of view IDs in the order they are displayed in the view switcher.
+
+const viewIds = vue.computed<string[]>(() => {
+  const res: string[] = [];
+
+  for (const [, views] of categoriesWithViews.value) {
+    for (const view of views) {
+      res.push(view.id);
+    }
+  }
+
+  return res;
+});
+
+// Keep a map of view IDs to their corresponding button elements, so we can scroll the active view's button into view
+// when the active view changes.
+
+const viewButtonRefs = new Map<string, HTMLElement>();
+
+const setViewButtonRef = (viewId: string, element: unknown): void => {
+  if (element instanceof HTMLElement) {
+    viewButtonRefs.set(viewId, element);
+  } else {
+    viewButtonRefs.delete(viewId);
+  }
+};
+
+// Switch views with the mouse wheel.
+// Note: we don't wrap around, i.e. we don't go from the last view to the first view, or vice versa. Also, we damp the
+//       wheel delta to avoid switching views too quickly when the user scrolls fast.
+
+const wheelDelta = vue.ref(0);
+const wheelThreshold = 321;
+
+const selectViewByOffset = (offset: number): void => {
+  const activeViewIndex = viewIds.value.indexOf(props.activeViewId);
+
+  if (activeViewIndex === -1) {
+    return;
+  }
+
+  const newViewIndex = Math.min(Math.max(activeViewIndex + offset, 0), viewIds.value.length - 1);
+
+  if (newViewIndex !== activeViewIndex) {
+    emit('selectView', viewIds.value[newViewIndex]);
+  }
+};
+
+const onWheel = (event: WheelEvent): void => {
+  if (!viewIds.value.length) {
+    return;
+  }
+
+  wheelDelta.value += event.deltaY;
+
+  while (wheelDelta.value >= wheelThreshold) {
+    wheelDelta.value -= wheelThreshold;
+
+    selectViewByOffset(1);
+  }
+
+  while (wheelDelta.value <= -wheelThreshold) {
+    wheelDelta.value += wheelThreshold;
+
+    selectViewByOffset(-1);
+  }
+};
+
+// Scroll the active view's button into view when the active view changes.
+
+vue.watch(
+  () => props.activeViewId,
+  (viewId) => {
+    viewButtonRefs.get(viewId)?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest'
+    });
+  },
+  { immediate: true, flush: 'post' }
+);
 </script>
 
 <style scoped>

@@ -66,7 +66,7 @@ export const useViewRegistry = vueusecore.createGlobalState(() => {
   // Note: the user's chosen view is always returned, whether or not it is applicable to the file (in which case it is
   //       up to the caller to indicate that the view is not supported for the given file type).
 
-  function resolve(activeViewId: string | undefined): IViewDescriptor | null {
+  function resolve(activeViewId: string): IViewDescriptor | null {
     return (
       _descriptors.find((descriptor) => {
         return descriptor.id === activeViewId;
