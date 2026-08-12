@@ -188,7 +188,8 @@ export const file = (
             }
 
             throw new Error(
-              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${response.status}.`, {
+              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${response.status}.`,
+              {
                 cause: response.status
               }
             );
@@ -197,10 +198,10 @@ export const file = (
             // A network/CORS error is an instance of TypeError in fetch. So, if this is the case then we try fetching
             // the file directly otherwise we re-throw the error.
 
-            if (!(error instanceof TypeError)
-             && (!(error instanceof Error)
-              || typeof(error.cause) !== 'number'
-              || ![403, 404].includes(error.cause))) {
+            if (
+              !(error instanceof TypeError) &&
+              (!(error instanceof Error) || typeof error.cause !== 'number' || ![403, 404].includes(error.cause))
+            ) {
               throw new Error(common.formatError(error));
             }
 
