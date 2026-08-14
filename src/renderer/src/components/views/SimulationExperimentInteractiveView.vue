@@ -331,47 +331,58 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
   const paletteColors = colors.PALETTE_COLORS;
   const paletteColorsLength = paletteColors.length;
 
+  const addRunTraces = (traces: IGraphPanelPlotTrace[], plotIndex: number, runIndex: number): void => {
+    const run = runsVal[runIndex];
+
+    if (!run) {
+      return;
+    }
+
+    if (!run.isVisible) {
+      return;
+    }
+
+    const runColorIndex = paletteColors.indexOf(run.color);
+    const baseColorIndex = runColorIndex >= 0 ? runColorIndex : 0;
+    const data = run.isLiveRun ? liveDataVal[plotIndex] : run.data[plotIndex];
+    const dataTraces = data?.traces;
+
+    if (!dataTraces?.length) {
+      return;
+    }
+
+    const suffix = runsCount === 1 ? '' : run.isLiveRun ? ' [Live]' : ` [#${runIndex}]`;
+
+    for (let k = 0; k < dataTraces.length; ++k) {
+      const dataTrace = dataTraces[k];
+
+      if (!dataTrace) {
+        continue;
+      }
+
+      traces.push({
+        ...dataTrace,
+        traceId: `${run.id}::${dataTrace.traceId ?? `${dataTrace.xValue}::${dataTrace.yValue}::${k}`}`,
+        name: dataTrace.name + suffix,
+        color: paletteColors[(baseColorIndex + k) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
+        zorder: run.isLiveRun ? 1 : undefined
+      });
+    }
+  };
+
   for (let i = 0; i < liveDataVal.length; ++i) {
     const traces: IGraphPanelPlotTrace[] = [];
 
-    for (let j = 0; j < runsCount; ++j) {
-      const run = runsVal[j];
+    // Add the traces for the tracked runs first and then the live run, so that the live run is always drawn on top of
+    // the tracked runs (Plotly draws traces in the order in which they appear in the data array).
+    // Note: the legend order is unaffected since the live run's traces have a zorder of 1 (mapped to Plotly's
+    //       legendrank) while tracked runs use the default of 1000.
 
-      if (!run) {
-        continue;
-      }
-
-      if (!run.isVisible) {
-        continue;
-      }
-
-      const runColorIndex = paletteColors.indexOf(run.color);
-      const baseColorIndex = runColorIndex >= 0 ? runColorIndex : 0;
-      const data = run.isLiveRun ? liveDataVal[i] : run.data[i];
-      const dataTraces = data?.traces;
-
-      if (!dataTraces?.length) {
-        continue;
-      }
-
-      const suffix = runsCount === 1 ? '' : run.isLiveRun ? ' [Live]' : ` [#${j}]`;
-
-      for (let k = 0; k < dataTraces.length; ++k) {
-        const dataTrace = dataTraces[k];
-
-        if (!dataTrace) {
-          continue;
-        }
-
-        traces.push({
-          ...dataTrace,
-          traceId: `${run.id}::${dataTrace.traceId ?? `${dataTrace.xValue}::${dataTrace.yValue}::${k}`}`,
-          name: dataTrace.name + suffix,
-          color: paletteColors[(baseColorIndex + k) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
-          zorder: run.isLiveRun ? 1 : undefined
-        });
-      }
+    for (let j = 1; j < runsCount; ++j) {
+      addRunTraces(traces, i, j);
     }
+
+    addRunTraces(traces, i, 0);
 
     res.push({
       xAxisTitle: liveDataVal[i]?.xAxisTitle,
