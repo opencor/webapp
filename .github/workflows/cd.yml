@@ -123,6 +123,10 @@ jobs:
           local-path: ./src/renderer/dist
           remote-path: /home/www/opencor.ws/app
           sync: full
+          # Note: we upload version.json last so that OpenCOR's Web app only reports a new version once all the other
+          #       files have been uploaded.
+          ftp-mirror-options: --exclude-glob=assets/version.json
+          ftp-post-sync-commands: put -O /home/www/opencor.ws/app/assets ./src/renderer/dist/assets/version.json
       - name: Archive OpenCOR's Web app
         run: bun archive:web
       - name: Release OpenCOR's Web app
