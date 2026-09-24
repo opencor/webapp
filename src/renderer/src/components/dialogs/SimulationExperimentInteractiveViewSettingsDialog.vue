@@ -984,7 +984,7 @@ const numberOfDataPoints = vue.computed<string>(() => {
   }
 
   const { startingPoint, endingPoint, pointInterval } = localSettings.value.simulation;
-  const points = Math.ceil((endingPoint - startingPoint) / pointInterval) + 1;
+  const points = Math.max(1, Math.round((endingPoint - startingPoint) / pointInterval)) + 1;
   const res = points.toLocaleString();
 
   if (!common.isDivisible(endingPoint - startingPoint, pointInterval)) {
