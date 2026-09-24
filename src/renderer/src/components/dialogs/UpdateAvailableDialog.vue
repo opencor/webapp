@@ -20,7 +20,6 @@
 </template>
 
 <script setup lang="ts">
-import * as common from '../../common/common';
 import { latestVersion } from '../../common/version';
 
 defineEmits<{
