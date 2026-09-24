@@ -6,25 +6,28 @@
       </div>
       <div class="space-y-2">
         <div class="text-center">
-          <span class="text-lg">Feel free to <strong>force reload</strong> OpenCOR whenever you are ready.</span><br />
-          <em>(You can force reload by pressing
-          <span v-if="common.isMacOs()" class="highlight">⇧⌘R</span>
-          <span v-else><span class="highlight">Ctrl</span>+<span class="highlight">Shift</span>+<span class="highlight">R</span></span>.)</em>
+          <span class="text-lg">Feel free to reload OpenCOR whenever you are ready.</span><br />
+          <em>(Please note that any unsaved work will be lost.)</em>
         </div>
       </div>
     </div>
     <template #footer>
-      <Button label="OK" autofocus @click="$emit('close')" />
+      <Button label="Reload" autofocus @click="onReloadNow" />
+      <Button label="Cancel" severity="secondary" @click="$emit('close')" />
     </template>
   </BaseDialog>
 </template>
 
 <script setup lang="ts">
-import { latestVersion } from '../../common/version';
+import { forceReload, latestVersion } from '../../common/version';
 
 defineEmits<{
   close: [];
 }>();
+
+const onReloadNow = (): void => {
+  void forceReload();
+};
 </script>
 
 <style scoped>

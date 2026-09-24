@@ -95,6 +95,21 @@ const startCheck = (): void => {
   }
 };
 
+// Force reload the Web app.
+
+const forceReload = async (): Promise<void> => {
+  // Note: there is no standard way to force reload a page (location.reload(true) is non-standard and ignored by modern
+  //       browsers). So, we first fetch the page with cache: 'reload', which bypasses the HTTP cache and updates it
+  //       with the latest version of the page, and then reload the page.
+
+  try {
+    await fetch(window.location.href, { cache: 'reload' });
+  } catch (_error: unknown) {
+  }
+
+  window.location.reload();
+};
+
 // Export the version checking functions and state.
 
-export { currentVersion, latestVersion, startCheck, updateAvailable };
+export { currentVersion, forceReload, latestVersion, startCheck, updateAvailable };
