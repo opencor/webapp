@@ -13,6 +13,7 @@ const latestVersion = vue.ref<string>('');
 
 interface IVersionInfo {
   version: string;
+  files?: string[];
 }
 
 const checkForUpdates = async (): Promise<boolean> => {
@@ -96,15 +97,59 @@ const startCheck = (): void => {
 };
 
 // Force reload the Web app.
+// Note: there is no standard way to force reload a page (location.reload(true) is non-standard and ignored by modern
+//       browsers). Also, our assets don't have a hash in their filenames (see vite.config.ts), so they may be stale in
+//       the HTTP cache too. So, we first fetch the page and all the files listed in the latest version.json file with
+//       cache: 'reload', which bypasses the HTTP cache and updates it, and then we reload the page. We do this within a
+//       given amount of time after which we reload the page anyway, so that the user is never left waiting forever.
+
+const FORCE_RELOAD_TIMEOUT = 30 * 1000; // 30 seconds.
+
+let forceReloading = false;
 
 const forceReload = async (): Promise<void> => {
-  // Note: there is no standard way to force reload a page (location.reload(true) is non-standard and ignored by modern
-  //       browsers). So, we first fetch the page with cache: 'reload', which bypasses the HTTP cache and updates it
-  //       with the latest version of the page, and then reload the page.
+  if (forceReloading) {
+    return;
+  }
+
+  forceReloading = true;
+
+  // Create an AbortController to abort the fetch requests if they take too long.
+
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    abortController.abort();
+  }, FORCE_RELOAD_TIMEOUT);
+
+  // Refresh the given URL in the HTTP cache.
+  // Note: we need to read the body since the HTTP cache is only updated once the body has been fully received.
+
+  const refresh = async (url: string): Promise<void> => {
+    const response = await fetch(url, { cache: 'reload', signal: abortController.signal });
+
+    await response.blob();
+  };
 
   try {
-    await fetch(window.location.href, { cache: 'reload' });
-  } catch (_error: unknown) {}
+    // Retrieve the list of files used by the latest version of OpenCOR's Web app.
+
+    const response = await fetch(`./assets/version.json?t=${Date.now()}`, {
+      cache: 'no-store',
+      signal: abortController.signal
+    });
+    const versionInfo: IVersionInfo = response.ok ? await response.json() : { version: '' };
+
+    // Refresh the page and all the files.
+
+    await Promise.allSettled([
+      refresh(window.location.href),
+      ...(versionInfo.files ?? []).map((file) => refresh(new URL(file, document.baseURI).href))
+    ]);
+  } catch (_error: unknown) {
+    // Ignore any error (including a timeout) and reload the page anyway.
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 
   window.location.reload();
 };
