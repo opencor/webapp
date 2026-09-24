@@ -104,8 +104,7 @@ const forceReload = async (): Promise<void> => {
 
   try {
     await fetch(window.location.href, { cache: 'reload' });
-  } catch (_error: unknown) {
-  }
+  } catch (_error: unknown) {}
 
   window.location.reload();
 };
