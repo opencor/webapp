@@ -70,6 +70,7 @@ export interface ICppLocApi {
   sedInstancePauseRun: (instanceId: number) => void;
   sedInstanceResumeRun: (instanceId: number) => void;
   sedInstanceStopRun: (instanceId: number) => void;
+  sedInstanceRelease: (instanceId: number) => void;
 
   // SedInstanceTask API.
 

@@ -1037,9 +1037,20 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
   return res;
 };
 
+// The instances that are currently being run.
+
+const runningInstances = new Set<locApi.SedInstance>();
+
 // A helper function to reinstantiate our instance.
 
 const reinstantiateInstance = (): locApi.SedInstance => {
+  // Release our previous instance, unless a simulation run is still waiting on it, in which case it will be released by
+  // that simulation run once it is done with it.
+
+  if (instance && !runningInstances.has(instance)) {
+    instance.release();
+  }
+
   instance = document.instantiate();
   instanceTask = instance.task(0);
 
@@ -1169,7 +1180,20 @@ const updateSimulation = async (): Promise<void> => {
     return;
   }
 
+  runningInstances.add(crtInstance);
+
   await vueCommon.waitWhileRunning(crtInstance).promise;
+
+  runningInstances.delete(crtInstance);
+
+  // Release our instance if it has been replaced by a newer one while the simulation was running, in which case our
+  // results are stale anyway.
+
+  if (crtInstance !== instance) {
+    crtInstance.release();
+
+    return;
+  }
 
   // Check if we have been superseded by a newer call while the simulation was running.
 
@@ -1776,6 +1800,16 @@ vue.onBeforeUnmount(() => {
   if (instance?.status() !== locSedApi.ESedInstanceStatus.IDLE) {
     instance?.stopRun();
   }
+
+  // Release our instance, unless a simulation run is still waiting on it, in which case it will be released by that
+  // simulation run once it is done with it.
+
+  if (instance && !runningInstances.has(instance)) {
+    instance.release();
+  }
+
+  instance = null;
+  instanceTask = null;
 });
 
 // Various things that need to be done once we are mounted.

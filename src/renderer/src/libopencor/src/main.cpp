@@ -70,6 +70,7 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     pExports.Set(Napi::String::New(pEnv, "sedInstancePauseRun"), Napi::Function::New(pEnv, sedInstancePauseRun));
     pExports.Set(Napi::String::New(pEnv, "sedInstanceResumeRun"), Napi::Function::New(pEnv, sedInstanceResumeRun));
     pExports.Set(Napi::String::New(pEnv, "sedInstanceStopRun"), Napi::Function::New(pEnv, sedInstanceStopRun));
+    pExports.Set(Napi::String::New(pEnv, "sedInstanceRelease"), Napi::Function::New(pEnv, sedInstanceRelease));
 
     // SedInstanceTask API.
 

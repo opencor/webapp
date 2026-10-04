@@ -277,6 +277,7 @@ electron.contextBridge.exposeInMainWorld('locApi', {
   sedInstancePauseRun: (instanceId: number) => loc.sedInstancePauseRun(instanceId),
   sedInstanceResumeRun: (instanceId: number) => loc.sedInstanceResumeRun(instanceId),
   sedInstanceStopRun: (instanceId: number) => loc.sedInstanceStopRun(instanceId),
+  sedInstanceRelease: (instanceId: number) => loc.sedInstanceRelease(instanceId),
 
   // SedInstanceTask API.
 

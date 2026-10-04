@@ -396,6 +396,8 @@ export enum ESedInstanceStatus {
 export class SedInstance {
   private _cppInstanceId: number = -1;
   private _wasmSedInstance: IWasmSedInstance = {} as IWasmSedInstance;
+  private _tasks: SedInstanceTask[] = [];
+  private _released = false;
 
   constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument) {
     if (cppVersion()) {
@@ -416,7 +418,11 @@ export class SedInstance {
   }
 
   task(index: number): SedInstanceTask {
-    return new SedInstanceTask(this._cppInstanceId, index, this._wasmSedInstance);
+    const task = new SedInstanceTask(this._cppInstanceId, index, this._wasmSedInstance);
+
+    this._tasks.push(task);
+
+    return task;
   }
 
   status(): ESedInstanceStatus {
@@ -458,6 +464,31 @@ export class SedInstance {
       this._wasmSedInstance.stopRun();
     }
   }
+
+  // Release the resources held by the instance (and its tasks).
+  // Note: this must only be done once the instance is idle and no longer used. Not releasing an instance means that it
+  //       (and its tasks) never gets freed, which with the WASM version of libOpenCOR eventually results in an
+  //       out-of-memory error.
+
+  release(): void {
+    if (this._released) {
+      return;
+    }
+
+    this._released = true;
+
+    for (const task of this._tasks) {
+      task.release();
+    }
+
+    this._tasks = [];
+
+    if (cppVersion()) {
+      _cppLocApi.sedInstanceRelease(this._cppInstanceId);
+    } else {
+      this._wasmSedInstance.delete();
+    }
+  }
 }
 
 export class SedInstanceTask extends SedIndex {
@@ -471,6 +502,12 @@ export class SedInstanceTask extends SedIndex {
 
     if (wasmVersion()) {
       this._wasmSedInstanceTask = wasmSedInstance.task(index) as IWasmSedInstanceTask;
+    }
+  }
+
+  release(): void {
+    if (wasmVersion()) {
+      this._wasmSedInstanceTask.delete();
     }
   }
 

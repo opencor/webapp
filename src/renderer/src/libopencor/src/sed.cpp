@@ -273,6 +273,11 @@ void sedInstanceStopRun(const Napi::CallbackInfo &pInfo)
     sedInstance->stopRun();
 }
 
+void sedInstanceRelease(const Napi::CallbackInfo &pInfo)
+{
+    sedInstances.erase(toSizeT(pInfo[0]));
+}
+
 // SedInstanceTask API.
 
 napi_value sedInstanceTaskVoiName(const Napi::CallbackInfo &pInfo)
