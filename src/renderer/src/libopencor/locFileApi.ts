@@ -141,7 +141,7 @@ export class File {
   }
 
   document(): SedDocument {
-    return new SedDocument(this._path, this._wasmFile);
+    return new SedDocument(this._path, this._wasmFile, this._issues);
   }
 
   uiJson(): IUiJson | undefined {
