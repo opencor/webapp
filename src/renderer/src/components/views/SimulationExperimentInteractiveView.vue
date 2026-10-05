@@ -284,7 +284,7 @@ const uiJsonEmpty = vue.computed<boolean>(() => {
 });
 
 const mathEval = new math.Float64ArrayMath();
-const model = document.model(0);
+const model = isDocumentValid ? document.model(0) : null;
 const isSimulating = vue.ref<boolean>(false);
 const liveData = vue.ref<IGraphPanelData[]>([]);
 let margins: Record<string, IGraphPanelMargins> = {};
@@ -1049,9 +1049,9 @@ const reinstantiateInstance = (): locApi.SedInstance => {
 // Run the interactive simulation.
 
 const updateSimulation = async (): Promise<void> => {
-  // Make sure that the view is usable, i.e. that we have an instance.
+  // Make sure that the view is usable, i.e. that we have a model and an instance.
 
-  if (!instance) {
+  if (!model || !instance) {
     return;
   }
 
@@ -1649,7 +1649,7 @@ const onToggleRunColorPopover = (index: number, event: MouseEvent): void => {
 const onDownloadCombineArchive = (): void => {
   const jsZip = new dependencies._jsZip();
   const baseFileName = common.fileName(props.file.path()).replace(/\.[^/.]+$/, '');
-  const modelFile = model.file();
+  const modelFile = model?.file();
 
   if (!modelFile) {
     emit('error', 'Cannot create COMBINE archive: no model file available.');

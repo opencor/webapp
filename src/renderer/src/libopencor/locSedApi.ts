@@ -38,7 +38,16 @@ export class SedDocument {
   private _wasmSedDocument: IWasmSedDocument = {} as IWasmSedDocument;
   private _issues: IIssue[] = [];
 
-  constructor(filePath: string, wasmFile: IWasmFile) {
+  constructor(filePath: string, wasmFile: IWasmFile, fileIssues: IIssue[]) {
+    // If the file has some errors (e.g., an invalid CellML file), then report its issues rather than those of the
+    // SED-ML document (since those are likely to be a consequence of the file's errors).
+
+    if (fileIssues.some((issue: IIssue) => issue.type === EIssueType.ERROR)) {
+      this._issues = [...fileIssues];
+
+      return;
+    }
+
     // Create the SED-ML document.
 
     if (cppVersion()) {
@@ -52,6 +61,12 @@ export class SedDocument {
     this._issues = cppVersion()
       ? _cppLocApi.sedDocumentIssues(this._cppDocumentId)
       : wasmIssuesToIssues(this._wasmSedDocument.issues);
+
+    // Don't check anything else if the SED-ML document already has some errors.
+
+    if (this._issues.some((issue: IIssue) => issue.type === EIssueType.ERROR)) {
+      return;
+    }
 
     // TODO: we only support a limited subset of SED-ML for now, so we need to check a few more things. Might wnat to
     // check https://github.com/opencor/opencor/blob/master/src/plugins/support/SEDMLSupport/src/sedmlfile.cpp#L579-L1492.
