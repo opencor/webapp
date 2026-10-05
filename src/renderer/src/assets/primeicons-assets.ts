@@ -1,11 +1,11 @@
 // Import the PrimeIcons file that we need, so Vite resolves it correctly in both dev and production modes, then inject
 // a @font-face rule.
 
-import woff2 from 'primeicons/fonts/primeicons.woff2';
+import woff2 from 'primeicons/fonts/primeicons.woff2?inline';
 
 const css = `@font-face {
   font-family: 'primeicons';
-  font-display: swap;
+  font-display: block;
   src: url('${woff2}') format('woff2');
   font-weight: normal;
   font-style: normal;
