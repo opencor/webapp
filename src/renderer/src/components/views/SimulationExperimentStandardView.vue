@@ -205,6 +205,26 @@ const updatePlot = (dataSize: number = 0): void => {
   };
 };
 
+// Release our instance (once it is idle) and our document.
+// Note: an instance must not be released while it is running, hence we stop it and wait for it to be idle first.
+
+let isUnmounted = false;
+let isWaitingOnRun = false;
+
+const releaseResources = async (): Promise<void> => {
+  if (instance) {
+    if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+      instance.stopRun();
+
+      await vueCommon.waitWhileRunning(instance).promise;
+    }
+
+    instance.release();
+  }
+
+  document.release();
+};
+
 // Event handlers.
 
 const onRunPause = async (): Promise<void> => {
@@ -279,9 +299,21 @@ const onRunPause = async (): Promise<void> => {
 
       progressResetCancel = runCancel;
 
+      isWaitingOnRun = true;
+
       await runPromise;
 
+      isWaitingOnRun = false;
+
       progressResetCancel = undefined;
+
+      // Release our resources if we got unmounted while the simulation was running (see onUnmounted() below).
+
+      if (isUnmounted) {
+        await releaseResources();
+
+        return;
+      }
 
       // Update the console with any issues that occurred during the simulation, or display the simulation time if it
       // completed successfully.
@@ -350,12 +382,22 @@ vue.onMounted(() => {
   updatePlot();
 });
 
-// Cancel any pending progress reset timers to avoid writing to stale refs after the component is torn down.
+// Cancel any pending progress reset timers to avoid writing to stale refs after the component is torn down, and release
+// our resources.
 
 vue.onUnmounted(() => {
+  isUnmounted = true;
+
   progressResetCancel?.();
 
   clearTimeout(abortProgressTimer);
+
+  // Release our resources, unless a simulation run is still waiting on our instance, in which case they will be released
+  // by that simulation run once it is done with our instance.
+
+  if (!isWaitingOnRun) {
+    releaseResources();
+  }
 });
 
 // Track whether the view is the currently active view for keyboard shortcut handling.

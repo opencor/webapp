@@ -10,14 +10,21 @@ libOpenCOR::FilePtr toFile(const Napi::Value &pValue)
     return fileManager.file(pValue.ToString().Utf8Value());
 }
 
+// Note: we use find() rather than operator[] since the latter would (re)insert an entry for an unknown (e.g., released)
+//       ID.
+
 libOpenCOR::SedDocumentPtr toSedDocument(size_t pId)
 {
-    return sedDocuments[pId];
+    auto iter = sedDocuments.find(pId);
+
+    return (iter != sedDocuments.end()) ? iter->second : nullptr;
 }
 
 libOpenCOR::SedInstancePtr toSedInstance(size_t pId)
 {
-    return sedInstances[pId];
+    auto iter = sedInstances.find(pId);
+
+    return (iter != sedInstances.end()) ? iter->second : nullptr;
 }
 
 size_t toSizeT(const Napi::Value &pValue)

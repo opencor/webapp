@@ -20,6 +20,7 @@ export interface ICppLocApi {
 
   sedDocumentCreate: (path: string) => number;
   sedDocumentInstantiate: (documentId: number) => number;
+  sedDocumentRelease: (documentId: number) => void;
   sedDocumentIssues: (documentId: number) => IIssue[];
   sedDocumentModelCount: (documentId: number) => number;
   sedDocumentSimulationCount: (documentId: number) => number;

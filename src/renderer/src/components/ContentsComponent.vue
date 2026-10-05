@@ -271,8 +271,17 @@ const closeFile = async (filePath: string): Promise<void> => {
   locApi.fileManager.unmanage(filePath);
 
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath);
+  const fileTab = fileTabs.value[fileTabIndex];
 
-  fileTabs.value.splice(fileTabIndex, 1);
+  if (fileTab) {
+    fileTabs.value.splice(fileTabIndex, 1);
+
+    // Release the file once its views have been unmounted (and have therefore released their own resources).
+
+    vue.nextTick(() => {
+      fileTab.file.release();
+    });
+  }
 
   if (activeFile.value === filePath && fileTabs.value.length) {
     const nextFileTab = fileTabs.value[Math.min(fileTabIndex, fileTabs.value.length - 1)];
@@ -548,6 +557,16 @@ defineExpose({
 
   addExternalData,
   simulationData
+});
+
+// Release the files that are still open once we (and therefore their views) have been unmounted.
+
+vue.onUnmounted(() => {
+  for (const fileTab of fileTabs.value) {
+    locApi.fileManager.unmanage(fileTab.file.path());
+
+    fileTab.file.release();
+  }
 });
 
 // Some watchers to let people know about changes to the opened files and the selected file.

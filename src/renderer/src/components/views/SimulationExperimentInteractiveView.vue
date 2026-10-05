@@ -809,7 +809,15 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     }
 
     try {
-      simulationDataResult[modelParameter] = locCommon.simulationDataValue(task, info);
+      // Note: we return a copy of the simulation data since, with the WASM version of libOpenCOR, the simulation data
+      //       is a view into the WASM heap, which becomes invalid once our instance gets released.
+
+      const simulationDataValue = locCommon.simulationDataValue(task, info);
+
+      simulationDataResult[modelParameter] = {
+        ...simulationDataValue,
+        data: new Float64Array(simulationDataValue.data)
+      };
     } catch (error: unknown) {
       issueMessages.push(`Error for model parameter "${modelParameter}": ${common.formatError(error)}`);
     }
@@ -1694,6 +1702,9 @@ const onDownloadCombineArchive = (): void => {
   );
   jsZip.file('model.cellml', modelFile.contents());
   jsZip.file('document.sedml', document.serialise().replace(modelFile.path(), 'model.cellml'));
+
+  modelFile.release();
+
   jsZip.file('simulation.json', JSON.stringify(actualUiJson.value, locApi.uiJsonReplacer, 2));
 
   jsZip
@@ -1810,6 +1821,10 @@ vue.onBeforeUnmount(() => {
 
   instance = null;
   instanceTask = null;
+
+  // Release our document (and its model and simulation).
+
+  document.release();
 });
 
 // Various things that need to be done once we are mounted.

@@ -6,6 +6,7 @@
 
 napi_value sedDocumentCreate(const Napi::CallbackInfo &pInfo);
 napi_value sedDocumentInstantiate(const Napi::CallbackInfo &pInfo);
+void sedDocumentRelease(const Napi::CallbackInfo &pInfo);
 napi_value sedDocumentIssues(const Napi::CallbackInfo &pInfo);
 napi_value sedDocumentModelCount(const Napi::CallbackInfo &pInfo);
 napi_value sedDocumentSimulationCount(const Napi::CallbackInfo &pInfo);

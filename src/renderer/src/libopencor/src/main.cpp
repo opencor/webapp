@@ -26,6 +26,7 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
 
     pExports.Set(Napi::String::New(pEnv, "sedDocumentCreate"), Napi::Function::New(pEnv, sedDocumentCreate));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentInstantiate"), Napi::Function::New(pEnv, sedDocumentInstantiate));
+    pExports.Set(Napi::String::New(pEnv, "sedDocumentRelease"), Napi::Function::New(pEnv, sedDocumentRelease));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentIssues"), Napi::Function::New(pEnv, sedDocumentIssues));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentModelCount"), Napi::Function::New(pEnv, sedDocumentModelCount));
     pExports.Set(Napi::String::New(pEnv, "sedDocumentSimulationCount"), Napi::Function::New(pEnv, sedDocumentSimulationCount));
