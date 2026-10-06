@@ -782,6 +782,8 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
       emit('file', { type: 'issue', filePath, issues: [issueMessage] });
 
+      file.release();
+
       return null;
     }
 
@@ -821,6 +823,16 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
   }
 };
 
+const openFileInContents = async (file: locApi.File, wait: boolean = false): Promise<void> => {
+  // Open the given file in our contents component or release it if we can't (e.g., we got unmounted in the meantime).
+
+  if (contentsRef.value) {
+    await contentsRef.value.openFile(file, wait);
+  } else {
+    file.release();
+  }
+};
+
 const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void => {
   processFile(fileFilePathOrFileContents).then(async (fileInfo) => {
     if (!fileInfo) {
@@ -834,7 +846,7 @@ const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void 
     }
 
     if (fileInfo.file) {
-      await contentsRef.value?.openFile(fileInfo.file);
+      await openFileInContents(fileInfo.file);
     }
   });
 };
@@ -862,7 +874,7 @@ const openFiles = (filesFilePathsOrFileContents: (string | Uint8Array | File)[])
     }
 
     if (currentFileInfo.file) {
-      await contentsRef.value?.openFile(currentFileInfo.file, true);
+      await openFileInContents(currentFileInfo.file, true);
     }
   }, Promise.resolve());
 };

@@ -31,6 +31,11 @@ napi_value sedDocumentInstantiate(const Napi::CallbackInfo &pInfo)
     return Napi::Number::New(pInfo.Env(), static_cast<double>(id));
 }
 
+void sedDocumentRelease(const Napi::CallbackInfo &pInfo)
+{
+    sedDocuments.erase(toSizeT(pInfo[0]));
+}
+
 napi_value sedDocumentIssues(const Napi::CallbackInfo &pInfo)
 {
     return issues(pInfo, toSedDocument(toSizeT(pInfo[0]))->issues());
@@ -271,6 +276,11 @@ void sedInstanceStopRun(const Napi::CallbackInfo &pInfo)
     auto sedInstance = toSedInstance(toSizeT(pInfo[0]));
 
     sedInstance->stopRun();
+}
+
+void sedInstanceRelease(const Napi::CallbackInfo &pInfo)
+{
+    sedInstances.erase(toSizeT(pInfo[0]));
 }
 
 // SedInstanceTask API.

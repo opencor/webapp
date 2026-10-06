@@ -809,7 +809,15 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     }
 
     try {
-      simulationDataResult[modelParameter] = locCommon.simulationDataValue(task, info);
+      // Note: we return a copy of the simulation data since, with the WASM version of libOpenCOR, the simulation data
+      //       is a view into the WASM heap, which becomes invalid once our instance gets released.
+
+      const simulationDataValue = locCommon.simulationDataValue(task, info);
+
+      simulationDataResult[modelParameter] = {
+        ...simulationDataValue,
+        data: new Float64Array(simulationDataValue.data)
+      };
     } catch (error: unknown) {
       issueMessages.push(`Error for model parameter "${modelParameter}": ${common.formatError(error)}`);
     }
@@ -1037,9 +1045,27 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
   return res;
 };
 
+// The instances that are currently being run.
+
+const runningInstances = new Set<locApi.SedInstance>();
+
 // A helper function to reinstantiate our instance.
 
 const reinstantiateInstance = (): locApi.SedInstance => {
+  // Release our previous instance, unless a simulation run is still waiting on it, in which case we stop that
+  // simulation run (since its results are going to be stale anyway) and let it release our previous instance once it is
+  // done with it.
+
+  if (instance) {
+    if (runningInstances.has(instance)) {
+      if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+        instance.stopRun();
+      }
+    } else {
+      instance.release();
+    }
+  }
+
   instance = document.instantiate();
   instanceTask = instance.task(0);
 
@@ -1169,7 +1195,20 @@ const updateSimulation = async (): Promise<void> => {
     return;
   }
 
+  runningInstances.add(crtInstance);
+
   await vueCommon.waitWhileRunning(crtInstance).promise;
+
+  runningInstances.delete(crtInstance);
+
+  // Release our instance if it has been replaced by a newer one while the simulation was running, in which case our
+  // results are stale anyway.
+
+  if (crtInstance !== instance) {
+    crtInstance.release();
+
+    return;
+  }
 
   // Check if we have been superseded by a newer call while the simulation was running.
 
@@ -1668,8 +1707,17 @@ const onDownloadCombineArchive = (): void => {
 </omexManifest>
 `
   );
-  jsZip.file('model.cellml', modelFile.contents());
-  jsZip.file('document.sedml', document.serialise().replace(modelFile.path(), 'model.cellml'));
+
+  try {
+    // Note: we release our model file even if something goes wrong while retrieving its contents or serialising our
+    //       document.
+
+    jsZip.file('model.cellml', modelFile.contents());
+    jsZip.file('document.sedml', document.serialise().replace(modelFile.path(), 'model.cellml'));
+  } finally {
+    modelFile.release();
+  }
+
   jsZip.file('simulation.json', JSON.stringify(actualUiJson.value, locApi.uiJsonReplacer, 2));
 
   jsZip
@@ -1776,6 +1824,20 @@ vue.onBeforeUnmount(() => {
   if (instance?.status() !== locSedApi.ESedInstanceStatus.IDLE) {
     instance?.stopRun();
   }
+
+  // Release our instance, unless a simulation run is still waiting on it, in which case it will be released by that
+  // simulation run once it is done with it.
+
+  if (instance && !runningInstances.has(instance)) {
+    instance.release();
+  }
+
+  instance = null;
+  instanceTask = null;
+
+  // Release our document (and its model and simulation).
+
+  document.release();
 });
 
 // Various things that need to be done once we are mounted.

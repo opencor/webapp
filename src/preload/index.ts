@@ -227,6 +227,7 @@ electron.contextBridge.exposeInMainWorld('locApi', {
 
   sedDocumentCreate: (path: string) => loc.sedDocumentCreate(path),
   sedDocumentInstantiate: (documentId: number) => loc.sedDocumentInstantiate(documentId),
+  sedDocumentRelease: (documentId: number) => loc.sedDocumentRelease(documentId),
   sedDocumentIssues: (documentId: number) => loc.sedDocumentIssues(documentId),
   sedDocumentModelCount: (documentId: number) => loc.sedDocumentModelCount(documentId),
   sedDocumentSimulationCount: (documentId: number) => loc.sedDocumentSimulationCount(documentId),
@@ -277,6 +278,7 @@ electron.contextBridge.exposeInMainWorld('locApi', {
   sedInstancePauseRun: (instanceId: number) => loc.sedInstancePauseRun(instanceId),
   sedInstanceResumeRun: (instanceId: number) => loc.sedInstanceResumeRun(instanceId),
   sedInstanceStopRun: (instanceId: number) => loc.sedInstanceStopRun(instanceId),
+  sedInstanceRelease: (instanceId: number) => loc.sedInstanceRelease(instanceId),
 
   // SedInstanceTask API.
 

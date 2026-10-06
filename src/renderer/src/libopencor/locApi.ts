@@ -20,6 +20,7 @@ export interface ICppLocApi {
 
   sedDocumentCreate: (path: string) => number;
   sedDocumentInstantiate: (documentId: number) => number;
+  sedDocumentRelease: (documentId: number) => void;
   sedDocumentIssues: (documentId: number) => IIssue[];
   sedDocumentModelCount: (documentId: number) => number;
   sedDocumentSimulationCount: (documentId: number) => number;
@@ -70,6 +71,7 @@ export interface ICppLocApi {
   sedInstancePauseRun: (instanceId: number) => void;
   sedInstanceResumeRun: (instanceId: number) => void;
   sedInstanceStopRun: (instanceId: number) => void;
+  sedInstanceRelease: (instanceId: number) => void;
 
   // SedInstanceTask API.
 

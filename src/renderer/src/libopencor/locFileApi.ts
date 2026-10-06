@@ -36,30 +36,34 @@ class FileManager {
   }
 
   file(path: string): File | null {
+    // Note: the file we are after is already managed, so we just wrap it rather than create (and therefore own) it.
+
     if (cppVersion()) {
-      const contents = _cppLocApi.fileContents(path);
-
-      if (contents) {
-        return new File(path, contents);
-      }
-
-      return null;
+      return _cppLocApi.fileContents(path) ? new File(path, undefined, {}) : null;
     }
+
+    // Note: every access to a WASM vector (and to its elements) yields a new handle that must be deleted, except for
+    //       the handle of the file we are after, which our File object takes ownership of.
 
     const fileManager = this.fileManager();
     const files = fileManager.files;
+    let res: File | null = null;
 
     for (const file of files) {
       if (!file) {
         continue;
       }
 
-      if (file.path === path) {
-        return new File(path, file.contents());
+      if (!res && file.path === path) {
+        res = new File(path, undefined, { wasmFile: file });
+      } else {
+        file.delete();
       }
     }
 
-    return null;
+    files.delete();
+
+    return res;
   }
 
   unmanage(path: string): void {
@@ -76,10 +80,12 @@ class FileManager {
 
         if (file.path === path) {
           fileManager.unmanage(file);
-
-          break;
         }
+
+        file.delete();
       }
+
+      files.delete();
     }
   }
 }
@@ -96,20 +102,43 @@ export enum EFileType {
   IRRETRIEVABLE_FILE
 }
 
+// Information about a file that is already managed by libOpenCOR, in which case a File object only wraps it, i.e. it
+// doesn't create (and therefore doesn't own) it.
+// Note: with the WASM version of libOpenCOR, the File object takes ownership of the given WASM file handle.
+
+export interface IManagedFile {
+  wasmFile?: IWasmFile;
+}
+
 export class File {
   _path: string;
   _wasmFile: IWasmFile = {} as IWasmFile;
   _issues: IIssue[] = [];
+  private _isOwner = true;
+  private _hasWasmFile = false;
+  private _released = false;
 
-  constructor(path: string, contents: Uint8Array | undefined = undefined) {
+  constructor(path: string, contents: Uint8Array | undefined = undefined, managedFile?: IManagedFile) {
     this._path = path;
 
-    if (cppVersion()) {
+    if (managedFile) {
+      this._isOwner = false;
+
+      if (cppVersion()) {
+        this._issues = _cppLocApi.fileIssues(path);
+      } else if (managedFile.wasmFile) {
+        this._wasmFile = vue.markRaw(managedFile.wasmFile);
+        this._hasWasmFile = true;
+
+        this._issues = wasmIssuesToIssues(this._wasmFile.issues);
+      }
+    } else if (cppVersion()) {
       _cppLocApi.fileCreate(path, contents);
 
       this._issues = _cppLocApi.fileIssues(path);
     } else if (contents) {
       this._wasmFile = vue.markRaw(new _wasmLocApi.File(path));
+      this._hasWasmFile = true;
 
       this._wasmFile.setContents(contents);
 
@@ -121,6 +150,27 @@ export class File {
       console.warn(`OpenCOR: no contents provided for file '${path}'.`);
 
       return;
+    }
+  }
+
+  // Release the resources held by the file.
+  // Note: this must only be done once the file is no longer used. With the WASM version of libOpenCOR, our WASM file
+  //       handle is what keeps the file alive (libOpenCOR's file manager only keeps a weak reference to it) while, with
+  //       the C++ version of libOpenCOR, it is our list of tracked files, but only if we created (i.e. own) the file.
+
+  release(): void {
+    if (this._released) {
+      return;
+    }
+
+    this._released = true;
+
+    if (cppVersion()) {
+      if (this._isOwner) {
+        _cppLocApi.fileManagerUnmanage(this._path);
+      }
+    } else if (this._hasWasmFile) {
+      this._wasmFile.delete();
     }
   }
 
@@ -161,6 +211,8 @@ export class File {
       }
 
       uiJsonContents = uiJson.contents();
+
+      uiJson.delete();
     }
 
     const decoder = new TextDecoder();

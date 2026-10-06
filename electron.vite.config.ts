@@ -42,7 +42,7 @@ export default electronVite.defineConfig({
         name: 'strip-unneeded-primeicons-files',
         generateBundle(_options, bundle) {
           for (const fileName of Object.keys(bundle)) {
-            if (fileName.includes('assets/primeicons') && /\.(eot|svg|ttf|woff)$/.test(fileName)) {
+            if (fileName.includes('assets/primeicons') && /\.(eot|svg|ttf|woff2?)$/.test(fileName)) {
               delete bundle[fileName];
             }
           }

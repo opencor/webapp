@@ -37,6 +37,10 @@ export class SedDocument {
   private _cppDocumentId: number = -1;
   private _wasmSedDocument: IWasmSedDocument = {} as IWasmSedDocument;
   private _issues: IIssue[] = [];
+  private _models = new Map<number, SedModel>();
+  private _simulations = new Map<number, SedSimulation>();
+  private _hasWasmSedDocument = false;
+  private _released = false;
 
   constructor(filePath: string, wasmFile: IWasmFile, fileIssues: IIssue[]) {
     // If the file has some errors (e.g., an invalid CellML file), then report its issues rather than those of the
@@ -54,6 +58,7 @@ export class SedDocument {
       this._cppDocumentId = _cppLocApi.sedDocumentCreate(filePath);
     } else {
       this._wasmSedDocument = new _wasmLocApi.SedDocument(wasmFile);
+      this._hasWasmSedDocument = true;
     }
 
     // Retrieve the issues.
@@ -136,6 +141,36 @@ export class SedDocument {
     }
   }
 
+  release(): void {
+    // Release the resources held by the document (and its models and simulations).
+    // Note: this must only be done once the document is no longer used. Instances created from the document don't need
+    //       it to be around since they hold their own references to whatever they need from it.
+
+    if (this._released) {
+      return;
+    }
+
+    this._released = true;
+
+    for (const model of this._models.values()) {
+      model.release();
+    }
+
+    this._models.clear();
+
+    for (const simulation of this._simulations.values()) {
+      simulation.release();
+    }
+
+    this._simulations.clear();
+
+    if (cppVersion()) {
+      _cppLocApi.sedDocumentRelease(this._cppDocumentId);
+    } else if (this._hasWasmSedDocument) {
+      this._wasmSedDocument.delete();
+    }
+  }
+
   issues(): IIssue[] {
     return this._issues;
   }
@@ -145,7 +180,17 @@ export class SedDocument {
   }
 
   model(index: number): SedModel {
-    return new SedModel(this._cppDocumentId, this._wasmSedDocument, index);
+    // Note: we cache our models so that we can release them when releasing the document.
+
+    let res = this._models.get(index);
+
+    if (!res) {
+      res = new SedModel(this._cppDocumentId, this._wasmSedDocument, index);
+
+      this._models.set(index, res);
+    }
+
+    return res;
   }
 
   simulationCount(): number {
@@ -155,12 +200,28 @@ export class SedDocument {
   }
 
   simulation(index: number): SedSimulation {
+    // Note: we cache our simulations so that we can release them when releasing the document.
+
+    let res = this._simulations.get(index);
+
+    if (!res) {
+      res = this.createSimulation(index);
+
+      this._simulations.set(index, res);
+    }
+
+    return res;
+  }
+
+  private createSimulation(index: number): SedSimulation {
     let type: ESedSimulationType;
 
     if (cppVersion()) {
       type = _cppLocApi.sedDocumentSimulationType(this._cppDocumentId, index);
     } else {
-      switch (this._wasmSedDocument.simulation(index)?.constructor.name) {
+      const wasmSedSimulation = this._wasmSedDocument.simulation(index);
+
+      switch (wasmSedSimulation?.constructor.name) {
         case 'SedAnalysis':
           type = ESedSimulationType.ANALYSIS;
 
@@ -176,6 +237,8 @@ export class SedDocument {
         default: // 'SedUniformTimeCourse'.
           type = ESedSimulationType.UNIFORM_TIME_COURSE;
       }
+
+      wasmSedSimulation?.delete();
     }
 
     if (type === ESedSimulationType.ANALYSIS) {
@@ -216,19 +279,43 @@ export class SedModel extends SedIndex {
     }
   }
 
+  release(): void {
+    if (wasmVersion()) {
+      this._wasmSedModel?.delete();
+    }
+  }
+
   file(): File | null {
+    // Note: the caller is responsible for releasing the returned file.
+
     if (cppVersion()) {
       return fileManager.file(_cppLocApi.sedModelFilePath(this._cppDocumentId, this._index));
     }
 
-    return this._wasmSedModel.file?.path != null ? fileManager.file(this._wasmSedModel.file.path) : null;
+    const wasmFile = this._wasmSedModel.file;
+
+    if (!wasmFile) {
+      return null;
+    }
+
+    const wasmFilePath = wasmFile.path;
+
+    wasmFile.delete();
+
+    return fileManager.file(wasmFilePath);
   }
 
   addChange(componentName: string, variableName: string, newValue: string): void {
     if (cppVersion()) {
       _cppLocApi.sedModelAddChange(this._cppDocumentId, this._index, componentName, variableName, newValue);
     } else {
-      this._wasmSedModel.addChange(new _wasmLocApi.SedChangeAttribute(componentName, variableName, newValue));
+      // Note: the model holds its own reference to the change, so we can (and must) delete our handle to it.
+
+      const wasmSedChangeAttribute = new _wasmLocApi.SedChangeAttribute(componentName, variableName, newValue);
+
+      this._wasmSedModel.addChange(wasmSedChangeAttribute);
+
+      wasmSedChangeAttribute.delete();
     }
   }
 
@@ -259,6 +346,10 @@ export class SedSimulation extends SedIndex {
     this._type = type;
   }
 
+  release(): void {
+    // Nothing to release by default.
+  }
+
   type(): ESedSimulationType {
     return this._type;
   }
@@ -279,6 +370,12 @@ export class SedOneStep extends SedSimulation {
     }
   }
 
+  override release(): void {
+    if (wasmVersion()) {
+      this._wasmSedOneStep?.delete();
+    }
+  }
+
   step(): number {
     return cppVersion() ? _cppLocApi.sedOneStepStep(this._cppDocumentId, this._index) : this._wasmSedOneStep.step;
   }
@@ -286,12 +383,23 @@ export class SedOneStep extends SedSimulation {
 
 export class SedUniformTimeCourse extends SedSimulation {
   private _wasmSedUniformTimeCourse: IWasmSedUniformTimeCourse = {} as IWasmSedUniformTimeCourse;
+  private _cvode: SolverCvode | null = null;
 
   constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
     super(cppDocumentId, wasmSedDocument, index, type);
 
     if (wasmVersion()) {
       this._wasmSedUniformTimeCourse = wasmSedDocument.simulation(index) as IWasmSedUniformTimeCourse;
+    }
+  }
+
+  override release(): void {
+    this._cvode?.release();
+
+    this._cvode = null;
+
+    if (wasmVersion()) {
+      this._wasmSedUniformTimeCourse?.delete();
     }
   }
 
@@ -352,7 +460,11 @@ export class SedUniformTimeCourse extends SedSimulation {
   }
 
   cvode(): SolverCvode {
-    return new SolverCvode(this._cppDocumentId, this._wasmSedUniformTimeCourse, this._index);
+    // Note: we cache our solver so that we can release it when releasing the simulation.
+
+    this._cvode ??= new SolverCvode(this._cppDocumentId, this._wasmSedUniformTimeCourse, this._index);
+
+    return this._cvode;
   }
 }
 
@@ -367,6 +479,12 @@ export class SolverCvode extends SedIndex {
 
     if (wasmVersion()) {
       this._wasmSolverCvode = wasmSedUniformTimeCourse.odeSolver as IWasmSolverCvode;
+    }
+  }
+
+  release(): void {
+    if (wasmVersion()) {
+      this._wasmSolverCvode?.delete();
     }
   }
 
@@ -396,6 +514,8 @@ export enum ESedInstanceStatus {
 export class SedInstance {
   private _cppInstanceId: number = -1;
   private _wasmSedInstance: IWasmSedInstance = {} as IWasmSedInstance;
+  private _tasks: SedInstanceTask[] = [];
+  private _released = false;
 
   constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument) {
     if (cppVersion()) {
@@ -416,7 +536,11 @@ export class SedInstance {
   }
 
   task(index: number): SedInstanceTask {
-    return new SedInstanceTask(this._cppInstanceId, index, this._wasmSedInstance);
+    const task = new SedInstanceTask(this._cppInstanceId, index, this._wasmSedInstance);
+
+    this._tasks.push(task);
+
+    return task;
   }
 
   status(): ESedInstanceStatus {
@@ -458,6 +582,31 @@ export class SedInstance {
       this._wasmSedInstance.stopRun();
     }
   }
+
+  // Release the resources held by the instance (and its tasks).
+  // Note: this must only be done once the instance is idle and no longer used. Not releasing an instance means that it
+  //       (and its tasks) never gets freed, which with the WASM version of libOpenCOR eventually results in an
+  //       out-of-memory error.
+
+  release(): void {
+    if (this._released) {
+      return;
+    }
+
+    this._released = true;
+
+    for (const task of this._tasks) {
+      task.release();
+    }
+
+    this._tasks = [];
+
+    if (cppVersion()) {
+      _cppLocApi.sedInstanceRelease(this._cppInstanceId);
+    } else {
+      this._wasmSedInstance.delete();
+    }
+  }
 }
 
 export class SedInstanceTask extends SedIndex {
@@ -471,6 +620,12 @@ export class SedInstanceTask extends SedIndex {
 
     if (wasmVersion()) {
       this._wasmSedInstanceTask = wasmSedInstance.task(index) as IWasmSedInstanceTask;
+    }
+  }
+
+  release(): void {
+    if (wasmVersion()) {
+      this._wasmSedInstanceTask.delete();
     }
   }
 
