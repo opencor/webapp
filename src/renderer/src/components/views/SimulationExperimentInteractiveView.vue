@@ -1700,10 +1700,16 @@ const onDownloadCombineArchive = (): void => {
 </omexManifest>
 `
   );
-  jsZip.file('model.cellml', modelFile.contents());
-  jsZip.file('document.sedml', document.serialise().replace(modelFile.path(), 'model.cellml'));
 
-  modelFile.release();
+  try {
+    // Note: we release our model file even if something goes wrong while retrieving its contents or serialising our
+    //       document.
+
+    jsZip.file('model.cellml', modelFile.contents());
+    jsZip.file('document.sedml', document.serialise().replace(modelFile.path(), 'model.cellml'));
+  } finally {
+    modelFile.release();
+  }
 
   jsZip.file('simulation.json', JSON.stringify(actualUiJson.value, locApi.uiJsonReplacer, 2));
 
