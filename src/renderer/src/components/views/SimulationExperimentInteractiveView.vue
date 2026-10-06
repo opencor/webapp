@@ -1052,11 +1052,18 @@ const runningInstances = new Set<locApi.SedInstance>();
 // A helper function to reinstantiate our instance.
 
 const reinstantiateInstance = (): locApi.SedInstance => {
-  // Release our previous instance, unless a simulation run is still waiting on it, in which case it will be released by
-  // that simulation run once it is done with it.
+  // Release our previous instance, unless a simulation run is still waiting on it, in which case we stop that
+  // simulation run (since its results are going to be stale anyway) and let it release our previous instance once it is
+  // done with it.
 
-  if (instance && !runningInstances.has(instance)) {
-    instance.release();
+  if (instance) {
+    if (runningInstances.has(instance)) {
+      if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+        instance.stopRun();
+      }
+    } else {
+      instance.release();
+    }
   }
 
   instance = document.instantiate();
