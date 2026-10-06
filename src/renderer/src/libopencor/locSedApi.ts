@@ -39,6 +39,7 @@ export class SedDocument {
   private _issues: IIssue[] = [];
   private _models = new Map<number, SedModel>();
   private _simulations = new Map<number, SedSimulation>();
+  private _hasWasmSedDocument = false;
   private _released = false;
 
   constructor(filePath: string, wasmFile: IWasmFile, fileIssues: IIssue[]) {
@@ -57,6 +58,7 @@ export class SedDocument {
       this._cppDocumentId = _cppLocApi.sedDocumentCreate(filePath);
     } else {
       this._wasmSedDocument = new _wasmLocApi.SedDocument(wasmFile);
+      this._hasWasmSedDocument = true;
     }
 
     // Retrieve the issues.
@@ -164,7 +166,7 @@ export class SedDocument {
 
     if (cppVersion()) {
       _cppLocApi.sedDocumentRelease(this._cppDocumentId);
-    } else {
+    } else if (this._hasWasmSedDocument) {
       this._wasmSedDocument.delete();
     }
   }
