@@ -159,16 +159,34 @@ export class File {
         this._issues = wasmIssuesToIssues(this._wasmFile.issues);
       }
     } else if (cppVersion()) {
+      // Note: if something goes wrong once our native file has been created (e.g., if libOpenCOR throws an exception),
+      //       then we must release it ourselves since we are going to throw, i.e. there won't be a File object to
+      //       release it (see release()).
+
       _cppLocApi.fileCreate(path, contents);
 
-      this._issues = _cppLocApi.fileIssues(path);
+      try {
+        this._issues = _cppLocApi.fileIssues(path);
+      } catch (error: unknown) {
+        _cppLocApi.fileManagerUnmanage(path);
+
+        throw error;
+      }
     } else if (contents) {
+      // Note: same as above, but for our WASM file.
+
       this._wasmFile = vue.markRaw(new _wasmLocApi.File(path));
       this._hasWasmFile = true;
 
-      this._wasmFile.setContents(contents);
+      try {
+        this._wasmFile.setContents(contents);
 
-      this._issues = wasmIssuesToIssues(this._wasmFile.issues);
+        this._issues = wasmIssuesToIssues(this._wasmFile.issues);
+      } catch (error: unknown) {
+        this._wasmFile.delete();
+
+        throw error;
+      }
     } else {
       // Note: we should never reach this point since we should always provide some file contents when using the WASM
       //       version of libOpenCOR.

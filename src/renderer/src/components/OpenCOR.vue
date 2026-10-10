@@ -913,8 +913,13 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
     loadingModelMessageVisible.value = true;
   }
 
+  let file: locApi.File | null = null;
+
   try {
-    const file = await locCommon.file(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+    file = await locCommon.file(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+    // Note: to retrieve the type of the file may fail (e.g., if libOpenCOR throws an exception), in which case we must
+    //       release the file since nothing else would (see the catch block below).
+
     const fileType = file.type();
 
     if (
@@ -945,6 +950,12 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
     reportFileIssue(filePath, common.formatMessage(common.formatError(error)));
 
     fileNoLongerBeingOpened(canonicalFilePath);
+
+    try {
+      file?.release();
+    } catch (error: unknown) {
+      console.warn(`OpenCOR: failed to release file (${filePath}):`, common.formatError(error));
+    }
 
     return null;
   } finally {
