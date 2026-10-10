@@ -880,13 +880,13 @@ const sharedMathJs = (): IMathJsLike => {
 export class Float64ArrayMath {
   private readonly math = sharedMathJs();
   private readonly compiledExpressions = new Map<string, ICompiledExpression>();
-  private readonly validatedTokens = new Map<string, true>();
+  private readonly identifiersCache = new Map<string, string[]>();
 
   // Reset both the compiled expressions and the token validation cache.
 
   resetCompiledExpressions(): void {
     this.compiledExpressions.clear();
-    this.validatedTokens.clear();
+    this.identifiersCache.clear();
   }
 
   // A method to compile expressions, normalising element-wise operators so that `.*`, `./`, and `.^` behave like `*`,
@@ -917,29 +917,26 @@ export class Float64ArrayMath {
   //       is used for expression results.
 
   evaluate(expression: string, scope: ExpressionScope): MathJsResult {
-    // If this expression has already been validated and its scope-allowed variables haven't changed, skip token
-    // scanning entirely.
+    // Make sure that the expression only uses functions and constants that we allow and variables from the given scope.
+    // Note: we cache the (unique) identifiers of an expression since retrieving them is costly, but we check them
+    //       against the given scope every time. Indeed, the same expression may be evaluated with different scopes
+    //       (e.g., a plot expression and a VOI expression), and an identifier that is not in the given scope would
+    //       otherwise resolve to one of Math.js's own functions (e.g., createUnit(), which would modify the Math.js
+    //       instance that is shared by all our Float64ArrayMath objects).
 
     const normalisedExpression = this.normaliseExpression(expression);
+    let identifiers = this.identifiersCache.get(normalisedExpression);
 
-    if (!this.validatedTokens.has(normalisedExpression)) {
-      const tokens = expressionIdentifiers(expression);
-      const allowedVariables = new Set(Object.keys(scope));
-      const seenTokens = new Set<string>();
+    if (!identifiers) {
+      identifiers = [...new Set(expressionIdentifiers(expression))];
 
-      for (const token of tokens) {
-        if (seenTokens.has(token)) {
-          continue;
-        }
+      this.identifiersCache.set(normalisedExpression, identifiers);
+    }
 
-        seenTokens.add(token);
-
-        if (!allowedVariables.has(token) && !ALLOWED_FUNCTIONS.has(token)) {
-          throw new MathError(expression, `Unknown symbol ${token}.`);
-        }
+    for (const identifier of identifiers) {
+      if (!ALLOWED_FUNCTIONS.has(identifier) && !Object.hasOwn(scope, identifier)) {
+        throw new MathError(expression, `Unknown symbol ${identifier}.`);
       }
-
-      this.validatedTokens.set(normalisedExpression, true);
     }
 
     return this.compile(expression).evaluate(scope);
