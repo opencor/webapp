@@ -629,7 +629,11 @@ export class SedInstance {
     }
 
     for (const task of this._tasks) {
-      task.release();
+      try {
+        task.release();
+      } catch (error: unknown) {
+        console.error('OpenCOR: an error occurred while releasing a simulation task:', error);
+      }
     }
 
     this._tasks = [];
@@ -651,20 +655,31 @@ const sliceValues = (values: Float64Array, start?: number, end?: number): Float6
 export class SedInstanceTask extends SedIndex {
   private _cppInstanceId: number;
   private _wasmSedInstanceTask: IWasmSedInstanceTask = {} as IWasmSedInstanceTask;
+  private _hasWasmSedInstanceTask = false;
 
   constructor(cppInstanceId: number, index: number, wasmSedInstance: IWasmSedInstance) {
     super(index);
 
     this._cppInstanceId = cppInstanceId;
 
+    // Note: an instance has no tasks if it has issues (e.g., if the number of steps of its simulation is not strictly
+    //       positive), in which case the WASM version of libOpenCOR gives us no task.
+
     if (wasmVersion()) {
-      this._wasmSedInstanceTask = wasmSedInstance.task(index) as IWasmSedInstanceTask;
+      const wasmSedInstanceTask = wasmSedInstance.task(index);
+
+      if (wasmSedInstanceTask) {
+        this._wasmSedInstanceTask = wasmSedInstanceTask as IWasmSedInstanceTask;
+        this._hasWasmSedInstanceTask = true;
+      }
     }
   }
 
   release(): void {
-    if (wasmVersion()) {
+    if (this._hasWasmSedInstanceTask) {
       this._wasmSedInstanceTask.delete();
+
+      this._hasWasmSedInstanceTask = false;
     }
   }
 

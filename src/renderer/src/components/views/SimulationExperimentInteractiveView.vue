@@ -1229,11 +1229,18 @@ const disposeInstance = (oldInstance: locApi.SedInstance): void => {
 //       which would make all our future simulation runs fail, as well as our unmounting.
 
 const reinstantiateInstance = (): locApi.SedInstance => {
+  // Note: an instance has no tasks if it has issues (e.g., if the number of steps of its simulation is not strictly
+  //       positive), in which case we must not retrieve its (non-existent) task since using it would fail (e.g., when
+  //       rendering the unit of the variable of integration). Our simulation run will report the issues of the instance
+  //       instead (see runSimulation()).
+
   const newInstance = document.instantiate();
-  let newInstanceTask: locApi.SedInstanceTask;
+  let newInstanceTask: locApi.SedInstanceTask | null = null;
 
   try {
-    newInstanceTask = newInstance.task(0);
+    if (!newInstance.hasIssues()) {
+      newInstanceTask = newInstance.task(0);
+    }
   } catch (error: unknown) {
     newInstance.release();
 
