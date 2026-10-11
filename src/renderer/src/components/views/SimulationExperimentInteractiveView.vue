@@ -25,7 +25,7 @@
               icon="pi pi-cog"
               text severity="secondary"
               title="Settings"
-              :disabled="compSettingsDisabled"
+              :disabled="isSimulating"
               @click="settingsVisible = true"
             />
           </div>
@@ -411,6 +411,10 @@ const uiJsonEmpty = vue.computed<boolean>(() => {
 });
 
 const isSimulating = vue.ref<boolean>(false);
+// Note: whether a simulation is running, including in between the simulation runs of an input simulation update (see
+//       updateSimulation()). It is used, among other things, to prevent our settings from being changed while a
+//       simulation is running since that simulation run would otherwise complete (and report its results) using our new
+//       settings.
 const liveData = vue.ref<IGraphPanelData[]>([]);
 let margins: Record<string, IGraphPanelMargins> = {};
 const compMargins = vue.ref<IGraphPanelMargins>();
@@ -1720,15 +1724,16 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 };
 
 const updateSimulation = async (): Promise<void> => {
-  // Make sure that the view is usable, i.e. that we have a model and an instance.
+  // Make sure that the view is usable, i.e. that we have a model and an instance, and that there are no issues with the
+  // UI JSON.
+  // Note: we may have been called to continue an input simulation update (see startInputSimulationUpdate()), in which
+  //       case we are still considered to be simulating (see below), so we make sure that we are not anymore. This is
+  //       safe since no simulation can be running if we have no model or instance, or if our UI JSON has issues (our
+  //       settings cannot be changed while a simulation is running).
 
-  if (!model || !instance) {
-    return;
-  }
+  if (!model || !instance || uiJsonIssues.value.length) {
+    isSimulating.value = false;
 
-  // Make sure that there are no issues with the UI JSON.
-
-  if (uiJsonIssues.value.length) {
     return;
   }
 
@@ -1738,8 +1743,10 @@ const updateSimulation = async (): Promise<void> => {
 
   // Run the simulation, keeping track of the fact that we are simulating, and report any unexpected error (e.g., an
   // exception thrown by libOpenCOR) as a simulation issue rather than leave us in a simulating state forever.
-  // Note: only the latest simulation run gets to report an error and to say that we are no longer simulating since an
-  //       older one has been superseded and the latest one is still in charge.
+  // Note #1: only the latest simulation run gets to report an error and to say that we are no longer simulating since
+  //          an older one has been superseded and the latest one is still in charge.
+  // Note #2: if an input has changed while we were running (see onInputChange()), then another simulation run is about
+  //          to start (see startInputSimulationUpdate()), so we are still simulating.
 
   isSimulating.value = true;
 
@@ -1756,7 +1763,7 @@ const updateSimulation = async (): Promise<void> => {
       ];
     }
   } finally {
-    if (currentSimulationGeneration === simulationGeneration) {
+    if (currentSimulationGeneration === simulationGeneration && !inputSimulationUpdatePending) {
       isSimulating.value = false;
     }
   }
@@ -2094,19 +2101,8 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
 //       means that intermediate input values may be skipped, but that we always have at most one simulation run in
 //       flight and that the simulation is still updated while an input is being changed.
 
-const inputSimulationUpdateInFlight = vue.shallowRef<Promise<void> | null>(null);
-// Note: it is reactive since it tells us whether an input simulation update is in progress, including in between two
-//       of its simulation runs (when isSimulating is briefly false, see startInputSimulationUpdate()), which our
-//       settings dialog relies on (see compSettingsDisabled).
+let inputSimulationUpdateInFlight: Promise<void> | null = null;
 let inputSimulationUpdatePending = false;
-
-// Determine whether our settings dialog should be disabled.
-// Note: our settings must not be changed while a simulation is running since that simulation run would otherwise
-//       complete (and report its results) using our new settings.
-
-const compSettingsDisabled = vue.computed<boolean>(() => {
-  return isSimulating.value || inputSimulationUpdateInFlight.value !== null;
-});
 
 const startInputSimulationUpdate = (): void => {
   const inputSimulationUpdate = updateSimulation().finally(async () => {
@@ -2119,11 +2115,11 @@ const startInputSimulationUpdate = (): void => {
     // Check whether we have been superseded by a newer input simulation update (see onInputChangeEnd()), in which case
     // it is up to that update to deal with any pending input change.
 
-    if (inputSimulationUpdate !== inputSimulationUpdateInFlight.value) {
+    if (inputSimulationUpdate !== inputSimulationUpdateInFlight) {
       return;
     }
 
-    inputSimulationUpdateInFlight.value = null;
+    inputSimulationUpdateInFlight = null;
 
     if (inputSimulationUpdatePending) {
       inputSimulationUpdatePending = false;
@@ -2132,11 +2128,11 @@ const startInputSimulationUpdate = (): void => {
     }
   });
 
-  inputSimulationUpdateInFlight.value = inputSimulationUpdate;
+  inputSimulationUpdateInFlight = inputSimulationUpdate;
 };
 
 const onInputChange = (): void => {
-  if (inputSimulationUpdateInFlight.value) {
+  if (inputSimulationUpdateInFlight) {
     inputSimulationUpdatePending = true;
 
     return;
