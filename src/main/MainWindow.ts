@@ -465,21 +465,30 @@ export class MainWindow extends ApplicationWindow {
     // Prevent our renderer from navigating away from OpenCOR (e.g., if a file is dropped outside of the area where we
     // handle drag and drop, in which case Chromium would replace OpenCOR with that file). Not only would the user lose
     // their work, but the page we would navigate to would also have access to our preload API.
-    // Note: our renderer never needs to navigate to another origin (links are opened through our window open handler
-    //       above), so we only allow navigations within our renderer's origin (e.g., a reload).
+    // Note #1: our renderer never needs to navigate to another origin (links are opened through our window open handler
+    //          above), so we only allow navigations within our renderer's origin (e.g., a reload).
+    // Note #2: will-redirect is also emitted for subframes (unlike will-navigate), which may legitimately be redirected
+    //          to another origin (e.g., the iframe used by Firebase for authentication), so we only check the
+    //          navigations of our main frame.
 
     const rendererOrigin = new URL(rendererUrl).origin;
-    const preventNavigationAway = (event: electron.Event, url: string): void => {
+    const preventNavigationAway = (
+      event: electron.Event<electron.WebContentsWillNavigateEventParams | electron.WebContentsWillRedirectEventParams>
+    ): void => {
+      if (!event.isMainFrame) {
+        return;
+      }
+
       let origin: string | null = null;
 
       try {
-        origin = new URL(url).origin;
+        origin = new URL(event.url).origin;
       } catch {
         // The URL is invalid, so we block the navigation.
       }
 
       if (origin !== rendererOrigin) {
-        console.warn(`OpenCOR: blocked attempt to navigate to ${url}.`);
+        console.warn(`OpenCOR: blocked attempt to navigate to ${event.url}.`);
 
         event.preventDefault();
       }
