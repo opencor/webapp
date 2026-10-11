@@ -282,6 +282,8 @@ export class MainWindow extends ApplicationWindow {
 
   private _splashScreenWindow: SplashScreenWindow | null = null;
   private _rendererReady = false;
+  private _closing = false;
+  // Note: whether we are being closed (e.g., because OpenCOR is being quit).
   private _rendererGone = false;
   private _pendingArguments: string[] = [];
   private _filesToReopen: IFilesToReopen | null = null;
@@ -522,16 +524,18 @@ export class MainWindow extends ApplicationWindow {
 
     const RENDERER_GONE_GRACE_PERIOD = 1000;
 
-    let closing = false;
-
     this.once('close', () => {
-      closing = true;
+      this._closing = true;
+    });
+
+    electron.app.once('before-quit', () => {
+      this._closing = true;
     });
 
     const loadingWasInterrupted = (error: unknown): boolean => {
       if (
         (error as { code?: string }).code === 'ERR_ABORTED' ||
-        closing ||
+        this._closing ||
         this.isDestroyed() ||
         this.webContents.isDestroyed() ||
         this._rendererGone ||
@@ -614,7 +618,11 @@ export class MainWindow extends ApplicationWindow {
   //       files that were open, the latter allowing them to break such a cycle.
 
   onRenderProcessGone(details: electron.RenderProcessGoneDetails): void {
-    if (details.reason === 'clean-exit') {
+    // Ignore our renderer exiting cleanly because we are being closed (e.g., because OpenCOR is being quit).
+    // Note: our renderer may also exit cleanly on its own (e.g., if the native libOpenCOR module calls exit(0)), in
+    //       which case it is gone just as if it had crashed, so we handle it as such.
+
+    if (details.reason === 'clean-exit' && (this._closing || this.isDestroyed() || this.webContents.isDestroyed())) {
       return;
     }
 
