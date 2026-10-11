@@ -38,21 +38,29 @@ class FileManager {
   }
 
   canonicalPath(path: string): string {
-    // Note #1: with the C++ version of libOpenCOR, a file may be referred to using different paths (e.g., through a
-    //          symbolic link), all of which refer to the same native file, i.e. the one with the canonical path. With
-    //          the WASM version of libOpenCOR, a file is referred to using a URL or a name that we generate (see
-    //          locCommon.filePath()), so there is no need to canonicalise it.
-    // Note #2: canonicalising a path may fail (e.g., if one of its folders cannot be accessed, if it contains a
-    //          symbolic link loop, or if it is too long), in which case we use the path as is. Indeed, a canonical path
-    //          is only used to determine whether two paths refer to the same file, so it must not prevent a file from
-    //          being opened (which will then fail and get reported as such) or a file tab from being found.
-
-    if (!cppVersion()) {
-      return path;
-    }
+    // Note #1: libOpenCOR canonicalises the path of a file when creating it (e.g., it resolves symbolic links, decodes
+    //          URLs, and removes "." and ".." segments), so a file may be referred to using different paths, all of
+    //          which refer to the same file, i.e. the one with the canonical path. With the C++ version of libOpencOR,
+    //          our native module gets that canonical path for us. With the WASM version of libOpenCOR, we do the same
+    //          as our native module, i.e. we create a file, without contents, to get its path. If the file is already
+    //          managed, then we get it rather than a new file, while if it isn't, then the new file gets unmanaged as
+    //          soon as we delete our handle to it.
+    // Note #2: canonicalising a path may fail, in which case we use the path as is. Indeed, a canonical path is only
+    //          used to determine whether two paths refer to the same file, so it must not prevent a file from being
+    //          opened (which will then fail and get reported as such) or a file tab from being found.
 
     try {
-      return _cppLocApi.fileManagerCanonicalPath(path);
+      if (cppVersion()) {
+        return _cppLocApi.fileManagerCanonicalPath(path);
+      }
+
+      const wasmFile = new _wasmLocApi.File(path);
+
+      try {
+        return wasmFile.path;
+      } finally {
+        wasmFile.delete();
+      }
     } catch (error: unknown) {
       console.warn(`OpenCOR: failed to canonicalise path (${path}):`, common.formatError(error));
 
@@ -70,6 +78,10 @@ class FileManager {
     // Note: every access to a WASM vector (and to its elements) yields a new handle that must be deleted, except for
     //       the handle of the file we are after, which our File object takes ownership of.
 
+    // Note: the path of a WASM file is its canonical path (see canonicalPath()), so we look for the file using the
+    //       canonical version of the given path.
+
+    const canonicalPath = this.canonicalPath(path);
     const fileManager = this.fileManager();
     const files = fileManager.files;
     let res: File | null = null;
@@ -79,7 +91,7 @@ class FileManager {
         continue;
       }
 
-      if (!res && file.path === path) {
+      if (!res && file.path === canonicalPath) {
         res = new File(path, undefined, { wasmFile: file });
       } else {
         file.delete();
@@ -95,6 +107,9 @@ class FileManager {
     if (cppVersion()) {
       _cppLocApi.fileManagerUnmanage(path);
     } else {
+      // Note: same as in file() above.
+
+      const canonicalPath = this.canonicalPath(path);
       const fileManager = this.fileManager();
       const files = fileManager.files;
 
@@ -103,7 +118,7 @@ class FileManager {
           continue;
         }
 
-        if (file.path === path) {
+        if (file.path === canonicalPath) {
           fileManager.unmanage(file);
         }
 
