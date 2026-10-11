@@ -67,7 +67,7 @@
                         label="Track run"
                         outlined
                         size="small"
-                        :title="isSimulating ? 'Wait for the simulation to finish' : 'Track current run'"
+                        title="Track current run"
                         :disabled="isSimulating || simulationIssues.length > 0"
                         @click="onTrackRun"
                       />
