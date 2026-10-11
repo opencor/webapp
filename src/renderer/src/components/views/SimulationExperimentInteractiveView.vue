@@ -349,6 +349,9 @@ let instanceIsPristine = true;
 // Note: whether our instance has never been run. If so, and if it was built with the same model changes as those wanted
 //       by our next simulation run (see instanceModelChangesKey), then that run can use it as is rather than build a
 //       new one. In practice, this only applies to our first simulation run.
+let simulationDataAvailable = false;
+// Note: whether our instance task holds the data of a simulation run that has successfully completed (see
+//       runSimulation() and simulationData()).
 const issues = documentIssues.length > 0 ? documentIssues : (instance?.issues() ?? []);
 let instanceTask = issues.length > 0 ? null : (instance?.task(0) ?? null);
 const allModelParameters = vue.ref<string[]>([]);
@@ -954,6 +957,28 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     });
   }
 
+  // Make sure that our instance task holds the data of a simulation run that has successfully completed.
+  // Note: our instance task refers to the instance of our current simulation run, which data is incomplete while it is
+  //       running (or if it failed). We emit a simulationData event once a simulation run has successfully completed
+  //       (see runSimulation()), so the caller will then be able to retrieve the complete data.
+
+  if (!simulationDataAvailable) {
+    return Promise.resolve({
+      type: 'issue',
+      simulationData: simulationDataResult,
+      issues: isSimulating.value
+        ? ['A simulation is running. Its data will be available once it has completed.']
+        : simulationIssues.value.length
+          ? [
+              'The last simulation run did not complete successfully.',
+              ...simulationIssues.value
+                .filter((issue) => issue.type !== locApi.EIssueType.INFORMATION)
+                .map((issue) => issue.description)
+            ]
+          : ['No simulation data is available yet.']
+    });
+  }
+
   if (!instanceTask) {
     return Promise.resolve({
       type: 'issue',
@@ -1276,6 +1301,11 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
   if (!model || !instance) {
     return;
   }
+
+  // Our simulation data is about to be updated, so it won't be available until this simulation run has successfully
+  // completed (see simulationData()).
+
+  simulationDataAvailable = false;
 
   // Stop the current simulation if it is still running or paused.
 
@@ -1682,6 +1712,8 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
   }
 
   // Let people know that the simulation data has been updated.
+
+  simulationDataAvailable = true;
 
   emit('simulationData');
 };
