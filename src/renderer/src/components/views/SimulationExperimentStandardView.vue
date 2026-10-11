@@ -49,7 +49,7 @@
                       size="small"
                       class="w-full"
                       :appendTo="appendTarget"
-                      @change="updatePlot()"
+                      @change="onParameterChange"
                     />
                   </Fieldset>
                   <Fieldset legend="Y Axis">
@@ -62,7 +62,7 @@
                       size="small"
                       class="w-full"
                       :appendTo="appendTarget"
-                      @change="updatePlot()"
+                      @change="onParameterChange"
                     />
                   </Fieldset>
                 </ScrollPanel>
@@ -283,6 +283,19 @@ const updatePlot = (dataSize: number = 0): void => {
       }
     ]
   };
+};
+
+// Update the plot after the X or Y parameter has changed.
+// Note: while a simulation is running or paused, only part of its data has been computed (the rest is either zeros or
+//       the data of a previous run), so we only plot the data that has been computed so far (as we do while running,
+//       see onRunPause()).
+
+const onParameterChange = (): void => {
+  if (instance && simulationStatus.value !== locSedApi.ESedInstanceStatus.IDLE) {
+    updatePlot(Math.round(instance.progress() * (uniformTimeCourse?.numberOfSteps() ?? 0)) + 1);
+  } else {
+    updatePlot();
+  }
 };
 
 // Release our instance (once it is idle) and our document.
