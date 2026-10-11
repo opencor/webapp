@@ -340,6 +340,12 @@ const electronUiEnabled = vue.ref<boolean>(true);
 trackCleanup(
   electronApi?.onEnableDisableUi((enable: boolean) => {
     electronUiEnabled.value = enable;
+
+    // Note: our main process enables/disables our main menu itself before letting us know, but whether our main menu
+    //       should be enabled also depends on our own UI (see compUiEnabled below), so we enable/disable it accordingly
+    //       (our watcher below wouldn't do it if compUiEnabled didn't change, e.g., if our UI is still blocked).
+
+    common.enableDisableMainMenu(compUiEnabled.value);
   })
 );
 
@@ -365,6 +371,19 @@ const compBlockUiEnabled = vue.computed<boolean>(() => {
 const compUiEnabled = vue.computed<boolean>(() => {
   return !compBlockUiEnabled.value && !isDialogActive.value;
 });
+
+// Enable/disable our main menu (in OpenCOR) whenever our UI gets enabled/disabled.
+// Note: our main menu must not be usable while our UI is blocked (e.g., while a model is being loaded) or while a dialog
+//       is open. Otherwise, the user could, for instance, close a file while it is being opened as part of several
+//       files (see openFiles()).
+
+vue.watch(
+  compUiEnabled,
+  (newCompUiEnabled: boolean) => {
+    common.enableDisableMainMenu(newCompUiEnabled);
+  },
+  { immediate: true }
+);
 
 // Remove any leftover SafeBlockUIWidget masks when unblocking.
 // Note: this is to ensure that we don't end up with leftover masks if the block event is emitted multiple times before

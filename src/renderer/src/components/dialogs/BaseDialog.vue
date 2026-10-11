@@ -22,8 +22,6 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import { enableDisableMainMenu } from '../../common/common';
-
 const emit = defineEmits<{
   cancel: [];
 }>();
@@ -47,8 +45,6 @@ const checkDialogPosition = () => {
 const onShow = () => {
   incrementDialogs();
 
-  enableDisableMainMenu(false);
-
   vue.nextTick(() => {
     dialogElement = document.querySelector('.p-dialog');
     containerElement = dialogElement?.closest('[data-pc-section="mask"]');
@@ -67,8 +63,6 @@ const onShow = () => {
 
 const onHide = () => {
   decrementDialogs();
-
-  enableDisableMainMenu(true);
 
   emit('cancel');
 
