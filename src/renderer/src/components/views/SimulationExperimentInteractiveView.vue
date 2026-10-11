@@ -25,6 +25,7 @@
               icon="pi pi-cog"
               text severity="secondary"
               title="Settings"
+              :disabled="compSettingsDisabled"
               @click="settingsVisible = true"
             />
           </div>
@@ -2093,8 +2094,19 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
 //       means that intermediate input values may be skipped, but that we always have at most one simulation run in
 //       flight and that the simulation is still updated while an input is being changed.
 
-let inputSimulationUpdateInFlight: Promise<void> | null = null;
+const inputSimulationUpdateInFlight = vue.shallowRef<Promise<void> | null>(null);
+// Note: it is reactive since it tells us whether an input simulation update is in progress, including in between two
+//       of its simulation runs (when isSimulating is briefly false, see startInputSimulationUpdate()), which our
+//       settings dialog relies on (see compSettingsDisabled).
 let inputSimulationUpdatePending = false;
+
+// Determine whether our settings dialog should be disabled.
+// Note: our settings must not be changed while a simulation is running since that simulation run would otherwise
+//       complete (and report its results) using our new settings.
+
+const compSettingsDisabled = vue.computed<boolean>(() => {
+  return isSimulating.value || inputSimulationUpdateInFlight.value !== null;
+});
 
 const startInputSimulationUpdate = (): void => {
   const inputSimulationUpdate = updateSimulation().finally(async () => {
@@ -2107,11 +2119,11 @@ const startInputSimulationUpdate = (): void => {
     // Check whether we have been superseded by a newer input simulation update (see onInputChangeEnd()), in which case
     // it is up to that update to deal with any pending input change.
 
-    if (inputSimulationUpdate !== inputSimulationUpdateInFlight) {
+    if (inputSimulationUpdate !== inputSimulationUpdateInFlight.value) {
       return;
     }
 
-    inputSimulationUpdateInFlight = null;
+    inputSimulationUpdateInFlight.value = null;
 
     if (inputSimulationUpdatePending) {
       inputSimulationUpdatePending = false;
@@ -2120,11 +2132,11 @@ const startInputSimulationUpdate = (): void => {
     }
   });
 
-  inputSimulationUpdateInFlight = inputSimulationUpdate;
+  inputSimulationUpdateInFlight.value = inputSimulationUpdate;
 };
 
 const onInputChange = (): void => {
-  if (inputSimulationUpdateInFlight) {
+  if (inputSimulationUpdateInFlight.value) {
     inputSimulationUpdatePending = true;
 
     return;
