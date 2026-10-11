@@ -510,14 +510,25 @@ vue.watch(
 
       await common.sleep(LONG_DELAY);
 
-      initialisingOpencorMessageVisible.value = false;
-
       // Let our main process know that we are ready, i.e. that we have registered our listeners and that we can now
       // open files, handle actions, etc.
-      // Note: we don't do this if our initialisation failed since we wouldn't be able to open files, handle actions,
-      //       etc. anyway.
+      // Note #1: we don't do this if our initialisation failed since we wouldn't be able to open files, handle actions,
+      //          etc. anyway.
+      // Note #2: our main process may then ask us to open some files (e.g., the files to reopen or those passed on the
+      //          command line). Its requests reach us before its reply and, for a remote file, our loading message is
+      //          shown straight away. So, we wait for that reply before hiding our initialising message, so that our UI
+      //          doesn't get briefly unblocked in between (and our main menu briefly enabled, see compUiEnabled).
 
-      electronApi?.rendererReady();
+      try {
+        await electronApi?.rendererReady();
+      } catch (error: unknown) {
+        console.error(
+          'OpenCOR: failed to let the main process know that the renderer is ready:',
+          common.formatError(error)
+        );
+      }
+
+      initialisingOpencorMessageVisible.value = false;
 
       // We are all done, so let's start checking for a newer version of OpenCOR, but only if we are running the Web app
       // and not in isolation mode (i.e. with a COMBINE archive) since in those cases we don't want to let the user know

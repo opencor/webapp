@@ -400,9 +400,12 @@ export class MainWindow extends ApplicationWindow {
       }
     });
 
-    // Enable our main menu.
+    // Disable our main menu.
+    // Note: our renderer enables/disables our main menu depending on whether its UI is enabled (see compUiEnabled in
+    //       src/renderer/src/components/OpenCOR.vue), so we keep it disabled until then. Otherwise, it could be used
+    //       before our renderer is able to handle it (e.g., while it is being loaded or initialised).
 
-    enableDisableMainMenu(true);
+    enableDisableMainMenu(false);
 
     // Make sure that our menu bar is always visible.
 
@@ -651,8 +654,8 @@ export class MainWindow extends ApplicationWindow {
       return;
     }
 
-    // Reload our renderer, making sure that our main menu is enabled (our renderer may have disabled it, e.g., because
-    // a dialog was open) and that we reopen our files once our renderer is ready again.
+    // Reload our renderer, making sure that our main menu is disabled until our reloaded renderer enables it (see the
+    // constructor) and that we reopen our files once our renderer is ready again.
     // Note: if our renderer was ready, then we keep track of the files that were open (as well as those that we had yet
     //       to reopen, see filesToReopen()) and of the selected file, so that they can be reopened and selected once
     //       our renderer is ready again. If it wasn't ready, then it never told us about the files that are open, so we
@@ -664,7 +667,7 @@ export class MainWindow extends ApplicationWindow {
     //       again, so the next time OpenCOR is started, it won't reopen the files that might have caused the crash
     //       either.
 
-    enableDisableMainMenu(true);
+    enableDisableMainMenu(false);
 
     if (choice === RELOAD_WITHOUT_FILES) {
       this._filesToReopen = { opened: [], selected: '' };

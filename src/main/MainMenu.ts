@@ -10,7 +10,8 @@ let enabledMenu: electron.Menu | null = null;
 let disabledMenu: electron.Menu | null = null;
 let recentFilePaths: string[] = [];
 let hasFiles = false;
-let menuEnabled = true;
+let menuEnabled = false;
+// Note: our main menu is disabled until our renderer enables it (see MainWindow's constructor).
 
 export const enableDisableMainMenu = (enable: boolean): void => {
   // Keep track of whether our menu is enabled (see updateReopenMenu()).
