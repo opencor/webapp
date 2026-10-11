@@ -135,11 +135,17 @@ export const uiJsonWithExpectedStructure = (value: unknown): IUiJsonWithExpected
   const output = object(uiJson.output);
   const res: Record<string, unknown> = {
     ...uiJson,
-    input: objects(uiJson.input),
+    input: objects(uiJson.input).map((input) => {
+      return input.possibleValues === undefined ? input : { ...input, possibleValues: objects(input.possibleValues) };
+    }),
     output: {
       ...output,
       data: objects(output.data),
-      plots: objects(output.plots),
+      plots: objects(output.plots).map((plot) => {
+        return plot.additionalTraces === undefined
+          ? plot
+          : { ...plot, additionalTraces: objects(plot.additionalTraces) };
+      }),
       ...(output.externalData === undefined
         ? {}
         : {
@@ -374,8 +380,17 @@ export const cleanUiJson = (uiJson: IUiJson): IUiJson => {
       return value;
     }
 
+    // Note: unlike an optional value, an array element is never "not provided", so we keep an element that would
+    //       otherwise be cleaned away (i.e. null, undefined, or an empty string) so that it gets reported by our schema
+    //       validation. Indeed, an array element is always expected to be an object (or a number in the case of
+    //       external data values), and the rest of our code relies on it.
+
     if (Array.isArray(value)) {
-      return (value as unknown[]).map(cleanUiJsonRec).filter((v) => v !== undefined);
+      return (value as unknown[]).map((item) => {
+        const cleanedItem = cleanUiJsonRec(item);
+
+        return cleanedItem === undefined ? item : cleanedItem;
+      });
     }
 
     if (typeof value === 'object') {
