@@ -357,6 +357,16 @@ const issues = documentIssues.length > 0 ? documentIssues : (instance?.issues() 
 let instanceTask = issues.length > 0 ? null : (instance?.task(0) ?? null);
 const allModelParameters = vue.ref<string[]>([]);
 const editableModelParameters = vue.ref<string[]>([]);
+
+// Populate our model parameters.
+// Note: this must be done before validating our UI JSON (see uiJsonIssues below) since its validation checks that the
+//       model parameters it refers to exist.
+
+if (instanceTask) {
+  vueCommon.populateParameters(allModelParameters, instanceTask);
+  vueCommon.populateParameters(editableModelParameters, instanceTask, true);
+}
+
 const voiName = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const voiId = vue.ref(instanceTask ? (voiName.value.split('/')[1] ?? '') : '');
 
@@ -1034,13 +1044,6 @@ defineExpose({
   addExternalData,
   simulationData
 });
-
-// Populate our model parameters.
-
-if (instanceTask) {
-  vueCommon.populateParameters(allModelParameters, instanceTask);
-  vueCommon.populateParameters(editableModelParameters, instanceTask, true);
-}
 
 // Update (initialise) our interactive UI..
 
