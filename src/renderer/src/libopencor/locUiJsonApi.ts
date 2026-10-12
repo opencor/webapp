@@ -736,18 +736,18 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
   // Make sure that the input information makes sense.
 
   const res: IIssue[] = [];
-  const inputIdUsed: Record<string, boolean> = {};
+  const inputIdUsed = new Set<string>();
 
   for (const input of uiJson.input) {
     if (input.id) {
-      if (inputIdUsed[input.id]) {
+      if (inputIdUsed.has(input.id)) {
         res.push({
           type: EIssueType.WARNING,
           description: `UI JSON: an input id must be unique ('${input.id}' is used more than once).`
         });
       }
 
-      inputIdUsed[input.id] = true;
+      inputIdUsed.add(input.id);
     } else {
       res.push({
         type: EIssueType.WARNING,
@@ -776,17 +776,17 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
         return possibleValue.value;
       });
       const listOfPossibleValues = listOfItems(new Set(possibleValues.map((possibleValue) => String(possibleValue))));
-      const usedPossibleValues: Record<number, boolean> = {};
+      const usedPossibleValues = new Set<number>();
 
       for (const possibleValue of possibleValues) {
-        if (usedPossibleValues[possibleValue]) {
+        if (usedPossibleValues.has(possibleValue)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an input possible value must have a unique value ('${possibleValue}' is used more than once).`
           });
         }
 
-        usedPossibleValues[possibleValue] = true;
+        usedPossibleValues.add(possibleValue);
       }
 
       if (!possibleValues.includes(input.defaultValue)) {
@@ -846,7 +846,7 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
 
   // Make sure that the output information makes sense.
 
-  const outputIdUsed: Record<string, boolean> = {};
+  const outputIdUsed = new Set<string>();
   const listOfAllModelParameters = listOfItems(allModelParametersSet);
 
   for (const outputData of uiJson.output.data) {
@@ -857,14 +857,14 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
       });
     }
 
-    if (outputIdUsed[outputData.id]) {
+    if (outputIdUsed.has(outputData.id)) {
       res.push({
         type: EIssueType.WARNING,
         description: `UI JSON: an output data id must be unique ('${outputData.id}' is used more than once).`
       });
     }
 
-    outputIdUsed[outputData.id] = true;
+    outputIdUsed.add(outputData.id);
 
     if (!outputData.name) {
       res.push({
@@ -899,17 +899,17 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
         });
       }
 
-      const outputExternalDataSeriesNames: Record<string, boolean> = {};
+      const outputExternalDataSeriesNames = new Set<string>();
 
       for (const outputExternalDataSeries of outputExternalData.dataSeries) {
-        if (outputExternalDataSeriesNames[outputExternalDataSeries.name]) {
+        if (outputExternalDataSeriesNames.has(outputExternalDataSeries.name)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an output external data series name must be unique ('${outputExternalDataSeries.name}' is used more than once).`
           });
         }
 
-        outputExternalDataSeriesNames[outputExternalDataSeries.name] = true;
+        outputExternalDataSeriesNames.add(outputExternalDataSeries.name);
 
         if (!outputExternalDataSeries.name) {
           res.push({
@@ -933,8 +933,8 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
         }
       }
 
-      const outputExternalDataIds: Record<string, boolean> = {};
-      const listOfOutputExternalDataSeriesNames = listOfItems(new Set(Object.keys(outputExternalDataSeriesNames)));
+      const outputExternalDataIds = new Set<string>();
+      const listOfOutputExternalDataSeriesNames = listOfItems(outputExternalDataSeriesNames);
 
       for (const outputExternalDataEntry of outputExternalData.data) {
         if (!outputExternalDataEntry.id) {
@@ -944,16 +944,16 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
           });
         }
 
-        if (outputExternalDataIds[outputExternalDataEntry.id]) {
+        if (outputExternalDataIds.has(outputExternalDataEntry.id)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an output external data id must be unique ('${outputExternalDataEntry.id}' is used more than once).`
           });
         }
 
-        outputExternalDataIds[outputExternalDataEntry.id] = true;
+        outputExternalDataIds.add(outputExternalDataEntry.id);
 
-        if (outputExternalDataEntry.id && outputIdUsed[outputExternalDataEntry.id]) {
+        if (outputExternalDataEntry.id && outputIdUsed.has(outputExternalDataEntry.id)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an output external data id must be unique across simulation and external data ('${outputExternalDataEntry.id}' is used more than once).`
@@ -961,7 +961,7 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
         }
 
         if (outputExternalDataEntry.id) {
-          outputIdUsed[outputExternalDataEntry.id] = true;
+          outputIdUsed.add(outputExternalDataEntry.id);
         }
 
         if (!outputExternalDataEntry.name) {
@@ -971,7 +971,7 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
           });
         }
 
-        if (!outputExternalDataSeriesNames[outputExternalDataEntry.name]) {
+        if (!outputExternalDataSeriesNames.has(outputExternalDataEntry.name)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an output external data name must match one of the available options ('${outputExternalDataEntry.name}' is not one of ${listOfOutputExternalDataSeriesNames}).`

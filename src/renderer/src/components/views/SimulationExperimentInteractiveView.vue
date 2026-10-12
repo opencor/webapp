@@ -439,7 +439,7 @@ const uiJsonIssues = vue.ref<locApi.IIssue[]>(
 const simulationIssues = vue.ref<locApi.IIssue[]>([]);
 const inputValues = vue.ref<number[]>([]);
 const showInput = vue.ref<boolean[]>([]);
-const idToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
+const idToInfo = new Map<string, locCommon.ISimulationDataInfo>();
 
 // A helper function to retrieve the simulation data information for the given name.
 // Note: we build (and cache) the simulation data information of all our simulation data the first time we need it.
@@ -644,14 +644,13 @@ const uniqueOutputDataId = (name: string, usedIds: Set<string>): string => {
 
 // A helper function to replace data IDs in an expression with its corresponding external data IDs.
 
-const replaceWithExternalDataIds = (expression: string, mapping: Record<string, string>): string => {
+const replaceWithExternalDataIds = (expression: string, mapping: Map<string, string>): string => {
   let res = expression;
-  const dataIds = Object.keys(mapping).sort((a, b) => {
+  const sortedMapping = [...mapping].sort(([a], [b]) => {
     return b.length - a.length;
   });
 
-  for (const dataId of dataIds) {
-    const externalDataId = mapping[dataId];
+  for (const [dataId, externalDataId] of sortedMapping) {
     let newRes = '';
     let i = 0;
 
@@ -819,7 +818,7 @@ const addExternalData = async (
 
     const dataSeries: locApi.IUiJsonOutputExternalDataSeries[] = [];
     const data: locApi.IUiJsonOutputData[] = [];
-    const dataIdToExternalDataId: Record<string, string> = {};
+    const dataIdToExternalDataId = new Map<string, string>();
 
     for (let columnIndex = 1; columnIndex < parsedCsv.headers.length; ++columnIndex) {
       const name = parsedCsv.headers[columnIndex];
@@ -838,7 +837,7 @@ const addExternalData = async (
 
       for (const outputData of actualUiJson.value.output.data) {
         if (outputData.name === modelParameter) {
-          dataIdToExternalDataId[outputData.id] = id;
+          dataIdToExternalDataId.set(outputData.id, id);
 
           break;
         }
@@ -1513,13 +1512,11 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 
   // Update our mapping of data IDs to simulation data information.
 
-  Object.keys(idToInfo).forEach((key) => {
-    delete idToInfo[key];
-  });
+  idToInfo.clear();
 
   actualUiJson.value.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     if (data.id && instanceTask) {
-      idToInfo[data.id] = simulationDataInfo(instanceTask, data.name);
+      idToInfo.set(data.id, simulationDataInfo(instanceTask, data.name));
     }
   });
 
@@ -1545,7 +1542,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     }
 
     for (const data of actualUiJson.value.output.data) {
-      const info = idToInfo[data.id];
+      const info = idToInfo.get(data.id);
 
       if (info && usedDataIds.has(data.id)) {
         modelScope[data.id] = simulationDataValue(instanceTask, info).data;
@@ -1830,8 +1827,10 @@ const onTrackRun = (): void => {
   }
 
   // Create a new run from the live run.
+  // Note: an input id comes from the UI JSON, so it may be the name of an Object.prototype property (e.g.,
+  //       "constructor" or "__proto__"), hence we use an object without a prototype.
 
-  const inputParameters: Record<string, number> = {};
+  const inputParameters: Record<string, number> = Object.create(null);
 
   for (let i = 0; i < actualUiJson.value.input.length; ++i) {
     const input = actualUiJson.value.input[i];
