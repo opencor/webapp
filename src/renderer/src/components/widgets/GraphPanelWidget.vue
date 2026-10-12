@@ -136,7 +136,17 @@ const resize = (): Promise<unknown> => {
   return Promise.resolve();
 };
 
+const resetMargins = (): void => {
+  // Forget the margins that we last emitted, so that we emit our current margins (e.g., when the shared margins we are
+  // given are reset, see onResetMargins() in SimulationExperimentInteractiveView.vue).
+
+  trackedMargins = undefined;
+
+  updateMarginsAsync();
+};
+
 defineExpose({
+  resetMargins,
   resize
 });
 
@@ -1063,9 +1073,7 @@ vue.watch(
         if (!props.margins) {
           // When shared margins are unset, we need to clear our tracked margins so that we can emit them.
 
-          trackedMargins = undefined;
-
-          updateMarginsAsync();
+          resetMargins();
         }
       });
   },

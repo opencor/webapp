@@ -1811,8 +1811,16 @@ const onMarginsUpdated = (plotId: string, newMargins: IGraphPanelMargins): void 
 };
 
 const onResetMargins = (): void => {
+  // Note: our plots only emit their margins when they change, so we must ask them to emit them again. Unsetting our
+  //       shared margins would get our plots to do so, but only if we had some shared margins (e.g., not if some plot
+  //       hadn't emitted its margins yet or if a plot was removed while there were some simulation issues).
+
   margins = {};
   compMargins.value = undefined;
+
+  for (const graphPanelRef of Object.values(graphPanelRefs.value)) {
+    graphPanelRef?.resetMargins();
+  }
 };
 
 // Runs-related event handlers
