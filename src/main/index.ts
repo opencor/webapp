@@ -179,9 +179,9 @@ if (!isPrimaryInstance) {
 
 export let mainWindow: MainWindow | null = null;
 
-// Note: another instance of OpenCOR may be started before our main window has been created (i.e. while our splash
-//       screen is shown), in which case we keep track of its arguments so that they can be handled once our main window
-//       has been created.
+// Note: another instance of OpenCOR may be started, or a file or an opencor:// link may be opened, before our main
+//       window has been created (i.e. while our splash screen is shown), in which case we keep track of the arguments
+//       so that they can be handled once our main window has been created.
 
 const pendingArguments: string[][] = [];
 
@@ -221,6 +221,18 @@ electron.app.on('open-file', (event, filePath) => {
   event.preventDefault();
 
   handleArguments([filePath]);
+});
+
+// Handle the clicking of an opencor:// link on macOS.
+// Note #1: on macOS, the link is not passed on the command line, not even when OpenCOR gets started by clicking it, in
+//          which case this event is emitted before OpenCOR is ready, hence we register our handler straight away. Also,
+//          several links may be clicked in a row, hence we handle each of them (see handleArguments()).
+// Note #2: we must prevent the default behaviour to let macOS know that we handle the link.
+
+electron.app.on('open-url', (event, url) => {
+  event.preventDefault();
+
+  handleArguments([url]);
 });
 
 // Register our URI scheme.
@@ -305,16 +317,6 @@ MimeType=x-scheme-handler/${URI_SCHEME}`;
     console.warn('OpenCOR: failed to set up Linux desktop integration:', formatError(error));
   }
 };
-
-// Handle the clicking of an opencor:// link.
-
-let triggeringUrl: string | null = null;
-
-electron.app.on('open-url', (_event, url) => {
-  triggeringUrl = url;
-
-  mainWindow?.handleArguments([url]);
-});
 
 // The app is ready, so finalise its initialisation.
 
@@ -504,17 +506,12 @@ electron.app
           saveSettings(settings);
         });
 
-        // Create our main window and pass to it our command line arguments or, if we got started via a URI scheme, the
-        // triggering URL.
+        // Create our main window and pass to it our command line arguments.
         // Note: if that fails (e.g., our renderer server couldn't be started), then OpenCOR cannot be used, so we
         //       report the error and quit (rather than leave our splash screen window shown forever).
 
         try {
-          mainWindow = new MainWindow(
-            triggeringUrl ? [triggeringUrl] : process.argv,
-            splashScreenWindow,
-            await rendererUrl
-          );
+          mainWindow = new MainWindow(process.argv, splashScreenWindow, await rendererUrl);
 
           // Forget about our main window once it has been closed (and therefore destroyed), so that we don't try to
           // use it (e.g., from our main menu or when another instance of OpenCOR is started).
@@ -528,7 +525,8 @@ electron.app
           return;
         }
 
-        // Handle the arguments of any instance of OpenCOR that was started while our splash screen was being shown.
+        // Handle the arguments of any instance of OpenCOR that was started, or any file or opencor:// link that was
+        // opened while our splash screen was being shown.
 
         for (const argv of pendingArguments.splice(0)) {
           mainWindow.handleArguments(argv);
