@@ -310,11 +310,17 @@ const isCsvFile = (bytes, complete) => {
   return nbOfLines >= 2;
 };
 
-const rejectedResponse = (reason) =>
-  new Response(`Target content is not allowed (${reason}).`, {
-    status: 403,
+const errorResponse = (message, status) =>
+  // Note: our error responses must also have our CORS headers, so that a browser lets the app know why we failed.
+
+  new Response(message, {
+    status,
     headers: CONTENT_HEADERS
   });
+
+const errorMessage = (error) => (error instanceof Error ? error.message : String(error)).replace(/\.+$/, '');
+
+const rejectedResponse = (reason) => errorResponse(`Target content is not allowed (${reason}).`, 403);
 
 const forwardRequest = async (targetUrl, request) => {
   const forwardHeaders = new Headers(request.headers);
@@ -423,22 +429,27 @@ export default {
       const targetUrl = extractTargetUrl(url);
 
       if (!targetUrl) {
-        return new Response('Missing "url" query parameter.', { status: 400 });
+        return errorResponse('Missing "url" query parameter.', 400);
       }
 
       if (!isValidTargetUrl(targetUrl)) {
-        return new Response('Target URL is not allowed.', { status: 403 });
+        return errorResponse('Target URL is not allowed.', 403);
       }
 
       if (request.method !== 'GET') {
-        return new Response('Method not allowed.', { status: 405 });
+        return errorResponse('Method not allowed.', 405);
       }
 
-      return await forwardRequest(targetUrl, request);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      // Note: we may not be able to fetch the target URL (e.g., it is only reachable from the user's network), in which
+      //       case the app may still be able to fetch it directly, so we let it know using an HTTP 502 error.
 
-      return new Response(`An error occurred: ${message}`, { status: 500 });
+      try {
+        return await forwardRequest(targetUrl, request);
+      } catch (error) {
+        return errorResponse(`Target URL could not be fetched (${errorMessage(error)}).`, 502);
+      }
+    } catch (error) {
+      return errorResponse(`An error occurred (${errorMessage(error)}).`, 500);
     }
   }
 };

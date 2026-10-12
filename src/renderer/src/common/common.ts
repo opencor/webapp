@@ -115,21 +115,39 @@ export const corsProxyUrl = (url: string): string => {
 };
 
 // A method to fetch a URL through our CORS proxy or, if that fails, directly.
-// Note: our CORS proxy may not be reachable, not allow the content of the URL (HTTP 403 error), or not find the URL
-//       (HTTP 404 error), in which case fetching the URL directly may still work (see also locCommon.file()).
+// Note #1: our CORS proxy may not be reachable, not allow the content of the URL (HTTP 403 error), not find the URL
+//          (HTTP 404 error), or not be able to fetch the URL (HTTP 502 error; e.g., the URL is only reachable from the
+//          user's network), in which case fetching the URL directly may still work.
+// Note #2: if fetching the URL directly also fails, then it is most likely because of CORS, about which a browser tells
+//          us next to nothing (e.g., "Failed to fetch"), so we report why our CORS proxy failed instead.
 
 export const fetchThroughCorsProxy = async (url: string): Promise<Response> => {
+  let corsProxyIssue: string;
+
   try {
     const response = await fetch(corsProxyUrl(url));
 
-    if (response.status !== 403 && response.status !== 404) {
+    if (response.status !== 403 && response.status !== 404 && response.status !== 502) {
+      return response;
+    }
+
+    corsProxyIssue =
+      (await response.text().catch(() => '')) || `The server responded with a status of ${response.status}.`;
+  } catch (error: unknown) {
+    corsProxyIssue = formatError(error);
+  }
+
+  try {
+    const response = await fetch(url);
+
+    if (response.ok) {
       return response;
     }
   } catch {
-    // Our CORS proxy is not reachable, so fetch the URL directly.
+    // Fetching the URL directly failed, so we report why our CORS proxy failed (see Note #2).
   }
 
-  return fetch(url);
+  throw new Error(corsProxyIssue);
 };
 
 // A method to compute the XXH64 value of some data.

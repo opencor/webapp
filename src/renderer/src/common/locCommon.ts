@@ -179,43 +179,18 @@ export const file = (
   if (typeof fileFilePathOrFileContents === 'string') {
     if (common.isUrl(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
-        // First try fetching the URL through OpenCOR's CORS proxy.
+        // Fetch the URL through OpenCOR's CORS proxy or, if that fails, directly (see common.fetchThroughCorsProxy()).
 
-        fetch(common.corsProxyUrl(fileFilePathOrFileContents))
+        common
+          .fetchThroughCorsProxy(fileFilePathOrFileContents)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer();
             }
 
-            // If the fetch through OpenCOR's CORS proxy failed, then throw an error to trigger the catch block below.
-
             throw new Error(
-              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${response.status}.`,
-              {
-                cause: response.status
-              }
+              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${response.status}.`
             );
-          })
-          .catch((error: unknown) => {
-            // If the fetch through OpenCOR's CORS proxy failed, then try fetching the URL directly, unless the error
-            // was a TypeError or an HTTP 403 or 404 error.
-
-            if (
-              !(error instanceof TypeError) &&
-              (!(error instanceof Error) || typeof error.cause !== 'number' || ![403, 404].includes(error.cause))
-            ) {
-              throw new Error(common.formatError(error));
-            }
-
-            return fetch(fileFilePathOrFileContents).then((response) => {
-              if (response.ok) {
-                return response.arrayBuffer();
-              }
-
-              throw new Error(
-                `Failed to fetch the file directly. The server responded with a status of ${response.status}.`
-              );
-            });
           })
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer);
