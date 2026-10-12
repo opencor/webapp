@@ -77,12 +77,19 @@ export const enableDisableMainMenu = (enable: boolean): void => {
   electronApi?.enableDisableMainMenu(enable);
 };
 
-// A method to determine whether a file name indicates a data URL OMEX file.
+// Some prefixes for the (made-up) name of a file opened using a data URL, and a method to determine whether a file name
+// is such a name.
+// Note #1: a file opened using a data URL only exists in memory, so it cannot be reopened (e.g., the next time OpenCOR
+//          is started) and must therefore not be added to our recent files either.
+// Note #2: a COMBINE archive is named "OMEX #<n>" while a CellML file (from a ZIP-CellML data URL) is named
+//          "CellML #<n>/<file name>" where <file name> is the name of the CellML file, so that it is still shown under
+//          its own name (see common.fileName()).
 
 export const OMEX_PREFIX = 'OMEX #';
+export const CELLML_PREFIX = 'CellML #';
 
-export const isDataUrlOmexFileName = (fileName: string): boolean => {
-  return fileName.startsWith(OMEX_PREFIX);
+export const isDataUrlFileName = (fileName: string): boolean => {
+  return fileName.startsWith(OMEX_PREFIX) || fileName.startsWith(CELLML_PREFIX);
 };
 
 // A method to determine whether the given value is an object (and not an array).

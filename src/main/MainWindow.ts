@@ -3,7 +3,7 @@ import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { formatError, isDataUrlOmexFileName, type ISettings, isUrl } from '../renderer/src/common/common';
+import { formatError, isDataUrlFileName, type ISettings, isUrl } from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY } from '../renderer/src/common/constants';
 import { isMacOs, isPackaged } from '../renderer/src/common/electron';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -147,9 +147,9 @@ export const clearRecentFiles = (): void => {
 };
 
 export const fileClosed = (filePath: string): void => {
-  // Make sure that the file is not a COMBINE archive that was opened using a data URL.
+  // Make sure that the file was not opened using a data URL (see isDataUrlFileName()).
 
-  if (isDataUrlOmexFileName(filePath)) {
+  if (isDataUrlFileName(filePath)) {
     return;
   }
 
@@ -204,9 +204,9 @@ export const fileSelected = (filePath: string): void => {
 
 // Retrieve the files that are currently open and the file that is currently selected, so that they can be reopened and
 // selected (e.g., the next time OpenCOR is started or after our renderer has crashed).
-// Note: a COMBINE archive that was opened using a data URL only exists in memory (under a made-up name, e.g.,
-//       "OMEX #1"), so it cannot be reopened. Hence, we don't reopen such a file and, if it is the selected file, we
-//       select the first file that is to be reopened instead.
+// Note: a file that was opened using a data URL only exists in memory (under a made-up name, e.g., "OMEX #1", see
+//       isDataUrlFileName()), so it cannot be reopened. Hence, we don't reopen such a file and, if it is the selected
+//       file, we select the first file that is to be reopened instead.
 
 interface IFilesToReopen {
   opened: string[];
@@ -214,8 +214,8 @@ interface IFilesToReopen {
 }
 
 const currentFilesToReopen = (): IFilesToReopen => {
-  const opened = openedFilePaths.filter((filePath) => !isDataUrlOmexFileName(filePath));
-  const selected = selectedFilePath && !isDataUrlOmexFileName(selectedFilePath) ? selectedFilePath : (opened[0] ?? '');
+  const opened = openedFilePaths.filter((filePath) => !isDataUrlFileName(filePath));
+  const selected = selectedFilePath && !isDataUrlFileName(selectedFilePath) ? selectedFilePath : (opened[0] ?? '');
 
   return { opened, selected };
 };
@@ -782,7 +782,7 @@ export class MainWindow extends ApplicationWindow {
     const opened = new Set(res.opened);
 
     for (const filePath of [this._reopeningFilePath, ...this._openedFilePaths.slice(this._openedFilePathIndex)]) {
-      if (filePath && !isDataUrlOmexFileName(filePath)) {
+      if (filePath && !isDataUrlFileName(filePath)) {
         opened.add(filePath);
       }
     }
