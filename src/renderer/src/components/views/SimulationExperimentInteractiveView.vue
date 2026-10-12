@@ -2165,8 +2165,9 @@ const onInputChange = (): void => {
 };
 
 const onInputChangeEnd = (): void => {
-  // An input has finished changing (e.g., a slider has been released), so rather than wait for the current simulation
-  // run to complete, cancel it and start a new one straight away using the final input values, if needed.
+  // An input has finished changing (e.g., a value has been selected or a slider has been released), so rather than wait
+  // for the current simulation run to complete, cancel it and start a new one straight away using the final input
+  // values, if needed.
   // Note: updateSimulation() takes care of stopping the current simulation run.
 
   if (inputSimulationUpdatePending) {

@@ -1,5 +1,5 @@
 <template>
-  <div ref="rootRef" v-if="possibleValues">
+  <div ref="rootRef" v-if="possibleValues" @pointerdown.capture="onInteractionStart" @keydown.capture="onInteractionStart">
     <FloatLabel variant="on">
       <Select
         v-model="discreteValue"
@@ -13,7 +13,7 @@
       <label>{{ name }}</label>
     </FloatLabel>
   </div>
-  <div ref="rootRef" v-else>
+  <div ref="rootRef" v-else @pointerdown.capture="onInteractionStart" @keydown.capture="onInteractionStart">
     <InputScientificNumberWidget v-model="value"
       :label="name"
       :min="minimumValue"
@@ -26,7 +26,6 @@
       :min="minimumValue" :max="maximumValue" :step="compStepValue"
       size="small"
       @change="sliderChange"
-      @slideend="sliderChangeEnd"
     />
   </div>
 </template>
@@ -83,15 +82,72 @@ vue.watch(
   { immediate: true }
 );
 
+// Keep track of whether the user is interacting with us (e.g., dragging our slider, holding one of our spin buttons, or
+// holding an arrow key), so that we can let our owner know when a change is final, i.e. when it is not made during an
+// interaction (e.g., selecting a value, entering a value, or clicking on our slider bar) or when the interaction during
+// which it was made has ended (see emitChange()).
+// Note: an interaction may end outside of us (e.g., our slider being released outside of us or the Enter key moving the
+//       focus away from our input), hence we listen to the window for the end of an interaction.
+
+let interacting = false;
+let changedWhileInteracting = false;
+
+const onInteractionStart = (): void => {
+  if (interacting) {
+    return;
+  }
+
+  interacting = true;
+
+  window.addEventListener('pointerup', onInteractionEnd);
+  window.addEventListener('keyup', onInteractionEnd);
+  window.addEventListener('blur', onInteractionEnd);
+};
+
+const onInteractionEnd = (): void => {
+  window.removeEventListener('pointerup', onInteractionEnd);
+  window.removeEventListener('keyup', onInteractionEnd);
+  window.removeEventListener('blur', onInteractionEnd);
+
+  interacting = false;
+
+  if (changedWhileInteracting) {
+    changedWhileInteracting = false;
+
+    // Note: we emit our changeEnd event in the next tick so that it gets emitted after any pending change event (see
+    //       emitChange()).
+
+    vue.nextTick(() => {
+      emits('changeEnd', props.name);
+    });
+  }
+};
+
+vue.onBeforeUnmount(() => {
+  window.removeEventListener('pointerup', onInteractionEnd);
+  window.removeEventListener('keyup', onInteractionEnd);
+  window.removeEventListener('blur', onInteractionEnd);
+});
+
 // Some methods to handle a scalar value using an input component and a slider.
 
 const emitChange = (newValue: number) => {
+  const changeIsFinal = !interacting;
+
+  if (!changeIsFinal) {
+    changedWhileInteracting = true;
+  }
+
   vue.nextTick(() => {
     value.value = newValue;
 
     oldValue = newValue;
 
     emits('change', props.name, newValue);
+
+    if (changeIsFinal) {
+      emits('changeEnd', props.name);
+    }
   });
 };
 
@@ -120,14 +176,5 @@ const sliderChange = (newValue: number | number[]) => {
   if (valueToEmit !== undefined && valueToEmit !== oldValue) {
     emitChange(valueToEmit);
   }
-};
-
-const sliderChangeEnd = () => {
-  // Note: we emit our changeEnd event in the next tick so that it gets emitted after any pending change event (see
-  //       emitChange()).
-
-  vue.nextTick(() => {
-    emits('changeEnd', props.name);
-  });
 };
 </script>
