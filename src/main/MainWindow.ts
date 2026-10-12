@@ -678,6 +678,31 @@ export class MainWindow extends ApplicationWindow {
     enableDisableMainMenu(false);
 
     if (choice === RELOAD_WITHOUT_FILES) {
+      // Add the files that we would have reopened (as well as the files that we were asked to open, e.g., through our
+      // command line) to our recent files, so that the user can still reopen them, one by one, if they want to.
+      // Note: we add them in reverse order and the selected file last, so that the selected file ends up being the most
+      //       recent one, followed by the other files in their original order (see fileClosed()).
+
+      const filesNotToReopen = this._rendererReady
+        ? this.filesToReopen()
+        : (this._filesToReopen ?? {
+            opened: electronConf.get('app.files.opened'),
+            selected: electronConf.get('app.files.selected')
+          });
+      const filesNotToOpen = this._pendingArguments.filter((argument) => !isAction(argument));
+
+      for (const filePath of [...filesNotToReopen.opened, ...filesNotToOpen].reverse()) {
+        fileClosed(filePath);
+      }
+
+      if (filesNotToReopen.selected) {
+        fileClosed(filesNotToReopen.selected);
+      }
+
+      // Discard the files that we were going to reopen and the arguments that we were asked to handle, so that our
+      // reloaded renderer doesn't reopen the files that might have caused the crash and doesn't handle the arguments
+      // that it never handled.
+
       this._filesToReopen = { opened: [], selected: '' };
       this._pendingArguments = [];
     } else if (this._rendererReady) {
