@@ -123,6 +123,10 @@ jobs:
           local-path: ./src/renderer/dist
           remote-path: /home/www/opencor.ws/app
           sync: full
+          ftp-options: set cmd:fail-exit yes
+          # Note: lftp carries on after a command has failed, so we ask it to exit instead. Otherwise, if some of our
+          #       assets couldn't be uploaded, index.html and version.json would still get uploaded (see below), and
+          #       index.html would reference assets that are not available.
           ftp-mirror-options: --exclude-glob=index.html --exclude-glob=assets/version.json
           ftp-post-sync-commands: put -O /home/www/opencor.ws/app ./src/renderer/dist/index.html; put -O /home/www/opencor.ws/app/assets ./src/renderer/dist/assets/version.json
           # Note: our assets have a hash in their file names, so we upload index.html (which references them) once they
