@@ -381,6 +381,11 @@ export class SedOneStep extends SedSimulation {
   }
 }
 
+// The maximum number of steps of a uniform time course.
+// Note: libOpenCOR uses an int for the number of steps, so a larger number of steps would get silently wrapped.
+
+export const MAXIMUM_NUMBER_OF_STEPS = 2 ** 31 - 1;
+
 export class SedUniformTimeCourse extends SedSimulation {
   private _wasmSedUniformTimeCourse: IWasmSedUniformTimeCourse = {} as IWasmSedUniformTimeCourse;
   private _cvode: SolverCvode | null | undefined;

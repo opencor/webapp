@@ -2046,19 +2046,32 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
   onRemoveAllRuns();
 
   // Update our settings and hide the dialog.
+  // Note: our settings may have been confirmed even though they have some issues (so that they can, for instance, be
+  //       saved as a COMBINE archive and fixed later), in which case we must not silently run our simulation with some
+  //       other settings, but let libOpenCOR report those issues. So, our number of steps is such that our point
+  //       interval can be retrieved from it (e.g., a negative point interval gives a negative number of steps), unless
+  //       our point interval is zero, not finite, or so small that our number of steps cannot be handled by libOpenCOR,
+  //       in which case we use zero steps. Either way, libOpenCOR will report an invalid number of steps. If our
+  //       settings are valid, then we use at least one step (i.e. if our point interval is greater than our simulation
+  //       range).
 
-  uniformTimeCourse.setInitialTime(updatedSettings.simulation.initialPoint);
-  uniformTimeCourse.setOutputStartTime(updatedSettings.simulation.startingPoint);
-  uniformTimeCourse.setOutputEndTime(updatedSettings.simulation.endingPoint);
-  uniformTimeCourse.setNumberOfSteps(
-    Math.max(
-      1,
-      Math.round(
-        (updatedSettings.simulation.endingPoint - updatedSettings.simulation.startingPoint) /
-          updatedSettings.simulation.pointInterval
-      )
-    )
-  );
+  const { initialPoint, startingPoint, endingPoint, pointInterval } = updatedSettings.simulation;
+
+  uniformTimeCourse.setInitialTime(initialPoint);
+  uniformTimeCourse.setOutputStartTime(startingPoint);
+  uniformTimeCourse.setOutputEndTime(endingPoint);
+
+  let numberOfSteps = Math.round((endingPoint - startingPoint) / pointInterval);
+
+  if (Number.isFinite(pointInterval) && pointInterval > 0 && endingPoint > startingPoint) {
+    numberOfSteps = Math.max(1, numberOfSteps);
+  }
+
+  if (!Number.isFinite(numberOfSteps) || Math.abs(numberOfSteps) > locApi.MAXIMUM_NUMBER_OF_STEPS) {
+    numberOfSteps = 0;
+  }
+
+  uniformTimeCourse.setNumberOfSteps(numberOfSteps);
 
   cvode?.setMaximumStep(updatedSettings.solvers.cvodeMaximumStep);
 

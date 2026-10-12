@@ -162,6 +162,7 @@ export { EFileType, File, fileManager } from './locFileApi';
 
 export {
   ESedSimulationType,
+  MAXIMUM_NUMBER_OF_STEPS,
   SedDocument,
   SedInstance,
   SedInstanceTask,

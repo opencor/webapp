@@ -1046,11 +1046,39 @@ const simulationSettingsIssues = vue.computed<locApi.IIssue[]>(() => {
     });
   }
 
+  // Note: a point interval that cannot be saved as a number of steps (e.g., if it is too small) gets saved as zero
+  //       steps (see onSettingsOk() in SimulationExperimentInteractiveView.vue), which gives an infinite (or NaN) point
+  //       interval when reopened.
+
+  if (
+    localSettings.value.simulation.pointInterval !== null &&
+    !Number.isFinite(localSettings.value.simulation.pointInterval)
+  ) {
+    res.push({
+      type: EIssueType.WARNING,
+      description: 'The point interval must be a finite number.'
+    });
+  }
+
   if (localSettings.value.simulation.pointInterval !== null && localSettings.value.simulation.pointInterval <= 0) {
     res.push({
       type: EIssueType.WARNING,
       description: 'The point interval must be a positive number.'
     });
+  }
+
+  // Make sure that our number of steps can be handled by libOpenCOR, i.e. that our point interval is not too small.
+  // Note: we only check this if our other simulation settings are valid.
+
+  if (res.length === 0) {
+    const { startingPoint, endingPoint, pointInterval } = localSettings.value.simulation;
+
+    if (!(Math.round((endingPoint - startingPoint) / pointInterval) <= locApi.MAXIMUM_NUMBER_OF_STEPS)) {
+      res.push({
+        type: EIssueType.WARNING,
+        description: `The point interval is too small (the number of steps must not exceed ${locApi.MAXIMUM_NUMBER_OF_STEPS.toLocaleString()}).`
+      });
+    }
   }
 
   return res;
