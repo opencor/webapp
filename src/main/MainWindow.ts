@@ -32,27 +32,26 @@ export const canCheckForUpdates = (): boolean => {
   return _canCheckForUpdates;
 };
 
-// Keep track of whether an update is being downloaded and installed.
-// Note: our renderer process may be reloaded while an update is being downloaded and installed (e.g., after it
-//       crashed), in which case it will check for updates at startup (if the user wants us to) and the user may also
-//       check for updates. We must not check for updates then since an issue with checking for updates could get
-//       forwarded as an issue with installing the update (see below) and the update could be offered (and downloaded)
-//       again.
+// Keep track of the state of an update, i.e. whether it is being downloaded, has been downloaded, or is being installed.
+// Note: our renderer process may be reloaded while an update is being downloaded or installed (e.g., after it crashed),
+//       in which case we must not check for updates (e.g., at startup) since an issue with checking for updates could
+//       get forwarded as an issue with installing the update (see below) and the update could be offered (and
+//       downloaded) again. Instead, we let our renderer know about the update (see resendUpdateState()).
 
-let updateInProgress = false;
+type UpdateState = 'idle' | 'downloading' | 'downloaded' | 'installing';
+
+let updateState: UpdateState = 'idle';
+let updateDownloadPercent = 0;
 
 export const checkForUpdates = (atStartup: boolean): void => {
-  // Check for updates, if we can and if requested (i.e. at startup, if the user wants us to, or by the user).
+  // Check for updates, if we can and if requested (i.e. at startup, if the user wants us to, or by the user), and if we
+  // are not already dealing with an update.
 
-  if (canCheckForUpdates() && (!atStartup || electronConf.get('settings.general.checkForUpdatesAtStartup'))) {
-    if (updateInProgress) {
-      if (!atStartup) {
-        MainWindow.instance?.send('update-check-error', 'an update is already being downloaded and installed');
-      }
-
-      return;
-    }
-
+  if (
+    canCheckForUpdates() &&
+    (!atStartup || electronConf.get('settings.general.checkForUpdatesAtStartup')) &&
+    updateState === 'idle'
+  ) {
     autoUpdater
       .checkForUpdates()
       .then((result: UpdateCheckResult | null) => {
@@ -71,7 +70,11 @@ export const checkForUpdates = (atStartup: boolean): void => {
 };
 
 autoUpdater.on('download-progress', (info: ProgressInfo) => {
-  MainWindow.instance?.send('update-download-progress', info.percent);
+  if (updateState === 'downloading') {
+    updateDownloadPercent = info.percent;
+
+    MainWindow.instance?.send('update-download-progress', info.percent);
+  }
 });
 
 // Forward any issue with installing an update.
@@ -83,37 +86,63 @@ autoUpdater.on('download-progress', (info: ProgressInfo) => {
 //       Once forwarded, the installation of the update has failed, so we are done with it (and any subsequent error
 //       event, e.g., from checking for updates again, must not be forwarded as an issue with installing an update).
 
-let updateDownloaded = false;
-
 autoUpdater.on('error', (error: Error) => {
-  if (updateDownloaded) {
-    updateDownloaded = false;
-    updateInProgress = false;
+  if (updateState === 'downloaded' || updateState === 'installing') {
+    updateState = 'idle';
 
     MainWindow.instance?.send('update-install-error', formatError(error));
   }
 });
 
 export const downloadAndInstallUpdate = (): void => {
-  updateDownloaded = false;
-  updateInProgress = true;
+  updateState = 'downloading';
+  updateDownloadPercent = 0;
 
   autoUpdater
     .downloadUpdate()
     .then(() => {
-      updateDownloaded = true;
+      updateState = 'downloaded';
+      updateDownloadPercent = 100;
 
       MainWindow.instance?.send('update-downloaded');
     })
     .catch((error: unknown) => {
-      updateInProgress = false;
+      updateState = 'idle';
 
       MainWindow.instance?.send('update-download-error', formatError(error));
     });
 };
 
 export const installUpdateAndRestart = (): void => {
+  // Install the update and restart OpenCOR.
+  // Note: our renderer may ask us to install the update more than once (see resendUpdateState()), but electron-updater
+  //       must only be asked once (e.g., on macOS, it would otherwise install the update once Squirrel.Mac has fetched it
+  //       as many times as it was asked to).
+
+  if (updateState !== 'downloaded') {
+    return;
+  }
+
+  updateState = 'installing';
+
   autoUpdater.quitAndInstall(true, true);
+};
+
+const resendUpdateState = (): void => {
+  // Let our renderer know about the update that is being downloaded or installed, if any.
+  // Note: this is needed when our renderer has been reloaded (e.g., after it crashed), so that it can show the progress
+  //       of the update (and block its UI) and ask us to install the update once it has been downloaded (in case our
+  //       previous renderer didn't get a chance to do so).
+
+  if (updateState === 'idle') {
+    return;
+  }
+
+  MainWindow.instance?.send('update-download-progress', updateDownloadPercent);
+
+  if (updateState === 'downloaded') {
+    MainWindow.instance?.send('update-downloaded');
+  }
 };
 
 export const loadSettings = (): ISettings => {
@@ -779,6 +808,10 @@ export class MainWindow extends ApplicationWindow {
     // Let the user know if our configuration file had to be reset.
 
     this.reportElectronConfReset();
+
+    // Let our renderer know about the update that is being downloaded or installed, if any.
+
+    resendUpdateState();
   }
 
   // Retrieve the files to reopen and the file to select (e.g., because we are being closed or because our renderer has

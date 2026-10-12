@@ -692,9 +692,14 @@ trackCleanup(
   })
 );
 
+// Note: we show our update download progress dialog in case it is not already visible, i.e. if we have been reloaded
+//       (e.g., after a crash) while an update was being downloaded or installed (see resendUpdateState() in
+//       MainWindow.ts).
+
 trackCleanup(
   electronApi?.onUpdateDownloadProgress((percent: number) => {
     updateDownloadPercent.value = percent;
+    updateDownloadProgressVisible.value = true;
   })
 );
 
