@@ -607,12 +607,20 @@ const serialisedSettings = (settingsToSerialise: ISimulationExperimentInteractiv
 
 const oldSettings = vue.ref<string>(serialisedSettings(settings.value));
 
-// Information issue shown when an interactive simulation error occurs.
+// Add an information issue to some simulation issues, telling the user to check our settings.
+// Note: our settings cannot be accessed in simulation-only mode (since our toolbar is hidden), so there is no point in
+//       telling the user to check them.
 
 const informationIssue: locApi.IIssue = {
   type: locApi.EIssueType.INFORMATION,
   description:
     'Please check the settings (click on the <i class="pi pi-cog"></i> icon in the top-right corner) and try again.'
+};
+
+const addInformationIssue = (issues: locApi.IIssue[]): void => {
+  if (!props.simulationOnly) {
+    issues.push(informationIssue);
+  }
 };
 
 // Update (initialise) our UI from the current actualUiJson.
@@ -1368,7 +1376,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
   // Make sure that we haven't come across any issues so far.
 
   if (simulationIssues.value.length) {
-    simulationIssues.value.push(informationIssue);
+    addInformationIssue(simulationIssues.value);
 
     return;
   }
@@ -1505,7 +1513,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
   // Make sure that we haven't come across any issues so far.
 
   if (simulationIssues.value.length) {
-    simulationIssues.value.push(informationIssue);
+    addInformationIssue(simulationIssues.value);
 
     return;
   }
@@ -1711,7 +1719,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
   // Make sure that we haven't come across any issues so far.
 
   if (simulationIssues.value.length) {
-    simulationIssues.value.push(informationIssue);
+    addInformationIssue(simulationIssues.value);
 
     return;
   }
@@ -1758,9 +1766,10 @@ const updateSimulation = async (): Promise<void> => {
         {
           type: locApi.EIssueType.ERROR,
           description: `An unexpected error occurred while running the simulation (${common.formatMessage(common.formatError(error), false)}).`
-        },
-        informationIssue
+        }
       ];
+
+      addInformationIssue(simulationIssues.value);
     }
   } finally {
     if (currentSimulationGeneration === simulationGeneration && !inputSimulationUpdatePending) {
