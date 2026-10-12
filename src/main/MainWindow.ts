@@ -32,14 +32,26 @@ export const canCheckForUpdates = (): boolean => {
   return _canCheckForUpdates;
 };
 
+// Keep track of whether an update is being downloaded and installed.
+// Note: our renderer process may be reloaded while an update is being downloaded and installed (e.g., after it
+//       crashed), in which case it will check for updates at startup (if the user wants us to) and the user may also
+//       check for updates. We must not check for updates then since an issue with checking for updates could get
+//       forwarded as an issue with installing the update (see below) and the update could be offered (and downloaded)
+//       again.
+
+let updateInProgress = false;
+
 export const checkForUpdates = (atStartup: boolean): void => {
   // Check for updates, if we can and if requested (i.e. at startup, if the user wants us to, or by the user).
 
   if (canCheckForUpdates() && (!atStartup || electronConf.get('settings.general.checkForUpdatesAtStartup'))) {
-    // Note: any issue with checking for updates is reported through the promise returned by checkForUpdates(), so we
-    //       must make sure that it doesn't also get forwarded as an issue with installing an update (see below).
+    if (updateInProgress) {
+      if (!atStartup) {
+        MainWindow.instance?.send('update-check-error', 'an update is already being downloaded and installed');
+      }
 
-    updateDownloaded = false;
+      return;
+    }
 
     autoUpdater
       .checkForUpdates()
@@ -76,6 +88,7 @@ let updateDownloaded = false;
 autoUpdater.on('error', (error: Error) => {
   if (updateDownloaded) {
     updateDownloaded = false;
+    updateInProgress = false;
 
     MainWindow.instance?.send('update-install-error', formatError(error));
   }
@@ -83,6 +96,7 @@ autoUpdater.on('error', (error: Error) => {
 
 export const downloadAndInstallUpdate = (): void => {
   updateDownloaded = false;
+  updateInProgress = true;
 
   autoUpdater
     .downloadUpdate()
@@ -92,6 +106,8 @@ export const downloadAndInstallUpdate = (): void => {
       MainWindow.instance?.send('update-downloaded');
     })
     .catch((error: unknown) => {
+      updateInProgress = false;
+
       MainWindow.instance?.send('update-download-error', formatError(error));
     });
 };
