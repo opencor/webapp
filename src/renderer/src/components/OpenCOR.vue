@@ -839,10 +839,13 @@ const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePa
       issues.value.push({ type: locApi.EIssueType.ERROR, description: issueMessage });
     });
   } else {
+    // Note: a data URL can be very long, so we don't show it (the issue message says that it is a data URL anyway).
+
     addToast({
       severity: 'error',
       summary: 'Opening a file',
-      detail: `${filePath}\n\n${issueMessage}`,
+      detail:
+        filePath.startsWith('data:') || filePath.startsWith('#data:') ? issueMessage : `${filePath}\n\n${issueMessage}`,
       life: TOAST_LIFE
     });
   }
@@ -865,12 +868,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
   if (zipCellmlDataUriInfo.res) {
     if (zipCellmlDataUriInfo.error) {
-      addToast({
-        severity: 'error',
-        summary: 'Opening a file',
-        detail: zipCellmlDataUriInfo.error,
-        life: TOAST_LIFE
-      });
+      reportFileIssue(fileDescription(fileFilePathOrFileContents), zipCellmlDataUriInfo.error);
 
       return null;
     }
@@ -884,12 +882,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
     if (combineArchiveDataUriInfo.res) {
       if (combineArchiveDataUriInfo.error) {
-        addToast({
-          severity: 'error',
-          summary: 'Opening a file',
-          detail: combineArchiveDataUriInfo.error,
-          life: TOAST_LIFE
-        });
+        reportFileIssue(fileDescription(fileFilePathOrFileContents), combineArchiveDataUriInfo.error);
 
         return null;
       }
