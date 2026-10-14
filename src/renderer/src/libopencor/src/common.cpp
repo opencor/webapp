@@ -136,7 +136,12 @@ napi_value doublesToNapiFloat64Array(const Napi::Env &pEnv, std::span<const doub
     const size_t byteLength = pDoubles.size() * sizeof(double);
     auto buffer = Napi::ArrayBuffer::New(pEnv, byteLength);
 
-    std::memcpy(buffer.Data(), pDoubles.data(), byteLength);
+    // Note: an empty slice of values may have no data (and so may an empty buffer), and std::memcpy() requires valid
+    //       pointers, even when there is nothing to copy.
+
+    if (byteLength != 0) {
+        std::memcpy(buffer.Data(), pDoubles.data(), byteLength);
+    }
 
     return Napi::Float64Array::New(pEnv, pDoubles.size(), buffer, 0);
 }
