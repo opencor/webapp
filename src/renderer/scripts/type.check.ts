@@ -15,9 +15,16 @@ const projectRoot =
   currentFolder === 'scripts' && parentFolder === 'renderer'
     ? path.resolve(currentWorkingDir, '..')
     : currentWorkingDir;
-const origResolveFilename = Module._resolveFilename;
+// Note: Module._resolveFilename() is an internal (and therefore untyped) Node.js API.
 
-Module._resolveFilename = function (request: string, parent: Module, ...args: unknown[]) {
+interface IModuleWithResolveFilename {
+  _resolveFilename: (this: unknown, request: string, parent: Module, ...args: unknown[]) => string;
+}
+
+const moduleWithResolveFilename = Module as unknown as IModuleWithResolveFilename;
+const origResolveFilename = moduleWithResolveFilename._resolveFilename;
+
+moduleWithResolveFilename._resolveFilename = function (request: string, parent: Module, ...args: unknown[]) {
   if (request === 'typescript/lib/tsc') {
     return path.join(projectRoot, 'node_modules', 'typescript-6', 'lib', 'tsc.js');
   }

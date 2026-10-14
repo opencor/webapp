@@ -35,7 +35,7 @@
             <Splitter>
               <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
                 <ScrollPanel class="h-full">
-                  <SimulationPropertyEditor v-if="instanceTask" :uniformTimeCourse="uniformTimeCourse" :instanceTask="instanceTask" :disabled="simulationSettingsDisabled" />
+                  <SimulationPropertyEditor v-if="instanceTask && uniformTimeCourse" :uniformTimeCourse="uniformTimeCourse" :instanceTask="instanceTask" :disabled="simulationSettingsDisabled" />
                   <!-- <SolversPropertyEditor />
                   <GraphsPropertyEditor />
                   <ParametersPropertyEditor /> -->
