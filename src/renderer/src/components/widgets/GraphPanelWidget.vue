@@ -150,8 +150,6 @@ defineExpose({
   resize
 });
 
-const DOUBLE_CLICK_DELAY = 300;
-
 const instanceId = Symbol('GraphPanelWidget');
 const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const mainDivRef = vue.shallowRef<HTMLElement | null>(null);
@@ -169,8 +167,18 @@ let stopTrackingContainerSize: (() => void) | undefined;
 let marginsRafId: number | undefined;
 let queueResizeRafId: number | undefined;
 let resizeRafId: number | undefined;
-let lastLegendClickIndex: number | undefined;
-let lastLegendClickTime = 0;
+
+interface ILegendToggle {
+  curveNumber: number;
+  previousVisibility: PlotlyTraceVisible | undefined;
+}
+
+let pendingLegendToggle: ILegendToggle | undefined;
+let lastLegendToggle: ILegendToggle | undefined;
+// Note: pendingLegendToggle is the toggle requested by the latest legend click, which may still get cancelled by a
+//       double-click while lastLegendToggle is the latest toggle that was actually made. The latter tells us the
+//       visibility that its trace had before it, which we need if its click turns out to be the first click of a
+//       double-click (see plotly_legenddoubleclick).
 
 // Context menu functionality.
 
@@ -822,7 +830,6 @@ const updatePlot = (): void => {
       //       observes the size of our plot (using a ResizeObserver) and keeps a reference to it, hence we purge our
       //       plot when we get unmounted (see onBeforeUnmount()).
       displayModeBar: false,
-      doubleClickDelay: DOUBLE_CLICK_DELAY,
       scrollZoom: true,
       showTips: false
     })
@@ -905,6 +912,11 @@ vue.onMounted(() => {
 
     // Intercept legend single-click to toggle trace visibility immediately, bypassing Plotly's setTimeout()-based
     // handler.
+    // Note: Plotly emits plotly_legendclick for both clicks of a double-click and then plotly_legenddoubleclick
+    //       straight after the second one (within the same call). So, rather than toggle the trace straight away, we do
+    //       it in a microtask, which gets cancelled if the click turns out to be the second click of a double-click
+    //       (see plotly_legenddoubleclick). This way, we rely on Plotly to tell a click from a double-click while still
+    //       toggling the trace without any noticeable delay.
 
     plotlyElement.on('plotly_legendclick', (...args: unknown[]) => {
       const eventData = args[0] as { curveNumber?: number } | undefined;
@@ -912,17 +924,6 @@ vue.onMounted(() => {
 
       if (curveNumber === undefined) {
         return;
-      }
-
-      const now = Date.now();
-
-      // If this is a rapid second click on the same trace, a double-click is in progress, so skip toggling and let
-      // plotly_legenddoubleclick() handle isolation.
-
-      if (curveNumber === lastLegendClickIndex && now - lastLegendClickTime < DOUBLE_CLICK_DELAY) {
-        lastLegendClickIndex = undefined;
-
-        return false;
       }
 
       // Toggle the trace visibility immediately.
@@ -933,13 +934,28 @@ vue.onMounted(() => {
         return false;
       }
 
-      const currentVisibility = plotlyData[curveNumber]?.visible;
-      const newVisibility = currentVisibility === 'legendonly' ? true : 'legendonly';
+      const legendToggle: ILegendToggle = {
+        curveNumber,
+        previousVisibility: plotlyData[curveNumber]?.visible
+      };
 
-      dependencies._plotlyJs.restyle(mainDivRef.value, 'visible', newVisibility, [curveNumber]);
+      pendingLegendToggle = legendToggle;
 
-      lastLegendClickIndex = curveNumber;
-      lastLegendClickTime = now;
+      queueMicrotask(() => {
+        if (pendingLegendToggle !== legendToggle || isUnmounted) {
+          return;
+        }
+
+        pendingLegendToggle = undefined;
+        lastLegendToggle = legendToggle;
+
+        dependencies._plotlyJs.restyle(
+          mainDivRef.value,
+          'visible',
+          legendToggle.previousVisibility === 'legendonly' ? true : 'legendonly',
+          [curveNumber]
+        );
+      });
 
       // Return false to cancel Plotly's own setTimeout()-based handler.
 
@@ -953,11 +969,21 @@ vue.onMounted(() => {
       const eventData = args[0] as { curveNumber?: number } | undefined;
       const curveNumber = eventData?.curveNumber;
 
+      // Cancel the toggle requested by the second click of this double-click (see plotly_legendclick).
+
+      pendingLegendToggle = undefined;
+
       if (curveNumber === undefined) {
         return false;
       }
 
-      lastLegendClickIndex = undefined;
+      // Note: the first click of this double-click has already toggled the visibility of the clicked trace (see
+      //       plotly_legendclick), so we use the visibility that it had before that click. Otherwise, double-clicking
+      //       the only visible trace would isolate it again rather than show all the traces again.
+
+      const firstClickToggle = lastLegendToggle?.curveNumber === curveNumber ? lastLegendToggle : undefined;
+
+      lastLegendToggle = undefined;
 
       const plotlyData = plotlyTraceData();
 
@@ -965,12 +991,15 @@ vue.onMounted(() => {
         return false;
       }
 
-      // Collect the indices of visible (not 'legendonly') traces.
+      // Collect the indices of visible (not 'legendonly') traces, as they were before this double-click.
 
       const visibleIndices: number[] = [];
 
       for (let i = 0; i < plotlyData.length; ++i) {
-        if (plotlyData[i] && plotlyData[i].visible !== 'legendonly' && plotlyData[i].visible !== false) {
+        const visibility =
+          i === curveNumber && firstClickToggle ? firstClickToggle.previousVisibility : plotlyData[i]?.visible;
+
+        if (plotlyData[i] && visibility !== 'legendonly' && visibility !== false) {
           visibleIndices.push(i);
         }
       }
