@@ -8,9 +8,9 @@ import * as postcss from 'postcss';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
-import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js';
-import { libopencorVersion, opencorVersion } from './scripts/libopencor.version';
-import { stripPrimeIconsFontFacePlugin } from './scripts/primeicons.plugin';
+import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js.ts';
+import { libopencorVersion, opencorVersion } from './scripts/libopencor.version.ts';
+import { stripPrimeIconsFontFacePlugin } from './scripts/primeicons.plugin.ts';
 
 await downloadLibopencorJsIfNeeded(
   path.join(import.meta.dirname, 'public', 'libopencor', 'downloads', 'wasm', libopencorVersion)

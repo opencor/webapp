@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { libopencorVersion } from './libopencor.version';
+import { libopencorVersion } from './libopencor.version.ts';
 
 export const downloadLibopencorJsIfNeeded = async (destDir: string): Promise<void> => {
   // Remove any other version of libopencor.js that we may have downloaded in the past, so that it doesn't end up being

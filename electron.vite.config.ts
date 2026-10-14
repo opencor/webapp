@@ -9,8 +9,8 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import vitePlugin from 'unplugin-vue-components/vite';
 
-import { libopencorVersion, opencorVersion } from './src/renderer/scripts/libopencor.version';
-import { stripPrimeIconsFontFacePlugin } from './src/renderer/scripts/primeicons.plugin';
+import { libopencorVersion, opencorVersion } from './src/renderer/scripts/libopencor.version.ts';
+import { stripPrimeIconsFontFacePlugin } from './src/renderer/scripts/primeicons.plugin.ts';
 
 export default electronVite.defineConfig({
   main: {
