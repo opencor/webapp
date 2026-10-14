@@ -86,30 +86,56 @@ vue.watch(
 // holding an arrow key), so that we can let our owner know when a change is final, i.e. when it is not made during an
 // interaction (e.g., selecting a value, entering a value, or clicking on our slider bar) or when the interaction during
 // which it was made has ended (see emitChange()).
-// Note: an interaction may end outside of us (e.g., our slider being released outside of us or the Enter key moving the
-//       focus away from our input), hence we listen to the window for the end of an interaction.
+// Note #1: an interaction may end outside of us (e.g., our slider being released outside of us or the Enter key moving
+//          the focus away from our input), hence we listen to the window for the end of an interaction.
+// Note #2: an interaction started using a pointer only ends when that pointer is released (or cancelled, e.g., when the
+//          browser takes over a touch gesture), so that, for instance, releasing a modifier key while dragging our
+//          slider doesn't end it. An interaction started using the keyboard ends when any key is released since a key
+//          may not get reported as released. Either way, an interaction ends when the window loses the focus.
 
 let interacting = false;
+let interactionPointerId: number | null = null;
 let changedWhileInteracting = false;
 
-const onInteractionStart = (): void => {
+const removeInteractionListeners = (): void => {
+  window.removeEventListener('pointerup', onPointerInteractionEnd);
+  window.removeEventListener('pointercancel', onPointerInteractionEnd);
+  window.removeEventListener('keyup', onInteractionEnd);
+  window.removeEventListener('blur', onInteractionEnd);
+};
+
+const onInteractionStart = (event: PointerEvent | KeyboardEvent): void => {
   if (interacting) {
     return;
   }
 
   interacting = true;
 
-  window.addEventListener('pointerup', onInteractionEnd);
-  window.addEventListener('keyup', onInteractionEnd);
+  if (event instanceof PointerEvent) {
+    interactionPointerId = event.pointerId;
+
+    window.addEventListener('pointerup', onPointerInteractionEnd);
+    window.addEventListener('pointercancel', onPointerInteractionEnd);
+  } else {
+    interactionPointerId = null;
+
+    window.addEventListener('keyup', onInteractionEnd);
+  }
+
   window.addEventListener('blur', onInteractionEnd);
 };
 
+const onPointerInteractionEnd = (event: PointerEvent): void => {
+  if (event.pointerId === interactionPointerId) {
+    onInteractionEnd();
+  }
+};
+
 const onInteractionEnd = (): void => {
-  window.removeEventListener('pointerup', onInteractionEnd);
-  window.removeEventListener('keyup', onInteractionEnd);
-  window.removeEventListener('blur', onInteractionEnd);
+  removeInteractionListeners();
 
   interacting = false;
+  interactionPointerId = null;
 
   if (changedWhileInteracting) {
     changedWhileInteracting = false;
@@ -124,9 +150,7 @@ const onInteractionEnd = (): void => {
 };
 
 vue.onBeforeUnmount(() => {
-  window.removeEventListener('pointerup', onInteractionEnd);
-  window.removeEventListener('keyup', onInteractionEnd);
-  window.removeEventListener('blur', onInteractionEnd);
+  removeInteractionListeners();
 });
 
 // Some methods to handle a scalar value using an input component and a slider.
