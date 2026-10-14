@@ -345,8 +345,11 @@ const nonNumericValuesIssues = (uiJson: IUiJson): IIssue[] => {
 };
 
 // A helper function to deep clone a UI JSON (or some settings containing a UI JSON).
-// Note: Float64Arrays (i.e. external data values) are shared rather than copied since they are never modified in place
-//       (they are only ever replaced), which avoids copying potentially large external data.
+// Note #1: Float64Arrays (i.e. external data values) are shared rather than copied since they are never modified in
+//          place (they are only ever replaced), which avoids copying potentially large external data.
+// Note #2: we use Object.fromEntries() rather than assign each key since a UI JSON may contain a "__proto__" key, which
+//          would otherwise set the prototype of our copy rather than be copied (and the contents of that key would then
+//          look like properties of our copy), see also cleanUiJson().
 
 export const cloneUiJson = <T>(value: T): T => {
   if (value instanceof Float64Array) {
@@ -358,13 +361,11 @@ export const cloneUiJson = <T>(value: T): T => {
   }
 
   if (value && typeof value === 'object') {
-    const res: Record<string, unknown> = {};
-
-    for (const [key, keyValue] of Object.entries(value)) {
-      res[key] = cloneUiJson(keyValue);
-    }
-
-    return res as T;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, keyValue]) => {
+        return [key, cloneUiJson(keyValue)];
+      })
+    ) as T;
   }
 
   return value;
@@ -393,18 +394,18 @@ export const cleanUiJson = (uiJson: IUiJson): IUiJson => {
       });
     }
 
+    // Note: we use Object.fromEntries() for the same reason as in cloneUiJson().
+
     if (typeof value === 'object') {
-      const object: Record<string, unknown> = {};
-
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        const cleaned = cleanUiJsonRec(v);
-
-        if (cleaned !== undefined) {
-          object[k] = cleaned as unknown;
-        }
-      }
-
-      return object;
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+          .map(([k, v]) => {
+            return [k, cleanUiJsonRec(v)];
+          })
+          .filter(([, cleaned]) => {
+            return cleaned !== undefined;
+          })
+      );
     }
 
     return value;
