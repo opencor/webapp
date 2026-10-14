@@ -15,6 +15,14 @@ const projectRoot =
   currentFolder === 'scripts' && parentFolder === 'renderer'
     ? path.resolve(currentWorkingDir, '..')
     : currentWorkingDir;
+
+// The `tsc` that `vue-tsc` is to use and patch, i.e. the one from TypeScript 6.
+// Note: we use its real path since it is the path that Bun gives to our Bun plugin (see below), whatever the layout of
+//       our node_modules folder (e.g., `typescript-6` may be a symbolic link to a package store, as is the case with
+//       Bun's isolated installs).
+
+const tscPath = fs.realpathSync(path.join(projectRoot, 'node_modules', 'typescript-6', 'lib', 'tsc.js'));
+
 // Note: Module._resolveFilename() is an internal (and therefore untyped) Node.js API.
 
 interface IModuleWithResolveFilename {
@@ -26,7 +34,7 @@ const origResolveFilename = moduleWithResolveFilename._resolveFilename;
 
 moduleWithResolveFilename._resolveFilename = function (request: string, parent: Module, ...args: unknown[]) {
   if (request === 'typescript/lib/tsc') {
-    return path.join(projectRoot, 'node_modules', 'typescript-6', 'lib', 'tsc.js');
+    return tscPath;
   }
 
   return origResolveFilename.call(this, request, parent, ...args);
@@ -41,6 +49,9 @@ moduleWithResolveFilename._resolveFilename = function (request: string, parent: 
 //          it gets patched by `vue-tsc`.
 // Note #2: Bun considers the code returned by a plugin with the `js` loader to be an ES module, but `tsc` is a CommonJS
 //          module, so we run its code ourselves (as Node.js would) and return its exports using the `object` loader.
+// Note #3: our Bun plugin only handles `tsc`, i.e. the file at tscPath (whatever path separator Bun uses). If it ended up
+//          not being used (e.g., if `vue-tsc` loaded `tsc` differently), then our type checking would silently succeed
+//          without having checked any Vue file, so we make it fail instead.
 
 interface IBunPluginBuilder {
   onLoad(
@@ -56,10 +67,28 @@ interface IBun {
 const bun = (globalThis as { Bun?: IBun }).Bun;
 
 if (bun) {
+  const escapedTscPathSegments = tscPath
+    .split(/[\\/]/)
+    .map((segment) => segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const tscPathFilter = new RegExp(`^${escapedTscPathSegments.join('[\\\\/]')}$`);
+  let tscLoaded = false;
+
+  process.on('exit', (code) => {
+    if (code === 0 && !tscLoaded) {
+      tscLoaded = true;
+
+      console.error(`OpenCOR: \`tsc\` (${tscPath}) was not patched by \`vue-tsc\`, so no Vue file was type checked.`);
+
+      process.exit(1);
+    }
+  });
+
   bun.plugin({
     name: 'vue-tsc',
     setup(build) {
-      build.onLoad({ filter: /[\\/]typescript-6[\\/]lib[\\/]tsc\.js$/ }, (args) => {
+      build.onLoad({ filter: tscPathFilter }, (args) => {
+        tscLoaded = true;
+
         const code = fs.readFileSync(args.path, 'utf8');
         const module = { exports: {} };
 
