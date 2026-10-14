@@ -819,8 +819,8 @@ const updatePlot = (): void => {
       responsive: true,
       // Note: to make our plot responsive means that Plotly sizes it relative to its container (rather than using a
       //       fixed size), which is needed for our plot to shrink when our container does. It also means that Plotly
-      //       adds a window resize listener that keeps a reference to our plot, hence we purge our plot when we get
-      //       unmounted (see onBeforeUnmount()).
+      //       observes the size of our plot (using a ResizeObserver) and keeps a reference to it, hence we purge our
+      //       plot when we get unmounted (see onBeforeUnmount()).
       displayModeBar: false,
       doubleClickDelay: DOUBLE_CLICK_DELAY,
       scrollZoom: true,
