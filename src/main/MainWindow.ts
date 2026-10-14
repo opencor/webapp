@@ -162,7 +162,11 @@ export const resetAll = (): void => {
   deleteGitHubAccessToken();
 */
 
-  electron.app.relaunch();
+  // Note: when running as an AppImage, process.execPath (which Electron relaunches by default) is within the AppImage's
+  //       temporary mount point, which disappears once OpenCOR exits, so we relaunch the AppImage itself instead (see
+  //       the creation of our desktop file in index.ts).
+
+  electron.app.relaunch(process.env.APPIMAGE ? { execPath: process.env.APPIMAGE } : undefined);
   electron.app.quit();
 };
 
