@@ -23,7 +23,7 @@ export default vite.defineConfig({
   base: './',
   build: {
     chunkSizeWarningLimit: 2048,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         // Note: our file names include a hash of their contents, so that they can be cached for a long time (since a
         //       new version of a file will have a different name). Only index.html and assets/version.json have a fixed

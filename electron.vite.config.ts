@@ -15,7 +15,7 @@ import { stripPrimeIconsFontFacePlugin } from './src/renderer/scripts/primeicons
 export default electronVite.defineConfig({
   main: {
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         output: {
           format: 'cjs'
         }

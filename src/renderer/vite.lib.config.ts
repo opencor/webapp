@@ -24,7 +24,7 @@ export default vite.defineConfig({
       formats: ['es'],
       name: 'OpenCOR'
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: ['vue'],
       output: {
         exports: 'named',
