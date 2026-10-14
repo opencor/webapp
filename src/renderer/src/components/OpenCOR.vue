@@ -877,6 +877,14 @@ const fileDescription = (fileFilePathOrFileContents: string | Uint8Array | File)
 // A helper function to report an issue with a file that couldn't be opened.
 
 const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePath: string = ''): void => {
+  // Let our main process know about the issue first since it may be waiting for the file (e.g., if the file is being
+  // reopened at startup, see MainWindow.fileOpenedOrNot()), so that it doesn't wait forever should reporting the issue
+  // to the user fail.
+  // Note: the canonical path of the file may not be known (e.g., if libOpenCOR couldn't determine it), in which case we
+  //       use the path that was used to (try to) open the file.
+
+  electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
+
   if (props.omex) {
     vue.nextTick(() => {
       issues.value.push({ type: locApi.EIssueType.ERROR, description: issueMessage });
@@ -892,11 +900,6 @@ const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePa
       life: TOAST_LIFE
     });
   }
-
-  // Note: the canonical path of the file may not be known (e.g., if libOpenCOR couldn't determine it), in which case we
-  //       use the path that was used to (try to) open the file.
-
-  electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
 
   emit('file', { type: 'issue', filePath, issues: [issueMessage] });
 };
@@ -989,6 +992,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
   }
 
   let file: locApi.File | null = null;
+  let fileToBeOpened = false;
 
   try {
     file = await locCommon.file(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
@@ -1011,10 +1015,10 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
       file.release();
 
-      fileNoLongerBeingOpened(canonicalFilePath);
-
       return null;
     }
+
+    fileToBeOpened = true;
 
     return {
       alreadyOpen: false,
@@ -1023,18 +1027,26 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
       canonicalFilePath
     };
   } catch (error: unknown) {
-    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
-
-    fileNoLongerBeingOpened(canonicalFilePath);
-
     try {
       file?.release();
     } catch (error: unknown) {
       console.warn(`OpenCOR: failed to release file (${filePath}):`, common.formatError(error));
     }
 
+    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
+
     return null;
   } finally {
+    // The file is no longer being opened, unless it is to be opened, in which case openFileInContents() will take care
+    // of it.
+    // Note: we do this here so that it gets done whatever happens (e.g., if reporting an issue fails). Otherwise, the
+    //       file would be considered as being opened forever, i.e. it could never be opened again, and our main process
+    //       might wait for it forever (see fileAlreadyOpen()).
+
+    if (!fileToBeOpened) {
+      fileNoLongerBeingOpened(canonicalFilePath);
+    }
+
     if (isRemoteFilePath) {
       --remoteModelLoadsCount.value;
 
