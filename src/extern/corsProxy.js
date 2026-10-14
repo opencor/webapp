@@ -19,7 +19,8 @@ const CONTENT_HEADERS = {
 
 const SNIFF_SIZE = 64 * 1024; // 64 KB.
 const MAX_SIZE = 32 * 1024 * 1024; // 32 MB.
-// Note: an OMEX file needs to be fully read (see forwardRequest()), so MAX_SIZE must be small enough for at least two
+// Note: an OMEX file needs to be fully read (see forwardRequest()), which means holding two copies of it (i.e. the
+//       chunks we read and their concatenation, see readChunks()), so MAX_SIZE must be small enough for at least two
 //       copies of it to fit in the memory available to a Cloudflare Worker (i.e. 128 MB).
 
 const ZIP_LOCAL_FILE_HEADER_SIGNATURE = 0x04034b50;
@@ -51,11 +52,14 @@ const concatenate = (chunks, length) => {
   return bytes;
 };
 
-const readBytes = async (reader, maxSize) => {
-  // Read up to (roughly) the given number of bytes and let the caller know whether the end of the stream was reached.
+const readChunks = async (reader, maxSize, initialChunks = []) => {
+  // Read chunks until (roughly) the given number of bytes, including those of the given initial chunks, has been
+  // reached and let the caller know whether the end of the stream was reached.
+  // Note: we don't concatenate the chunks, so that the caller can decide whether (and when) to do it, i.e. without
+  //       having to hold more than two copies of the data at any given time (see MAX_SIZE).
 
-  const chunks = [];
-  let length = 0;
+  const chunks = [...initialChunks];
+  let length = chunks.reduce((total, chunk) => total + chunk.length, 0);
   let done = false;
 
   while (length < maxSize) {
@@ -71,6 +75,14 @@ const readBytes = async (reader, maxSize) => {
 
     length += result.value.length;
   }
+
+  return { chunks, length, done };
+};
+
+const readBytes = async (reader, maxSize) => {
+  // Read up to (roughly) the given number of bytes and let the caller know whether the end of the stream was reached.
+
+  const { chunks, length, done } = await readChunks(reader, maxSize);
 
   return { bytes: concatenate(chunks, length), done };
 };
@@ -417,17 +429,19 @@ const forwardRequest = async (targetUrl, request) => {
   let bytes = head;
 
   if (!done) {
-    // Note: we read (up to) one more byte than allowed, so that we know whether the OMEX file is too large.
+    // Note: we read (up to) one more byte than allowed, so that we know whether the OMEX file is too large, in which
+    //       case we reject it without concatenating its chunks. Otherwise, we concatenate the start of the OMEX file
+    //       and the rest of it in one go.
 
-    const rest = await readBytes(reader, MAX_SIZE - head.length + 1);
+    const all = await readChunks(reader, MAX_SIZE + 1, [head]);
 
-    if (head.length + rest.bytes.length > MAX_SIZE) {
+    if (all.length > MAX_SIZE) {
       await reader.cancel();
 
       return rejectedResponse('too large');
     }
 
-    bytes = concatenate([head, rest.bytes], head.length + rest.bytes.length);
+    bytes = concatenate(all.chunks, all.length);
   }
 
   if (!isOmexFile(bytes)) {
