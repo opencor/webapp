@@ -2114,14 +2114,13 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
 
   updateSimulation();
 
-  if (simulationIssues.value.length) {
-    return;
-  }
-
   // Reset the margins of our various plots.
-  // Note: this is needed when the number of plots changes or simulation couldn't originally be run and now it can be
-  //       run with the new settings. Without this, the plots will start with incorrect margins before they get updated
-  //       which results in some flashing.
+  // Note #1: this is needed when the number of plots changes or when a simulation couldn't originally be run and now it
+  //          can be run with the new settings. Without this, the plots will start with incorrect margins before they
+  //          get updated which results in some flashing.
+  // Note #2: we reset them even if the simulation has some issues since those issues may get resolved without our
+  //          settings being changed (e.g., by changing an input), in which case our plots would otherwise be shown with
+  //          the margins from before our settings were changed (see onMarginsUpdated()).
 
   onResetMargins();
 };
