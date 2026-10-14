@@ -16,16 +16,11 @@ std::map<size_t, libOpenCOR::SedInstancePtr> &sedInstances = *new std::map<size_
 // Release all our SED-ML instances, SED-ML documents, and files.
 // Note: this is called when our Node.js environment gets torn down (e.g., when the renderer process exits or gets
 //       reloaded), i.e. while libOpenCOR's own static objects still exist (see the note about our global maps above).
-//       We release our SED-ML instances first (stopping any run since libOpenCOR waits for a run to finish before
-//       deleting an instance), then our SED-ML documents and finally our files, i.e. in the reverse order of their
-//       dependencies.
+//       We release our SED-ML instances first (libOpenCOR stops any run, and waits for it to finish, before deleting an
+//       instance), then our SED-ML documents and finally our files, i.e. in the reverse order of their dependencies.
 
 void releaseAll()
 {
-    for (auto &[id, sedInstance] : sedInstances) {
-        sedInstance->stopRun();
-    }
-
     sedInstances.clear();
     sedDocuments.clear();
     files.clear();
