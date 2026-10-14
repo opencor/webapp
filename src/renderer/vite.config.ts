@@ -12,7 +12,7 @@ import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
 import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js';
-import { libopencorVersion } from './scripts/libopencor.version';
+import { libopencorVersion, opencorVersion } from './scripts/libopencor.version';
 import { stripPrimeIconsFontFacePlugin } from './scripts/primeicons.plugin';
 
 await downloadLibopencorJsIfNeeded(
@@ -39,7 +39,8 @@ export default vite.defineConfig({
   },
   publicDir: path.join(import.meta.dirname, 'public'),
   define: {
-    __LIBOPENCOR_WASM_VERSION__: JSON.stringify(libopencorVersion)
+    __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
+    __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.

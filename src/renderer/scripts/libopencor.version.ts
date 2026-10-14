@@ -3,6 +3,7 @@ import * as path from 'node:path';
 
 type RendererPackageJson = {
   libopencorVersion: string;
+  version: string;
 };
 
 const resolvedPaths = [
@@ -20,3 +21,4 @@ if (rendererPackageJsonPath === undefined) {
 const rendererPackageJson = JSON.parse(fs.readFileSync(rendererPackageJsonPath, 'utf8')) as RendererPackageJson;
 
 export const libopencorVersion = rendererPackageJson.libopencorVersion;
+export const opencorVersion = rendererPackageJson.version;

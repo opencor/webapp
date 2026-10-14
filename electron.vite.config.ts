@@ -9,7 +9,7 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import vitePlugin from 'unplugin-vue-components/vite';
 
-import { libopencorVersion } from './src/renderer/scripts/libopencor.version';
+import { libopencorVersion, opencorVersion } from './src/renderer/scripts/libopencor.version';
 import { stripPrimeIconsFontFacePlugin } from './src/renderer/scripts/primeicons.plugin';
 
 export default electronVite.defineConfig({
@@ -31,7 +31,8 @@ export default electronVite.defineConfig({
       target: 'esnext'
     },
     define: {
-      __LIBOPENCOR_WASM_VERSION__: JSON.stringify(libopencorVersion)
+      __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
+      __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
     },
     envDir: path.join(import.meta.dirname, 'src/renderer'),
     plugins: [

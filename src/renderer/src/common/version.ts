@@ -1,8 +1,11 @@
 import * as vue from 'vue';
 
-import packageJson from '../../package.json' with { type: 'json' };
+// Our current version.
+// Note: it is injected at build time (see vite.config.ts, vite.lib.config.ts, and electron.vite.config.ts) rather than
+//       imported from our package.json file since the whole of our package.json file would otherwise end up in our
+//       bundle.
 
-const { version: currentVersion } = packageJson;
+const currentVersion = __OPENCOR_VERSION__;
 
 // State to track whether an update is available and the latest version.
 

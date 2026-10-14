@@ -54,7 +54,7 @@ const totalNbOfSteps =
 
 // The base URL for libOpenCOR's files.
 
-const libOpenCORWasmBaseUrl = `https://opencor.ws/libopencor/downloads/wasm/${__LIBOPENCOR_WASM_VERSION__}`;
+const libOpenCORWasmBaseUrl = `https://opencor.ws/libopencor/downloads/wasm/${__LIBOPENCOR_VERSION__}`;
 
 // A helper function to retry an asynchronous operation (e.g., importing an external dependency from a CDN) a few times,
 // with an increasing delay, before giving up. This way, a transient network issue doesn't prevent OpenCOR from being
@@ -192,7 +192,7 @@ const importLibOpenCORGlue = async (): Promise<WasmFactory> => {
   // Note: document.baseURI is used rather than window.location.href, since the former doesn't change with client-side
   //       routing.
 
-  const url = new URL(`libopencor/downloads/wasm/${__LIBOPENCOR_WASM_VERSION__}`, document.baseURI).href;
+  const url = new URL(`libopencor/downloads/wasm/${__LIBOPENCOR_VERSION__}`, document.baseURI).href;
 
   // Check whether the glue is served from this URL, retrying if we cannot tell (e.g., because of a network error or a
   // temporary server error).
