@@ -670,11 +670,14 @@ export class MainWindow extends ApplicationWindow {
   //       files that were open, the latter allowing them to break such a cycle.
 
   onRenderProcessGone(details: electron.RenderProcessGoneDetails): void {
-    // Ignore our renderer exiting cleanly because we are being closed (e.g., because OpenCOR is being quit).
+    // Ignore our renderer being gone if we are being closed (e.g., because OpenCOR is being quit), whatever the reason.
+    // Indeed, our renderer will normally exit cleanly in that case, but it may also be killed (e.g., when logging off or
+    // shutting down the system) or crash while being torn down. Either way, there is nothing to recover since we are
+    // going away, so we must not offer to reload OpenCOR.
     // Note: our renderer may also exit cleanly on its own (e.g., if the native libOpenCOR module calls exit(0)), in
     //       which case it is gone just as if it had crashed, so we handle it as such.
 
-    if (details.reason === 'clean-exit' && (this._closing || this.isDestroyed() || this.webContents.isDestroyed())) {
+    if (this._closing || this.isDestroyed() || this.webContents.isDestroyed()) {
       return;
     }
 
