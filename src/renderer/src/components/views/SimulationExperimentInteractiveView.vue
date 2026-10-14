@@ -25,7 +25,6 @@
               icon="pi pi-cog"
               text severity="secondary"
               title="Settings"
-              :disabled="isSimulating"
               @click="settingsVisible = true"
             />
           </div>
@@ -422,9 +421,8 @@ const uiJsonEmpty = vue.computed<boolean>(() => {
 
 const isSimulating = vue.ref<boolean>(false);
 // Note: whether a simulation is running, including in between the simulation runs of an input simulation update (see
-//       updateSimulation()). It is used, among other things, to prevent our settings from being changed while a
-//       simulation is running since that simulation run would otherwise complete (and report its results) using our new
-//       settings.
+//       updateSimulation()). It is used, among other things, to prevent the current run from being tracked while a
+//       simulation is running (see onTrackRun()).
 const liveData = vue.ref<IGraphPanelData[]>([]);
 let margins: Record<string, IGraphPanelMargins> = {};
 const compMargins = vue.ref<IGraphPanelMargins>();
@@ -1736,8 +1734,8 @@ const updateSimulation = async (): Promise<void> => {
   // UI JSON.
   // Note: we may have been called to continue an input simulation update (see startInputSimulationUpdate()), in which
   //       case we are still considered to be simulating (see below), so we make sure that we are not anymore. This is
-  //       safe since no simulation can be running if we have no model or instance, or if our UI JSON has issues (our
-  //       settings cannot be changed while a simulation is running).
+  //       safe since no simulation can be running if we have no model or instance, or if our UI JSON has issues (any
+  //       simulation run gets cancelled when our settings are changed, see onSettingsOk()).
 
   if (!model || !instance || uiJsonIssues.value.length) {
     isSimulating.value = false;
@@ -1775,6 +1773,21 @@ const updateSimulation = async (): Promise<void> => {
     if (currentSimulationGeneration === simulationGeneration && !inputSimulationUpdatePending) {
       isSimulating.value = false;
     }
+  }
+};
+
+// Cancel any simulation run that is in progress, as well as any pending input simulation update.
+// Note: the cancelled simulation run will see that it has been superseded (see runSimulation()), so it won't report its
+//       results nor say that we are no longer simulating (see updateSimulation()), hence we do the latter here.
+
+const cancelSimulation = (): void => {
+  ++simulationGeneration;
+
+  inputSimulationUpdatePending = false;
+  isSimulating.value = false;
+
+  if (instance && instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+    instance.stopRun();
   }
 };
 
@@ -2049,6 +2062,11 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
 
     return;
   }
+
+  // Cancel any simulation run that is in progress since its results would be stale (and would otherwise be reported
+  // using our new settings).
+
+  cancelSimulation();
 
   // Clear all our tracked runs.
 
