@@ -38,12 +38,15 @@ let mutationObserver: MutationObserver | null = null;
 let shown = false;
 
 const checkDialogPosition = () => {
+  // Make sure that our dialog remains within the requested element, if any, or within our mask (i.e., within the whole
+  // of OpenCOR) if no element is requested.
+
   if (dialogElement instanceof HTMLElement && containerElement instanceof HTMLElement) {
     const dialogRect = dialogElement.getBoundingClientRect();
-    const containerRect = containerElement.getBoundingClientRect();
+    const boundsRect = (props.centreOn ?? containerElement).getBoundingClientRect();
 
-    dialogElement.style.top = `${Math.max(Math.min(dialogRect.top, containerRect.bottom - dialogRect.height), containerRect.top)}px`;
-    dialogElement.style.left = `${Math.max(Math.min(dialogRect.left, containerRect.right - dialogRect.width), containerRect.left)}px`;
+    dialogElement.style.top = `${Math.max(Math.min(dialogRect.top, boundsRect.bottom - dialogRect.height), boundsRect.top)}px`;
+    dialogElement.style.left = `${Math.max(Math.min(dialogRect.left, boundsRect.right - dialogRect.width), boundsRect.left)}px`;
   }
 };
 
