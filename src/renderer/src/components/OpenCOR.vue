@@ -583,11 +583,54 @@ if (firebaseConfig) {
 loadGitHubAccessToken();
 */
 
+// Handle an external request, i.e. a request that comes from outside of our UI (e.g., a file opened from the file
+// explorer, from another instance of OpenCOR, or through an opencor:// link).
+// Note: a dialog is modal, so an external request must wait for all our dialogs to be closed. Otherwise, a file could,
+//       for instance, get opened (and selected) while a dialog is open in the current file tab, hiding that dialog and
+//       leaving our UI disabled. So, we queue our external requests and handle them, in order, once no dialog is open.
+//       Also, an external request may open a dialog (e.g., opencor://openAboutDialog), so we wait for our UI to be
+//       updated after handling an external request to know whether we can handle the next one.
+
+const pendingExternalRequests: (() => void)[] = [];
+let handlingPendingExternalRequests = false;
+
+const handlePendingExternalRequests = async (): Promise<void> => {
+  if (handlingPendingExternalRequests) {
+    return;
+  }
+
+  handlingPendingExternalRequests = true;
+
+  try {
+    while (pendingExternalRequests.length && !isDialogActive.value) {
+      pendingExternalRequests.shift()?.();
+
+      await vue.nextTick();
+    }
+  } finally {
+    handlingPendingExternalRequests = false;
+  }
+};
+
+const handleExternalRequest = (externalRequest: () => void): void => {
+  pendingExternalRequests.push(externalRequest);
+
+  void handlePendingExternalRequests();
+};
+
+vue.watch(isDialogActive, (newIsDialogActive: boolean) => {
+  if (!newIsDialogActive) {
+    void handlePendingExternalRequests();
+  }
+});
+
 // Handle an action.
 
 trackCleanup(
   electronApi?.onAction((action: string) => {
-    handleAction(action);
+    handleExternalRequest(() => {
+      handleAction(action);
+    });
   })
 );
 
@@ -1183,7 +1226,9 @@ const onDragLeave = (): void => {
 
 trackCleanup(
   electronApi?.onOpen((filePath: string) => {
-    openFile(filePath);
+    handleExternalRequest(() => {
+      openFile(filePath);
+    });
   })
 );
 
