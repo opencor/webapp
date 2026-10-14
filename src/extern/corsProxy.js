@@ -250,8 +250,28 @@ const xmlRootElement = (text) => {
   return { name, namespace: null };
 };
 
+const xmlEncoding = (bytes) => {
+  // Return the encoding of the given XML bytes, as detected from their first bytes (see Appendix F of the XML
+  // specification, https://www.w3.org/TR/xml/#sec-guessing), i.e. using a byte order mark or, failing that, the way the
+  // start of an XML declaration ("<?") is encoded. We default to UTF-8 (whose byte order mark, if any, gets skipped by
+  // TextDecoder).
+  // Note: TextDecoder also skips a UTF-16 byte order mark, as long as it matches the given encoding.
+
+  const [byte0, byte1, byte2, byte3] = bytes;
+
+  if ((byte0 === 0xfe && byte1 === 0xff) || (byte0 === 0x00 && byte1 === 0x3c && byte2 === 0x00 && byte3 === 0x3f)) {
+    return 'utf-16be';
+  }
+
+  if ((byte0 === 0xff && byte1 === 0xfe) || (byte0 === 0x3c && byte1 === 0x00 && byte2 === 0x3f && byte3 === 0x00)) {
+    return 'utf-16le';
+  }
+
+  return 'utf-8';
+};
+
 const isCellmlOrSedmlFile = (bytes) => {
-  const rootElement = xmlRootElement(new TextDecoder().decode(bytes));
+  const rootElement = xmlRootElement(new TextDecoder(xmlEncoding(bytes)).decode(bytes));
 
   if (!rootElement?.namespace) {
     return false;
