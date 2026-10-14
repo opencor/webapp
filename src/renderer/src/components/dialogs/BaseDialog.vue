@@ -31,6 +31,7 @@ const { incrementDialogs, decrementDialogs } = useDialogState();
 let dialogElement: HTMLElement | null = null;
 let containerElement: HTMLElement | null | undefined = null;
 let mutationObserver: MutationObserver | null = null;
+let shown = false;
 
 const checkDialogPosition = () => {
   if (dialogElement instanceof HTMLElement && containerElement instanceof HTMLElement) {
@@ -42,10 +43,24 @@ const checkDialogPosition = () => {
   }
 };
 
+const disconnectMutationObserver = () => {
+  if (mutationObserver) {
+    mutationObserver.disconnect();
+
+    mutationObserver = null;
+  }
+};
+
 const onShow = () => {
+  shown = true;
+
   incrementDialogs();
 
   vue.nextTick(() => {
+    if (!shown) {
+      return;
+    }
+
     dialogElement = document.querySelector('.p-dialog');
     containerElement = dialogElement?.closest('[data-pc-section="mask"]');
 
@@ -62,18 +77,32 @@ const onShow = () => {
 };
 
 const onHide = () => {
-  decrementDialogs();
+  if (shown) {
+    shown = false;
+
+    decrementDialogs();
+  }
 
   emit('cancel');
 
   vue.nextTick(() => {
-    if (mutationObserver) {
-      mutationObserver.disconnect();
-
-      mutationObserver = null;
-    }
+    disconnectMutationObserver();
   });
 };
+
+// Make sure that we are no longer accounted for in our dialog state if we get unmounted while being shown (e.g., if the
+// file tab that contains us gets closed), since our dialog doesn't emit a hide event in that case. Otherwise, our UI
+// would remain disabled forever (see compUiEnabled in OpenCOR.vue).
+
+vue.onBeforeUnmount(() => {
+  if (shown) {
+    shown = false;
+
+    decrementDialogs();
+  }
+
+  disconnectMutationObserver();
+});
 </script>
 
 <script lang="ts">
