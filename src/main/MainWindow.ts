@@ -217,13 +217,26 @@ export const fileClosed = (filePath: string): void => {
   updateReopenMenu(recentFilePaths);
 };
 
-// Note: for fileIssue() and fileOpened(), filePath is the path that was used to (try to) open the file, which may be the
-//       path that we asked our renderer to open (see reopenFilePathsAndSelectFilePath()).
+// Note: for fileIssue() and fileOpened(), filePath is the path that was used to (try to) open the file, which may be
+//       the path that we asked our renderer to open (see reopenFilePathsAndSelectFilePath()).
 
-export const fileIssue = (filePath: string, canonicalFilePath: string): void => {
-  if (removeRecentFilePath(canonicalFilePath)) {
+const removeRecentFilePaths = (filePath: string, canonicalFilePath: string): void => {
+  // Remove both the canonical path of the file and the path that was used to (try to) open it from our recent file
+  // paths.
+  // Note: our recent file paths are normally canonical, but they may also include some paths that we couldn't
+  //       canonicalise (see onRenderProcessGone()), in which case the canonical path of such a file is only known once
+  //       our renderer has (tried to) open it.
+
+  const filePathRemoved = filePath !== canonicalFilePath && removeRecentFilePath(filePath);
+  const canonicalFilePathRemoved = removeRecentFilePath(canonicalFilePath);
+
+  if (filePathRemoved || canonicalFilePathRemoved) {
     updateReopenMenu(recentFilePaths);
   }
+};
+
+export const fileIssue = (filePath: string, canonicalFilePath: string): void => {
+  removeRecentFilePaths(filePath, canonicalFilePath);
 
   // A file couldn't be opened, possibly while reopening files during OpenCOR startup, in which case we need to make sure
   // that it doesn't get selected and reopen the next file.
@@ -232,9 +245,7 @@ export const fileIssue = (filePath: string, canonicalFilePath: string): void => 
 };
 
 export const fileOpened = (filePath: string, canonicalFilePath: string): void => {
-  if (removeRecentFilePath(canonicalFilePath)) {
-    updateReopenMenu(recentFilePaths);
-  }
+  removeRecentFilePaths(filePath, canonicalFilePath);
 
   // A file has been opened, possibly while reopening files during OpenCOR startup, in which case we need to reopen the
   // next file.
@@ -739,8 +750,12 @@ export class MainWindow extends ApplicationWindow {
     if (choice === RELOAD_WITHOUT_FILES) {
       // Add the files that we would have reopened (as well as the files that we were asked to open, e.g., through our
       // command line) to our recent files, so that the user can still reopen them, one by one, if they want to.
-      // Note: we add them in reverse order and the selected file last, so that the selected file ends up being the most
-      //       recent one, followed by the other files in their original order (see fileClosed()).
+      // Note #1: we add them in reverse order and the selected file last, so that the selected file ends up being the
+      //          most recent one, followed by the other files in their original order (see fileClosed()).
+      // Note #2: unlike the files that we would have reopened, the files that we were asked to open were never given to
+      //          our renderer, so their path is not canonical (only libOpenCOR, i.e. our renderer, can canonicalise a
+      //          path). Such a path will get replaced with its canonical version once its file gets (re)opened (see
+      //          removeRecentFilePaths()).
 
       const filesNotToReopen = this._rendererReady
         ? this.filesToReopen()
