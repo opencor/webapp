@@ -42,8 +42,8 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "1.20261010.0",
-  "libopencorVersion": "1.20261009.6",
+  "version": "1.20261015.0",
+  "libopencorVersion": "1.20261014.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.ts",
     "build:lib": "vite build --config vite.lib.config.ts && bun --bun scripts/type.check.ts --project tsconfig.lib.types.json",
