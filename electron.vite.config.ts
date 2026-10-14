@@ -53,6 +53,10 @@ export default electronVite.defineConfig({
         resolvers: [primeVueAutoImportResolver.PrimeVueResolver()]
       })
     ],
+    publicDir: false,
+    // Note: our renderer's public folder only contains libOpenCOR's glue (see downloadLibopencorJsIfNeeded()), which
+    //       is only needed by our Web app (OpenCOR uses our C++ API, see initialiseLocApi()), so there is no need to
+    //       ship it.
     server: {
       fs: {
         allow: [path.join(import.meta.dirname, '..')]
