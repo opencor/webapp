@@ -1,6 +1,7 @@
 <template>
   <div ref="rootRef">
     <BaseDialog v-bind="$attrs" header=" " class="w-270 h-210"
+      :centreOn="centreOn"
       @keydown.prevent.enter="onOk"
       @cancel="onCancel"
     >
@@ -879,6 +880,7 @@ const props = defineProps<{
   voiUnit: string;
   allModelParameters: string[];
   editableModelParameters: string[];
+  centreOn?: HTMLElement | null;
 }>();
 
 const emit = defineEmits<{

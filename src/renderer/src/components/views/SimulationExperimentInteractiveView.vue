@@ -156,6 +156,7 @@
       <Teleport :to="opencorElement" :disabled="!opencorElement">
         <SimulationExperimentInteractiveViewSettingsDialog class="simulation-experiment-view"
           v-model:visible="settingsVisible"
+          :centreOn="fileTabElement"
           :settings="settings"
           :voiId="voiId"
           :voiName="voiName"
@@ -236,9 +237,11 @@ const emit = defineEmits<{
 }>();
 
 const opencorElement = vue.shallowRef<HTMLElement | null>(null);
+const fileTabElement = vue.shallowRef<HTMLElement | null>(null);
 // Note: our settings dialog is rendered in our OpenCOR element (rather than in our file tab) so that, like all the other
 //       dialogs, it covers the whole of OpenCOR, including our main menu and file tabs. It still gets our styles since
-//       it is given our simulation-experiment-view class.
+//       it is given our simulation-experiment-view class, and it is still centred over our file tab, i.e. the element
+//       in which we are laid out (our nearest positioned ancestor).
 const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const settingsVisible = vue.ref<boolean>(false);
 const document = props.file.document();
@@ -2238,6 +2241,7 @@ vue.onBeforeUnmount(() => {
 
 vue.onMounted(() => {
   opencorElement.value = rootRef.value?.closest<HTMLElement>('.opencor') ?? null;
+  fileTabElement.value = rootRef.value?.offsetParent instanceof HTMLElement ? rootRef.value.offsetParent : null;
 
   updateSimulation();
 

@@ -22,6 +22,10 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
+const props = defineProps<{
+  centreOn?: HTMLElement | null;
+}>();
+
 const emit = defineEmits<{
   cancel: [];
 }>();
@@ -40,6 +44,29 @@ const checkDialogPosition = () => {
 
     dialogElement.style.top = `${Math.max(Math.min(dialogRect.top, containerRect.bottom - dialogRect.height), containerRect.top)}px`;
     dialogElement.style.left = `${Math.max(Math.min(dialogRect.left, containerRect.right - dialogRect.width), containerRect.left)}px`;
+  }
+};
+
+const centreDialog = () => {
+  // Centre our dialog over the requested element, if any, or over our mask (i.e., over the whole of OpenCOR) if no
+  // element is requested.
+  // Note: our dialog is centred within the padding box of our mask, so we pad our mask so that its padding box matches
+  //       the requested element. We use !important since our mask may otherwise be padded (see .with-main-menu in
+  //       OpenCOR.vue).
+
+  if (props.centreOn && containerElement instanceof HTMLElement) {
+    const containerRect = containerElement.getBoundingClientRect();
+    const centreOnRect = props.centreOn.getBoundingClientRect();
+    const paddingTop = Math.max(0, centreOnRect.top - containerRect.top);
+    const paddingRight = Math.max(0, containerRect.right - centreOnRect.right);
+    const paddingBottom = Math.max(0, containerRect.bottom - centreOnRect.bottom);
+    const paddingLeft = Math.max(0, centreOnRect.left - containerRect.left);
+
+    containerElement.style.setProperty(
+      'padding',
+      `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
+      'important'
+    );
   }
 };
 
@@ -65,6 +92,8 @@ const onShow = () => {
     containerElement = dialogElement?.closest('[data-pc-section="mask"]');
 
     if (dialogElement && containerElement) {
+      centreDialog();
+
       mutationObserver = new MutationObserver(() => {
         checkDialogPosition();
       });
