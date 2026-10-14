@@ -23,16 +23,19 @@ const withDefaultSettings = (settings: unknown): ISettings => {
   const res = { ...loadedSettings, ...defaultSettings() } as ISettings;
   const general = loadedSettings.general;
 
+  // Note: we use Object.hasOwn() and Object.fromEntries() rather than look up and assign each key since the loaded
+  //       settings may contain a "__proto__" key, which would otherwise be looked up as, and assigned to, the prototype
+  //       of our general settings (see also cloneUiJson()).
+
   if (isObject(general)) {
-    const resGeneral = res.general as unknown as Record<string, unknown>;
+    const defaultGeneral = res.general as unknown as Record<string, unknown>;
 
-    for (const [key, value] of Object.entries(general)) {
-      const defaultValue = resGeneral[key];
-
-      if (defaultValue === undefined || typeof value === typeof defaultValue) {
-        resGeneral[key] = value;
-      }
-    }
+    res.general = Object.fromEntries([
+      ...Object.entries(defaultGeneral),
+      ...Object.entries(general).filter(([key, value]) => {
+        return !Object.hasOwn(defaultGeneral, key) || typeof value === typeof defaultGeneral[key];
+      })
+    ]) as unknown as ISettingsGeneral;
   }
 
   return res;
