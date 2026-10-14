@@ -35,8 +35,11 @@
           <div v-if="uiJsonEmpty" class="flex flex-col items-center justify-center grow">
             <i class="pi pi-info-circle text-[1.5rem]! text-muted-color mb-3"></i>
             <p class="text-muted-color text-center">
-              The view needs to be configured.<br />
-              Please click on the <i class="pi pi-cog"></i> icon in the top-right corner.
+              The view needs to be configured.
+              <template v-if="!simulationOnly">
+                <br />
+                Please click on the <i class="pi pi-cog"></i> icon in the top-right corner.
+              </template>
             </p>
           </div>
           <IssuesView v-else-if="uiJsonIssues.length" class="w-full m-4" :issues="uiJsonIssues" />
