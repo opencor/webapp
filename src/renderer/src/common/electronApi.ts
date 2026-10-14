@@ -24,6 +24,7 @@ interface IElectronApi {
   installUpdateAndRestart: () => void;
   loadGitHubAccessToken: () => Promise<string | null>;
   loadSettings: () => Promise<ISettings>;
+  recentFilePathCanonicalised: (filePath: string, canonicalFilePath: string) => void;
   rendererReady: () => Promise<void>;
   resetAll: () => void;
   saveGitHubAccessToken: (token: string) => Promise<boolean>;
@@ -33,6 +34,7 @@ interface IElectronApi {
 
   onAbout: (callback: () => void) => () => void;
   onAction: (callback: (action: string) => void) => () => void;
+  onCanonicaliseRecentFilePaths: (callback: (filePaths: string[]) => void) => () => void;
   onCheckForUpdates: (callback: () => void) => () => void;
   onEnableDisableUi: (callback: (enable: boolean) => void) => () => void;
   onOpen: (callback: (filePath: string) => void) => () => void;

@@ -33,6 +33,7 @@ import {
   loadSettings,
   MainWindow,
   normaliseCommandLine,
+  recentFilePathCanonicalised,
   reportFatalErrorAndQuit,
   resetAll,
   saveSettings
@@ -493,6 +494,12 @@ electron.app
         electron.ipcMain.handle('load-settings', (): ISettings => {
           return loadSettings();
         });
+        electron.ipcMain.handle(
+          'recent-file-path-canonicalised',
+          (_event, filePath: string, canonicalFilePath: string) => {
+            recentFilePathCanonicalised(filePath, canonicalFilePath);
+          }
+        );
         electron.ipcMain.handle('renderer-ready', () => {
           MainWindow.instance?.rendererReady();
         });

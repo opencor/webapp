@@ -1244,6 +1244,27 @@ trackCleanup(
   })
 );
 
+// Canonicalise some recent file paths for our main process.
+// Note: our main process can't canonicalise a file path itself (only libOpenCOR can), so it asks us to do it for the
+//       recent file paths that it couldn't get from us (see MainWindow.onRenderProcessGone()). A file path that can't
+//       be canonicalised is left as it is.
+
+trackCleanup(
+  electronApi?.onCanonicaliseRecentFilePaths((filePaths: string[]) => {
+    for (const filePath of filePaths) {
+      try {
+        const canonicalFilePath = locApi.fileManager.canonicalPath(filePath);
+
+        if (canonicalFilePath !== filePath) {
+          electronApi?.recentFilePathCanonicalised(filePath, canonicalFilePath);
+        }
+      } catch (error: unknown) {
+        console.warn(`OpenCOR: failed to canonicalise a recent file path (${filePath}):`, common.formatError(error));
+      }
+    }
+  })
+);
+
 const onOpenMenu = (): void => {
   if (props.omex) {
     return;

@@ -217,6 +217,28 @@ export const fileClosed = (filePath: string): void => {
   updateReopenMenu(recentFilePaths);
 };
 
+export const recentFilePathCanonicalised = (filePath: string, canonicalFilePath: string): void => {
+  // Replace the given (non-canonical) file path with its canonical version in our recent file paths (see
+  // MainWindow.rendererReady()), unless it is no longer there (e.g., if our Reopen menu got cleared in the meantime),
+  // making sure that the canonical file path is only listed once.
+
+  const index = recentFilePaths.indexOf(filePath);
+
+  if (filePath === canonicalFilePath || index === -1) {
+    return;
+  }
+
+  recentFilePaths[index] = canonicalFilePath;
+
+  for (let i = recentFilePaths.length - 1; i >= 0; --i) {
+    if (i !== index && recentFilePaths[i] === canonicalFilePath) {
+      recentFilePaths.splice(i, 1);
+    }
+  }
+
+  updateReopenMenu(recentFilePaths);
+};
+
 // Note: for fileIssue() and fileOpened(), filePath is the path that was used to (try to) open the file, which may be
 //       the path that we asked our renderer to open (see reopenFilePathsAndSelectFilePath()).
 
@@ -225,7 +247,7 @@ const removeRecentFilePaths = (filePath: string, canonicalFilePath: string): voi
   // paths.
   // Note: our recent file paths are normally canonical, but they may also include some paths that we couldn't
   //       canonicalise (see onRenderProcessGone()), in which case the canonical path of such a file is only known once
-  //       our renderer has (tried to) open it.
+  //       our renderer has canonicalised it (see recentFilePathCanonicalised()) or (tried to) open it.
 
   const filePathRemoved = filePath !== canonicalFilePath && removeRecentFilePath(filePath);
   const canonicalFilePathRemoved = removeRecentFilePath(canonicalFilePath);
@@ -353,6 +375,7 @@ export class MainWindow extends ApplicationWindow {
   // Note: whether we are being closed (e.g., because OpenCOR is being quit).
   private _rendererGone = false;
   private _pendingArguments: string[] = [];
+  private _recentFilePathsToCanonicalise: string[] = [];
   private _filesToReopen: IFilesToReopen | null = null;
   private _openedFilePaths: string[] = [];
   private _openedFilePathIndex = 0;
@@ -753,9 +776,10 @@ export class MainWindow extends ApplicationWindow {
       // Note #1: we add them in reverse order and the selected file last, so that the selected file ends up being the
       //          most recent one, followed by the other files in their original order (see fileClosed()).
       // Note #2: unlike the files that we would have reopened, the files that we were asked to open were never given to
-      //          our renderer, so their path is not canonical (only libOpenCOR, i.e. our renderer, can canonicalise a
-      //          path). Such a path will get replaced with its canonical version once its file gets (re)opened (see
-      //          removeRecentFilePaths()).
+      //          our renderer, so their path may not be canonical (only libOpenCOR, i.e. our renderer, can canonicalise
+      //          a path). So, we ask our reloaded renderer to canonicalise them once it is ready (see rendererReady()).
+      //          We still add them straight away though, so that they don't get lost should OpenCOR be quit before
+      //          then.
 
       const filesNotToReopen = this._rendererReady
         ? this.filesToReopen()
@@ -768,6 +792,8 @@ export class MainWindow extends ApplicationWindow {
       for (const filePath of [...filesNotToReopen.opened, ...filesNotToOpen].reverse()) {
         fileClosed(filePath);
       }
+
+      this._recentFilePathsToCanonicalise.push(...filesNotToOpen);
 
       if (filesNotToReopen.selected) {
         fileClosed(filesNotToReopen.selected);
@@ -833,6 +859,12 @@ export class MainWindow extends ApplicationWindow {
     this.reopenFilePathsAndSelectFilePath();
 
     this.handleArguments(this._pendingArguments.splice(0));
+
+    // Ask our renderer to canonicalise the recent file paths that we couldn't get from it (see onRenderProcessGone()).
+
+    if (this._recentFilePathsToCanonicalise.length) {
+      this.send('canonicalise-recent-file-paths', this._recentFilePathsToCanonicalise.splice(0));
+    }
 
     // Let the user know if our configuration file had to be reset.
 

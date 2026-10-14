@@ -102,6 +102,8 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   installUpdateAndRestart: () => electron.ipcRenderer.invoke('install-update-and-restart'),
   loadGitHubAccessToken: (): Promise<string | null> => electron.ipcRenderer.invoke('load-github-access-token'),
   loadSettings: (): Promise<ISettings> => electron.ipcRenderer.invoke('load-settings'),
+  recentFilePathCanonicalised: (filePath: string, canonicalFilePath: string) =>
+    electron.ipcRenderer.invoke('recent-file-path-canonicalised', filePath, canonicalFilePath),
   rendererReady: () => electron.ipcRenderer.invoke('renderer-ready'),
   resetAll: () => electron.ipcRenderer.invoke('reset-all'),
   saveGitHubAccessToken: (token: string): Promise<boolean> =>
@@ -112,6 +114,8 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
 
   onAbout: (callback: () => void) => onIpc('about', callback),
   onAction: (callback: (action: string) => void) => onIpc('action', callback),
+  onCanonicaliseRecentFilePaths: (callback: (filePaths: string[]) => void) =>
+    onIpc('canonicalise-recent-file-paths', callback),
   onCheckForUpdates: (callback: () => void) => onIpc('check-for-updates', callback),
   onEnableDisableUi: (callback: (enable: boolean) => void) => onIpc('enable-disable-ui', callback),
   onOpen: (callback: (filePath: string) => void) => onIpc('open', callback),
