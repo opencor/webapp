@@ -1,7 +1,7 @@
 // A simple CORS proxy handler for Cloudflare Workers (see https://workers.cloudflare.com/).
 // Note: the proxy accepts any target URL, but it only returns content that is a CellML file, a SED-ML file, an OMEX file,
-//       or a CSV file (as expected by the app), and that is not too large (see MAX_SIZE). Such content is returned as
-//       an opaque, sandboxed download, so that a browser never renders or executes it.
+//       or a CSV file (see isCsvFile()), and that is not too large (see MAX_SIZE). Such content is returned as an
+//       opaque, sandboxed download, so that a browser never renders or executes it.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -263,21 +263,27 @@ const isCellmlOrSedmlFile = (bytes) => {
   );
 };
 
-const isCsvFile = (bytes, complete) => {
-  // Check that the given bytes are a CSV file as expected by the app (see parseExternalCsvData()), i.e. text (without
-  // control characters other than tabs and line breaks) where lines are separated by line breaks and values by commas,
-  // and where there are at least two lines (i.e. a header and some data) and every line has the same number of values,
-  // which must be at least two (i.e. a VOI column and a data column). Like the app, we decode the text as UTF-8
+const hasCsvExtension = (targetUrl) => new URL(targetUrl).pathname.toLowerCase().endsWith('.csv');
+
+const isCsvFile = (bytes, complete, csvExtension) => {
+  // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks).
+  // If the target URL has a .csv extension, then that is all we check since the app can tell the user why the CSV file
+  // cannot be used, if needed (see parseExternalCsvData()). Otherwise, the content is all we have to go by, so we also
+  // check that the text looks like a CSV file as expected by the app, i.e. lines are separated by line breaks and
+  // values by commas, there are at least two lines (i.e. a header and some data), and every line has the same number of
+  // values, which must be at least two (i.e. a VOI column and a data column). Like the app, we decode the text as UTF-8
   // (replacing invalid byte sequences, like Response.text() does), trim lines, and skip blank lines.
-  // Note: we don't check that the CSV file can be used by the app since the app can tell the user why it cannot be used
-  //       (see parseExternalCsvData()). If we only have the start of the CSV file, then we ignore its last (and likely
-  //       incomplete) line.
+  // Note: if we only have the start of the CSV file, then we ignore its last (and likely incomplete) line.
 
   const text = new TextDecoder().decode(bytes, { stream: !complete });
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: we are looking for control characters.
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) {
     return false;
+  }
+
+  if (csvExtension) {
+    return true;
   }
 
   const lines = text.split(/\r?\n/);
@@ -373,7 +379,7 @@ const forwardRequest = async (targetUrl, request) => {
   const reader = response.body.getReader();
   const { bytes: head, done } = await readBytes(reader, SNIFF_SIZE);
 
-  if (isCellmlOrSedmlFile(head) || isCsvFile(head, done)) {
+  if (isCellmlOrSedmlFile(head) || isCsvFile(head, done, hasCsvExtension(targetUrl))) {
     return new Response(done ? head : replayStream(head, reader), {
       status: response.status,
       headers: CONTENT_HEADERS
