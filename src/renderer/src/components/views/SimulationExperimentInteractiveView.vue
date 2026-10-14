@@ -153,17 +153,19 @@
           </div>
         </div>
       </div>
-      <SimulationExperimentInteractiveViewSettingsDialog
-        v-model:visible="settingsVisible"
-        :settings="settings"
-        :voiId="voiId"
-        :voiName="voiName"
-        :voiUnit="instanceTask ? instanceTask.voiUnit() : ''"
-        :allModelParameters="allModelParameters"
-        :editableModelParameters="editableModelParameters"
-        @ok="onSettingsOk"
-        @close="settingsVisible = false"
-      />
+      <Teleport :to="opencorElement" :disabled="!opencorElement">
+        <SimulationExperimentInteractiveViewSettingsDialog class="simulation-experiment-view"
+          v-model:visible="settingsVisible"
+          :settings="settings"
+          :voiId="voiId"
+          :voiName="voiName"
+          :voiUnit="instanceTask ? instanceTask.voiUnit() : ''"
+          :allModelParameters="allModelParameters"
+          :editableModelParameters="editableModelParameters"
+          @ok="onSettingsOk"
+          @close="settingsVisible = false"
+        />
+      </Teleport>
       <Popover ref="runColorPopoverRef" :appendTo="appendTarget">
         <div class="flex p-1.5 gap-2">
           <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
@@ -233,6 +235,10 @@ const emit = defineEmits<{
   simulationData: [];
 }>();
 
+const opencorElement = vue.shallowRef<HTMLElement | null>(null);
+// Note: our settings dialog is rendered in our OpenCOR element (rather than in our file tab) so that, like all the other
+//       dialogs, it covers the whole of OpenCOR, including our main menu and file tabs. It still gets our styles since
+//       it is given our simulation-experiment-view class.
 const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const settingsVisible = vue.ref<boolean>(false);
 const document = props.file.document();
@@ -2231,6 +2237,8 @@ vue.onBeforeUnmount(() => {
 // Various things that need to be done once we are mounted.
 
 vue.onMounted(() => {
+  opencorElement.value = rootRef.value?.closest<HTMLElement>('.opencor') ?? null;
+
   updateSimulation();
 
   const windowIsFocused = vueusecore.useWindowFocus();
