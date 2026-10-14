@@ -833,7 +833,7 @@ const fileDescription = (fileFilePathOrFileContents: string | Uint8Array | File)
 
 // A helper function to report an issue with a file that couldn't be opened.
 
-const reportFileIssue = (filePath: string, issueMessage: string): void => {
+const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePath: string = ''): void => {
   if (props.omex) {
     vue.nextTick(() => {
       issues.value.push({ type: locApi.EIssueType.ERROR, description: issueMessage });
@@ -847,7 +847,10 @@ const reportFileIssue = (filePath: string, issueMessage: string): void => {
     });
   }
 
-  electronApi?.fileIssue(filePath);
+  // Note: the canonical path of the file may not be known (e.g., if libOpenCOR couldn't determine it), in which case we
+  //       use the path that was used to (try to) open the file.
+
+  electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
 
   emit('file', { type: 'issue', filePath, issues: [issueMessage] });
 };
@@ -966,7 +969,8 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
         filePath,
         fileType === locApi.EFileType.IRRETRIEVABLE_FILE
           ? 'The file could not be retrieved.'
-          : 'Only COMBINE archives are supported.'
+          : 'Only COMBINE archives are supported.',
+        canonicalFilePath
       );
 
       file.release();
@@ -983,7 +987,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
       canonicalFilePath
     };
   } catch (error: unknown) {
-    reportFileIssue(filePath, common.formatMessage(common.formatError(error)));
+    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
 
     fileNoLongerBeingOpened(canonicalFilePath);
 
@@ -1029,7 +1033,7 @@ const openFileInContents = async (
       file.release();
     }
 
-    reportFileIssue(filePath, common.formatMessage(common.formatError(error)));
+    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
   } finally {
     fileNoLongerBeingOpened(canonicalFilePath);
   }
@@ -1048,16 +1052,16 @@ const fileAlreadyOpen = async (fileInfo: IFileInfo, wait: boolean = false): Prom
   if (beingOpened) {
     void beingOpened.then(() => {
       if (contentsRef.value?.hasFile(fileInfo.filePath)) {
-        electronApi?.fileOpened(fileInfo.filePath);
+        electronApi?.fileOpened(fileInfo.filePath, fileInfo.canonicalFilePath);
       } else {
-        electronApi?.fileIssue(fileInfo.filePath);
+        electronApi?.fileIssue(fileInfo.filePath, fileInfo.canonicalFilePath);
       }
     });
 
     return;
   }
 
-  electronApi?.fileOpened(fileInfo.filePath);
+  electronApi?.fileOpened(fileInfo.filePath, fileInfo.canonicalFilePath);
 
   await contentsRef.value?.selectFile(fileInfo.filePath, wait);
 };
@@ -1096,7 +1100,8 @@ const openProcessedFile = async (
 
     reportFileIssue(
       fileInfo?.filePath || fileDescription(fileFilePathOrFileContents),
-      common.formatMessage(common.formatError(error))
+      common.formatMessage(common.formatError(error)),
+      fileInfo?.canonicalFilePath
     );
   }
 };

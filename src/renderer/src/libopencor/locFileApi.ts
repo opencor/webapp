@@ -45,9 +45,10 @@ class FileManager {
     //          as our native module, i.e. we create a file, without contents, to get its path. If the file is already
     //          managed, then we get it rather than a new file, while if it isn't, then the new file gets unmanaged as
     //          soon as we delete our handle to it.
-    // Note #2: canonicalising a path may fail, in which case we use the path as is. Indeed, a canonical path is only
-    //          used to determine whether two paths refer to the same file, so it must not prevent a file from being
-    //          opened (which will then fail and get reported as such) or a file tab from being found.
+    // Note #2: canonicalising a path may fail, in which case we use the path as is. Indeed, a canonical path is used
+    //          to determine whether two paths refer to the same file and by our main process to identify a file (e.g.,
+    //          in our list of recent files, see MainWindow.ts), so it must not prevent a file from being opened (which
+    //          will then fail and get reported as such) or a file tab from being found.
 
     try {
       if (cppVersion()) {

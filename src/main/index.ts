@@ -470,11 +470,11 @@ electron.app
         electron.ipcMain.handle('file-closed', (_event, filePath: string) => {
           fileClosed(filePath);
         });
-        electron.ipcMain.handle('file-issue', (_event, filePath: string) => {
-          fileIssue(filePath);
+        electron.ipcMain.handle('file-issue', (_event, filePath: string, canonicalFilePath: string) => {
+          fileIssue(filePath, canonicalFilePath);
         });
-        electron.ipcMain.handle('file-opened', (_event, filePath: string) => {
-          fileOpened(filePath);
+        electron.ipcMain.handle('file-opened', (_event, filePath: string, canonicalFilePath: string) => {
+          fileOpened(filePath, canonicalFilePath);
         });
         electron.ipcMain.handle('file-selected', (_event, filePath: string) => {
           fileSelected(filePath);

@@ -1984,7 +1984,7 @@ const onToggleRunColorPopover = (index: number, event: MouseEvent): void => {
 
 const onDownloadCombineArchive = (): void => {
   const jsZip = new dependencies._jsZip();
-  const baseFileName = common.fileName(props.file.path()).replace(/\.[^/.]+$/, '');
+  const baseFileName = common.fileName(props.file.canonicalPath()).replace(/\.[^/.]+$/, '');
   const modelFile = model?.file();
 
   if (!modelFile) {

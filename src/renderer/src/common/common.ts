@@ -263,17 +263,12 @@ export const downloadFile = (filename: string, content: string | Blob, type: str
 };
 
 // A method to get the file name from a file path.
+// Note: the file path should be a canonical path (see locApi.File.canonicalPath()), i.e. a path that libOpenCOR has
+//       already decoded, if needed (e.g., "https://example.com/my%20model.cellml" becomes
+//       "https://example.com/my model.cellml" while "/path/to/my%20model.cellml" is a valid local file name).
 
 export const fileName = (filePath: string): string => {
-  const res = filePath.split(/(\\|\/)/g).pop() || '';
-
-  try {
-    return decodeURIComponent(res);
-  } catch (error: unknown) {
-    console.warn('OpenCOR: failed to decode the file path:', res, formatError(error));
-
-    return res;
-  }
+  return filePath.split(/(\\|\/)/g).pop() || '';
 };
 
 // A method to sleep for a number of milliseconds.

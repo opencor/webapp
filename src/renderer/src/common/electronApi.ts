@@ -16,8 +16,8 @@ interface IElectronApi {
   enableDisableMainMenu: (enable: boolean) => void;
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) => void;
   fileClosed: (filePath: string) => void;
-  fileIssue: (filePath: string) => void;
-  fileOpened: (filePath: string) => void;
+  fileIssue: (filePath: string, canonicalFilePath: string) => void;
+  fileOpened: (filePath: string, canonicalFilePath: string) => void;
   filePath: (file: File) => string;
   fileSelected(filePath: string): void;
   filesOpened(filePaths: string[]): void;

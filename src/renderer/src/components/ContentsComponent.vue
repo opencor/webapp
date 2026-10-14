@@ -34,7 +34,7 @@
         @dragstart="onDragStart($event, fileTab.file.path())"
         @dragend="onDragEnd"
       >
-        <span class="file-tab-label">{{ common.fileName(fileTab.file.path()) }}</span>
+        <span class="file-tab-label">{{ common.fileName(fileTab.file.canonicalPath()) }}</span>
         <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
       </div>
     </div>
@@ -286,7 +286,7 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
 
   await selectFile(filePath, wait);
 
-  electronApi?.fileOpened(filePath);
+  electronApi?.fileOpened(filePath, file.canonicalPath());
 
   emit('fileOpened', filePath);
 };
@@ -301,6 +301,8 @@ const closeFile = async (filePath: string): Promise<void> => {
   if (!fileTab) {
     return;
   }
+
+  const canonicalFilePath = fileTab.file.canonicalPath();
 
   locApi.fileManager.unmanage(filePath);
 
@@ -320,7 +322,7 @@ const closeFile = async (filePath: string): Promise<void> => {
     }
   }
 
-  electronApi?.fileClosed(filePath);
+  electronApi?.fileClosed(canonicalFilePath);
 
   emit('fileClosed', filePath);
 };
@@ -605,16 +607,17 @@ vue.onUnmounted(() => {
 });
 
 // Some watchers to let people know about changes to the opened files and the selected file.
+// Note: our main process identifies files by their canonical path (see MainWindow.ts).
 
-vue.watch(filePaths, (newFilePaths: string[]) => {
-  electronApi?.filesOpened(newFilePaths);
+vue.watch(filePaths, () => {
+  electronApi?.filesOpened(fileTabs.value.map((fileTab) => fileTab.file.canonicalPath()));
 });
 
 vue.watch(activeFile, (newActiveFile: string) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
   //       people know that a file has been selected.
 
-  electronApi?.fileSelected(newActiveFile);
+  electronApi?.fileSelected(findFileTab(newActiveFile)?.file.canonicalPath() ?? newActiveFile);
 
   if (!dragState.value) {
     // Make sure that the selected file tab is visible in the file tab bar.

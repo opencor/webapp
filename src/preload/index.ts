@@ -92,8 +92,10 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
   fileClosed: (filePath: string) => electron.ipcRenderer.invoke('file-closed', filePath),
-  fileIssue: (filePath: string) => electron.ipcRenderer.invoke('file-issue', filePath),
-  fileOpened: (filePath: string) => electron.ipcRenderer.invoke('file-opened', filePath),
+  fileIssue: (filePath: string, canonicalFilePath: string) =>
+    electron.ipcRenderer.invoke('file-issue', filePath, canonicalFilePath),
+  fileOpened: (filePath: string, canonicalFilePath: string) =>
+    electron.ipcRenderer.invoke('file-opened', filePath, canonicalFilePath),
   filePath: (file: File) => electron.webUtils.getPathForFile(file),
   fileSelected: (filePath: string) => electron.ipcRenderer.invoke('file-selected', filePath),
   filesOpened: (filePaths: string[]) => electron.ipcRenderer.invoke('files-opened', filePaths),

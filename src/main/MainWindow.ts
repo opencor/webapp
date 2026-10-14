@@ -166,6 +166,10 @@ export const resetAll = (): void => {
   electron.app.quit();
 };
 
+// Our recent files, as well as the files that are opened and the file that is selected, are identified by their
+// canonical path, as determined by libOpenCOR (and given to us by our renderer), so that a file is only listed once
+// even if it was opened using different paths (e.g., "/tmp/model.cellml" and "/private/tmp/model.cellml" on macOS).
+
 let recentFilePaths: string[] = [];
 
 const removeRecentFilePath = (filePath: string): boolean => {
@@ -209,8 +213,11 @@ export const fileClosed = (filePath: string): void => {
   updateReopenMenu(recentFilePaths);
 };
 
-export const fileIssue = (filePath: string): void => {
-  if (removeRecentFilePath(filePath)) {
+// Note: for fileIssue() and fileOpened(), filePath is the path that was used to (try to) open the file, which may be the
+//       path that we asked our renderer to open (see reopenFilePathsAndSelectFilePath()).
+
+export const fileIssue = (filePath: string, canonicalFilePath: string): void => {
+  if (removeRecentFilePath(canonicalFilePath)) {
     updateReopenMenu(recentFilePaths);
   }
 
@@ -220,8 +227,8 @@ export const fileIssue = (filePath: string): void => {
   MainWindow.instance?.fileOpenedOrNot(filePath, false);
 };
 
-export const fileOpened = (filePath: string): void => {
-  if (removeRecentFilePath(filePath)) {
+export const fileOpened = (filePath: string, canonicalFilePath: string): void => {
+  if (removeRecentFilePath(canonicalFilePath)) {
     updateReopenMenu(recentFilePaths);
   }
 
