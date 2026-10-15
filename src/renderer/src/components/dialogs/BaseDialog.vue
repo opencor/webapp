@@ -1,5 +1,5 @@
 <template>
-  <Dialog :modal="true" appendTo="self"
+  <Dialog ref="dialogRef" :modal="true" appendTo="self"
     :pt:mask:style="{
       position: 'absolute'
     }"
@@ -20,6 +20,7 @@
 </template>
 
 <script setup lang="ts">
+import type Dialog from 'primevue/dialog';
 import * as vue from 'vue';
 
 const props = defineProps<{
@@ -32,8 +33,16 @@ const emit = defineEmits<{
 
 const { incrementDialogs, decrementDialogs } = useDialogState();
 
+// Note: PrimeVue's Dialog keeps track of its container (i.e. our dialog) and of its mask, so we retrieve them from it
+//       rather than look for them in the DOM, which could otherwise find the dialog of another instance of OpenCOR on
+//       the same page.
+
+const dialogRef = vue.shallowRef<
+  (InstanceType<typeof Dialog> & { container: HTMLElement | null; mask: HTMLElement | null }) | null
+>(null);
+
 let dialogElement: HTMLElement | null = null;
-let containerElement: HTMLElement | null | undefined = null;
+let containerElement: HTMLElement | null = null;
 let mutationObserver: MutationObserver | null = null;
 let shown = false;
 
@@ -91,8 +100,8 @@ const onShow = () => {
       return;
     }
 
-    dialogElement = document.querySelector('.p-dialog');
-    containerElement = dialogElement?.closest('[data-pc-section="mask"]');
+    dialogElement = dialogRef.value?.container ?? null;
+    containerElement = dialogRef.value?.mask ?? null;
 
     if (dialogElement && containerElement) {
       centreDialog();
