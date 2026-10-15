@@ -2138,16 +2138,23 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
     editableModelParameters: editableModelParameters.value
   });
 
-  if (uiJsonIssues.value.length > 0) {
-    return;
-  }
-
   // Make sure that our next simulation run doesn't use our current instance since it was instantiated using our old
   // settings.
   // Note: this is only relevant if our current instance has yet to be run (e.g., if our previous simulation run couldn't
   //       be started because of some issues).
 
   instanceIsPristine = false;
+
+  // Remove the model changes from our previous simulation run if our new UI JSON is invalid.
+  // Note: we don't run any simulation with an invalid UI JSON, so those model changes would otherwise be left in our
+  //       document and, therefore, be exported with it (see onDownloadCombineArchive()) even though they don't match our
+  //       new UI JSON.
+
+  if (uiJsonIssues.value.length > 0) {
+    applyModelChanges([]);
+
+    return;
+  }
 
   // Update our UI.
 
