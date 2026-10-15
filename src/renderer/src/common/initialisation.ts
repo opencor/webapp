@@ -263,8 +263,11 @@ const importLibOpenCORGlue = async (): Promise<WasmFactory> => {
 
 // Import libOpenCOR's glue from https://opencor.ws, for a host application that doesn't serve it itself (see
 // importLibOpenCORGlue()).
-// Note: to make its module worker same-origin, we fetch the glue's source, patch its worker-script URL so that it
-//       points to a same-origin blob URL, and import the patched source from that blob URL.
+// Note: to make its pthread workers same-origin, we fetch the glue's source and import it from a same-origin blob URL.
+//       Indeed, on the Web, the glue spawns each of its pthread workers from a blob that imports the glue's own URL
+//       (i.e. import.meta.url), so that the workers import the glue from our same-origin blob URL. This also means that
+//       the blob URL must remain valid since libOpenCOR spawns its pthread workers lazily (on the first simulation run,
+//       and again whenever no worker is available), so revoking it would prevent the workers from being spawned.
 
 const importLibOpenCORGlueFromOpencorWs = async (): Promise<WasmFactory> => {
   const libOpenCORSource = await withRetries('libOpenCOR', async (attempt) => {
@@ -279,40 +282,16 @@ const importLibOpenCORGlueFromOpencorWs = async (): Promise<WasmFactory> => {
     return response.text();
   });
 
-  // The URL of the worker script, which must be the same glue, but served from a same-origin blob URL.
-
-  const libOpenCORWorkerUrl = URL.createObjectURL(new Blob([libOpenCORSource], { type: 'text/javascript' }));
-
-  // Patch the glue's worker-script URL so that its worker is spawned from the same-origin blob URL.
-
-  const workerUrlPattern = 'new URL("libopencor.js",import.meta.url)';
-
-  if (!libOpenCORSource.includes(workerUrlPattern)) {
-    // The glue doesn't contain the expected worker-script URL, which means a future version of libOpenCOR generates
-    // different code. So, import it directly from https://opencor.ws, which works in standard browsers (the worker will
-    // then be cross-origin, which is allowed with CORS), but may not in restricted ones.
-    // Note: the worker URL is not used in this case, so it can be revoked.
-
-    URL.revokeObjectURL(libOpenCORWorkerUrl);
-
-    return importLibOpenCOR(`${libOpenCORWasmBaseUrl}/libopencor.js`);
-  }
-
-  const patchedLibOpenCORUrl = URL.createObjectURL(
-    new Blob([libOpenCORSource.replace(workerUrlPattern, JSON.stringify(libOpenCORWorkerUrl))], {
-      type: 'text/javascript'
-    })
-  );
+  const libOpenCORUrl = URL.createObjectURL(new Blob([libOpenCORSource], { type: 'text/javascript' }));
 
   try {
-    return await importLibOpenCOR(patchedLibOpenCORUrl);
-  } finally {
-    // The patched glue has now been imported, so its blob URL is no longer needed and can be revoked.
-    // Note: libOpenCORWorkerUrl, on the other hand, must remain valid since libOpenCOR spawns its module worker lazily
-    //       (on the first simulation run, and again whenever no worker is available), so revoking it now would prevent
-    //       the worker from being spawned.
+    return await importLibOpenCOR(libOpenCORUrl);
+  } catch (error: unknown) {
+    // The glue couldn't be imported, so its blob URL is no longer needed and can be revoked.
 
-    URL.revokeObjectURL(patchedLibOpenCORUrl);
+    URL.revokeObjectURL(libOpenCORUrl);
+
+    throw error;
   }
 };
 
