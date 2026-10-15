@@ -780,7 +780,7 @@ export class MainWindow extends ApplicationWindow {
       type: 'error',
       title: 'OpenCOR',
       message: 'OpenCOR has encountered a problem and needs to be reloaded.',
-      detail: `Reason: ${details.reason} (exit code ${details.exitCode}).\n\nIf the problem keeps happening, reload OpenCOR without reopening the files that were open. Those files won't be reopened either if you quit OpenCOR, but they will be available from File | Reopen.${confResetMessage ? `\n\n${confResetMessage.message} ${confResetMessage.detail}` : ''}`,
+      detail: `Reason: ${details.reason} (exit code ${details.exitCode}).\n\nIf the problem keeps happening, reload OpenCOR without reopening the files that were open. Those files won't be reopened either if you quit OpenCOR, but they will be available from File|Reopen.${confResetMessage ? `\n\n${confResetMessage.message} ${confResetMessage.detail}` : ''}`,
       buttons: ['Reload', 'Reload Without Files', 'Quit'],
       defaultId: RELOAD,
       cancelId: QUIT
