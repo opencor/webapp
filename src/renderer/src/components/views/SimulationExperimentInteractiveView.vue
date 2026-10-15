@@ -446,6 +446,18 @@ const uiJsonIssues = vue.ref<locApi.IIssue[]>(
   })
 );
 
+// Remove the model changes resulting from our default input values if our UI JSON is invalid.
+// Note: we applied them before validating our UI JSON (see above), but we don't run any simulation with an invalid UI
+//       JSON, so they would otherwise be left in our document and, therefore, be exported with it (see
+//       onDownloadCombineArchive()). Our instance was, however, built with them, so it must not be reused by our next
+//       simulation run (e.g., if our UI JSON gets fixed through our settings dialog).
+
+if (uiJsonIssues.value.length && instanceModelChangesKey !== NO_MODEL_CHANGES_KEY) {
+  applyModelChanges([]);
+
+  instanceIsPristine = false;
+}
+
 const simulationIssues = vue.ref<locApi.IIssue[]>([]);
 const inputValues = vue.ref<number[]>([]);
 const showInput = vue.ref<boolean[]>([]);
