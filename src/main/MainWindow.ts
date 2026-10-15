@@ -505,7 +505,8 @@ export class MainWindow extends ApplicationWindow {
 
         // Opened files and selected file.
         // Note: if our renderer is not ready, then either it crashed and we are being closed before it could be
-        //       reloaded, in which case we save the files that were open (and selected) at the time of the crash, or it
+        //       reloaded (or instead of being reloaded), in which case we save the files that were open (and selected)
+        //       at the time of the crash, unless the user chose not to reopen them (see onRenderProcessGone()), or it
         //       never was ready (e.g., OpenCOR couldn't be loaded), in which case it never told us about the files that
         //       are open, so we keep the files that were open when OpenCOR was last closed.
 
@@ -775,68 +776,28 @@ export class MainWindow extends ApplicationWindow {
       type: 'error',
       title: 'OpenCOR',
       message: 'OpenCOR has encountered a problem and needs to be reloaded.',
-      detail: `Reason: ${details.reason} (exit code ${details.exitCode}).\n\nIf the problem keeps happening, reload OpenCOR without reopening the files that were open.${confResetMessage ? `\n\n${confResetMessage.message} ${confResetMessage.detail}` : ''}`,
+      detail: `Reason: ${details.reason} (exit code ${details.exitCode}).\n\nIf the problem keeps happening, reload OpenCOR without reopening the files that were open. Those files won't be reopened either if you quit OpenCOR, but they will be available from File | Reopen.${confResetMessage ? `\n\n${confResetMessage.message} ${confResetMessage.detail}` : ''}`,
       buttons: ['Reload', 'Reload Without Files', 'Quit'],
       defaultId: RELOAD,
       cancelId: QUIT
     });
 
-    if (choice === QUIT) {
-      electron.app.quit();
+    // Discard the files that we would have reopened if the user wants to reload our renderer without them or to quit
+    // OpenCOR, or keep track of them so that they can be reopened once our renderer is ready again.
+    // Note #1: if the user wants to quit OpenCOR, then the files that we would have reopened would otherwise be saved
+    //          and therefore reopened the next time OpenCOR is started, crashing our renderer again if one of them
+    //          caused the crash.
+    // Note #2: if our renderer was ready, then we keep track of the files that were open (as well as those that we had
+    //          yet to reopen, see filesToReopen()) and of the selected file, so that they can be reopened and selected
+    //          once our renderer is ready again. If it wasn't ready, then it never told us about the files that are
+    //          open, so we keep the files that we were going to reopen (i.e. those from a previous crash, if any, or
+    //          those that were open when OpenCOR was last closed, see rendererReady()), as well as the arguments that
+    //          we were asked to handle (e.g., our command line), which were never handled. Either way, the files to
+    //          reopen are what gets saved should OpenCOR be quit before our renderer is ready again, so the next time
+    //          OpenCOR is started, it won't reopen the files that might have caused the crash either.
 
-      return;
-    }
-
-    // Reload our renderer, making sure that our main menu is disabled until our reloaded renderer enables it (see the
-    // constructor) and that we reopen our files once our renderer is ready again.
-    // Note: if our renderer was ready, then we keep track of the files that were open (as well as those that we had yet
-    //       to reopen, see filesToReopen()) and of the selected file, so that they can be reopened and selected once
-    //       our renderer is ready again. If it wasn't ready, then it never told us about the files that are open, so we
-    //       keep the files that we were going to reopen (i.e. those from a previous crash, if any, or those that were
-    //       open when OpenCOR was last closed, see rendererReady()), as well as the arguments that we were asked to
-    //       handle (e.g., our command line), which were never handled. Unless, that is, we were asked not to reopen any
-    //       files, in which case we also discard those arguments since they may include the file that caused the crash.
-    //       Either way, the files to reopen are what gets saved should OpenCOR be quit before our renderer is ready
-    //       again, so the next time OpenCOR is started, it won't reopen the files that might have caused the crash
-    //       either.
-
-    enableDisableMainMenu(false);
-
-    if (choice === RELOAD_WITHOUT_FILES) {
-      // Add the files that we would have reopened (as well as the files that we were asked to open, e.g., through our
-      // command line) to our recent files, so that the user can still reopen them, one by one, if they want to.
-      // Note #1: we add them in reverse order and the selected file last, so that the selected file ends up being the
-      //          most recent one, followed by the other files in their original order (see fileClosed()).
-      // Note #2: unlike the files that we would have reopened, the files that we were asked to open were never given to
-      //          our renderer, so their path may not be canonical (only libOpenCOR, i.e. our renderer, can canonicalise
-      //          a path). So, we ask our reloaded renderer to canonicalise them once it is ready (see rendererReady()).
-      //          We still add them straight away though, so that they don't get lost should OpenCOR be quit before
-      //          then.
-
-      const filesNotToReopen = this._rendererReady
-        ? this.filesToReopen()
-        : (this._filesToReopen ?? {
-            opened: electronConf.get('app.files.opened'),
-            selected: electronConf.get('app.files.selected')
-          });
-      const filesNotToOpen = this._pendingArguments.filter((argument) => !isAction(argument));
-
-      for (const filePath of [...filesNotToReopen.opened, ...filesNotToOpen].reverse()) {
-        fileClosed(filePath);
-      }
-
-      this._recentFilePathsToCanonicalise.push(...filesNotToOpen);
-
-      if (filesNotToReopen.selected) {
-        fileClosed(filesNotToReopen.selected);
-      }
-
-      // Discard the files that we were going to reopen and the arguments that we were asked to handle, so that our
-      // reloaded renderer doesn't reopen the files that might have caused the crash and doesn't handle the arguments
-      // that it never handled.
-
-      this._filesToReopen = { opened: [], selected: '' };
-      this._pendingArguments = [];
+    if (choice === RELOAD_WITHOUT_FILES || choice === QUIT) {
+      this.discardFilesToReopen();
     } else if (this._rendererReady) {
       this._filesToReopen = this.filesToReopen();
     }
@@ -859,7 +820,62 @@ export class MainWindow extends ApplicationWindow {
     this._reopeningFilePath = null;
     this._selectedFilePath = '';
 
+    // Quit OpenCOR or reload our renderer, making sure that our main menu is disabled until our reloaded renderer
+    // enables it (see the constructor) and that we reopen our files once our renderer is ready again (see
+    // rendererReady()).
+    // Note: we only quit OpenCOR now since our files to reopen get saved when we are closed (see the constructor), and
+    //       we want the ones that we have just discarded to be saved, not the ones that our (crashed) renderer told us
+    //       were open.
+
+    enableDisableMainMenu(false);
+
+    if (choice === QUIT) {
+      electron.app.quit();
+
+      return;
+    }
+
     this.webContents.reload();
+  }
+
+  // Discard the files that we would have reopened and the arguments that we were asked to handle since one of them
+  // might have caused our renderer to crash (see onRenderProcessGone()).
+
+  private discardFilesToReopen(): void {
+    // Add the files that we would have reopened (as well as the files that we were asked to open, e.g., through our
+    // command line) to our recent files, so that the user can still reopen them, one by one, if they want to.
+    // Note #1: we add them in reverse order and the selected file last, so that the selected file ends up being the
+    //          most recent one, followed by the other files in their original order (see fileClosed()).
+    // Note #2: unlike the files that we would have reopened, the files that we were asked to open were never given to
+    //          our renderer, so their path may not be canonical (only libOpenCOR, i.e. our renderer, can canonicalise
+    //          a path). So, we ask our reloaded renderer to canonicalise them once it is ready (see rendererReady()).
+    //          We still add them straight away though, so that they don't get lost should OpenCOR be quit before
+    //          then (or instead of reloading our renderer).
+
+    const filesNotToReopen = this._rendererReady
+      ? this.filesToReopen()
+      : (this._filesToReopen ?? {
+          opened: electronConf.get('app.files.opened'),
+          selected: electronConf.get('app.files.selected')
+        });
+    const filesNotToOpen = this._pendingArguments.filter((argument) => !isAction(argument));
+
+    for (const filePath of [...filesNotToReopen.opened, ...filesNotToOpen].reverse()) {
+      fileClosed(filePath);
+    }
+
+    this._recentFilePathsToCanonicalise.push(...filesNotToOpen);
+
+    if (filesNotToReopen.selected) {
+      fileClosed(filesNotToReopen.selected);
+    }
+
+    // Discard the files that we were going to reopen and the arguments that we were asked to handle, so that neither our
+    // reloaded renderer nor OpenCOR, the next time it is started, reopens the files that might have caused the crash
+    // or handles the arguments that our (crashed) renderer never handled.
+
+    this._filesToReopen = { opened: [], selected: '' };
+    this._pendingArguments = [];
   }
 
   // Our renderer is ready, so reopen previously opened files, if any, select the previously selected file, and handle
