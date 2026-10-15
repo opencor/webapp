@@ -1,6 +1,7 @@
 <template>
   <div ref="rootRef">
     <BaseDialog v-bind="$attrs" header=" " class="w-270 h-210"
+      :centreOn="centreOn"
       @keydown.prevent.enter="onOk"
       @cancel="onCancel"
     >
@@ -879,6 +880,7 @@ const props = defineProps<{
   voiUnit: string;
   allModelParameters: string[];
   editableModelParameters: string[];
+  centreOn?: HTMLElement | null;
 }>();
 
 const emit = defineEmits<{
@@ -892,13 +894,11 @@ const DEFAULT_INTERACTIVE_TAB = 'simulationInputs';
 function deepCloneSettings(
   settings: ISimulationExperimentInteractiveViewSettingsDialog
 ): ISimulationExperimentInteractiveViewSettingsDialog {
-  // Perform a deep clone of our settings using JSON serialisation.
-  // Note: we use our custom replacer to make sure that any typed arrays (e.g., Float64Array) in our UI JSON are
-  //       correctly serialised and deserialised.
+  // Perform a deep clone of our settings.
+  // Note: our external data values (i.e. Float64Arrays) are shared rather than copied (see cloneUiJson()), which is
+  //       fine since we never modify them in place.
 
-  const deepClonedSettings = JSON.parse(
-    JSON.stringify(settings, locApi.uiJsonReplacer)
-  ) as ISimulationExperimentInteractiveViewSettingsDialog;
+  const deepClonedSettings = locApi.cloneUiJson(settings);
 
   // Make sure that our UI JSON has the expected structure.
 
@@ -931,14 +931,14 @@ vue.watch(
 const simulationSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const solversSettingsIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const uiJsonIssuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
-const rootRef = vue.ref<HTMLElement | null>(null);
+const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef as unknown as vue.Ref<HTMLElement | null>);
 const activeTab = vue.ref(DEFAULT_TAB);
 const activeInteractiveTab = vue.ref(DEFAULT_INTERACTIVE_TAB);
 const showSimulationSettingsIssuesPanel = vue.ref(false);
 const showSolversSettingsIssuesPanel = vue.ref(false);
 const showUiJsonIssuesPanel = vue.ref(false);
-const externalDataFileRef = vue.ref<HTMLInputElement | null>(null);
+const externalDataFileRef = vue.shallowRef<HTMLInputElement | null>(null);
 const externalDataFileDragging = vue.ref(false);
 const externalDataUrl = vue.ref('');
 
@@ -1048,11 +1048,39 @@ const simulationSettingsIssues = vue.computed<locApi.IIssue[]>(() => {
     });
   }
 
+  // Note: a point interval that cannot be saved as a number of steps (e.g., if it is too small) gets saved as zero
+  //       steps (see onSettingsOk() in SimulationExperimentInteractiveView.vue), which gives an infinite (or NaN) point
+  //       interval when reopened.
+
+  if (
+    localSettings.value.simulation.pointInterval !== null &&
+    !Number.isFinite(localSettings.value.simulation.pointInterval)
+  ) {
+    res.push({
+      type: EIssueType.WARNING,
+      description: 'The point interval must be a finite number.'
+    });
+  }
+
   if (localSettings.value.simulation.pointInterval !== null && localSettings.value.simulation.pointInterval <= 0) {
     res.push({
       type: EIssueType.WARNING,
       description: 'The point interval must be a positive number.'
     });
+  }
+
+  // Make sure that our number of steps can be handled by libOpenCOR, i.e. that our point interval is not too small.
+  // Note: we only check this if our other simulation settings are valid.
+
+  if (res.length === 0) {
+    const { startingPoint, endingPoint, pointInterval } = localSettings.value.simulation;
+
+    if (!(Math.round((endingPoint - startingPoint) / pointInterval) <= locApi.MAXIMUM_NUMBER_OF_STEPS)) {
+      res.push({
+        type: EIssueType.WARNING,
+        description: `The point interval is too small (the number of steps must not exceed ${locApi.MAXIMUM_NUMBER_OF_STEPS.toLocaleString()}).`
+      });
+    }
   }
 
   return res;
@@ -1315,9 +1343,7 @@ const importExternalDataFromUrl = async (): Promise<void> => {
   const url = externalDataUrl.value.trim();
 
   try {
-    const response = await fetch(common.corsProxyUrl(url)).catch(() => {
-      return fetch(url);
-    });
+    const response = await common.fetchThroughCorsProxy(url);
 
     if (!response.ok) {
       throw new Error(`Could not retrieve CSV file from URL (${response.status}: ${response.statusText}).`);

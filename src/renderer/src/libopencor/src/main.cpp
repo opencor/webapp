@@ -1,9 +1,14 @@
+#include "common.h"
 #include "file.h"
 #include "sed.h"
 #include "version.h"
 
 Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
 {
+    // Release everything we hold when our Node.js environment gets torn down (see releaseAll()).
+
+    pEnv.AddCleanupHook(releaseAll);
+
     // Note: this must be in sync with src/preload/index.ts.
 
     // Some general methods.
@@ -12,6 +17,8 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
 
     // FileManager API.
 
+    pExports.Set(Napi::String::New(pEnv, "fileManagerCanonicalPath"), Napi::Function::New(pEnv, fileManagerCanonicalPath));
+    pExports.Set(Napi::String::New(pEnv, "fileManagerHasFile"), Napi::Function::New(pEnv, fileManagerHasFile));
     pExports.Set(Napi::String::New(pEnv, "fileManagerUnmanage"), Napi::Function::New(pEnv, fileManagerUnmanage));
 
     // File API.
@@ -57,6 +64,7 @@ Napi::Object init(Napi::Env pEnv, Napi::Object pExports)
     // SolverCvode API.
     // TODO: this is only temporary until we have full support for our different solvers.
 
+    pExports.Set(Napi::String::New(pEnv, "solverCvodeExists"), Napi::Function::New(pEnv, solverCvodeExists));
     pExports.Set(Napi::String::New(pEnv, "solverCvodeMaximumStep"), Napi::Function::New(pEnv, solverCvodeMaximumStep));
     pExports.Set(Napi::String::New(pEnv, "solverCvodeSetMaximumStep"), Napi::Function::New(pEnv, solverCvodeSetMaximumStep));
 

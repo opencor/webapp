@@ -35,7 +35,7 @@
             <Splitter>
               <SplitterPanel class="ml-4 mr-4 mb-4 min-w-fit" :size="25">
                 <ScrollPanel class="h-full">
-                  <SimulationPropertyEditor v-if="instanceTask" :uniformTimeCourse="uniformTimeCourse" :instanceTask="instanceTask" :disabled="simulationSettingsDisabled" />
+                  <SimulationPropertyEditor v-if="instanceTask && uniformTimeCourse" :uniformTimeCourse="uniformTimeCourse" :instanceTask="instanceTask" :disabled="simulationSettingsDisabled" />
                   <!-- <SolversPropertyEditor />
                   <GraphsPropertyEditor />
                   <ParametersPropertyEditor /> -->
@@ -49,7 +49,7 @@
                       size="small"
                       class="w-full"
                       :appendTo="appendTarget"
-                      @change="updatePlot()"
+                      @change="onParameterChange"
                     />
                   </Fieldset>
                   <Fieldset legend="Y Axis">
@@ -62,7 +62,7 @@
                       size="small"
                       class="w-full"
                       :appendTo="appendTarget"
-                      @change="updatePlot()"
+                      @change="onParameterChange"
                     />
                   </Fieldset>
                 </ScrollPanel>
@@ -114,8 +114,8 @@ const emit = defineEmits<{
   simulationData: [];
 }>();
 
-const rootRef = vue.ref<HTMLElement | null>(null);
-const editorRef = vue.ref<HTMLElement | null>(null);
+const rootRef = vue.shallowRef<HTMLElement | null>(null);
+const editorRef = vue.shallowRef<HTMLElement | null>(null);
 const document = props.file.document();
 const documentIssues = document.issues();
 const isDocumentValid = documentIssues.length === 0;
@@ -158,6 +158,67 @@ const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
   return instanceTask ? locCommon.simulationDataInfo(instanceTask, yParameter.value) : locCommon.NoSimulationDataInfo;
 });
 
+// Our live data, i.e. the data that we have retrieved so far while a simulation is running.
+// Note: while a simulation is running, we only retrieve the data that has been computed since our last update (rather
+//       than all of it every time) and store it in some buffers, which we then plot using views of them (so no copy is
+//       involved, while still providing Plotly with new arrays, which it needs to update our plot). Also, libOpenCOR
+//       counts a step as completed just before storing its results, so the last point that we retrieved may not have
+//       been stored at the time, which is why we always retrieve it again.
+
+interface ILiveData {
+  task: locSedApi.SedInstanceTask;
+  xInfo: locCommon.ISimulationDataInfo;
+  yInfo: locCommon.ISimulationDataInfo;
+  x: Float64Array;
+  y: Float64Array;
+  size: number;
+}
+
+let liveData: ILiveData | null = null;
+
+const retrieveLiveData = (task: locSedApi.SedInstanceTask, dataSize: number): ILiveData => {
+  // (Re)create our buffers if needed (e.g., at the start of a simulation run or if the X or Y parameter has changed) or
+  // grow them if they are too small.
+
+  if (!liveData || liveData.task !== task || liveData.xInfo !== xInfo.value || liveData.yInfo !== yInfo.value) {
+    const capacity = Math.max(dataSize, (uniformTimeCourse?.numberOfSteps() ?? 0) + 1);
+
+    liveData = {
+      task,
+      xInfo: xInfo.value,
+      yInfo: yInfo.value,
+      x: new Float64Array(capacity),
+      y: new Float64Array(capacity),
+      size: 0
+    };
+  } else if (dataSize > liveData.x.length) {
+    const x = new Float64Array(dataSize);
+    const y = new Float64Array(dataSize);
+
+    x.set(liveData.x);
+    y.set(liveData.y);
+
+    liveData.x = x;
+    liveData.y = y;
+  }
+
+  // Retrieve the data that has been computed since our last update (as well as our last point, see above).
+
+  const start = Math.max(0, liveData.size - 1);
+
+  if (dataSize > start) {
+    const x = locCommon.simulationDataValue(task, liveData.xInfo, start, dataSize).data;
+    const y = locCommon.simulationDataValue(task, liveData.yInfo, start, dataSize).data;
+
+    liveData.x.set(x, start);
+    liveData.y.set(y, start);
+
+    liveData.size = Math.max(liveData.size, start + Math.min(x.length, y.length));
+  }
+
+  return liveData;
+};
+
 const updatePlot = (dataSize: number = 0): void => {
   if (!instanceTask) {
     data.value = {
@@ -183,9 +244,28 @@ const updatePlot = (dataSize: number = 0): void => {
       : undefined;
 
   // Retrieve the data for the selected X and Y parameters and update the plot.
+  // Note: while a simulation is running (i.e. dataSize > 0), we use our live data (see retrieveLiveData()). Otherwise,
+  //       we retrieve all the data. With the C++ version of libOpenCOR, that data is a copy that we own, so we can use
+  //       it as is. With the WASM version of libOpenCOR, that data is a view of the WASM heap, so we need to copy it.
 
-  const xData = locCommon.simulationDataValue(instanceTask, xInfo.value).data;
-  const yData = locCommon.simulationDataValue(instanceTask, yInfo.value).data;
+  let xData: Float64Array;
+  let yData: Float64Array;
+
+  if (dataSize > 0) {
+    const live = retrieveLiveData(instanceTask, dataSize);
+
+    xData = live.x.subarray(0, live.size);
+    yData = live.y.subarray(0, live.size);
+  } else {
+    liveData = null;
+
+    const ownData = (values: Float64Array): Float64Array => {
+      return locApi.cppVersion() ? values : values.slice();
+    };
+
+    xData = ownData(locCommon.simulationDataValue(instanceTask, xInfo.value).data);
+    yData = ownData(locCommon.simulationDataValue(instanceTask, yInfo.value).data);
+  }
 
   data.value = {
     xAxisTitle: xParameter.value,
@@ -196,13 +276,26 @@ const updatePlot = (dataSize: number = 0): void => {
       {
         name: vueCommon.traceName(undefined, xParameter.value, yParameter.value),
         xValue: xParameter.value,
-        x: dataSize > 0 ? xData.slice(0, dataSize) : xData.slice(),
+        x: xData,
         yValue: yParameter.value,
-        y: dataSize > 0 ? yData.slice(0, dataSize) : yData.slice(),
+        y: yData,
         color: colors.DEFAULT_COLOR
       }
     ]
   };
+};
+
+// Update the plot after the X or Y parameter has changed.
+// Note: while a simulation is running or paused, only part of its data has been computed (the rest is either zeros or
+//       the data of a previous run), so we only plot the data that has been computed so far (as we do while running,
+//       see onRunPause()).
+
+const onParameterChange = (): void => {
+  if (instance && simulationStatus.value !== locSedApi.ESedInstanceStatus.IDLE) {
+    updatePlot(Math.round(instance.progress() * (uniformTimeCourse?.numberOfSteps() ?? 0)) + 1);
+  } else {
+    updatePlot();
+  }
 };
 
 // Release our instance (once it is idle) and our document.
@@ -212,23 +305,66 @@ let isUnmounted = false;
 let isWaitingOnRun = false;
 
 const releaseResources = async (): Promise<void> => {
-  if (instance) {
-    if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
-      instance.stopRun();
+  // Note: we always release our document, even if something goes wrong with our instance (e.g., if libOpenCOR throws an
+  //       exception while we wait for it to be idle) since we would otherwise leak it.
 
-      await vueCommon.waitWhileRunning(instance).promise;
+  try {
+    if (instance) {
+      if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+        instance.stopRun();
+
+        await vueCommon.waitWhileRunning(instance).promise;
+      }
+
+      instance.release();
     }
-
-    instance.release();
+  } catch (error: unknown) {
+    console.error('OpenCOR: an error occurred while releasing a simulation instance:', common.formatError(error));
+  } finally {
+    document.release();
   }
+};
 
-  document.release();
+// A helper function to scroll our console to the bottom.
+
+const scrollConsoleToBottom = (): void => {
+  vue.nextTick(() => {
+    editorRef.value?.scrollTo({ top: editorRef.value.scrollHeight });
+  });
+};
+
+// A helper function to report an error in our console.
+
+const addConsoleError = (error: unknown): void => {
+  consoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${colors.REVERTED_PALETTE.Red};"><strong>Error:</strong> ${common.formatMessage(common.formatError(error))}</span>`;
+
+  scrollConsoleToBottom();
 };
 
 // Event handlers.
 
 const onRunPause = async (): Promise<void> => {
-  switch (instance?.status()) {
+  // Make sure that we have an instance (we don't if our document has issues).
+
+  if (!instance) {
+    return;
+  }
+
+  // Retrieve the status of our simulation.
+  // Note: this may fail (e.g., if libOpenCOR throws an exception, see the handling of a run error below), in which case
+  //       we report the error rather than let it go unnoticed.
+
+  let status: locSedApi.ESedInstanceStatus;
+
+  try {
+    status = instance.status();
+  } catch (error: unknown) {
+    addConsoleError(error);
+
+    return;
+  }
+
+  switch (status) {
     case locSedApi.ESedInstanceStatus.RUNNING:
       // Pause the simulation.
 
@@ -247,9 +383,12 @@ const onRunPause = async (): Promise<void> => {
       break;
     default: {
       // locSedApi.ESedInstanceStatus.IDLE:
-      // Reset our abort flag.
+      // Reset our abort flag and our live data.
+      // Note: our live data is normally reset at the end of a simulation run (see updatePlot()), but not if the run was
+      //       aborted or failed, in which case we would otherwise end up plotting (some of) the data of that run.
 
       runAborted.value = false;
+      liveData = null;
 
       // Start the simulation.
 
@@ -301,16 +440,59 @@ const onRunPause = async (): Promise<void> => {
 
       isWaitingOnRun = true;
 
-      await runPromise;
+      let runError: unknown = null;
 
-      isWaitingOnRun = false;
+      try {
+        await runPromise;
+      } catch (error: unknown) {
+        runError = error;
+      } finally {
+        isWaitingOnRun = false;
 
-      progressResetCancel = undefined;
+        progressResetCancel = undefined;
+      }
 
       // Release our resources if we got unmounted while the simulation was running (see onUnmounted() below).
 
       if (isUnmounted) {
         await releaseResources();
+
+        return;
+      }
+
+      // Handle any error that occurred while waiting for the simulation to finish (e.g., if libOpenCOR threw an
+      // exception), in which case we cannot rely on our instance anymore.
+      // Note #1: we only know that we couldn't retrieve the status (or progress) of the simulation, which may therefore
+      //          still be running (or be paused). So, we try to stop it and wait for it to be idle. Otherwise, our next
+      //          run would, for instance, end up pausing the simulation rather than starting a new one (see the
+      //          RUNNING case above). If this fails too, then there is nothing more that we can do.
+      // Note #2: the run is over either way, so we reset our progress bar and live data, but we keep our plot as is (as
+      //          when a run is aborted) so that the user can see how far the simulation went.
+
+      if (runError) {
+        isWaitingOnRun = true;
+
+        try {
+          instance.stopRun();
+
+          await vueCommon.waitWhileRunning(instance).promise;
+        } catch {
+          // Our instance cannot be relied upon anymore, so there is nothing more that we can do.
+        } finally {
+          isWaitingOnRun = false;
+        }
+
+        if (isUnmounted) {
+          await releaseResources();
+
+          return;
+        }
+
+        simulationStatus.value = locSedApi.ESedInstanceStatus.IDLE;
+        progress.value = 0;
+        liveData = null;
+
+        addConsoleError(runError);
 
         return;
       }
@@ -356,13 +538,7 @@ const onRunPause = async (): Promise<void> => {
         updatePlot();
       }
 
-      vue.nextTick(() => {
-        const consoleElement = editorRef.value;
-
-        if (consoleElement) {
-          consoleElement.scrollTop = consoleElement.scrollHeight;
-        }
-      });
+      scrollConsoleToBottom();
     }
   }
 };

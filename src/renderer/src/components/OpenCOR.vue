@@ -279,7 +279,7 @@ const { isDialogActive } = provideDialogState();
 
 const safeBlockUiRef = vue.ref<InstanceType<typeof SafeBlockUIWidget> | null>(null);
 const mainMenuRef = vue.ref<InstanceType<typeof MainMenu> | null>(null);
-const filesRef = vue.ref<HTMLElement | null>(null);
+const filesRef = vue.shallowRef<HTMLElement | null>(null);
 const issues = vue.ref<locApi.IIssue[]>([]);
 const compIssues = vue.computed<locApi.IIssue[]>(() => {
   return [...initialisation.issues.value, ...issues.value];
@@ -305,13 +305,49 @@ const compIsActiveApp = vue.computed<boolean>(() => {
   return activeInstanceUid.value === crtInstanceUid;
 });
 
+// Keep track of what needs to be cleaned up when we get unmounted (e.g., when OpenCOR is used as a library or during
+// development with hot module replacement), i.e. our Electron API listeners (which would otherwise keep us alive and
+// get called for an unmounted instance), our timers, and our watchers that are not bound to our component.
+
+const cleanups: (() => void)[] = [];
+
+const trackCleanup = (cleanup: (() => void) | undefined): void => {
+  if (cleanup) {
+    cleanups.push(cleanup);
+  }
+};
+
+const setTrackedTimeout = (callback: () => void, delay: number): void => {
+  const timeoutId = window.setTimeout(callback, delay);
+
+  trackCleanup(() => {
+    window.clearTimeout(timeoutId);
+  });
+};
+
+vue.onUnmounted(() => {
+  for (const cleanup of cleanups) {
+    cleanup();
+  }
+
+  cleanups.length = 0;
+});
+
 // Enable/disable the UI from Electron.
 
 const electronUiEnabled = vue.ref<boolean>(true);
 
-electronApi?.onEnableDisableUi((enable: boolean) => {
-  electronUiEnabled.value = enable;
-});
+trackCleanup(
+  electronApi?.onEnableDisableUi((enable: boolean) => {
+    electronUiEnabled.value = enable;
+
+    // Note: our main process enables/disables our main menu itself before letting us know, but whether our main menu
+    //       should be enabled also depends on our own UI (see compUiEnabled below), so we enable/disable it accordingly
+    //       (our watcher below wouldn't do it if compUiEnabled didn't change, e.g., if our UI is still blocked).
+
+    common.enableDisableMainMenu(compUiEnabled.value);
+  })
+);
 
 // Determine whether the component UI should be blocked/enabled.
 // Note: compBlockUiEnabled is used to determine whether PrimeVue's BlockUI component should be enabled, whereas
@@ -335,6 +371,20 @@ const compBlockUiEnabled = vue.computed<boolean>(() => {
 const compUiEnabled = vue.computed<boolean>(() => {
   return !compBlockUiEnabled.value && !isDialogActive.value;
 });
+
+// Enable/disable our main menu (in OpenCOR) whenever our UI gets enabled/disabled.
+// Note: our main menu must not be usable while our UI is blocked (e.g., while a remote model is being loaded) or while
+//       a dialog is open. Local files, however, don't block our UI while they are being opened, so a local file may get
+//       closed while it is being opened as part of several files (see openFiles()), something that
+//       ContentsComponent.openFile() handles.
+
+vue.watch(
+  compUiEnabled,
+  (newCompUiEnabled: boolean) => {
+    common.enableDisableMainMenu(newCompUiEnabled);
+  },
+  { immediate: true }
+);
 
 // Remove any leftover SafeBlockUIWidget masks when unblocking.
 // Note: this is to ensure that we don't end up with leftover masks if the block event is emitted multiple times before
@@ -461,6 +511,24 @@ vue.watch(
 
       await common.sleep(LONG_DELAY);
 
+      // Let our main process know that we are ready, i.e. that we have registered our listeners and that we can now
+      // open files, handle actions, etc.
+      // Note #1: we don't do this if our initialisation failed since we wouldn't be able to open files, handle actions,
+      //          etc. anyway.
+      // Note #2: our main process may then ask us to open some files (e.g., the files to reopen or those passed on the
+      //          command line). Its requests reach us before its reply and, for a remote file, our loading message is
+      //          shown straight away. So, we wait for that reply before hiding our initialising message, so that our UI
+      //          doesn't get briefly unblocked in between (and our main menu briefly enabled, see compUiEnabled).
+
+      try {
+        await electronApi?.rendererReady();
+      } catch (error: unknown) {
+        console.error(
+          'OpenCOR: failed to let the main process know that the renderer is ready:',
+          common.formatError(error)
+        );
+      }
+
       initialisingOpencorMessageVisible.value = false;
 
       // We are all done, so let's start checking for a newer version of OpenCOR, but only if we are running the Web app
@@ -516,11 +584,56 @@ if (firebaseConfig) {
 loadGitHubAccessToken();
 */
 
+// Handle an external request, i.e. a request that comes from outside of our UI (e.g., a file opened from the file
+// explorer, from another instance of OpenCOR, or through an opencor:// link).
+// Note: a dialog is modal, so an external request must wait for all our dialogs to be closed. Otherwise, a file could,
+//       for instance, get opened (and selected) while a dialog is open in the current file tab, hiding that dialog and
+//       leaving our UI disabled. So, we queue our external requests and handle them, in order, once no dialog is open.
+//       Also, an external request may open a dialog (e.g., opencor://openAboutDialog), so we wait for our UI to be
+//       updated after handling an external request to know whether we can handle the next one.
+
+const pendingExternalRequests: (() => void)[] = [];
+let handlingPendingExternalRequests = false;
+
+const handlePendingExternalRequests = async (): Promise<void> => {
+  if (handlingPendingExternalRequests) {
+    return;
+  }
+
+  handlingPendingExternalRequests = true;
+
+  try {
+    while (pendingExternalRequests.length && !isDialogActive.value) {
+      pendingExternalRequests.shift()?.();
+
+      await vue.nextTick();
+    }
+  } finally {
+    handlingPendingExternalRequests = false;
+  }
+};
+
+const handleExternalRequest = (externalRequest: () => void): void => {
+  pendingExternalRequests.push(externalRequest);
+
+  void handlePendingExternalRequests();
+};
+
+vue.watch(isDialogActive, (newIsDialogActive: boolean) => {
+  if (!newIsDialogActive) {
+    void handlePendingExternalRequests();
+  }
+});
+
 // Handle an action.
 
-electronApi?.onAction((action: string) => {
-  handleAction(action);
-});
+trackCleanup(
+  electronApi?.onAction((action: string) => {
+    handleExternalRequest(() => {
+      handleAction(action);
+    });
+  })
+);
 
 const handleAction = (action: string): void => {
   const isAction = (actionName: string, expectedActionName: string): boolean => {
@@ -555,20 +668,28 @@ const handleAction = (action: string): void => {
 };
 
 // Enable/disable some menu items.
+// Note: we let our main process know straight away whether we have files since our main menu may still reflect a
+//       previous instance of our renderer (e.g., if we got reloaded while some files were open).
 
 const hasFiles = vue.computed<boolean>(() => {
   return contentsRef.value?.hasFiles() ?? false;
 });
 
-vue.watch(hasFiles, (newHasFiles: boolean) => {
-  electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles);
-});
+vue.watch(
+  hasFiles,
+  (newHasFiles: boolean) => {
+    electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles);
+  },
+  { immediate: true }
+);
 
 // Auto update.
 
-electronApi?.onCheckForUpdates(() => {
-  electronApi?.checkForUpdates(false);
-});
+trackCleanup(
+  electronApi?.onCheckForUpdates(() => {
+    electronApi?.checkForUpdates(false);
+  })
+);
 
 const updateErrorVisible = vue.ref<boolean>(false);
 const updateErrorTitle = vue.ref<string>('');
@@ -584,10 +705,12 @@ const updateDownloadProgressVisible = vue.ref<boolean>(false);
 const updateVersion = vue.ref<string>('');
 const updateDownloadPercent = vue.ref<number>(0);
 
-electronApi?.onUpdateAvailable((version: string) => {
-  desktopUpdateAvailableVisible.value = true;
-  updateVersion.value = version;
-});
+trackCleanup(
+  electronApi?.onUpdateAvailable((version: string) => {
+    desktopUpdateAvailableVisible.value = true;
+    updateVersion.value = version;
+  })
+);
 
 const onDownloadAndInstall = (): void => {
   updateDownloadPercent.value = 0; // Just to be on the safe side.
@@ -597,33 +720,56 @@ const onDownloadAndInstall = (): void => {
   electronApi?.downloadAndInstallUpdate();
 };
 
-electronApi?.onUpdateDownloadError((issue: string) => {
-  updateErrorTitle.value = 'Downloading Update...';
-  updateErrorIssue.value = `An error occurred while downloading the update (${common.formatMessage(issue, false)}).`;
-  updateErrorVisible.value = true;
-});
+trackCleanup(
+  electronApi?.onUpdateDownloadError((issue: string) => {
+    updateErrorTitle.value = 'Downloading Update...';
+    updateErrorIssue.value = `An error occurred while downloading the update (${common.formatMessage(issue, false)}).`;
+    updateErrorVisible.value = true;
+  })
+);
 
-electronApi?.onUpdateDownloadProgress((percent: number) => {
-  updateDownloadPercent.value = percent;
-});
+trackCleanup(
+  electronApi?.onUpdateInstallError((issue: string) => {
+    updateErrorTitle.value = 'Installing Update...';
+    updateErrorIssue.value = `An error occurred while installing the update (${common.formatMessage(issue, false)}).`;
+    updateErrorVisible.value = true;
+  })
+);
 
-electronApi?.onUpdateDownloaded(() => {
-  updateDownloadPercent.value = 100; // Just to be on the safe side.
+// Note: we show our update download progress dialog in case it is not already visible, i.e. if we have been reloaded
+//       (e.g., after a crash) while an update was being downloaded or installed (see resendUpdateState() in
+//       MainWindow.ts).
 
-  electronApi?.installUpdateAndRestart();
-});
+trackCleanup(
+  electronApi?.onUpdateDownloadProgress((percent: number) => {
+    updateDownloadPercent.value = percent;
+    updateDownloadProgressVisible.value = true;
+  })
+);
+
+trackCleanup(
+  electronApi?.onUpdateDownloaded(() => {
+    updateDownloadPercent.value = 100; // Just to be on the safe side.
+
+    electronApi?.installUpdateAndRestart();
+  })
+);
 
 const updateNotAvailableVisible = vue.ref<boolean>(false);
 
-electronApi?.onUpdateNotAvailable(() => {
-  updateNotAvailableVisible.value = true;
-});
+trackCleanup(
+  electronApi?.onUpdateNotAvailable(() => {
+    updateNotAvailableVisible.value = true;
+  })
+);
 
-electronApi?.onUpdateCheckError((issue: string) => {
-  updateErrorTitle.value = 'Checking For Updates...';
-  updateErrorIssue.value = `An error occurred while checking for updates (${common.formatMessage(issue, false)}).`;
-  updateErrorVisible.value = true;
-});
+trackCleanup(
+  electronApi?.onUpdateCheckError((issue: string) => {
+    updateErrorTitle.value = 'Checking For Updates...';
+    updateErrorIssue.value = `An error occurred while checking for updates (${common.formatMessage(issue, false)}).`;
+    updateErrorVisible.value = true;
+  })
+);
 
 // Handle errors.
 
@@ -640,9 +786,11 @@ const onError = (message: string): void => {
 
 const aboutVisible = vue.ref<boolean>(false);
 
-electronApi?.onAbout(() => {
-  onAboutMenu();
-});
+trackCleanup(
+  electronApi?.onAbout(() => {
+    onAboutMenu();
+  })
+);
 
 const onAboutMenu = (): void => {
   if (props.omex) {
@@ -656,9 +804,11 @@ const onAboutMenu = (): void => {
 
 const settingsVisible = vue.ref<boolean>(false);
 
-electronApi?.onSettings(() => {
-  onSettingsMenu();
-});
+trackCleanup(
+  electronApi?.onSettings(() => {
+    onSettingsMenu();
+  })
+);
 
 const onSettingsMenu = (): void => {
   if (props.omex) {
@@ -678,13 +828,79 @@ const onUpdateAvailable = () => {
 
 // Open a file.
 
-let globalOmexDataUrlCounter = 0;
+// The files that are being opened, keyed by their canonical path, each with a promise that gets resolved once the file
+// has been opened (or not).
+
+interface IFileBeingOpened {
+  promise: Promise<void>;
+  resolve: () => void;
+}
+
+const filesBeingOpened = new Map<string, IFileBeingOpened>();
+
+const fileBeingOpened = (canonicalFilePath: string): void => {
+  let resolve: () => void = () => {};
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  filesBeingOpened.set(canonicalFilePath, { promise, resolve });
+};
+
+const fileNoLongerBeingOpened = (canonicalFilePath: string): void => {
+  filesBeingOpened.get(canonicalFilePath)?.resolve();
+  filesBeingOpened.delete(canonicalFilePath);
+};
 
 interface IFileInfo {
   alreadyOpen: boolean;
+  beingOpened?: Promise<void>;
+  // Note: if the file is already being opened (i.e. it doesn't have a file tab yet), then a promise that gets resolved
+  //       once the file has been opened (or not).
   file: locApi.File | null;
   filePath: string;
+  canonicalFilePath: string;
 }
+
+// A helper function to describe a file for which we don't (yet) have a file path.
+
+const fileDescription = (fileFilePathOrFileContents: string | Uint8Array | File): string => {
+  return typeof fileFilePathOrFileContents === 'string'
+    ? fileFilePathOrFileContents
+    : fileFilePathOrFileContents instanceof File
+      ? fileFilePathOrFileContents.name
+      : 'Unknown file';
+};
+
+// A helper function to report an issue with a file that couldn't be opened.
+
+const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePath: string = ''): void => {
+  // Let our main process know about the issue first since it may be waiting for the file (e.g., if the file is being
+  // reopened at startup, see MainWindow.fileOpenedOrNot()), so that it doesn't wait forever should reporting the issue
+  // to the user fail.
+  // Note: the canonical path of the file may not be known (e.g., if libOpenCOR couldn't determine it), in which case we
+  //       use the path that was used to (try to) open the file.
+
+  electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
+
+  if (props.omex) {
+    vue.nextTick(() => {
+      issues.value.push({ type: locApi.EIssueType.ERROR, description: issueMessage });
+    });
+  } else {
+    // Note: a data URL can be very long, so we don't show it (the issue message says that it is a data URL anyway).
+
+    addToast({
+      severity: 'error',
+      summary: 'Opening a file',
+      detail:
+        filePath.startsWith('data:') || filePath.startsWith('#data:') ? issueMessage : `${filePath}\n\n${issueMessage}`,
+      life: TOAST_LIFE
+    });
+  }
+
+  emit('file', { type: 'issue', filePath, issues: [issueMessage] });
+};
 
 const processFile = async (fileFilePathOrFileContents: string | Uint8Array | File): Promise<IFileInfo | null> => {
   // Check whether we were passed a ZIP-CellML data URL.
@@ -696,17 +912,19 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
   if (zipCellmlDataUriInfo.res) {
     if (zipCellmlDataUriInfo.error) {
-      addToast({
-        severity: 'error',
-        summary: 'Opening a file',
-        detail: zipCellmlDataUriInfo.error,
-        life: TOAST_LIFE
-      });
+      reportFileIssue(fileDescription(fileFilePathOrFileContents), zipCellmlDataUriInfo.error);
 
       return null;
     }
 
-    cellmlDataUrlFileName = zipCellmlDataUriInfo.fileName as string;
+    // Note: we only use the name of the CellML file, not its path within the ZIP file. Indeed, its path may contain
+    //       path separators that JSZip doesn't resolve (e.g., "..\model.cellml"), in which case the canonical path of
+    //       our CellML file could end up without its prefix (e.g., "model.cellml" rather than "CellML #1/model.cellml"
+    //       on Windows), i.e. it wouldn't be recognised as a data URL file anymore (see common.isDataUrlFileName()).
+
+    const zipCellmlFileName = zipCellmlDataUriInfo.fileName as string;
+
+    cellmlDataUrlFileName = `${common.CELLML_PREFIX}${common.nextCellmlDataUrlNumber()}/${common.fileName(zipCellmlFileName) || zipCellmlFileName}`;
     fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
   } else {
     // Check whether we were passed a COMBINE archive data URL.
@@ -715,32 +933,58 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
     if (combineArchiveDataUriInfo.res) {
       if (combineArchiveDataUriInfo.error) {
-        addToast({
-          severity: 'error',
-          summary: 'Opening a file',
-          detail: combineArchiveDataUriInfo.error,
-          life: TOAST_LIFE
-        });
+        reportFileIssue(fileDescription(fileFilePathOrFileContents), combineArchiveDataUriInfo.error);
 
         return null;
       }
 
-      omexDataUrlCounter = ++globalOmexDataUrlCounter;
+      omexDataUrlCounter = common.nextOmexDataUrlNumber();
       fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
     }
   }
 
-  // Check whether the file is already open and if so then select it.
+  // Check whether the file is already open or being opened and if so then select it.
+  // Note: a file may be opened more than once at the same time (e.g., by dropping the same file twice or by selecting
+  //       the same sample file twice). Since a file is only considered open once it has a file tab, we also need to
+  //       keep track of the files that are being opened, so that we don't end up with several file tabs for the same
+  //       file (and, with the C++ version of libOpenCOR, several File objects sharing, and therefore releasing, the
+  //       same native file). Also, a file may be referred to using different paths (e.g., through a symbolic link),
+  //       hence we keep track of the canonical path of the files that are being opened (our contents component does
+  //       the same for the files that are open, see ContentsComponent.findFileTab()).
+  // Note: this may fail (e.g., if the file path cannot be determined), in which case we report the issue so that the
+  //       user knows about it and our main process doesn't wait for the file forever (e.g., if the file is being
+  //       reopened at startup, see MainWindow.fileOpenedOrNot()).
 
-  const filePath = locCommon.filePath(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+  let filePath = '';
+  let canonicalFilePath = '';
+  let fileIsOpen = false;
 
-  if (contentsRef.value?.hasFile(filePath) ?? false) {
+  try {
+    filePath = locCommon.filePath(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+    canonicalFilePath = locApi.fileManager.canonicalPath(filePath);
+    fileIsOpen = contentsRef.value?.hasFile(filePath) ?? false;
+  } catch (error: unknown) {
+    reportFileIssue(
+      filePath || fileDescription(fileFilePathOrFileContents),
+      common.formatMessage(common.formatError(error))
+    );
+
+    return null;
+  }
+
+  const beingOpened = fileIsOpen ? undefined : filesBeingOpened.get(canonicalFilePath)?.promise;
+
+  if (fileIsOpen || beingOpened) {
     return {
       alreadyOpen: true,
+      beingOpened,
       file: null,
-      filePath
+      filePath,
+      canonicalFilePath
     };
   }
+
+  fileBeingOpened(canonicalFilePath);
 
   // Retrieve a locApi.File object for the given file or file path.
 
@@ -752,69 +996,62 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
     loadingModelMessageVisible.value = true;
   }
 
+  let file: locApi.File | null = null;
+  let fileToBeOpened = false;
+
   try {
-    const file = await locCommon.file(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+    file = await locCommon.file(fileFilePathOrFileContents, cellmlDataUrlFileName, omexDataUrlCounter);
+    // Note: to retrieve the type of the file may fail (e.g., if libOpenCOR throws an exception), in which case we must
+    //       release the file since nothing else would (see the catch block below).
+
     const fileType = file.type();
 
     if (
       fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
       (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
     ) {
-      const issueMessage =
+      reportFileIssue(
+        filePath,
         fileType === locApi.EFileType.IRRETRIEVABLE_FILE
           ? 'The file could not be retrieved.'
-          : 'Only COMBINE archives are supported.';
-
-      if (props.omex) {
-        vue.nextTick(() => {
-          issues.value.push({ type: locApi.EIssueType.ERROR, description: issueMessage });
-        });
-      } else {
-        addToast({
-          severity: 'error',
-          summary: 'Opening a file',
-          detail: `${filePath}\n\n${issueMessage}`,
-          life: TOAST_LIFE
-        });
-      }
-
-      electronApi?.fileIssue(filePath);
-
-      emit('file', { type: 'issue', filePath, issues: [issueMessage] });
+          : 'Only COMBINE archives are supported.',
+        canonicalFilePath
+      );
 
       file.release();
 
       return null;
     }
 
+    fileToBeOpened = true;
+
     return {
       alreadyOpen: false,
       file,
-      filePath
+      filePath,
+      canonicalFilePath
     };
   } catch (error: unknown) {
-    if (props.omex) {
-      vue.nextTick(() => {
-        issues.value.push({
-          type: locApi.EIssueType.ERROR,
-          description: common.formatMessage(common.formatError(error))
-        });
-      });
-    } else {
-      addToast({
-        severity: 'error',
-        summary: 'Opening a file',
-        detail: `${filePath}\n\n${common.formatMessage(common.formatError(error))}`,
-        life: TOAST_LIFE
-      });
+    try {
+      file?.release();
+    } catch (error: unknown) {
+      console.warn(`OpenCOR: failed to release file (${filePath}):`, common.formatError(error));
     }
 
-    electronApi?.fileIssue(filePath);
-
-    emit('file', { type: 'issue', filePath, issues: [common.formatMessage(common.formatError(error))] });
+    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
 
     return null;
   } finally {
+    // The file is no longer being opened, unless it is to be opened, in which case openFileInContents() will take care
+    // of it.
+    // Note: we do this here so that it gets done whatever happens (e.g., if reporting an issue fails). Otherwise, the
+    //       file would be considered as being opened forever, i.e. it could never be opened again, and our main process
+    //       might wait for it forever (see fileAlreadyOpen()).
+
+    if (!fileToBeOpened) {
+      fileNoLongerBeingOpened(canonicalFilePath);
+    }
+
     if (isRemoteFilePath) {
       --remoteModelLoadsCount.value;
 
@@ -823,59 +1060,125 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
   }
 };
 
-const openFileInContents = async (file: locApi.File, wait: boolean = false): Promise<void> => {
+const openFileInContents = async (
+  file: locApi.File,
+  canonicalFilePath: string,
+  wait: boolean = false
+): Promise<void> => {
   // Open the given file in our contents component or release it if we can't (e.g., we got unmounted in the meantime).
+  // Note #1: to open a file may fail (e.g., if libOpenCOR throws an exception), in which case we report the issue and
+  //          release the file, unless it got opened (i.e. it has a file tab), in which case it is now managed by our
+  //          contents component. Either way, the issue doesn't stop other files from being opened.
+  // Note #2: either way, the file is no longer being opened once we are done (see processFile()).
 
-  if (contentsRef.value) {
+  const filePath = file.path();
+
+  try {
+    if (!contentsRef.value) {
+      file.release();
+
+      return;
+    }
+
     await contentsRef.value.openFile(file, wait);
-  } else {
-    file.release();
+  } catch (error: unknown) {
+    if (!contentsRef.value?.hasFile(filePath)) {
+      file.release();
+    }
+
+    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
+  } finally {
+    fileNoLongerBeingOpened(canonicalFilePath);
   }
 };
 
-const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void => {
-  processFile(fileFilePathOrFileContents).then(async (fileInfo) => {
+const fileAlreadyOpen = async (fileInfo: IFileInfo, wait: boolean = false): Promise<void> => {
+  // Let our main process know whether the file is open since it may be waiting for it (e.g., if the file is being
+  // reopened at startup, see MainWindow.fileOpenedOrNot()), and select it.
+  // Note: if the file is being opened, then we can only let our main process know once it has been opened (or not), in
+  //       which case it will also have been selected (see ContentsComponent.openFile()). However, we must not wait for
+  //       that here since we may be called from openFiles() and the file may be opened after us in its chain, in which
+  //       case we would wait forever.
+
+  const beingOpened = fileInfo.beingOpened;
+
+  if (beingOpened) {
+    void beingOpened.then(() => {
+      if (contentsRef.value?.hasFile(fileInfo.filePath)) {
+        electronApi?.fileOpened(fileInfo.filePath, fileInfo.canonicalFilePath);
+      } else {
+        electronApi?.fileIssue(fileInfo.filePath, fileInfo.canonicalFilePath);
+      }
+    });
+
+    return;
+  }
+
+  electronApi?.fileOpened(fileInfo.filePath, fileInfo.canonicalFilePath);
+
+  await contentsRef.value?.selectFile(fileInfo.filePath, wait);
+};
+
+const openProcessedFile = async (
+  fileFilePathOrFileContents: string | Uint8Array | File,
+  fileInfoPromise: Promise<IFileInfo | null>,
+  wait: boolean
+): Promise<void> => {
+  // Open the given processed file (see processFile()) or select it if it is already open.
+  // Note: we never reject. Indeed, processFile() and the functions we call report the issues that they come across, but
+  //       should something unexpected go wrong, then we still need to report it so that the user knows about it, our
+  //       main process doesn't wait for the file forever (e.g., if the file is being reopened at startup, see
+  //       MainWindow.fileOpenedOrNot()), and the next files can still be opened (see openFiles()).
+
+  let fileInfo: IFileInfo | null = null;
+
+  try {
+    fileInfo = await fileInfoPromise;
+
     if (!fileInfo) {
       return;
     }
 
     if (fileInfo.alreadyOpen) {
-      await contentsRef.value?.selectFile(fileInfo.filePath);
+      await fileAlreadyOpen(fileInfo, wait);
 
       return;
     }
 
     if (fileInfo.file) {
-      await openFileInContents(fileInfo.file);
+      await openFileInContents(fileInfo.file, fileInfo.canonicalFilePath, wait);
     }
-  });
+  } catch (error: unknown) {
+    console.error('OpenCOR: an unexpected error occurred while opening a file:', common.formatError(error));
+
+    reportFileIssue(
+      fileInfo?.filePath || fileDescription(fileFilePathOrFileContents),
+      common.formatMessage(common.formatError(error)),
+      fileInfo?.canonicalFilePath
+    );
+  }
+};
+
+const openFile = (fileFilePathOrFileContents: string | Uint8Array | File): void => {
+  void openProcessedFile(fileFilePathOrFileContents, processFile(fileFilePathOrFileContents), false);
 };
 
 const openFiles = (filesFilePathsOrFileContents: (string | Uint8Array | File)[]): void => {
   // Start processing all files in parallel but open their tabs in the original order.
+  // Note: openProcessedFile() never rejects, so an issue with a file doesn't prevent the next files from being opened
+  //       (and therefore from no longer being considered as being opened, see processFile()).
 
-  const filePromises = filesFilePathsOrFileContents.map((fileFilePathOrFileContents) => {
-    return processFile(fileFilePathOrFileContents);
+  const processedFiles = filesFilePathsOrFileContents.map((fileFilePathOrFileContents) => {
+    return {
+      fileFilePathOrFileContents,
+      fileInfoPromise: processFile(fileFilePathOrFileContents)
+    };
   });
 
-  filePromises.reduce(async (previousFilePromises, currentFilePromise) => {
-    await previousFilePromises;
+  void processedFiles.reduce(async (previousFilesOpened, processedFile) => {
+    await previousFilesOpened;
 
-    const currentFileInfo = await currentFilePromise;
-
-    if (!currentFileInfo) {
-      return;
-    }
-
-    if (currentFileInfo.alreadyOpen) {
-      await contentsRef.value?.selectFile(currentFileInfo.filePath, true);
-
-      return;
-    }
-
-    if (currentFileInfo.file) {
-      await openFileInContents(currentFileInfo.file, true);
-    }
+    await openProcessedFile(processedFile.fileFilePathOrFileContents, processedFile.fileInfoPromise, true);
   }, Promise.resolve());
 };
 
@@ -938,9 +1241,34 @@ const onDragLeave = (): void => {
 
 // Open.
 
-electronApi?.onOpen((filePath: string) => {
-  openFile(filePath);
-});
+trackCleanup(
+  electronApi?.onOpen((filePath: string) => {
+    handleExternalRequest(() => {
+      openFile(filePath);
+    });
+  })
+);
+
+// Canonicalise some recent file paths for our main process.
+// Note: our main process can't canonicalise a file path itself (only libOpenCOR can), so it asks us to do it for the
+//       recent file paths that it couldn't get from us (see MainWindow.onRenderProcessGone()). A file path that can't
+//       be canonicalised is left as it is.
+
+trackCleanup(
+  electronApi?.onCanonicaliseRecentFilePaths((filePaths: string[]) => {
+    for (const filePath of filePaths) {
+      try {
+        const canonicalFilePath = locApi.fileManager.canonicalPath(filePath);
+
+        if (canonicalFilePath !== filePath) {
+          electronApi?.recentFilePathCanonicalised(filePath, canonicalFilePath);
+        }
+      } catch (error: unknown) {
+        console.warn(`OpenCOR: failed to canonicalise a recent file path (${filePath}):`, common.formatError(error));
+      }
+    }
+  })
+);
 
 const onOpenMenu = (): void => {
   if (props.omex) {
@@ -954,9 +1282,11 @@ const onOpenMenu = (): void => {
 
 const openRemoteVisible = vue.ref<boolean>(false);
 
-electronApi?.onOpenRemote(() => {
-  openRemoteVisible.value = true;
-});
+trackCleanup(
+  electronApi?.onOpenRemote(() => {
+    openRemoteVisible.value = true;
+  })
+);
 
 const onOpenRemoteMenu = (): void => {
   if (props.omex) {
@@ -977,9 +1307,11 @@ const onOpenRemote = (url: string): void => {
 
 // Open sample Lorenz.
 
-electronApi?.onOpenSampleLorenz(() => {
-  onOpenSampleLorenzMenu();
-});
+trackCleanup(
+  electronApi?.onOpenSampleLorenz(() => {
+    onOpenSampleLorenzMenu();
+  })
+);
 
 const onOpenSampleLorenzMenu = (): void => {
   if (props.omex) {
@@ -991,9 +1323,11 @@ const onOpenSampleLorenzMenu = (): void => {
 
 // Close.
 
-electronApi?.onClose(() => {
-  onCloseMenu();
-});
+trackCleanup(
+  electronApi?.onClose(() => {
+    onCloseMenu();
+  })
+);
 
 const onCloseMenu = (): void => {
   if (props.omex) {
@@ -1005,9 +1339,11 @@ const onCloseMenu = (): void => {
 
 // Close all.
 
-electronApi?.onCloseAll(() => {
-  onCloseAllMenu();
-});
+trackCleanup(
+  electronApi?.onCloseAll(() => {
+    onCloseAllMenu();
+  })
+);
 
 const onCloseAllMenu = (): void => {
   if (props.omex) {
@@ -1021,9 +1357,11 @@ const onCloseAllMenu = (): void => {
 
 const resetAllVisible = vue.ref<boolean>(false);
 
-electronApi?.onResetAll(() => {
-  resetAllVisible.value = true;
-});
+trackCleanup(
+  electronApi?.onResetAll(() => {
+    resetAllVisible.value = true;
+  })
+);
 
 const onResetAll = (): void => {
   electronApi?.resetAll();
@@ -1031,9 +1369,13 @@ const onResetAll = (): void => {
 
 // Select.
 
-electronApi?.onSelect((filePath: string) => {
-  contentsRef.value?.selectFile(filePath);
-});
+trackCleanup(
+  electronApi?.onSelect((filePath: string) => {
+    handleExternalRequest(() => {
+      contentsRef.value?.selectFile(filePath);
+    });
+  })
+);
 
 // A few things that can only be done when the component is mounted.
 
@@ -1042,13 +1384,13 @@ vue.onMounted(() => {
 
   // Make ourselves the active instance.
 
-  setTimeout(() => {
+  setTrackedTimeout(() => {
     activateInstance();
   }, SHORT_DELAY);
 
   // Ensure that our toasts are shown within our block UI.
 
-  setTimeout(() => {
+  setTrackedTimeout(() => {
     const toastElement = document.getElementById(toastId.value);
 
     if (toastElement && safeBlockUiElement && toastElement.parentElement !== safeBlockUiElement) {
@@ -1126,7 +1468,7 @@ if (props.omex) {
   vue.onMounted(() => {
     // Do what follows with a bit of a delay to give our background (with the OpenCOR logo) time to be renderered.
 
-    setTimeout(() => {
+    setTrackedTimeout(() => {
       if (electronApi) {
         // Check for updates.
         // Note: the main process will actually check for updates if requested and if OpenCOR is packaged.
@@ -1134,35 +1476,39 @@ if (props.omex) {
         electronApi.checkForUpdates(true);
       } else {
         // Handle the action passed to our Web app, if any.
-        // Note: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
+        // Note #1: to use vue.nextTick() doesn't do the trick, so we have no choice but to use setTimeout().
+        // Note #2: our watcher is created outside of our component's setup, so it is not automatically stopped when we
+        //          get unmounted, hence we keep track of it.
 
-        vue.watch(initialisingOpencorMessageVisible, (newInitialisingOpencorMessageVisible: boolean) => {
-          if (!newInitialisingOpencorMessageVisible && window.location.search) {
-            // Retrieve the action from the URL.
-            // Note: we also include the hash since it is used to pass a model that is encoded as a data URL.
+        trackCleanup(
+          vue.watch(initialisingOpencorMessageVisible, (newInitialisingOpencorMessageVisible: boolean) => {
+            if (!newInitialisingOpencorMessageVisible && window.location.search) {
+              // Retrieve the action from the URL.
+              // Note: we also include the hash since it is used to pass a model that is encoded as a data URL.
 
-            let action = window.location.search.substring(1);
+              let action = window.location.search.substring(1);
 
-            if (window.location.hash) {
-              action += window.location.hash;
+              if (window.location.hash) {
+                action += window.location.hash;
+              }
+
+              // Ensure that the URL is cleaned up.
+
+              window.history.replaceState({}, document.title, window.location.pathname);
+
+              if (action.startsWith(FULL_URI_SCHEME)) {
+                handleAction(action.slice(FULL_URI_SCHEME.length));
+              } else {
+                addToast({
+                  severity: 'error',
+                  summary: 'Handling an action',
+                  detail: `${action}\n\nThe action could not be handled.`,
+                  life: TOAST_LIFE
+                });
+              }
             }
-
-            // Ensure that the URL is cleaned up.
-
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            if (action.startsWith(FULL_URI_SCHEME)) {
-              handleAction(action.slice(FULL_URI_SCHEME.length));
-            } else {
-              addToast({
-                severity: 'error',
-                summary: 'Handling an action',
-                detail: `${action}\n\nThe action could not be handled.`,
-                life: TOAST_LIFE
-              });
-            }
-          }
-        });
+          })
+        );
       }
     }, SHORT_DELAY);
   });

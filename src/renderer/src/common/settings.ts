@@ -1,5 +1,45 @@
-import { formatError, type ISettings, type ISettingsGeneral } from './common';
+import { formatError, type ISettings, type ISettingsGeneral, isObject } from './common';
 import { electronApi } from './electronApi';
+
+// Our default settings.
+
+const defaultSettings = (): ISettings => {
+  return {
+    general: {
+      checkForUpdatesAtStartup: true
+    }
+  };
+};
+
+// A helper function to merge the given (loaded) settings over our default settings.
+// Note #1: the loaded settings may be incomplete (e.g., if they were saved by an older version of OpenCOR or edited by
+//          hand), have values of the wrong type (e.g., "false" rather than false), or not even be an object, in which
+//          case we use our default settings for whatever is missing or of the wrong type.
+// Note #2: we keep the settings, and settings sections, for which we don't have a default value (e.g., settings saved by
+//          a newer version of OpenCOR).
+
+const withDefaultSettings = (settings: unknown): ISettings => {
+  const loadedSettings = isObject(settings) ? settings : {};
+  const res = { ...loadedSettings, ...defaultSettings() } as ISettings;
+  const general = loadedSettings.general;
+
+  // Note: we use Object.hasOwn() and Object.fromEntries() rather than look up and assign each key since the loaded
+  //       settings may contain a "__proto__" key, which would otherwise be looked up as, and assigned to, the prototype
+  //       of our general settings (see also cloneUiJson()).
+
+  if (isObject(general)) {
+    const defaultGeneral = res.general as unknown as Record<string, unknown>;
+
+    res.general = Object.fromEntries([
+      ...Object.entries(defaultGeneral),
+      ...Object.entries(general).filter(([key, value]) => {
+        return !Object.hasOwn(defaultGeneral, key) || typeof value === typeof defaultGeneral[key];
+      })
+    ]) as unknown as ISettingsGeneral;
+  }
+
+  return res;
+};
 
 class Settings {
   protected static _instance: Settings | null = null;
@@ -44,18 +84,27 @@ class Settings {
 
   load(): void {
     if (electronApi) {
-      electronApi.loadSettings().then((settings: ISettings) => {
-        this._settings = settings;
-        this._oldRawSettings = JSON.stringify(settings);
+      // Note: if our settings cannot be loaded, then we keep our default settings, but we still let people know that we
+      //       are initialised (since they would otherwise wait forever).
 
-        this.emitInitialised();
-      });
+      electronApi
+        .loadSettings()
+        .then((settings: ISettings) => {
+          this._settings = withDefaultSettings(settings);
+          this._oldRawSettings = JSON.stringify(settings);
+        })
+        .catch((error: unknown) => {
+          console.warn('OpenCOR: failed to load the settings, so using the default settings:', formatError(error));
+        })
+        .finally(() => {
+          this.emitInitialised();
+        });
     } else {
       try {
         const raw = window.localStorage.getItem('settings');
 
         if (raw) {
-          this._settings = JSON.parse(raw);
+          this._settings = withDefaultSettings(JSON.parse(raw));
           this._oldRawSettings = raw;
         }
       } catch (error: unknown) {
@@ -94,11 +143,7 @@ class Settings {
   }
 
   reset(): void {
-    this._settings = {
-      general: {
-        checkForUpdatesAtStartup: true
-      }
-    };
+    this._settings = defaultSettings();
 
     this._oldRawSettings = null;
   }

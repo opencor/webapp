@@ -1,17 +1,23 @@
 import electron from 'electron';
 
 import { formatError } from '../renderer/src/common/common';
-import { isMacOs, isPackaged } from '../renderer/src/common/electron';
+import { isMacOs } from '../renderer/src/common/electron';
 
 import { mainWindow } from './index';
-import { clearRecentFiles } from './MainWindow';
+import { canCheckForUpdates, clearRecentFiles } from './MainWindow';
 
 let enabledMenu: electron.Menu | null = null;
 let disabledMenu: electron.Menu | null = null;
 let recentFilePaths: string[] = [];
 let hasFiles = false;
+let menuEnabled = false;
+// Note: our main menu is disabled until our renderer enables it (see MainWindow's constructor).
 
 export const enableDisableMainMenu = (enable: boolean): void => {
+  // Keep track of whether our menu is enabled (see updateReopenMenu()).
+
+  menuEnabled = enable;
+
   // Build our menu, if needed.
 
   if (enable && enabledMenu) {
@@ -25,17 +31,17 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       label: 'Settings...',
       accelerator: 'CmdOrCtrl+,',
       click: () => {
-        mainWindow?.webContents.send('settings');
+        mainWindow?.send('settings');
       }
     };
 
     let checkForUpdatesMenuItem: electron.MenuItemConstructorOptions | null = null;
 
-    if (isPackaged()) {
+    if (canCheckForUpdates()) {
       checkForUpdatesMenuItem = {
         label: 'Check for Updates...',
         click: () => {
-          mainWindow?.webContents.send('check-for-updates');
+          mainWindow?.send('check-for-updates');
         }
       };
     }
@@ -43,7 +49,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
     const aboutOpencorMenuItem: electron.MenuItemConstructorOptions = {
       label: 'About OpenCOR',
       click: () => {
-        mainWindow?.webContents.send('about');
+        mainWindow?.send('about');
       }
     };
 
@@ -98,7 +104,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       label: 'Open Remote...',
       accelerator: 'CmdOrCtrl+Shift+O',
       click: () => {
-        mainWindow?.webContents.send('open-remote');
+        mainWindow?.send('open-remote');
       }
     });
     fileSubMenu.push({
@@ -107,7 +113,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
         {
           label: 'Lorenz',
           click: () => {
-            mainWindow?.webContents.send('open-sample-lorenz');
+            mainWindow?.send('open-sample-lorenz');
           }
         }
       ]
@@ -119,7 +125,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       label: 'Most Recent',
       accelerator: 'CmdOrCtrl+Shift+T',
       click: () => {
-        mainWindow?.webContents.send('open', recentFilePaths[0]);
+        mainWindow?.send('open', recentFilePaths[0]);
       },
       enabled: recentFilePaths.length > 0
     });
@@ -131,7 +137,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
         fileReopenSubMenu.push({
           label: filePath,
           click: () => {
-            mainWindow?.webContents.send('open', filePath);
+            mainWindow?.send('open', filePath);
           }
         });
       });
@@ -158,7 +164,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       label: 'Close',
       accelerator: 'CmdOrCtrl+W',
       click: () => {
-        mainWindow?.webContents.send('close');
+        mainWindow?.send('close');
       },
       enabled: hasFiles
     });
@@ -166,7 +172,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       id: 'fileCloseAll',
       label: 'Close All',
       click: () => {
-        mainWindow?.webContents.send('close-all');
+        mainWindow?.send('close-all');
       },
       enabled: hasFiles
     });
@@ -222,7 +228,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
     toolsSubMenu.push({
       label: 'Reset All...',
       click: () => {
-        mainWindow?.webContents.send('reset-all');
+        mainWindow?.send('reset-all');
       }
     });
 
@@ -293,9 +299,12 @@ export const enableDisableMainMenu = (enable: boolean): void => {
 };
 
 export const enableDisableFileCloseAndCloseAllMenuItems = (enable: boolean): void => {
-  if (enabledMenu) {
-    hasFiles = enable;
+  // Note: we keep track of whether we have files even if we don't currently have an enabled menu (e.g., because it got
+  //       invalidated while our menu was disabled, see updateReopenMenu()), so that it gets built accordingly.
 
+  hasFiles = enable;
+
+  if (enabledMenu) {
     const fileCloseMenu = enabledMenu.getMenuItemById('fileClose');
     const fileCloseAllMenu = enabledMenu.getMenuItemById('fileCloseAll');
 
@@ -307,8 +316,14 @@ export const enableDisableFileCloseAndCloseAllMenuItems = (enable: boolean): voi
 };
 
 export const updateReopenMenu = (filePaths: string[]): void => {
+  // Invalidate our enabled menu so that it gets rebuilt with our new Reopen menu, but only rebuild (and set) it now if
+  // our menu is enabled. Indeed, our menu may be disabled (e.g., because a dialog is open in our renderer), in which
+  // case it must remain disabled and it will get rebuilt when it gets enabled again.
+
   enabledMenu = null;
   recentFilePaths = filePaths;
 
-  enableDisableMainMenu(true);
+  if (menuEnabled) {
+    enableDisableMainMenu(true);
+  }
 };

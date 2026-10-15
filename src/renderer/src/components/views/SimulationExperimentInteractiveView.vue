@@ -2,7 +2,7 @@
   <div ref="rootRef" class="simulation-experiment-view h-full flex flex-col">
     <IssuesView v-if="issues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="issues" />
     <template v-else>
-      <Toolbar class="p-1! shrink-0">
+      <Toolbar v-if="!simulationOnly" class="p-1! shrink-0">
         <template #start>
           <div class="flex gap-1 invisible">
             <Button class="p-1! toolbar-button"
@@ -35,8 +35,11 @@
           <div v-if="uiJsonEmpty" class="flex flex-col items-center justify-center grow">
             <i class="pi pi-info-circle text-[1.5rem]! text-muted-color mb-3"></i>
             <p class="text-muted-color text-center">
-              The view needs to be configured.<br />
-              Please click on the <i class="pi pi-cog"></i> icon in the top-right corner.
+              The view needs to be configured.
+              <template v-if="!simulationOnly">
+                <br />
+                Please click on the <i class="pi pi-cog"></i> icon in the top-right corner.
+              </template>
             </p>
           </div>
           <IssuesView v-else-if="uiJsonIssues.length" class="w-full m-4" :issues="uiJsonIssues" />
@@ -55,7 +58,8 @@
                     :possibleValues="locApi.isDiscreteInput(input) ? input.possibleValues : undefined"
                     :stepValue="locApi.isScalarInput(input) ? input.stepValue : undefined"
                     :class="index !== 0 ? 'mt-6' : ''"
-                    @change="updateSimulation()"
+                    @change="onInputChange()"
+                    @changeEnd="onInputChangeEnd()"
                   />
                 </Fieldset>
                 <Fieldset legend="Runs">
@@ -66,7 +70,7 @@
                         label="Track run"
                         outlined
                         size="small"
-                        :title="isSimulating ? 'Wait for the simulation to finish' : 'Track current run'"
+                        title="Track current run"
                         :disabled="isSimulating || simulationIssues.length > 0"
                         @click="onTrackRun"
                       />
@@ -131,7 +135,7 @@
                 </Fieldset>
                 <Fieldset v-if="preSimulationDuration" legend="Note" class="note">
                   The simulation was run for <br/>
-                  <strong>{{ preSimulationDuration }} {{ instanceTask ? instanceTask.voiUnit() : '' }}</strong> prior to plotting.
+                  <strong>{{ preSimulationDuration }} {{ voiUnit }}</strong> prior to plotting.
                 </Fieldset>
               </ScrollPanel>
             </div>
@@ -145,7 +149,6 @@
                   :margins="compMargins"
                   :data="compData[index] || { traces: [] }"
                   @marginsUpdated="(newMargins: IGraphPanelMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
-                  @resetMargins="() => onResetMargins()"
                 />
               </div>
               <IssuesView v-show="simulationIssues.length" class="absolute inset-0 m-4 ml-0" :issues="simulationIssues" />
@@ -153,17 +156,20 @@
           </div>
         </div>
       </div>
-      <SimulationExperimentInteractiveViewSettingsDialog
-        v-model:visible="settingsVisible"
-        :settings="settings"
-        :voiId="voiId"
-        :voiName="voiName"
-        :voiUnit="instanceTask ? instanceTask.voiUnit() : ''"
-        :allModelParameters="allModelParameters"
-        :editableModelParameters="editableModelParameters"
-        @ok="onSettingsOk"
-        @close="settingsVisible = false"
-      />
+      <Teleport :to="opencorElement" :disabled="!opencorElement">
+        <SimulationExperimentInteractiveViewSettingsDialog class="simulation-experiment-view"
+          v-model:visible="settingsVisible"
+          :centreOn="fileTabElement"
+          :settings="settings"
+          :voiId="voiId"
+          :voiName="voiName"
+          :voiUnit="voiUnit"
+          :allModelParameters="allModelParameters"
+          :editableModelParameters="editableModelParameters"
+          @ok="onSettingsOk"
+          @close="settingsVisible = false"
+        />
+      </Teleport>
       <Popover ref="runColorPopoverRef" :appendTo="appendTarget">
         <div class="flex p-1.5 gap-2">
           <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md hover:scale-[1.15]"
@@ -184,7 +190,11 @@ import * as vueusecore from '@vueuse/core';
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
-import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../../index';
+import type {
+  IOpenCORExternalDataEvent,
+  IOpenCORSimulationDataEvent,
+  IOpenCORSimulationDataValue
+} from '../../../index';
 
 import * as colors from '../../common/colors';
 import * as common from '../../common/common';
@@ -229,24 +239,157 @@ const emit = defineEmits<{
   simulationData: [];
 }>();
 
-const rootRef = vue.ref<HTMLElement | null>(null);
+const opencorElement = vue.shallowRef<HTMLElement | null>(null);
+const fileTabElement = vue.shallowRef<HTMLElement | null>(null);
+// Note: our settings dialog is rendered in our OpenCOR element (rather than in our file tab) so that, like all the other
+//       dialogs, it covers the whole of OpenCOR, including our main menu and file tabs. It still gets our styles since
+//       it is given our simulation-experiment-view class, and it is still centred over our file tab, i.e. the element
+//       in which we are laid out (our nearest positioned ancestor).
+const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const settingsVisible = vue.ref<boolean>(false);
 const document = props.file.document();
 const documentIssues = document.issues();
 const isDocumentValid = documentIssues.length === 0;
 const uniformTimeCourse = isDocumentValid ? (document.simulation(0) as locApi.SedUniformTimeCourse) : null;
 const cvode = uniformTimeCourse?.cvode() ?? null;
+const mathEval = new math.Float64ArrayMath();
+const model = isDocumentValid ? document.model(0) : null;
+
+// Some helper functions to evaluate and apply the model changes resulting from the given parameters and scope.
+
+interface IModelChange {
+  componentName: string;
+  variableName: string;
+  newValue: string;
+}
+
+const evaluateModelChanges = (
+  parameters: locApi.IUiJsonParameter[],
+  modelScope: math.ExpressionScope,
+  issues: locApi.IIssue[]
+): IModelChange[] => {
+  const res: IModelChange[] = [];
+
+  for (const parameter of parameters) {
+    const componentVariableNames = parameter.name.split('/');
+
+    if (componentVariableNames[0] && componentVariableNames[1]) {
+      try {
+        res.push({
+          componentName: componentVariableNames[0],
+          variableName: componentVariableNames[1],
+          newValue: String(mathEval.evaluate(parameter.value, modelScope))
+        });
+      } catch (error: unknown) {
+        issues.push({
+          type: locApi.EIssueType.ERROR,
+          description: `An error occurred while applying parameter change for '${parameter.name}' (${common.formatMessage(common.formatError(error), false)}).`
+        });
+      }
+    }
+  }
+
+  return res;
+};
+
+const applyModelChanges = (modelChanges: IModelChange[]): void => {
+  if (!model) {
+    return;
+  }
+
+  model.removeAllChanges();
+
+  for (const modelChange of modelChanges) {
+    model.addChange(modelChange.componentName, modelChange.variableName, modelChange.newValue);
+  }
+};
+
+// Our UI JSON with the structure that our view relies on (i.e. one that can be safely accessed). If our original UI
+// JSON doesn't have that structure (e.g., it has no output), then the parts that don't have it are replaced with empty
+// equivalents while the other parts are kept as is, so that they can still be used (e.g., in our settings dialog). Any
+// issue with our original UI JSON is then reported (see uiJsonIssues).
+
+const uiJsonWithExpectedStructure = props.uiJson ? locApi.uiJsonWithExpectedStructure(props.uiJson) : undefined;
+const uiJsonStructureRepaired = vue.ref<boolean>(uiJsonWithExpectedStructure?.repaired ?? false);
+
+// Apply the model changes resulting from our default input values before instantiating our document, so that our first
+// simulation run can use our instance rather than have to instantiate our document again (see updateSimulation()).
+// Note: if those model changes result in our instance having issues, then we instantiate our document without them so
+//       that our view remains usable (any issue with those model changes will be reported when running the simulation).
+//       Also, our UI JSON has yet to be validated at this stage, so we ignore any error that may occur while evaluating
+//       those model changes (any issue with our UI JSON will be reported once it has been validated).
+
+const NO_MODEL_CHANGES_KEY = JSON.stringify([]);
+let instanceModelChangesKey = NO_MODEL_CHANGES_KEY;
+
+if (model && uiJsonWithExpectedStructure) {
+  try {
+    const initialModelScope: math.ExpressionScope = {};
+
+    for (const input of uiJsonWithExpectedStructure.uiJson.input) {
+      initialModelScope[input.id] = input.defaultValue;
+    }
+
+    const initialModelChanges = evaluateModelChanges(
+      uiJsonWithExpectedStructure.uiJson.parameters,
+      initialModelScope,
+      []
+    );
+
+    applyModelChanges(initialModelChanges);
+
+    instanceModelChangesKey = JSON.stringify(initialModelChanges);
+  } catch (_error: unknown) {
+    applyModelChanges([]);
+
+    instanceModelChangesKey = NO_MODEL_CHANGES_KEY;
+  }
+}
+
 let instance = isDocumentValid ? document.instantiate() : null;
+
+if (instance?.hasIssues() && instanceModelChangesKey !== NO_MODEL_CHANGES_KEY) {
+  instance.release();
+
+  applyModelChanges([]);
+
+  instance = document.instantiate();
+  instanceModelChangesKey = NO_MODEL_CHANGES_KEY;
+}
+
+let instanceIsPristine = true;
+// Note: whether our instance has never been run. If so, and if it was built with the same model changes as those wanted
+//       by our next simulation run (see instanceModelChangesKey), then that run can use it as is rather than build a
+//       new one. In practice, this only applies to our first simulation run.
+let simulationDataAvailable = false;
+// Note: whether our instance task holds the data of a simulation run that has successfully completed (see
+//       runSimulation() and simulationData()).
 const issues = documentIssues.length > 0 ? documentIssues : (instance?.issues() ?? []);
 let instanceTask = issues.length > 0 ? null : (instance?.task(0) ?? null);
 const allModelParameters = vue.ref<string[]>([]);
 const editableModelParameters = vue.ref<string[]>([]);
+
+// Populate our model parameters.
+// Note: this must be done before validating our UI JSON (see uiJsonIssues below) since its validation checks that the
+//       model parameters it refers to exist.
+
+if (instanceTask) {
+  vueCommon.populateParameters(allModelParameters, instanceTask);
+  vueCommon.populateParameters(editableModelParameters, instanceTask, true);
+}
+
 const voiName = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const voiId = vue.ref(instanceTask ? (voiName.value.split('/')[1] ?? '') : '');
+const voiUnit = vue.ref(instanceTask ? instanceTask.voiUnit() : '');
 
 const actualUiJson = vue.ref<locApi.IUiJson>(
-  props.uiJson
-    ? (JSON.parse(JSON.stringify(props.uiJson, locApi.uiJsonReplacer)) as locApi.IUiJson)
+  // Note: we deep clone our UI JSON, sharing its external data values rather than copying them (see cloneUiJson()),
+  //       and normalise it to make sure that its external data values are Float64Arrays rather than plain arrays.
+  //       Indeed, plain arrays would be deeply tracked by Vue (i.e. element by element), which would be both slow and
+  //       memory hungry for large external data.
+
+  uiJsonWithExpectedStructure
+    ? locApi.normaliseUiJson(locApi.cloneUiJson(uiJsonWithExpectedStructure.uiJson))
     : {
         input: [],
         output: {
@@ -263,6 +406,12 @@ const actualUiJson = vue.ref<locApi.IUiJson>(
 );
 
 const uiJsonEmpty = vue.computed<boolean>(() => {
+  if (uiJsonStructureRepaired.value) {
+    // Our original UI JSON didn't have the expected structure, so it isn't empty, it's invalid (see uiJsonIssues).
+
+    return false;
+  }
+
   if (
     actualUiJson.value.input.length === 0 &&
     actualUiJson.value.parameters.length === 0 &&
@@ -283,24 +432,68 @@ const uiJsonEmpty = vue.computed<boolean>(() => {
   return false;
 });
 
-const mathEval = new math.Float64ArrayMath();
-const model = isDocumentValid ? document.model(0) : null;
 const isSimulating = vue.ref<boolean>(false);
+// Note: whether a simulation is running, including in between the simulation runs of an input simulation update (see
+//       updateSimulation()). It is used, among other things, to prevent the current run from being tracked while a
+//       simulation is running (see onTrackRun()).
 const liveData = vue.ref<IGraphPanelData[]>([]);
 let margins: Record<string, IGraphPanelMargins> = {};
 const compMargins = vue.ref<IGraphPanelMargins>();
 
 const uiJsonIssues = vue.ref<locApi.IIssue[]>(
-  locApi.validateUiJson(actualUiJson.value, {
+  locApi.validateUiJson(uiJsonStructureRepaired.value ? props.uiJson : actualUiJson.value, {
     allModelParameters: allModelParameters.value,
     editableModelParameters: editableModelParameters.value
   })
 );
 
+// Remove the model changes resulting from our default input values if our UI JSON is invalid.
+// Note: we applied them before validating our UI JSON (see above), but we don't run any simulation with an invalid UI
+//       JSON, so they would otherwise be left in our document and, therefore, be exported with it (see
+//       onDownloadCombineArchive()). Our instance was, however, built with them, so it must not be reused by our next
+//       simulation run (e.g., if our UI JSON gets fixed through our settings dialog).
+
+if (uiJsonIssues.value.length && instanceModelChangesKey !== NO_MODEL_CHANGES_KEY) {
+  applyModelChanges([]);
+
+  instanceIsPristine = false;
+}
+
 const simulationIssues = vue.ref<locApi.IIssue[]>([]);
 const inputValues = vue.ref<number[]>([]);
 const showInput = vue.ref<boolean[]>([]);
-const idToInfo: Record<string, locCommon.ISimulationDataInfo> = {};
+const idToInfo = new Map<string, locCommon.ISimulationDataInfo>();
+
+// A helper function to retrieve the simulation data information for the given name.
+// Note: we build (and cache) the simulation data information of all our simulation data the first time we need it.
+//       Indeed, it is much faster than looking up simulation data information by name every time (see
+//       locCommon.simulationDataInfos()). Also, the names of our simulation data don't change when we reinstantiate our
+//       document (since our model changes and settings only affect values), so our cache remains valid for as long as
+//       our document is used.
+
+let simulationDataInfosCache: Map<string, locCommon.ISimulationDataInfo> | null = null;
+
+const simulationDataInfo = (task: locSedApi.SedInstanceTask, name: string): locCommon.ISimulationDataInfo => {
+  simulationDataInfosCache ??= locCommon.simulationDataInfos(task);
+
+  return simulationDataInfosCache.get(name) ?? locCommon.NoSimulationDataInfo;
+};
+
+// A helper function to retrieve the simulation data value for the given simulation data information.
+// Note: with the WASM version of libOpenCOR, the simulation data may be a view of the WASM heap, so we need to copy it.
+//       Otherwise, it would become a dangling view (with potentially corrupted data) as soon as the corresponding
+//       instance gets released (e.g., when it gets reinstantiated by a newer simulation run), which would in turn mess
+//       up our plots (in particular those of our tracked runs). With the C++ version of libOpenCOR, the simulation data
+//       is already a copy that we own, so there is no need to copy it again.
+
+const simulationDataValue = (
+  task: locSedApi.SedInstanceTask,
+  info: locCommon.ISimulationDataInfo
+): IOpenCORSimulationDataValue => {
+  const res = locCommon.simulationDataValue(task, info);
+
+  return locApi.cppVersion() ? res : { ...res, data: new Float64Array(res.data) };
+};
 
 const runs = vue.ref<ISimulationRun[]>([
   {
@@ -421,14 +614,36 @@ const preSimulationDuration = vue.computed<number>(() => {
   return settingsVal.simulation.startingPoint - settingsVal.simulation.initialPoint;
 });
 
-const oldSettings = vue.ref<string>(JSON.stringify(vue.toRaw(settings.value)));
+// A helper function to serialise some settings so that they can be compared with some other settings.
+// Note: our settings dialog adds an empty list of external data to a UI JSON that doesn't have any, so we ignore an
+//       empty list of external data to avoid detecting changes where there are none.
 
-// Information issue shown when an interactive simulation error occurs.
+const serialisedSettings = (settingsToSerialise: ISimulationExperimentInteractiveViewSettingsDialog): string => {
+  return JSON.stringify(vue.toRaw(settingsToSerialise), (key: string, value: unknown): unknown => {
+    if (key === 'externalData' && Array.isArray(value) && !value.length) {
+      return undefined;
+    }
+
+    return locApi.uiJsonReplacer(key, value);
+  });
+};
+
+const oldSettings = vue.ref<string>(serialisedSettings(settings.value));
+
+// Add an information issue to some simulation issues, telling the user to check our settings.
+// Note: our settings cannot be accessed in simulation-only mode (since our toolbar is hidden), so there is no point in
+//       telling the user to check them.
 
 const informationIssue: locApi.IIssue = {
   type: locApi.EIssueType.INFORMATION,
   description:
     'Please check the settings (click on the <i class="pi pi-cog"></i> icon in the top-right corner) and try again.'
+};
+
+const addInformationIssue = (issues: locApi.IIssue[]): void => {
+  if (!props.simulationOnly) {
+    issues.push(informationIssue);
+  }
 };
 
 // Update (initialise) our UI from the current actualUiJson.
@@ -460,14 +675,13 @@ const uniqueOutputDataId = (name: string, usedIds: Set<string>): string => {
 
 // A helper function to replace data IDs in an expression with its corresponding external data IDs.
 
-const replaceWithExternalDataIds = (expression: string, mapping: Record<string, string>): string => {
+const replaceWithExternalDataIds = (expression: string, mapping: Map<string, string>): string => {
   let res = expression;
-  const dataIds = Object.keys(mapping).sort((a, b) => {
+  const sortedMapping = [...mapping].sort(([a], [b]) => {
     return b.length - a.length;
   });
 
-  for (const dataId of dataIds) {
-    const externalDataId = mapping[dataId];
+  for (const [dataId, externalDataId] of sortedMapping) {
     let newRes = '';
     let i = 0;
 
@@ -533,7 +747,7 @@ const addExternalData = async (
 
   if (common.isUrl(csv)) {
     try {
-      const response = await fetch(common.corsProxyUrl(csv));
+      const response = await common.fetchThroughCorsProxy(csv);
 
       if (!response.ok) {
         return Promise.resolve(
@@ -635,7 +849,7 @@ const addExternalData = async (
 
     const dataSeries: locApi.IUiJsonOutputExternalDataSeries[] = [];
     const data: locApi.IUiJsonOutputData[] = [];
-    const dataIdToExternalDataId: Record<string, string> = {};
+    const dataIdToExternalDataId = new Map<string, string>();
 
     for (let columnIndex = 1; columnIndex < parsedCsv.headers.length; ++columnIndex) {
       const name = parsedCsv.headers[columnIndex];
@@ -654,7 +868,7 @@ const addExternalData = async (
 
       for (const outputData of actualUiJson.value.output.data) {
         if (outputData.name === modelParameter) {
-          dataIdToExternalDataId[outputData.id] = id;
+          dataIdToExternalDataId.set(outputData.id, id);
 
           break;
         }
@@ -788,6 +1002,28 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     });
   }
 
+  // Make sure that our instance task holds the data of a simulation run that has successfully completed.
+  // Note: our instance task refers to the instance of our current simulation run, which data is incomplete while it is
+  //       running (or if it failed). We emit a simulationData event once a simulation run has successfully completed
+  //       (see runSimulation()), so the caller will then be able to retrieve the complete data.
+
+  if (!simulationDataAvailable) {
+    return Promise.resolve({
+      type: 'issue',
+      simulationData: simulationDataResult,
+      issues: isSimulating.value
+        ? ['A simulation is running. Its data will be available once it has completed.']
+        : simulationIssues.value.length
+          ? [
+              'The last simulation run did not complete successfully.',
+              ...simulationIssues.value
+                .filter((issue) => issue.type !== locApi.EIssueType.INFORMATION)
+                .map((issue) => issue.description)
+            ]
+          : ['No simulation data is available yet.']
+    });
+  }
+
   if (!instanceTask) {
     return Promise.resolve({
       type: 'issue',
@@ -800,7 +1036,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
   const issueMessages: string[] = [];
 
   for (const modelParameter of modelParameters) {
-    const info = locCommon.simulationDataInfo(task, modelParameter === 'VOI' ? task.voiName() : modelParameter);
+    const info = simulationDataInfo(task, modelParameter === 'VOI' ? task.voiName() : modelParameter);
 
     if (locCommon.isNoSimulationDataInfo(info)) {
       issueMessages.push(`No simulation data information was found for model parameter "${modelParameter}".`);
@@ -809,15 +1045,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
     }
 
     try {
-      // Note: we return a copy of the simulation data since, with the WASM version of libOpenCOR, the simulation data
-      //       is a view into the WASM heap, which becomes invalid once our instance gets released.
-
-      const simulationDataValue = locCommon.simulationDataValue(task, info);
-
-      simulationDataResult[modelParameter] = {
-        ...simulationDataValue,
-        data: new Float64Array(simulationDataValue.data)
-      };
+      simulationDataResult[modelParameter] = simulationDataValue(task, info);
     } catch (error: unknown) {
       issueMessages.push(`Error for model parameter "${modelParameter}": ${common.formatError(error)}`);
     }
@@ -846,13 +1074,6 @@ defineExpose({
   addExternalData,
   simulationData
 });
-
-// Populate our model parameters.
-
-if (instanceTask) {
-  vueCommon.populateParameters(allModelParameters, instanceTask);
-  vueCommon.populateParameters(editableModelParameters, instanceTask, true);
-}
 
 // Update (initialise) our interactive UI..
 
@@ -1049,51 +1270,80 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
 
 const runningInstances = new Set<locApi.SedInstance>();
 
+// A helper function to dispose of an instance that we no longer need, i.e. release it, unless a simulation run is still
+// waiting on it, in which case we stop that simulation run (since its results are going to be stale anyway) and let it
+// release the instance once it is done with it (see runSimulation()).
+
+const disposeInstance = (oldInstance: locApi.SedInstance): void => {
+  if (!runningInstances.has(oldInstance)) {
+    oldInstance.release();
+
+    return;
+  }
+
+  if (oldInstance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+    oldInstance.stopRun();
+  }
+};
+
 // A helper function to reinstantiate our instance.
+// Note: we instantiate our document before disposing of our previous instance. Indeed, if instantiating our document
+//       fails (e.g., if libOpenCOR throws an exception), then we would otherwise be left with a released instance,
+//       which would make all our future simulation runs fail, as well as our unmounting.
 
 const reinstantiateInstance = (): locApi.SedInstance => {
-  // Release our previous instance, unless a simulation run is still waiting on it, in which case we stop that
-  // simulation run (since its results are going to be stale anyway) and let it release our previous instance once it is
-  // done with it.
+  // Note: an instance has no tasks if it has issues (e.g., if the number of steps of its simulation is not strictly
+  //       positive), in which case we must not retrieve its (non-existent) task since using it would fail (e.g., when
+  //       rendering the unit of the variable of integration). Our simulation run will report the issues of the instance
+  //       instead (see runSimulation()).
 
-  if (instance) {
-    if (runningInstances.has(instance)) {
-      if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
-        instance.stopRun();
-      }
-    } else {
-      instance.release();
+  const newInstance = document.instantiate();
+  let newInstanceTask: locApi.SedInstanceTask | null = null;
+
+  try {
+    if (!newInstance.hasIssues()) {
+      newInstanceTask = newInstance.task(0);
+    }
+  } catch (error: unknown) {
+    newInstance.release();
+
+    throw error;
+  }
+
+  const oldInstance = instance;
+
+  instance = newInstance;
+  instanceTask = newInstanceTask;
+
+  // Dispose of our previous instance.
+  // Note: failing to do so (e.g., if libOpenCOR throws an exception while stopping the simulation run that is waiting
+  //       on it) must not prevent our new instance from being used.
+
+  if (oldInstance) {
+    try {
+      disposeInstance(oldInstance);
+    } catch (error: unknown) {
+      console.error('OpenCOR: an error occurred while disposing of a simulation instance:', common.formatError(error));
     }
   }
 
-  instance = document.instantiate();
-  instanceTask = instance.task(0);
-
-  return instance;
+  return newInstance;
 };
 
 // Run the interactive simulation.
+// Note: this is called by updateSimulation(), which takes care of keeping track of the fact that we are simulating.
 
-const updateSimulation = async (): Promise<void> => {
+const runSimulation = async (currentSimulationGeneration: number): Promise<void> => {
   // Make sure that the view is usable, i.e. that we have a model and an instance.
 
   if (!model || !instance) {
     return;
   }
 
-  // Make sure that there are no issues with the UI JSON.
+  // Our simulation data is about to be updated, so it won't be available until this simulation run has successfully
+  // completed (see simulationData()).
 
-  if (uiJsonIssues.value.length) {
-    return;
-  }
-
-  // Increment the simulation generation so that we can cancel any previous simulation runs that are still in progress.
-
-  const currentSimulationGeneration = ++simulationGeneration;
-
-  // Keep track of the fact that we are simulating.
-
-  isSimulating.value = true;
+  simulationDataAvailable = false;
 
   // Stop the current simulation if it is still running or paused.
 
@@ -1142,35 +1392,14 @@ const updateSimulation = async (): Promise<void> => {
     }
   }
 
-  // Update the SED-ML document.
+  // Evaluate the model changes.
 
-  model.removeAllChanges();
-
-  for (const parameter of actualUiJson.value.parameters) {
-    const componentVariableNames = parameter.name.split('/');
-
-    if (componentVariableNames[0] && componentVariableNames[1]) {
-      try {
-        model.addChange(
-          componentVariableNames[0],
-          componentVariableNames[1],
-          String(mathEval.evaluate(parameter.value, modelScope))
-        );
-      } catch (error: unknown) {
-        simulationIssues.value.push({
-          type: locApi.EIssueType.ERROR,
-          description: `An error occurred while applying parameter change for '${parameter.name}' (${common.formatMessage(common.formatError(error), false)}).`
-        });
-      }
-    }
-  }
+  const modelChanges = evaluateModelChanges(actualUiJson.value.parameters, modelScope, simulationIssues.value);
 
   // Make sure that we haven't come across any issues so far.
 
   if (simulationIssues.value.length) {
-    simulationIssues.value.push(informationIssue);
-
-    isSimulating.value = false;
+    addInformationIssue(simulationIssues.value);
 
     return;
   }
@@ -1181,32 +1410,51 @@ const updateSimulation = async (): Promise<void> => {
     return;
   }
 
-  // Create a fresh instance for the new simulation run.
-  // Note: this ensures that the instance picks up the latest model changes and avoids reusing an instance which
+  // Use our instance as is if it has yet to be run and was instantiated with the same model changes (e.g., for our first
+  // simulation run), otherwise apply the model changes and create a fresh instance for the new simulation run.
+  // Note: using a fresh instance ensures that it picks up the latest model changes and avoids reusing an instance which
   //       internal state may have been corrupted by a previous cancellation.
 
-  const crtInstance = reinstantiateInstance();
+  const modelChangesKey = JSON.stringify(modelChanges);
+  let crtInstance = instance;
+
+  if (!instanceIsPristine || modelChangesKey !== instanceModelChangesKey) {
+    applyModelChanges(modelChanges);
+
+    crtInstance = reinstantiateInstance();
+    instanceModelChangesKey = modelChangesKey;
+  }
+
+  instanceIsPristine = false;
 
   // Start the simulation in a background thread and yield to the UI to keep it responsive while the simulation runs.
 
   if (!crtInstance.startRun()) {
-    isSimulating.value = false;
-
     return;
   }
 
   runningInstances.add(crtInstance);
 
-  await vueCommon.waitWhileRunning(crtInstance).promise;
+  // Release our instance if it has been replaced by a newer one (or if we got unmounted) while the simulation was
+  // running, in which case our results are stale anyway.
+  // Note: we do this even if waiting for the simulation to finish failed (e.g., if libOpenCOR threw an exception) since
+  //       nothing else will release our instance (see reinstantiateInstance() and onBeforeUnmount()).
 
-  runningInstances.delete(crtInstance);
+  let instanceReplaced = false;
 
-  // Release our instance if it has been replaced by a newer one while the simulation was running, in which case our
-  // results are stale anyway.
+  try {
+    await vueCommon.waitWhileRunning(crtInstance).promise;
+  } finally {
+    runningInstances.delete(crtInstance);
 
-  if (crtInstance !== instance) {
-    crtInstance.release();
+    if (crtInstance !== instance) {
+      instanceReplaced = true;
 
+      crtInstance.release();
+    }
+  }
+
+  if (instanceReplaced) {
     return;
   }
 
@@ -1220,8 +1468,6 @@ const updateSimulation = async (): Promise<void> => {
 
   if (crtInstance.hasIssues()) {
     simulationIssues.value = crtInstance.issues();
-
-    isSimulating.value = false;
 
     return;
   }
@@ -1290,36 +1536,48 @@ const updateSimulation = async (): Promise<void> => {
   // Make sure that we haven't come across any issues so far.
 
   if (simulationIssues.value.length) {
-    simulationIssues.value.push(informationIssue);
-
-    isSimulating.value = false;
+    addInformationIssue(simulationIssues.value);
 
     return;
   }
 
   // Update our mapping of data IDs to simulation data information.
 
-  Object.keys(idToInfo).forEach((key) => {
-    delete idToInfo[key];
-  });
+  idToInfo.clear();
 
   actualUiJson.value.output.data.forEach((data: locApi.IUiJsonOutputData) => {
     if (data.id && instanceTask) {
-      idToInfo[data.id] = locCommon.simulationDataInfo(instanceTask, data.name);
+      idToInfo.set(data.id, simulationDataInfo(instanceTask, data.name));
     }
   });
 
   // Update our scope with the latest simulation data.
+  // Note: we only retrieve the simulation data that is used by our plots since retrieving simulation data means copying
+  //       it (see simulationDataValue()), which can be costly for large simulations.
 
   if (instanceTask) {
-    // Latest simulation data.
-    // Note: we make a copy of the data since, with the WASM version of libOpenCOR, it may be a view of the WASM heap.
-    //       If we were to keep it as is, it would become a dangling view (with potentially corrupted data) as soon as
-    //       the corresponding instance gets reinstantiated and destroyed by a newer simulation run, which would in turn
-    //       mess up our plots (in particular those of our tracked runs).
+    const usedDataIds = new Set<string>();
+
+    for (const plot of actualUiJson.value.output.plots) {
+      const expressions = [plot.xValue, plot.yValue];
+
+      for (const additionalTrace of plot.additionalTraces ?? []) {
+        expressions.push(additionalTrace.xValue, additionalTrace.yValue);
+      }
+
+      for (const expression of expressions) {
+        for (const identifier of math.expressionIdentifiers(expression ?? '')) {
+          usedDataIds.add(identifier);
+        }
+      }
+    }
 
     for (const data of actualUiJson.value.output.data) {
-      modelScope[data.id] = new Float64Array(locCommon.simulationDataValue(instanceTask, idToInfo[data.id]).data);
+      const info = idToInfo.get(data.id);
+
+      if (info && usedDataIds.has(data.id)) {
+        modelScope[data.id] = simulationDataValue(instanceTask, info).data;
+      }
     }
   }
 
@@ -1481,21 +1739,81 @@ const updateSimulation = async (): Promise<void> => {
 
   liveData.value = newLiveData;
 
-  // The simulation has completed, so we are no longer simulating.
-
-  isSimulating.value = false;
-
   // Make sure that we haven't come across any issues so far.
 
   if (simulationIssues.value.length) {
-    simulationIssues.value.push(informationIssue);
+    addInformationIssue(simulationIssues.value);
 
     return;
   }
 
   // Let people know that the simulation data has been updated.
 
+  simulationDataAvailable = true;
+
   emit('simulationData');
+};
+
+const updateSimulation = async (): Promise<void> => {
+  // Make sure that the view is usable, i.e. that we have a model and an instance, and that there are no issues with the
+  // UI JSON.
+  // Note: we may have been called to continue an input simulation update (see startInputSimulationUpdate()), in which
+  //       case we are still considered to be simulating (see below), so we make sure that we are not anymore. This is
+  //       safe since no simulation can be running if we have no model or instance, or if our UI JSON has issues (any
+  //       simulation run gets cancelled when our settings are changed, see onSettingsOk()).
+
+  if (!model || !instance || uiJsonIssues.value.length) {
+    isSimulating.value = false;
+
+    return;
+  }
+
+  // Increment the simulation generation so that we can cancel any previous simulation runs that are still in progress.
+
+  const currentSimulationGeneration = ++simulationGeneration;
+
+  // Run the simulation, keeping track of the fact that we are simulating, and report any unexpected error (e.g., an
+  // exception thrown by libOpenCOR) as a simulation issue rather than leave us in a simulating state forever.
+  // Note #1: only the latest simulation run gets to report an error and to say that we are no longer simulating since
+  //          an older one has been superseded and the latest one is still in charge.
+  // Note #2: if an input has changed while we were running (see onInputChange()), then another simulation run is about
+  //          to start (see startInputSimulationUpdate()), so we are still simulating.
+
+  isSimulating.value = true;
+
+  try {
+    await runSimulation(currentSimulationGeneration);
+  } catch (error: unknown) {
+    if (currentSimulationGeneration === simulationGeneration) {
+      simulationIssues.value = [
+        {
+          type: locApi.EIssueType.ERROR,
+          description: `An unexpected error occurred while running the simulation (${common.formatMessage(common.formatError(error), false)}).`
+        }
+      ];
+
+      addInformationIssue(simulationIssues.value);
+    }
+  } finally {
+    if (currentSimulationGeneration === simulationGeneration && !inputSimulationUpdatePending) {
+      isSimulating.value = false;
+    }
+  }
+};
+
+// Cancel any simulation run that is in progress, as well as any pending input simulation update.
+// Note: the cancelled simulation run will see that it has been superseded (see runSimulation()), so it won't report its
+//       results nor say that we are no longer simulating (see updateSimulation()), hence we do the latter here.
+
+const cancelSimulation = (): void => {
+  ++simulationGeneration;
+
+  inputSimulationUpdatePending = false;
+  isSimulating.value = false;
+
+  if (instance && instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+    instance.stopRun();
+  }
 };
 
 // Margins-related event handlers.
@@ -1526,6 +1844,13 @@ const onMarginsUpdated = (plotId: string, newMargins: IGraphPanelMargins): void 
     return;
   }
 
+  // Update our shared margins, but only if they have actually changed since updating them means that all our plots get
+  // relaid out.
+
+  if (compMargins.value?.left === maxLeft && compMargins.value?.right === maxRight) {
+    return;
+  }
+
   compMargins.value = {
     left: maxLeft,
     right: maxRight
@@ -1533,8 +1858,16 @@ const onMarginsUpdated = (plotId: string, newMargins: IGraphPanelMargins): void 
 };
 
 const onResetMargins = (): void => {
+  // Note: our plots only emit their margins when they change, so we must ask them to emit them again. Unsetting our
+  //       shared margins would get our plots to do so, but only if we had some shared margins (e.g., not if some plot
+  //       hadn't emitted its margins yet or if a plot was removed while there were some simulation issues).
+
   margins = {};
   compMargins.value = undefined;
+
+  for (const graphPanelRef of Object.values(graphPanelRefs.value)) {
+    graphPanelRef?.resetMargins();
+  }
 };
 
 // Runs-related event handlers
@@ -1549,8 +1882,10 @@ const onTrackRun = (): void => {
   }
 
   // Create a new run from the live run.
+  // Note: an input id comes from the UI JSON, so it may be the name of an Object.prototype property (e.g.,
+  //       "constructor" or "__proto__"), hence we use an object without a prototype.
 
-  const inputParameters: Record<string, number> = {};
+  const inputParameters: Record<string, number> = Object.create(null);
 
   for (let i = 0; i < actualUiJson.value.input.length; ++i) {
     const input = actualUiJson.value.input[i];
@@ -1687,7 +2022,7 @@ const onToggleRunColorPopover = (index: number, event: MouseEvent): void => {
 
 const onDownloadCombineArchive = (): void => {
   const jsZip = new dependencies._jsZip();
-  const baseFileName = common.fileName(props.file.path()).replace(/\.[^/.]+$/, '');
+  const baseFileName = common.fileName(props.file.canonicalPath()).replace(/\.[^/.]+$/, '');
   const modelFile = model?.file();
 
   if (!modelFile) {
@@ -1736,13 +2071,13 @@ const onDownloadCombineArchive = (): void => {
 // Settings dialog event handler.
 
 const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSettingsDialog): void => {
-  if (!uniformTimeCourse || !cvode) {
+  if (!uniformTimeCourse) {
     settingsVisible.value = false;
 
     return;
   }
 
-  const newSettingsJson = JSON.stringify(vue.toRaw(updatedSettings));
+  const newSettingsJson = serialisedSettings(updatedSettings);
   const settingsHaveChanges = newSettingsJson !== oldSettings.value;
 
   oldSettings.value = newSettingsJson;
@@ -1753,30 +2088,47 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
     return;
   }
 
+  // Cancel any simulation run that is in progress since its results would be stale (and would otherwise be reported
+  // using our new settings).
+
+  cancelSimulation();
+
   // Clear all our tracked runs.
 
   onRemoveAllRuns();
 
   // Update our settings and hide the dialog.
+  // Note: our settings may have been confirmed even though they have some issues (so that they can, for instance, be
+  //       saved as a COMBINE archive and fixed later), in which case we must not silently run our simulation with some
+  //       other settings, but let libOpenCOR report those issues. So, our number of steps is such that our point
+  //       interval can be retrieved from it (e.g., a negative point interval gives a negative number of steps), unless
+  //       our point interval is zero, not finite, or so small that our number of steps cannot be handled by libOpenCOR,
+  //       in which case we use zero steps. Either way, libOpenCOR will report an invalid number of steps. If our
+  //       settings are valid, then we use at least one step (i.e. if our point interval is greater than our simulation
+  //       range).
 
-  const oldCvodeMaximumStep = cvode.maximumStep();
+  const { initialPoint, startingPoint, endingPoint, pointInterval } = updatedSettings.simulation;
 
-  uniformTimeCourse.setInitialTime(updatedSettings.simulation.initialPoint);
-  uniformTimeCourse.setOutputStartTime(updatedSettings.simulation.startingPoint);
-  uniformTimeCourse.setOutputEndTime(updatedSettings.simulation.endingPoint);
-  uniformTimeCourse.setNumberOfSteps(
-    Math.max(
-      1,
-      Math.round(
-        (updatedSettings.simulation.endingPoint - updatedSettings.simulation.startingPoint) /
-          updatedSettings.simulation.pointInterval
-      )
-    )
-  );
+  uniformTimeCourse.setInitialTime(initialPoint);
+  uniformTimeCourse.setOutputStartTime(startingPoint);
+  uniformTimeCourse.setOutputEndTime(endingPoint);
 
-  cvode.setMaximumStep(updatedSettings.solvers.cvodeMaximumStep);
+  let numberOfSteps = Math.round((endingPoint - startingPoint) / pointInterval);
+
+  if (Number.isFinite(pointInterval) && pointInterval > 0 && endingPoint > startingPoint) {
+    numberOfSteps = Math.max(1, numberOfSteps);
+  }
+
+  if (!Number.isFinite(numberOfSteps) || Math.abs(numberOfSteps) > locApi.MAXIMUM_NUMBER_OF_STEPS) {
+    numberOfSteps = 0;
+  }
+
+  uniformTimeCourse.setNumberOfSteps(numberOfSteps);
+
+  cvode?.setMaximumStep(updatedSettings.solvers.cvodeMaximumStep);
 
   actualUiJson.value = locApi.cleanUiJson(updatedSettings.interactive.uiJson);
+  uiJsonStructureRepaired.value = false;
   settingsVisible.value = false;
 
   // Validate the new UI JSON settings.
@@ -1786,14 +2138,22 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
     editableModelParameters: editableModelParameters.value
   });
 
+  // Make sure that our next simulation run doesn't use our current instance since it was instantiated using our old
+  // settings.
+  // Note: this is only relevant if our current instance has yet to be run (e.g., if our previous simulation run couldn't
+  //       be started because of some issues).
+
+  instanceIsPristine = false;
+
+  // Remove the model changes from our previous simulation run if our new UI JSON is invalid.
+  // Note: we don't run any simulation with an invalid UI JSON, so those model changes would otherwise be left in our
+  //       document and, therefore, be exported with it (see onDownloadCombineArchive()) even though they don't match our
+  //       new UI JSON.
+
   if (uiJsonIssues.value.length > 0) {
+    applyModelChanges([]);
+
     return;
-  }
-
-  // Reinstantiate our instance in case we modified CVODE's maximum step.
-
-  if (cvode.maximumStep() !== oldCvodeMaximumStep) {
-    reinstantiateInstance();
   }
 
   // Update our UI.
@@ -1804,16 +2164,75 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
 
   updateSimulation();
 
-  if (simulationIssues.value.length) {
+  // Reset the margins of our various plots.
+  // Note #1: this is needed when the number of plots changes or when a simulation couldn't originally be run and now it
+  //          can be run with the new settings. Without this, the plots will start with incorrect margins before they
+  //          get updated which results in some flashing.
+  // Note #2: we reset them even if the simulation has some issues since those issues may get resolved without our
+  //          settings being changed (e.g., by changing an input), in which case our plots would otherwise be shown with
+  //          the margins from before our settings were changed (see onMarginsUpdated()).
+
+  onResetMargins();
+};
+
+// Update the simulation following a change to one of our inputs.
+// Note: an input (e.g., a slider being dragged) can change faster than a simulation run completes. So, rather than
+//       starting a new simulation run (and therefore instantiating a new instance) for every change, we let the current
+//       simulation run complete and then start a new one using the latest input values (i.e. latest value wins). This
+//       means that intermediate input values may be skipped, but that we always have at most one simulation run in
+//       flight and that the simulation is still updated while an input is being changed.
+
+let inputSimulationUpdateInFlight: Promise<void> | null = null;
+let inputSimulationUpdatePending = false;
+
+const startInputSimulationUpdate = (): void => {
+  const inputSimulationUpdate = updateSimulation().finally(async () => {
+    // Give our plots a chance to be rendered before starting a new simulation run, if needed.
+
+    if (inputSimulationUpdatePending) {
+      await common.waitForNextAnimationFrame();
+    }
+
+    // Check whether we have been superseded by a newer input simulation update (see onInputChangeEnd()), in which case
+    // it is up to that update to deal with any pending input change.
+
+    if (inputSimulationUpdate !== inputSimulationUpdateInFlight) {
+      return;
+    }
+
+    inputSimulationUpdateInFlight = null;
+
+    if (inputSimulationUpdatePending) {
+      inputSimulationUpdatePending = false;
+
+      startInputSimulationUpdate();
+    }
+  });
+
+  inputSimulationUpdateInFlight = inputSimulationUpdate;
+};
+
+const onInputChange = (): void => {
+  if (inputSimulationUpdateInFlight) {
+    inputSimulationUpdatePending = true;
+
     return;
   }
 
-  // Reset the margins of our various plots.
-  // Note: this is needed when the number of plots changes or simulation couldn't originally be run and now it can be
-  //       run with the new settings. Without this, the plots will start with incorrect margins before they get updated
-  //       which results in some flashing.
+  startInputSimulationUpdate();
+};
 
-  onResetMargins();
+const onInputChangeEnd = (): void => {
+  // An input has finished changing (e.g., a value has been selected or a slider has been released), so rather than wait
+  // for the current simulation run to complete, cancel it and start a new one straight away using the final input
+  // values, if needed.
+  // Note: updateSimulation() takes care of stopping the current simulation run.
+
+  if (inputSimulationUpdatePending) {
+    inputSimulationUpdatePending = false;
+
+    startInputSimulationUpdate();
+  }
 };
 
 // Make sure that any pending simulation updates are discarded once we get unmounted.
@@ -1821,28 +2240,32 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
 vue.onBeforeUnmount(() => {
   ++simulationGeneration;
 
-  if (instance?.status() !== locSedApi.ESedInstanceStatus.IDLE) {
-    instance?.stopRun();
+  inputSimulationUpdatePending = false;
+
+  // Dispose of our instance and release our document (and its model and simulation).
+  // Note: we always release our document, even if something goes wrong with our instance (e.g., if libOpenCOR throws an
+  //       exception while stopping a simulation run) since we would otherwise leak it.
+
+  try {
+    if (instance) {
+      disposeInstance(instance);
+    }
+  } catch (error: unknown) {
+    console.error('OpenCOR: an error occurred while disposing of a simulation instance:', common.formatError(error));
+  } finally {
+    instance = null;
+    instanceTask = null;
+
+    document.release();
   }
-
-  // Release our instance, unless a simulation run is still waiting on it, in which case it will be released by that
-  // simulation run once it is done with it.
-
-  if (instance && !runningInstances.has(instance)) {
-    instance.release();
-  }
-
-  instance = null;
-  instanceTask = null;
-
-  // Release our document (and its model and simulation).
-
-  document.release();
 });
 
 // Various things that need to be done once we are mounted.
 
 vue.onMounted(() => {
+  opencorElement.value = rootRef.value?.closest<HTMLElement>('.opencor') ?? null;
+  fileTabElement.value = rootRef.value?.offsetParent instanceof HTMLElement ? rootRef.value.offsetParent : null;
+
   updateSimulation();
 
   const windowIsFocused = vueusecore.useWindowFocus();

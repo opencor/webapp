@@ -289,7 +289,9 @@ export class SedModel extends SedIndex {
     // Note: the caller is responsible for releasing the returned file.
 
     if (cppVersion()) {
-      return fileManager.file(_cppLocApi.sedModelFilePath(this._cppDocumentId, this._index));
+      const filePath = _cppLocApi.sedModelFilePath(this._cppDocumentId, this._index);
+
+      return filePath === null ? null : fileManager.file(filePath);
     }
 
     const wasmFile = this._wasmSedModel.file;
@@ -381,9 +383,14 @@ export class SedOneStep extends SedSimulation {
   }
 }
 
+// The maximum number of steps of a uniform time course.
+// Note: libOpenCOR uses an int for the number of steps, so a larger number of steps would get silently wrapped.
+
+export const MAXIMUM_NUMBER_OF_STEPS = 2 ** 31 - 1;
+
 export class SedUniformTimeCourse extends SedSimulation {
   private _wasmSedUniformTimeCourse: IWasmSedUniformTimeCourse = {} as IWasmSedUniformTimeCourse;
-  private _cvode: SolverCvode | null = null;
+  private _cvode: SolverCvode | null | undefined;
 
   constructor(cppDocumentId: number, wasmSedDocument: IWasmSedDocument, index: number, type: ESedSimulationType) {
     super(cppDocumentId, wasmSedDocument, index, type);
@@ -396,7 +403,7 @@ export class SedUniformTimeCourse extends SedSimulation {
   override release(): void {
     this._cvode?.release();
 
-    this._cvode = null;
+    this._cvode = undefined;
 
     if (wasmVersion()) {
       this._wasmSedUniformTimeCourse?.delete();
@@ -459,10 +466,28 @@ export class SedUniformTimeCourse extends SedSimulation {
     }
   }
 
-  cvode(): SolverCvode {
-    // Note: we cache our solver so that we can release it when releasing the simulation.
+  cvode(): SolverCvode | null {
+    // Note: we cache our solver so that we can release it when releasing the simulation. Also, the simulation's ODE
+    //       solver is not necessarily CVODE (e.g., it could be Forward Euler or not set at all), in which case we
+    //       return null.
 
-    this._cvode ??= new SolverCvode(this._cppDocumentId, this._wasmSedUniformTimeCourse, this._index);
+    if (this._cvode === undefined) {
+      if (cppVersion()) {
+        this._cvode = _cppLocApi.solverCvodeExists(this._cppDocumentId, this._index)
+          ? new SolverCvode(this._cppDocumentId, null, this._index)
+          : null;
+      } else {
+        const wasmOdeSolver = this._wasmSedUniformTimeCourse.odeSolver;
+
+        if (wasmOdeSolver instanceof _wasmLocApi.SolverCvode) {
+          this._cvode = new SolverCvode(this._cppDocumentId, wasmOdeSolver as IWasmSolverCvode, this._index);
+        } else {
+          wasmOdeSolver?.delete();
+
+          this._cvode = null;
+        }
+      }
+    }
 
     return this._cvode;
   }
@@ -472,13 +497,13 @@ export class SolverCvode extends SedIndex {
   private _cppDocumentId: number;
   private _wasmSolverCvode: IWasmSolverCvode = {} as IWasmSolverCvode;
 
-  constructor(cppDocumentId: number, wasmSedUniformTimeCourse: IWasmSedUniformTimeCourse, index: number) {
+  constructor(cppDocumentId: number, wasmSolverCvode: IWasmSolverCvode | null, index: number) {
     super(index);
 
     this._cppDocumentId = cppDocumentId;
 
-    if (wasmVersion()) {
-      this._wasmSolverCvode = wasmSedUniformTimeCourse.odeSolver as IWasmSolverCvode;
+    if (wasmSolverCvode) {
+      this._wasmSolverCvode = wasmSolverCvode;
     }
   }
 
@@ -584,9 +609,12 @@ export class SedInstance {
   }
 
   // Release the resources held by the instance (and its tasks).
-  // Note: this must only be done once the instance is idle and no longer used. Not releasing an instance means that it
-  //       (and its tasks) never gets freed, which with the WASM version of libOpenCOR eventually results in an
-  //       out-of-memory error.
+  // Note #1: this should only be done once the instance is idle and no longer used. Not releasing an instance means
+  //          that it (and its tasks) never gets freed, which with the WASM version of libOpenCOR eventually results in
+  //          an out-of-memory error.
+  // Note #2: libOpenCOR waits for a run to finish before deleting an instance, so we stop any run first. Indeed, a
+  //          paused run would otherwise never finish (and therefore hang the UI) while a running one would block the UI
+  //          until it finishes.
 
   release(): void {
     if (this._released) {
@@ -595,8 +623,24 @@ export class SedInstance {
 
     this._released = true;
 
+    // Stop our simulation run, if needed.
+    // Note: we release our tasks and instance even if this fails (e.g., if libOpenCOR throws an exception) since we
+    //       would otherwise leak them (we are now considered released, so we won't get another chance).
+
+    try {
+      if (this.status() !== ESedInstanceStatus.IDLE) {
+        this.stopRun();
+      }
+    } catch (error: unknown) {
+      console.error('OpenCOR: an error occurred while stopping a simulation run:', error);
+    }
+
     for (const task of this._tasks) {
-      task.release();
+      try {
+        task.release();
+      } catch (error: unknown) {
+        console.error('OpenCOR: an error occurred while releasing a simulation task:', error);
+      }
     }
 
     this._tasks = [];
@@ -609,23 +653,40 @@ export class SedInstance {
   }
 }
 
+// A helper function to retrieve (a view of) a slice of the given values.
+
+const sliceValues = (values: Float64Array, start?: number, end?: number): Float64Array => {
+  return start === undefined && end === undefined ? values : values.subarray(start ?? 0, end);
+};
+
 export class SedInstanceTask extends SedIndex {
   private _cppInstanceId: number;
   private _wasmSedInstanceTask: IWasmSedInstanceTask = {} as IWasmSedInstanceTask;
+  private _hasWasmSedInstanceTask = false;
 
   constructor(cppInstanceId: number, index: number, wasmSedInstance: IWasmSedInstance) {
     super(index);
 
     this._cppInstanceId = cppInstanceId;
 
+    // Note: an instance has no tasks if it has issues (e.g., if the number of steps of its simulation is not strictly
+    //       positive), in which case the WASM version of libOpenCOR gives us no task.
+
     if (wasmVersion()) {
-      this._wasmSedInstanceTask = wasmSedInstance.task(index) as IWasmSedInstanceTask;
+      const wasmSedInstanceTask = wasmSedInstance.task(index);
+
+      if (wasmSedInstanceTask) {
+        this._wasmSedInstanceTask = wasmSedInstanceTask as IWasmSedInstanceTask;
+        this._hasWasmSedInstanceTask = true;
+      }
     }
   }
 
   release(): void {
-    if (wasmVersion()) {
+    if (this._hasWasmSedInstanceTask) {
       this._wasmSedInstanceTask.delete();
+
+      this._hasWasmSedInstanceTask = false;
     }
   }
 
@@ -641,10 +702,16 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.voiUnit;
   }
 
-  voi(): Float64Array {
+  // Note: the various methods to retrieve simulation data accept an optional start and end (with the same semantics as
+  //       TypedArray.prototype.subarray()), which allow us to retrieve only some of the values (e.g., those that have
+  //       been computed since we last retrieved some while a simulation is running). With the C++ version of
+  //       libOpenCOR, this avoids copying values that are not needed. With the WASM version of libOpenCOR, the
+  //       simulation data is a view of the WASM heap, so we simply return a view of it.
+
+  voi(start?: number, end?: number): Float64Array {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskVoi(this._cppInstanceId, this._index)
-      : this._wasmSedInstanceTask.voi;
+      ? _cppLocApi.sedInstanceTaskVoi(this._cppInstanceId, this._index, start, end)
+      : sliceValues(this._wasmSedInstanceTask.voi, start, end);
   }
 
   stateCount(): number {
@@ -665,10 +732,10 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.stateUnit(index);
   }
 
-  state(index: number): Float64Array {
+  state(index: number, start?: number, end?: number): Float64Array {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskState(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.state(index);
+      ? _cppLocApi.sedInstanceTaskState(this._cppInstanceId, this._index, index, start, end)
+      : sliceValues(this._wasmSedInstanceTask.state(index), start, end);
   }
 
   rateCount(): number {
@@ -689,10 +756,10 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.rateUnit(index);
   }
 
-  rate(index: number): Float64Array {
+  rate(index: number, start?: number, end?: number): Float64Array {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskRate(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.rate(index);
+      ? _cppLocApi.sedInstanceTaskRate(this._cppInstanceId, this._index, index, start, end)
+      : sliceValues(this._wasmSedInstanceTask.rate(index), start, end);
   }
 
   constantCount(): number {
@@ -713,10 +780,10 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.constantUnit(index);
   }
 
-  constant(index: number): Float64Array {
+  constant(index: number, start?: number, end?: number): Float64Array {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskConstant(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.constant(index);
+      ? _cppLocApi.sedInstanceTaskConstant(this._cppInstanceId, this._index, index, start, end)
+      : sliceValues(this._wasmSedInstanceTask.constant(index), start, end);
   }
 
   computedConstantCount(): number {
@@ -737,10 +804,10 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.computedConstantUnit(index);
   }
 
-  computedConstant(index: number): Float64Array {
+  computedConstant(index: number, start?: number, end?: number): Float64Array {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskComputedConstant(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.computedConstant(index);
+      ? _cppLocApi.sedInstanceTaskComputedConstant(this._cppInstanceId, this._index, index, start, end)
+      : sliceValues(this._wasmSedInstanceTask.computedConstant(index), start, end);
   }
 
   algebraicVariableCount(): number {
@@ -761,9 +828,9 @@ export class SedInstanceTask extends SedIndex {
       : this._wasmSedInstanceTask.algebraicVariableUnit(index);
   }
 
-  algebraicVariable(index: number): Float64Array {
+  algebraicVariable(index: number, start?: number, end?: number): Float64Array {
     return cppVersion()
-      ? _cppLocApi.sedInstanceTaskAlgebraicVariable(this._cppInstanceId, this._index, index)
-      : this._wasmSedInstanceTask.algebraicVariable(index);
+      ? _cppLocApi.sedInstanceTaskAlgebraicVariable(this._cppInstanceId, this._index, index, start, end)
+      : sliceValues(this._wasmSedInstanceTask.algebraicVariable(index), start, end);
   }
 }

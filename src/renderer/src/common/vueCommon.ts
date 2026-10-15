@@ -104,6 +104,78 @@ export const trackElementHeight = (
   return stopTrackingElementHeight;
 };
 
+// The overlay container of each OpenCOR instance (i.e. of each .opencor element), along with the number of components
+// using it.
+// Note: an overlay container is shared by all the components of an OpenCOR instance that use it, and it comes with a
+//       window scroll listener, which keeps the container (and therefore, through its parent, the whole OpenCOR
+//       instance) alive. So, we keep track of the number of components using an overlay container and remove both the
+//       container and its window scroll listener once no component uses it anymore (e.g., once its OpenCOR instance has
+//       been unmounted).
+
+interface IOverlayContainer {
+  element: HTMLElement;
+  users: number;
+  remove: () => void;
+}
+
+const overlayContainers = new WeakMap<Element, IOverlayContainer>();
+
+const overlayContainer = (opencor: Element, containerClass: string): IOverlayContainer => {
+  let res = overlayContainers.get(opencor);
+
+  if (res) {
+    return res;
+  }
+
+  // Remove any stale overlay container (e.g., one created by a previous version of this module following a hot module
+  // replacement during development).
+
+  opencor.querySelector(`:scope > .${containerClass}`)?.remove();
+
+  // Create our overlay container.
+
+  const divElement = document.createElement('div');
+
+  divElement.className = containerClass;
+  divElement.style.cssText =
+    'position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
+
+  // Restore pointer events for overlay content teleported into the container.
+
+  divElement.appendChild(
+    Object.assign(document.createElement('style'), {
+      textContent: `.${containerClass} > * { pointer-events: auto; }`
+    })
+  );
+
+  opencor.appendChild(divElement);
+
+  const updateOffset = (): void => {
+    divElement.style.top = `-${window.scrollY}px`;
+    divElement.style.left = `-${window.scrollX}px`;
+  };
+
+  updateOffset();
+
+  window.addEventListener('scroll', updateOffset, { passive: true });
+
+  res = {
+    element: divElement,
+    users: 0,
+    remove: () => {
+      window.removeEventListener('scroll', updateOffset);
+
+      divElement.remove();
+
+      overlayContainers.delete(opencor);
+    }
+  };
+
+  overlayContainers.set(opencor, res);
+
+  return res;
+};
+
 // A composable that provides an overlay container as an append target for PrimeVue overlays. PrimeVue's
 // `absolutePosition()` computes document-absolute coordinates (viewport-relative `getBoundingClientRect()` plus
 // `windowScrollTop`/`windowScrollLeft`). The container uses `position: fixed` inside `.opencor`, and its `top`/`left`
@@ -118,91 +190,88 @@ export const trackElementHeight = (
 export const useAppendTarget = (ancestorRef: vue.Ref<HTMLElement | null>) => {
   const appendTarget = vue.shallowRef<HTMLElement | undefined>(undefined);
   const containerClass = 'opencor-overlay-container';
+  let usedOverlayContainer: IOverlayContainer | null = null;
 
   vue.onMounted(() => {
     const opencor = ancestorRef.value?.closest('.opencor');
 
     if (opencor) {
-      let container = opencor.querySelector(`.${containerClass}`) as HTMLElement | null;
+      usedOverlayContainer = overlayContainer(opencor, containerClass);
 
-      if (!container) {
-        const divElement = document.createElement('div');
+      ++usedOverlayContainer.users;
 
-        divElement.className = containerClass;
-        divElement.style.cssText =
-          'position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 99999;';
-
-        // Restore pointer events for overlay content teleported into the container.
-
-        divElement.appendChild(
-          Object.assign(document.createElement('style'), {
-            textContent: `.${containerClass} > * { pointer-events: auto; }`
-          })
-        );
-
-        opencor.appendChild(divElement);
-
-        const updateOffset = (): void => {
-          divElement.style.top = `-${window.scrollY}px`;
-          divElement.style.left = `-${window.scrollX}px`;
-        };
-
-        updateOffset();
-
-        window.addEventListener('scroll', updateOffset, { passive: true });
-
-        container = divElement;
-      }
-
-      appendTarget.value = container;
+      appendTarget.value = usedOverlayContainer.element;
     }
+  });
+
+  vue.onBeforeUnmount(() => {
+    if (usedOverlayContainer && --usedOverlayContainer.users === 0) {
+      usedOverlayContainer.remove();
+    }
+
+    usedOverlayContainer = null;
   });
 
   return appendTarget;
 };
 
 // Populate the parameters of the given instance task.
+// Note: we collect our parameters into a plain array (rather than push them one by one into our reactive array, which
+//       would go through Vue's reactivity for each of them), sort them using a collator (which is faster than
+//       String.prototype.localeCompare() for a large number of comparisons), and then update our reactive array once.
+
+const parametersCollator = new Intl.Collator();
 
 export const populateParameters = (
   parameters: vue.Ref<string[]>,
   instanceTask: locSedApi.SedInstanceTask,
   onlyEditableModelParameters = false
 ): void => {
-  const addParameter = (param: string): void => {
-    parameters.value.push(param);
-  };
+  const res = [...parameters.value];
 
   if (!onlyEditableModelParameters) {
-    addParameter(instanceTask.voiName());
+    res.push(instanceTask.voiName());
   }
 
-  for (let i = 0; i < instanceTask.stateCount(); i++) {
-    addParameter(instanceTask.stateName(i));
+  const stateCount = instanceTask.stateCount();
+
+  for (let i = 0; i < stateCount; ++i) {
+    res.push(instanceTask.stateName(i));
   }
 
   if (!onlyEditableModelParameters) {
-    for (let i = 0; i < instanceTask.rateCount(); i++) {
-      addParameter(instanceTask.rateName(i));
+    const rateCount = instanceTask.rateCount();
+
+    for (let i = 0; i < rateCount; ++i) {
+      res.push(instanceTask.rateName(i));
     }
   }
 
-  for (let i = 0; i < instanceTask.constantCount(); i++) {
-    addParameter(instanceTask.constantName(i));
+  const constantCount = instanceTask.constantCount();
+
+  for (let i = 0; i < constantCount; ++i) {
+    res.push(instanceTask.constantName(i));
   }
 
   if (!onlyEditableModelParameters) {
-    for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
-      addParameter(instanceTask.computedConstantName(i));
+    const computedConstantCount = instanceTask.computedConstantCount();
+
+    for (let i = 0; i < computedConstantCount; ++i) {
+      res.push(instanceTask.computedConstantName(i));
     }
 
-    for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
-      addParameter(instanceTask.algebraicVariableName(i));
+    const algebraicVariableCount = instanceTask.algebraicVariableCount();
+
+    for (let i = 0; i < algebraicVariableCount; ++i) {
+      res.push(instanceTask.algebraicVariableName(i));
     }
   }
 
   // Sort the parameters alphabetically.
 
-  parameters.value.sort((parameter1: string, parameter2: string) => parameter1.localeCompare(parameter2));
+  res.sort(parametersCollator.compare);
+
+  parameters.value = res;
 };
 
 // A helper function to wait while a simulation instance is running, yielding to the UI to keep it responsive.
@@ -225,7 +294,21 @@ export const waitWhileRunning = (
     clearTimeout(progressResetTimer);
   };
 
-  const promise = new Promise<void>((resolve) => {
+  const promise = new Promise<void>((resolve, reject) => {
+    // Note: since we poll using setTimeout(), an error thrown while polling would otherwise be uncaught and our promise
+    //       would never settle (meaning that our caller would wait forever and, for instance, never release its
+    //       instance). So, an error thrown by one of our callbacks is reported, but doesn't stop us from polling, while
+    //       an error thrown by our instance (e.g., by libOpenCOR) rejects our promise since we cannot know its status
+    //       anymore.
+
+    const callSafely = (callback: () => void): void => {
+      try {
+        callback();
+      } catch (error: unknown) {
+        console.error('OpenCOR: an error occurred while waiting for a simulation run to finish:', error);
+      }
+    };
+
     const poll = (): void => {
       if (cancelled) {
         resolve();
@@ -233,12 +316,27 @@ export const waitWhileRunning = (
         return;
       }
 
-      const status = instance.status();
+      let status: locSedApi.ESedInstanceStatus;
+      let progress = 0;
+
+      try {
+        status = instance.status();
+
+        if (status === locSedApi.ESedInstanceStatus.RUNNING) {
+          progress = instance.progress();
+        }
+      } catch (error: unknown) {
+        cancel();
+
+        reject(error);
+
+        return;
+      }
 
       if (status !== lastStatus) {
         lastStatus = status;
 
-        onStatusChange?.(status);
+        callSafely(() => onStatusChange?.(status));
       }
 
       // Update the progress bar and keep polling while the simulation is running or paused, and resolve when the
@@ -246,7 +344,7 @@ export const waitWhileRunning = (
 
       switch (status) {
         case locSedApi.ESedInstanceStatus.RUNNING:
-          onProgress?.(100 * instance.progress());
+          callSafely(() => onProgress?.(100 * progress));
 
           setTimeout(poll, VERY_SHORT_DELAY);
 
@@ -257,13 +355,13 @@ export const waitWhileRunning = (
           break;
         default: // locSedApi.ESedInstanceStatus.IDLE:
           if (onProgress && !runAbortedRef?.value) {
-            onProgress(100);
+            callSafely(() => onProgress(100));
 
             // Reset the progress bar after a short delay.
 
             progressResetTimer = setTimeout(() => {
               if (!cancelled) {
-                onProgress?.(0);
+                callSafely(() => onProgress(0));
               }
             }, MEDIUM_DELAY);
           }

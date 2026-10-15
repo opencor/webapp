@@ -6,6 +6,8 @@ import type { IIssue } from './locLoggerApi';
 export interface ICppLocApi {
   // FileManager API.
 
+  fileManagerCanonicalPath: (path: string) => string;
+  fileManagerHasFile: (path: string) => boolean;
   fileManagerUnmanage: (path: string) => void;
 
   // File API.
@@ -29,7 +31,7 @@ export interface ICppLocApi {
 
   // SedModel API.
 
-  sedModelFilePath: (documentId: number, index: number) => string;
+  sedModelFilePath: (documentId: number, index: number) => string | null;
   sedModelAddChange: (
     documentId: number,
     index: number,
@@ -57,6 +59,7 @@ export interface ICppLocApi {
   // SolverCvode API.
   // TODO: this is only temporary until we have full support for our different solvers.
 
+  solverCvodeExists: (documentId: number, index: number) => boolean;
   solverCvodeMaximumStep: (documentId: number, index: number) => number;
   solverCvodeSetMaximumStep: (documentId: number, index: number, value: number) => void;
 
@@ -77,27 +80,57 @@ export interface ICppLocApi {
 
   sedInstanceTaskVoiName: (instanceId: number, index: number) => string;
   sedInstanceTaskVoiUnit: (instanceId: number, index: number) => string;
-  sedInstanceTaskVoi: (instanceId: number, index: number) => Float64Array;
+  sedInstanceTaskVoi: (instanceId: number, index: number, start?: number, end?: number) => Float64Array;
   sedInstanceTaskStateCount: (instanceId: number, index: number) => number;
   sedInstanceTaskStateName: (instanceId: number, index: number, stateIndex: number) => string;
   sedInstanceTaskStateUnit: (instanceId: number, index: number, stateIndex: number) => string;
-  sedInstanceTaskState: (instanceId: number, index: number, stateIndex: number) => Float64Array;
+  sedInstanceTaskState: (
+    instanceId: number,
+    index: number,
+    stateIndex: number,
+    start?: number,
+    end?: number
+  ) => Float64Array;
   sedInstanceTaskRateCount: (instanceId: number, index: number) => number;
   sedInstanceTaskRateName: (instanceId: number, index: number, rateIndex: number) => string;
   sedInstanceTaskRateUnit: (instanceId: number, index: number, rateIndex: number) => string;
-  sedInstanceTaskRate: (instanceId: number, index: number, rateIndex: number) => Float64Array;
+  sedInstanceTaskRate: (
+    instanceId: number,
+    index: number,
+    rateIndex: number,
+    start?: number,
+    end?: number
+  ) => Float64Array;
   sedInstanceTaskConstantCount: (instanceId: number, index: number) => number;
   sedInstanceTaskConstantName: (instanceId: number, index: number, constantIndex: number) => string;
   sedInstanceTaskConstantUnit: (instanceId: number, index: number, constantIndex: number) => string;
-  sedInstanceTaskConstant: (instanceId: number, index: number, constantIndex: number) => Float64Array;
+  sedInstanceTaskConstant: (
+    instanceId: number,
+    index: number,
+    constantIndex: number,
+    start?: number,
+    end?: number
+  ) => Float64Array;
   sedInstanceTaskComputedConstantCount: (instanceId: number, index: number) => number;
   sedInstanceTaskComputedConstantName: (instanceId: number, index: number, computedConstantIndex: number) => string;
   sedInstanceTaskComputedConstantUnit: (instanceId: number, index: number, computedConstantIndex: number) => string;
-  sedInstanceTaskComputedConstant: (instanceId: number, index: number, computedConstantIndex: number) => Float64Array;
+  sedInstanceTaskComputedConstant: (
+    instanceId: number,
+    index: number,
+    computedConstantIndex: number,
+    start?: number,
+    end?: number
+  ) => Float64Array;
   sedInstanceTaskAlgebraicVariableCount: (instanceId: number, index: number) => number;
   sedInstanceTaskAlgebraicVariableName: (instanceId: number, index: number, algebraicVariableIndex: number) => string;
   sedInstanceTaskAlgebraicVariableUnit: (instanceId: number, index: number, algebraicVariableIndex: number) => string;
-  sedInstanceTaskAlgebraicVariable: (instanceId: number, index: number, algebraicVariableIndex: number) => Float64Array;
+  sedInstanceTaskAlgebraicVariable: (
+    instanceId: number,
+    index: number,
+    algebraicVariableIndex: number,
+    start?: number,
+    end?: number
+  ) => Float64Array;
 
   // Version API.
 
@@ -129,6 +162,7 @@ export { EFileType, File, fileManager } from './locFileApi';
 
 export {
   ESedSimulationType,
+  MAXIMUM_NUMBER_OF_STEPS,
   SedDocument,
   SedInstance,
   SedInstanceTask,
@@ -151,10 +185,12 @@ export {
   type IUiJsonParameter,
   type IUiJsonScalarInput,
   cleanUiJson,
+  cloneUiJson,
   isScalarInput,
   isDiscreteInput,
   normaliseUiJson,
   uiJsonReplacer,
+  uiJsonWithExpectedStructure,
   validateUiJson
 } from './locUiJsonApi';
 

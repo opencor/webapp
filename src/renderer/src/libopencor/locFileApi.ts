@@ -2,6 +2,8 @@ import * as vue from 'vue';
 
 import type { File as IWasmFile, FileManager as IWasmFileManagerInstance } from '@opencor/libopencor-types';
 
+import * as common from '../common/common';
+
 import {
   _cppLocApi,
   _wasmLocApi,
@@ -35,57 +37,70 @@ class FileManager {
     return this._fileManager;
   }
 
+  canonicalPath(path: string): string {
+    // Note #1: libOpenCOR canonicalises the path of a file when creating it (e.g., it resolves symbolic links, decodes
+    //          URLs, and removes "." and ".." segments), so a file may be referred to using different paths, all of
+    //          which refer to the same file, i.e. the one with the canonical path. With the C++ version of libOpencOR,
+    //          our native module gets that canonical path for us. With the WASM version of libOpenCOR, we do the same
+    //          as our native module, i.e. we create a file, without contents, to get its path. If the file is already
+    //          managed, then we get it rather than a new file, while if it isn't, then the new file gets unmanaged as
+    //          soon as we delete our handle to it.
+    // Note #2: canonicalising a path may fail, in which case we use the path as is. Indeed, a canonical path is used
+    //          to determine whether two paths refer to the same file and by our main process to identify a file (e.g.,
+    //          in our list of recent files, see MainWindow.ts), so it must not prevent a file from being opened (which
+    //          will then fail and get reported as such) or a file tab from being found.
+
+    try {
+      if (cppVersion()) {
+        return _cppLocApi.fileManagerCanonicalPath(path);
+      }
+
+      const wasmFile = new _wasmLocApi.File(path);
+
+      try {
+        return wasmFile.path;
+      } finally {
+        wasmFile.delete();
+      }
+    } catch (error: unknown) {
+      console.warn(`OpenCOR: failed to canonicalise path (${path}):`, common.formatError(error));
+
+      return path;
+    }
+  }
+
   file(path: string): File | null {
     // Note: the file we are after is already managed, so we just wrap it rather than create (and therefore own) it.
 
     if (cppVersion()) {
-      return _cppLocApi.fileContents(path) ? new File(path, undefined, {}) : null;
+      return _cppLocApi.fileManagerHasFile(path) ? new File(path, undefined, {}) : null;
     }
 
-    // Note: every access to a WASM vector (and to its elements) yields a new handle that must be deleted, except for
-    //       the handle of the file we are after, which our File object takes ownership of.
+    // Note #1: libOpenCOR's file manager canonicalises the given path in the same way as libOpenCOR does when creating
+    //          a file (see canonicalPath()), so we can retrieve a file using any of its paths.
+    // Note #2: our File object takes ownership of the WASM file handle.
 
-    const fileManager = this.fileManager();
-    const files = fileManager.files;
-    let res: File | null = null;
+    const wasmFile = this.fileManager().fileFromFileNameOrUrl(path);
 
-    for (const file of files) {
-      if (!file) {
-        continue;
-      }
-
-      if (!res && file.path === path) {
-        res = new File(path, undefined, { wasmFile: file });
-      } else {
-        file.delete();
-      }
-    }
-
-    files.delete();
-
-    return res;
+    return wasmFile ? new File(path, undefined, { wasmFile }) : null;
   }
 
   unmanage(path: string): void {
     if (cppVersion()) {
       _cppLocApi.fileManagerUnmanage(path);
     } else {
+      // Note: same as in file() above, except that we must delete the WASM file handle ourselves.
+
       const fileManager = this.fileManager();
-      const files = fileManager.files;
+      const wasmFile = fileManager.fileFromFileNameOrUrl(path);
 
-      for (const file of files) {
-        if (!file) {
-          continue;
+      if (wasmFile) {
+        try {
+          fileManager.unmanage(wasmFile);
+        } finally {
+          wasmFile.delete();
         }
-
-        if (file.path === path) {
-          fileManager.unmanage(file);
-        }
-
-        file.delete();
       }
-
-      files.delete();
     }
   }
 }
@@ -112,6 +127,7 @@ export interface IManagedFile {
 
 export class File {
   _path: string;
+  private _canonicalPath: string | undefined;
   _wasmFile: IWasmFile = {} as IWasmFile;
   _issues: IIssue[] = [];
   private _isOwner = true;
@@ -133,16 +149,34 @@ export class File {
         this._issues = wasmIssuesToIssues(this._wasmFile.issues);
       }
     } else if (cppVersion()) {
+      // Note: if something goes wrong once our native file has been created (e.g., if libOpenCOR throws an exception),
+      //       then we must release it ourselves since we are going to throw, i.e. there won't be a File object to
+      //       release it (see release()).
+
       _cppLocApi.fileCreate(path, contents);
 
-      this._issues = _cppLocApi.fileIssues(path);
+      try {
+        this._issues = _cppLocApi.fileIssues(path);
+      } catch (error: unknown) {
+        _cppLocApi.fileManagerUnmanage(path);
+
+        throw error;
+      }
     } else if (contents) {
+      // Note: same as above, but for our WASM file.
+
       this._wasmFile = vue.markRaw(new _wasmLocApi.File(path));
       this._hasWasmFile = true;
 
-      this._wasmFile.setContents(contents);
+      try {
+        this._wasmFile.setContents(contents);
 
-      this._issues = wasmIssuesToIssues(this._wasmFile.issues);
+        this._issues = wasmIssuesToIssues(this._wasmFile.issues);
+      } catch (error: unknown) {
+        this._wasmFile.delete();
+
+        throw error;
+      }
     } else {
       // Note: we should never reach this point since we should always provide some file contents when using the WASM
       //       version of libOpenCOR.
@@ -180,6 +214,12 @@ export class File {
 
   path(): string {
     return this._path;
+  }
+
+  canonicalPath(): string {
+    this._canonicalPath ??= fileManager.canonicalPath(this._path);
+
+    return this._canonicalPath;
   }
 
   issues(): IIssue[] {

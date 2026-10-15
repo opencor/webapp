@@ -34,7 +34,7 @@
         @dragstart="onDragStart($event, fileTab.file.path())"
         @dragend="onDragEnd"
       >
-        <span class="file-tab-label">{{ common.fileName(fileTab.file.path()) }}</span>
+        <span class="file-tab-label">{{ common.fileName(fileTab.file.canonicalPath()) }}</span>
         <div class="pi pi-times remove-button" @mousedown.prevent @click.stop="closeFile(fileTab.file.path())" />
       </div>
     </div>
@@ -98,7 +98,9 @@ const viewRegistry = useViewRegistry();
 const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof SimulationExperimentInteractiveView> | null>(
   null
 );
-const fileTabs = vue.ref<IFileTab[]>([]);
+const fileTabs = vue.ref<IFileTab[]>([]) as vue.Ref<IFileTab[]>;
+// Note: we cast our ref since Vue's ref type would otherwise unwrap our file tabs' locApi.File instances, which would
+//       lose their private members and therefore not be considered locApi.File instances anymore.
 const fileTabRefs: Record<string, HTMLElement | null> = {};
 const activeFile = vue.ref<string>('');
 
@@ -119,7 +121,7 @@ interface IDragState {
 }
 
 const dragState = vue.ref<IDragState | null>(null);
-const fileTabBarRef = vue.ref<HTMLElement | null>(null);
+const fileTabBarRef = vue.shallowRef<HTMLElement | null>(null);
 const dropIndicatorLeft = vue.ref<number | null>(null);
 
 const captureSimulationExperimentInteractiveViewRef = (element: unknown): void => {
@@ -189,12 +191,28 @@ const onSelectView = (fileTab: IFileTab, viewId: string): void => {
   fileTab.activeViewId = viewId;
 };
 
-const hasFile = (filePath: string): boolean => {
+const findFileTab = (filePath: string): IFileTab | undefined => {
+  // Retrieve the file tab for the given file path.
+  // Note: a file may be referred to using different paths (e.g., through a symbolic link), hence we also compare
+  //       canonical paths, but only if needed since it is more costly.
+
   if (props.simulationOnly) {
-    return false;
+    return undefined;
   }
 
-  return fileTabs.value.find((fileTab) => fileTab.file.path() === filePath) !== undefined;
+  const res = fileTabs.value.find((fileTab) => fileTab.file.path() === filePath);
+
+  if (res) {
+    return res;
+  }
+
+  const canonicalFilePath = locApi.fileManager.canonicalPath(filePath);
+
+  return fileTabs.value.find((fileTab) => fileTab.file.canonicalPath() === canonicalFilePath);
+};
+
+const hasFile = (filePath: string): boolean => {
+  return findFileTab(filePath) !== undefined;
 };
 
 const hasFiles = (): boolean => {
@@ -220,11 +238,16 @@ const waitForTabsUpdate = async (): Promise<void> => {
 };
 
 const selectFile = async (filePath: string, wait: boolean = false): Promise<void> => {
-  if (props.simulationOnly) {
+  // Note: we can only select a file that has a file tab (findFileTab() also returns undefined in simulation-only mode),
+  //       and the given file path may not be the one of that file tab (see findFileTab()).
+
+  const selectedFileTab = findFileTab(filePath);
+
+  if (!selectedFileTab) {
     return;
   }
 
-  activeFile.value = filePath;
+  activeFile.value = selectedFileTab.file.path();
 
   if (wait) {
     await waitForTabsUpdate();
@@ -253,35 +276,51 @@ const selectPreviousFile = async (): Promise<void> => {
 const openFile = async (file: locApi.File, wait: boolean = false): Promise<void> => {
   const filePath = file.path();
   const prevActiveFile = activeFile.value;
+  const uiJson = file.uiJson();
 
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file: file,
-    uiJson: file.uiJson(),
-    activeViewId: file.uiJson() ? 'simulation-experiment-interactive' : 'simulation-experiment-standard'
+    uiJson: uiJson,
+    activeViewId: uiJson ? 'simulation-experiment-interactive' : 'simulation-experiment-standard'
   });
 
-  await selectFile(filePath, wait);
+  // Select the file and let people know that it has been opened.
+  // Note: we let people know before waiting for our file tabs to be updated (see selectFile()) since the file may get
+  //       closed in the meantime (e.g., using File|Close), in which case people would otherwise be told that it has been
+  //       opened after having been told that it has been closed (and, in the case of Electron, it wouldn't be listed in
+  //       our recent files).
 
-  electronApi?.fileOpened(filePath);
+  const fileSelected = selectFile(filePath, wait);
+
+  electronApi?.fileOpened(filePath, file.canonicalPath());
 
   emit('fileOpened', filePath);
+
+  await fileSelected;
 };
 
 const closeFile = async (filePath: string): Promise<void> => {
-  locApi.fileManager.unmanage(filePath);
+  // Note: there is nothing to close if the file has no file tab, so we don't want to let people know that it has been
+  //       closed (and, in the case of Electron, have it added to our list of recent files).
 
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath);
   const fileTab = fileTabs.value[fileTabIndex];
 
-  if (fileTab) {
-    fileTabs.value.splice(fileTabIndex, 1);
-
-    // Release the file once its views have been unmounted (and have therefore released their own resources).
-
-    vue.nextTick(() => {
-      fileTab.file.release();
-    });
+  if (!fileTab) {
+    return;
   }
+
+  const canonicalFilePath = fileTab.file.canonicalPath();
+
+  locApi.fileManager.unmanage(filePath);
+
+  fileTabs.value.splice(fileTabIndex, 1);
+
+  // Release the file once its views have been unmounted (and have therefore released their own resources).
+
+  vue.nextTick(() => {
+    fileTab.file.release();
+  });
 
   if (activeFile.value === filePath && fileTabs.value.length) {
     const nextFileTab = fileTabs.value[Math.min(fileTabIndex, fileTabs.value.length - 1)];
@@ -291,7 +330,7 @@ const closeFile = async (filePath: string): Promise<void> => {
     }
   }
 
-  electronApi?.fileClosed(filePath);
+  electronApi?.fileClosed(canonicalFilePath);
 
   emit('fileClosed', filePath);
 };
@@ -309,8 +348,14 @@ const closeAllFiles = async (): Promise<void> => {
     return;
   }
 
-  while (fileTabs.value.length) {
-    await closeCurrentFile();
+  // Close the files from a snapshot of our file tabs, so that we are guaranteed to terminate, and close the current
+  // file last, so that closing the other files doesn't result in a new file being selected each time.
+
+  const currentFilePath = activeFile.value;
+  const otherFilePaths = filePaths.value.filter((filePath) => filePath !== currentFilePath);
+
+  for (const filePath of [...otherFilePaths, currentFilePath]) {
+    await closeFile(filePath);
   }
 };
 
@@ -570,16 +615,17 @@ vue.onUnmounted(() => {
 });
 
 // Some watchers to let people know about changes to the opened files and the selected file.
+// Note: our main process identifies files by their canonical path (see MainWindow.ts).
 
-vue.watch(filePaths, (newFilePaths: string[]) => {
-  electronApi?.filesOpened(newFilePaths);
+vue.watch(filePaths, () => {
+  electronApi?.filesOpened(fileTabs.value.map((fileTab) => fileTab.file.canonicalPath()));
 });
 
 vue.watch(activeFile, (newActiveFile: string) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
   //       people know that a file has been selected.
 
-  electronApi?.fileSelected(newActiveFile);
+  electronApi?.fileSelected(findFileTab(newActiveFile)?.file.canonicalPath() ?? newActiveFile);
 
   if (!dragState.value) {
     // Make sure that the selected file tab is visible in the file tab bar.

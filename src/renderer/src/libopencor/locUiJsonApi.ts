@@ -90,41 +90,285 @@ export const uiJsonReplacer = (_key: string, value: unknown): unknown => {
   return value instanceof Float64Array ? Array.from(value) : value;
 };
 
-export const normaliseUiJson = (uiJson: IUiJson): IUiJson => {
-  for (const externalData of uiJson.output.externalData ?? []) {
-    if (!(externalData.voiValues instanceof Float64Array)) {
-      externalData.voiValues = new Float64Array(externalData.voiValues);
+// A helper function to return a version of the given UI JSON that has the structure that the rest of our code relies
+// on, i.e. that can be safely accessed. Anything that doesn't have that structure (e.g., a missing output or a plot
+// that is not an object) is replaced with an empty equivalent (or removed) while everything else is kept as is, so that
+// it can still be used (e.g., in our settings dialog).
+// Note: whether a UI JSON is valid is determined by validateUiJson(), which should therefore be given the original UI
+//       JSON so that all of its issues get reported.
+
+export interface IUiJsonWithExpectedStructure {
+  uiJson: IUiJson;
+  repaired: boolean;
+}
+
+export const uiJsonWithExpectedStructure = (value: unknown): IUiJsonWithExpectedStructure => {
+  let repaired = false;
+
+  const object = (value: unknown): Record<string, unknown> => {
+    if (common.isObject(value)) {
+      return value;
     }
 
-    for (const dataSeries of externalData.dataSeries) {
-      if (!(dataSeries.values instanceof Float64Array)) {
-        dataSeries.values = new Float64Array(dataSeries.values);
-      }
+    repaired = true;
+
+    return {};
+  };
+
+  const objects = (value: unknown): Record<string, unknown>[] => {
+    if (!Array.isArray(value)) {
+      repaired = true;
+
+      return [];
     }
+
+    const res = value.filter(common.isObject);
+
+    if (res.length !== value.length) {
+      repaired = true;
+    }
+
+    return res;
+  };
+
+  const uiJson = object(value);
+  const output = object(uiJson.output);
+  const res: Record<string, unknown> = {
+    ...uiJson,
+    input: objects(uiJson.input).map((input) => {
+      return input.possibleValues === undefined ? input : { ...input, possibleValues: objects(input.possibleValues) };
+    }),
+    output: {
+      ...output,
+      data: objects(output.data),
+      plots: objects(output.plots).map((plot) => {
+        return plot.additionalTraces === undefined
+          ? plot
+          : { ...plot, additionalTraces: objects(plot.additionalTraces) };
+      }),
+      ...(output.externalData === undefined
+        ? {}
+        : {
+            externalData: objects(output.externalData).map((externalData) => {
+              return {
+                ...externalData,
+                data: objects(externalData.data),
+                dataSeries: objects(externalData.dataSeries)
+              };
+            })
+          })
+    },
+    parameters: objects(uiJson.parameters)
+  };
+
+  return {
+    uiJson: res as unknown as IUiJson,
+    repaired
+  };
+};
+
+// Some helper functions to convert values to/from a Float64Array.
+// Note: we only convert arrays (to a Float64Array) and Float64Arrays (from a Float64Array), leaving other values as
+//       they are so that validateUiJson() can report them as they are. This also means that we never call
+//       new Float64Array(n), which would create an array of n zeros and therefore could result in a huge allocation if
+//       n was some (invalid) large number.
+
+const toFloat64Array = (values: unknown): unknown => {
+  // Note: new Float64Array(values) would silently convert some non-numeric values to valid numbers (e.g., null, false,
+  //       "", and [] to 0, true to 1, "3" to 3, and [5] to 5), so we convert any non-numeric value to NaN ourselves,
+  //       so that validateUiJson() reports it (see fromFloat64ArrayForSchemaValidation()).
+
+  if (!Array.isArray(values)) {
+    return values;
   }
+
+  const res = new Float64Array(values.length);
+
+  for (let i = 0; i < values.length; ++i) {
+    const value: unknown = values[i];
+
+    res[i] = typeof value === 'number' ? value : Number.NaN;
+  }
+
+  return res;
+};
+
+const fromFloat64ArrayForSchemaValidation = (values: unknown): unknown => {
+  // Note: for schema validation purposes, we only need an array that has the same "emptiness" as the given values and
+  //       that contains numbers. This means that we don't have to convert (and then validate) all the values, which
+  //       would be costly for large external data. Indeed, the actual length of the values and whether they are all
+  //       (finite) numbers are checked separately (see validateUiJson() and nonNumericValuesIssues()), the latter so
+  //       that values that are not numbers (e.g., NaN for a non-numeric value, see toFloat64Array()) get reported once
+  //       per array rather than once per value (there could be thousands of them, e.g., missing values in some CSV
+  //       data).
+
+  if (!(values instanceof Float64Array) && !Array.isArray(values)) {
+    return values;
+  }
+
+  return values.length ? [0] : [];
+};
+
+// A helper function to map the external data of a UI JSON, if it has any.
+// Note: the UI JSON may not have the expected structure, in which case we only map what can be mapped.
+
+const mapExternalData = (
+  uiJson: IUiJson,
+  mapValues: (values: unknown) => unknown,
+  inPlace: boolean
+): IUiJson | undefined => {
+  const output: unknown = (uiJson as unknown as Record<string, unknown>).output;
+
+  if (!common.isObject(output) || !Array.isArray(output.externalData) || !output.externalData.length) {
+    return undefined;
+  }
+
+  const externalData = output.externalData.map((externalDataItem: unknown) => {
+    if (!common.isObject(externalDataItem)) {
+      return externalDataItem;
+    }
+
+    const res = inPlace ? externalDataItem : { ...externalDataItem };
+
+    res.voiValues = mapValues(externalDataItem.voiValues);
+
+    if (Array.isArray(externalDataItem.dataSeries)) {
+      res.dataSeries = externalDataItem.dataSeries.map((dataSeries: unknown) => {
+        if (!common.isObject(dataSeries)) {
+          return dataSeries;
+        }
+
+        const dataSeriesRes = inPlace ? dataSeries : { ...dataSeries };
+
+        dataSeriesRes.values = mapValues(dataSeries.values);
+
+        return dataSeriesRes;
+      });
+    }
+
+    return res;
+  });
+
+  if (inPlace) {
+    output.externalData = externalData;
+
+    return uiJson;
+  }
+
+  return { ...uiJson, output: { ...output, externalData } } as unknown as IUiJson;
+};
+
+export const normaliseUiJson = (uiJson: IUiJson): IUiJson => {
+  mapExternalData(uiJson, toFloat64Array, true);
 
   return uiJson;
 };
 
 const uiJsonForSchemaValidation = (uiJson: IUiJson): unknown => {
-  if (!uiJson.output.externalData?.length) {
-    return uiJson;
+  return mapExternalData(uiJson, fromFloat64ArrayForSchemaValidation, false) ?? uiJson;
+};
+
+// A helper function to report the external data values of a UI JSON that are not (finite) numbers, with one issue per
+// array of values (see fromFloat64ArrayForSchemaValidation()).
+// Note: the UI JSON may not have the expected structure, in which case we only check what can be checked (the rest gets
+//       reported by our schema validation).
+
+const MAX_REPORTED_NON_NUMERIC_VALUE_INDICES = 5;
+
+const nonNumericValuesIssues = (uiJson: IUiJson): IIssue[] => {
+  const res: IIssue[] = [];
+
+  const check = (values: unknown, what: string): void => {
+    if (!(values instanceof Float64Array) && !Array.isArray(values)) {
+      return;
+    }
+
+    const indices: number[] = [];
+    let count = 0;
+
+    for (let i = 0; i < values.length; ++i) {
+      const value: unknown = values[i];
+
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        if (indices.length < MAX_REPORTED_NON_NUMERIC_VALUE_INDICES) {
+          indices.push(i);
+        }
+
+        ++count;
+      }
+    }
+
+    if (!count) {
+      return;
+    }
+
+    const otherCount = count - indices.length;
+    const where =
+      count === 1
+        ? `the value at index ${indices[0]} is not`
+        : `${count} values are not, at indices ${indices.join(', ')}${otherCount ? `, and ${otherCount} more` : ''}`;
+
+    res.push({
+      type: EIssueType.WARNING,
+      description: `UI JSON: ${what} must only contain numbers (${where}).`
+    });
+  };
+
+  const output: unknown = (uiJson as unknown as Record<string, unknown>).output;
+
+  if (!common.isObject(output) || !Array.isArray(output.externalData)) {
+    return res;
   }
 
-  return {
-    ...uiJson,
-    output: {
-      ...uiJson.output,
-      externalData: uiJson.output.externalData.map((externalData) => ({
-        ...externalData,
-        voiValues: Array.from(externalData.voiValues),
-        dataSeries: externalData.dataSeries.map((dataSeries) => ({
-          ...dataSeries,
-          values: Array.from(dataSeries.values)
-        }))
-      }))
+  for (const externalDataItem of output.externalData) {
+    if (!common.isObject(externalDataItem)) {
+      continue;
     }
-  };
+
+    check(externalDataItem.voiValues, 'an output external data VOI values');
+
+    if (Array.isArray(externalDataItem.dataSeries)) {
+      for (const dataSeries of externalDataItem.dataSeries) {
+        if (common.isObject(dataSeries)) {
+          check(
+            dataSeries.values,
+            typeof dataSeries.name === 'string' && dataSeries.name
+              ? `an output external data series values ('${dataSeries.name}')`
+              : 'an output external data series values'
+          );
+        }
+      }
+    }
+  }
+
+  return res;
+};
+
+// A helper function to deep clone a UI JSON (or some settings containing a UI JSON).
+// Note #1: Float64Arrays (i.e. external data values) are shared rather than copied since they are never modified in
+//          place (they are only ever replaced), which avoids copying potentially large external data.
+// Note #2: we use Object.fromEntries() rather than assign each key since a UI JSON may contain a "__proto__" key, which
+//          would otherwise set the prototype of our copy rather than be copied (and the contents of that key would then
+//          look like properties of our copy), see also cleanUiJson().
+
+export const cloneUiJson = <T>(value: T): T => {
+  if (value instanceof Float64Array) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(cloneUiJson) as T;
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, keyValue]) => {
+        return [key, cloneUiJson(keyValue)];
+      })
+    ) as T;
+  }
+
+  return value;
 };
 
 export const cleanUiJson = (uiJson: IUiJson): IUiJson => {
@@ -137,22 +381,31 @@ export const cleanUiJson = (uiJson: IUiJson): IUiJson => {
       return value;
     }
 
+    // Note: unlike an optional value, an array element is never "not provided", so we keep an element that would
+    //       otherwise be cleaned away (i.e. null, undefined, or an empty string) so that it gets reported by our schema
+    //       validation. Indeed, an array element is always expected to be an object (or a number in the case of
+    //       external data values), and the rest of our code relies on it.
+
     if (Array.isArray(value)) {
-      return (value as unknown[]).map(cleanUiJsonRec).filter((v) => v !== undefined);
+      return (value as unknown[]).map((item) => {
+        const cleanedItem = cleanUiJsonRec(item);
+
+        return cleanedItem === undefined ? item : cleanedItem;
+      });
     }
 
+    // Note: we use Object.fromEntries() for the same reason as in cloneUiJson().
+
     if (typeof value === 'object') {
-      const object: Record<string, unknown> = {};
-
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        const cleaned = cleanUiJsonRec(v);
-
-        if (cleaned !== undefined) {
-          object[k] = cleaned as unknown;
-        }
-      }
-
-      return object;
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+          .map(([k, v]) => {
+            return [k, cleanUiJsonRec(v)];
+          })
+          .filter(([, cleaned]) => {
+            return cleaned !== undefined;
+          })
+      );
     }
 
     return value;
@@ -454,17 +707,26 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
     nestedErrors: true
   });
 
-  if (!validatorRes.valid) {
+  // Note: external data values that are not numbers are not reported by our schema validation (see
+  //       fromFloat64ArrayForSchemaValidation()), but they are just as invalid, so we report them alongside.
+
+  const nonNumericIssues = nonNumericValuesIssues(uiJson);
+
+  if (!validatorRes.valid || nonNumericIssues.length) {
     const res: IIssue[] = [];
 
-    for (const issue of String(validatorRes).split('\n')) {
-      if (issue) {
-        res.push({
-          type: EIssueType.WARNING,
-          description: `UI JSON: ${common.formatMessage(issue)}`
-        });
+    if (!validatorRes.valid) {
+      for (const issue of String(validatorRes).split('\n')) {
+        if (issue) {
+          res.push({
+            type: EIssueType.WARNING,
+            description: `UI JSON: ${common.formatMessage(issue)}`
+          });
+        }
       }
     }
+
+    res.push(...nonNumericIssues);
 
     return res;
   }
@@ -475,18 +737,18 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
   // Make sure that the input information makes sense.
 
   const res: IIssue[] = [];
-  const inputIdUsed: Record<string, boolean> = {};
+  const inputIdUsed = new Set<string>();
 
   for (const input of uiJson.input) {
     if (input.id) {
-      if (inputIdUsed[input.id]) {
+      if (inputIdUsed.has(input.id)) {
         res.push({
           type: EIssueType.WARNING,
           description: `UI JSON: an input id must be unique ('${input.id}' is used more than once).`
         });
       }
 
-      inputIdUsed[input.id] = true;
+      inputIdUsed.add(input.id);
     } else {
       res.push({
         type: EIssueType.WARNING,
@@ -515,17 +777,17 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
         return possibleValue.value;
       });
       const listOfPossibleValues = listOfItems(new Set(possibleValues.map((possibleValue) => String(possibleValue))));
-      const usedPossibleValues: Record<number, boolean> = {};
+      const usedPossibleValues = new Set<number>();
 
       for (const possibleValue of possibleValues) {
-        if (usedPossibleValues[possibleValue]) {
+        if (usedPossibleValues.has(possibleValue)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an input possible value must have a unique value ('${possibleValue}' is used more than once).`
           });
         }
 
-        usedPossibleValues[possibleValue] = true;
+        usedPossibleValues.add(possibleValue);
       }
 
       if (!possibleValues.includes(input.defaultValue)) {
@@ -585,7 +847,7 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
 
   // Make sure that the output information makes sense.
 
-  const outputIdUsed: Record<string, boolean> = {};
+  const outputIdUsed = new Set<string>();
   const listOfAllModelParameters = listOfItems(allModelParametersSet);
 
   for (const outputData of uiJson.output.data) {
@@ -596,14 +858,14 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
       });
     }
 
-    if (outputIdUsed[outputData.id]) {
+    if (outputIdUsed.has(outputData.id)) {
       res.push({
         type: EIssueType.WARNING,
         description: `UI JSON: an output data id must be unique ('${outputData.id}' is used more than once).`
       });
     }
 
-    outputIdUsed[outputData.id] = true;
+    outputIdUsed.add(outputData.id);
 
     if (!outputData.name) {
       res.push({
@@ -638,17 +900,17 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
         });
       }
 
-      const outputExternalDataSeriesNames: Record<string, boolean> = {};
+      const outputExternalDataSeriesNames = new Set<string>();
 
       for (const outputExternalDataSeries of outputExternalData.dataSeries) {
-        if (outputExternalDataSeriesNames[outputExternalDataSeries.name]) {
+        if (outputExternalDataSeriesNames.has(outputExternalDataSeries.name)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an output external data series name must be unique ('${outputExternalDataSeries.name}' is used more than once).`
           });
         }
 
-        outputExternalDataSeriesNames[outputExternalDataSeries.name] = true;
+        outputExternalDataSeriesNames.add(outputExternalDataSeries.name);
 
         if (!outputExternalDataSeries.name) {
           res.push({
@@ -672,8 +934,8 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
         }
       }
 
-      const outputExternalDataIds: Record<string, boolean> = {};
-      const listOfOutputExternalDataSeriesNames = listOfItems(new Set(Object.keys(outputExternalDataSeriesNames)));
+      const outputExternalDataIds = new Set<string>();
+      const listOfOutputExternalDataSeriesNames = listOfItems(outputExternalDataSeriesNames);
 
       for (const outputExternalDataEntry of outputExternalData.data) {
         if (!outputExternalDataEntry.id) {
@@ -683,16 +945,16 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
           });
         }
 
-        if (outputExternalDataIds[outputExternalDataEntry.id]) {
+        if (outputExternalDataIds.has(outputExternalDataEntry.id)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an output external data id must be unique ('${outputExternalDataEntry.id}' is used more than once).`
           });
         }
 
-        outputExternalDataIds[outputExternalDataEntry.id] = true;
+        outputExternalDataIds.add(outputExternalDataEntry.id);
 
-        if (outputExternalDataEntry.id && outputIdUsed[outputExternalDataEntry.id]) {
+        if (outputExternalDataEntry.id && outputIdUsed.has(outputExternalDataEntry.id)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an output external data id must be unique across simulation and external data ('${outputExternalDataEntry.id}' is used more than once).`
@@ -700,7 +962,7 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
         }
 
         if (outputExternalDataEntry.id) {
-          outputIdUsed[outputExternalDataEntry.id] = true;
+          outputIdUsed.add(outputExternalDataEntry.id);
         }
 
         if (!outputExternalDataEntry.name) {
@@ -710,7 +972,7 @@ export const validateUiJson = (uiJson: IUiJson | undefined, options?: IValidateU
           });
         }
 
-        if (!outputExternalDataSeriesNames[outputExternalDataEntry.name]) {
+        if (!outputExternalDataSeriesNames.has(outputExternalDataEntry.name)) {
           res.push({
             type: EIssueType.WARNING,
             description: `UI JSON: an output external data name must match one of the available options ('${outputExternalDataEntry.name}' is not one of ${listOfOutputExternalDataSeriesNames}).`

@@ -35,6 +35,7 @@ const props = withDefaults(
       value: number;
       unit?: string;
     }[];
+    isValid?: (index: number, newValue: number) => boolean;
   }>(),
   {
     hasUnits: true
@@ -48,11 +49,23 @@ const emit = defineEmits<{
 const columnWidth = `width: calc(100% / ${props.hasUnits ? '3' : '2'});`;
 
 const onCellEditComplete = (event: DataTableCellEditCompleteEvent): void => {
-  const { data, newValue, field } = event;
+  // Note: a property is edited using a copy of it, so we only need to ignore an invalid new value for the property to
+  //       keep its current value. A new value is invalid if it is not a finite number (e.g., the field was cleared,
+  //       giving a null value) or if it is deemed invalid by our owner.
+
+  const { data, newValue, field, index } = event;
+
+  if (
+    typeof newValue !== 'number' ||
+    !Number.isFinite(newValue) ||
+    (props.isValid && !props.isValid(index, newValue))
+  ) {
+    return;
+  }
 
   data[field] = newValue;
 
-  emit('propertyUpdated', event.index, event.newValue);
+  emit('propertyUpdated', index, newValue);
 };
 </script>
 

@@ -86,7 +86,6 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   marginsUpdated: [newMargins: IGraphPanelMargins];
-  resetMargins: [];
 }>();
 
 const trackSize = (): void => {
@@ -95,14 +94,12 @@ const trackSize = (): void => {
 };
 
 const queueResize = (): void => {
-  if (resizeQueued) {
+  if (queueResizeRafId !== undefined) {
     return;
   }
 
-  resizeQueued = true;
-
-  requestAnimationFrame(() => {
-    resizeQueued = false;
+  queueResizeRafId = requestAnimationFrame(() => {
+    queueResizeRafId = undefined;
 
     resize();
   });
@@ -120,40 +117,68 @@ const resize = (): Promise<unknown> => {
   resizeRafId = requestAnimationFrame(() => {
     resizeRafId = undefined;
 
-    dependencies._plotlyJs.Plots.resize(mainDivRef.value).then(() => {
-      trackSize();
+    // Note: Plotly rejects resizing a plot that is not displayed (e.g., in a hidden file tab), in which case there is
+    //       nothing to do.
 
-      updateMarginsAsync();
-    });
+    dependencies._plotlyJs.Plots.resize(mainDivRef.value)
+      .then(() => {
+        if (isUnmounted) {
+          return;
+        }
+
+        trackSize();
+
+        updateMarginsAsync();
+      })
+      .catch(() => {});
   });
 
   return Promise.resolve();
 };
 
+const resetMargins = (): void => {
+  // Forget the margins that we last emitted, so that we emit our current margins (e.g., when the shared margins we are
+  // given are reset, see onResetMargins() in SimulationExperimentInteractiveView.vue).
+
+  trackedMargins = undefined;
+
+  updateMarginsAsync();
+};
+
 defineExpose({
+  resetMargins,
   resize
 });
 
-const DOUBLE_CLICK_DELAY = 300;
-
 const instanceId = Symbol('GraphPanelWidget');
-const rootRef = vue.ref<HTMLElement | null>(null);
-const mainDivRef = vue.ref<HTMLElement | null>(null);
+const rootRef = vue.shallowRef<HTMLElement | null>(null);
+const mainDivRef = vue.shallowRef<HTMLElement | null>(null);
 const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
 const progressMessage = vue.inject<IProgressMessage>('progressMessage');
 let plotIsReady = false;
-let resizeQueued = false;
+let isUnmounted = false;
 let trackedWidth = 0;
 let trackedHeight = 0;
 let trackedMargins: IGraphPanelMargins | undefined;
 let stopTrackingContainerSize: (() => void) | undefined;
 let marginsRafId: number | undefined;
+let queueResizeRafId: number | undefined;
 let resizeRafId: number | undefined;
-let lastLegendClickIndex: number | undefined;
-let lastLegendClickTime = 0;
+
+interface ILegendToggle {
+  curveNumber: number;
+  previousVisibility: PlotlyTraceVisible | undefined;
+}
+
+let pendingLegendToggle: ILegendToggle | undefined;
+let lastLegendToggle: ILegendToggle | undefined;
+// Note: pendingLegendToggle is the toggle requested by the latest legend click, which may still get cancelled by a
+//       double-click while lastLegendToggle is the latest toggle that was actually made. The latter tells us the
+//       visibility that its trace had before it, which we need if its click turns out to be the first click of a
+//       double-click (see plotly_legenddoubleclick).
 
 // Context menu functionality.
 
@@ -254,8 +279,6 @@ const zoomIn = (): void => {
     'xaxis.range': [xCenter - 0.5 * xSpan, xCenter + 0.5 * xSpan],
     'yaxis.range': [yCenter - 0.5 * ySpan, yCenter + 0.5 * ySpan]
   });
-
-  emit('resetMargins');
 };
 
 const zoomOut = (): void => {
@@ -281,8 +304,6 @@ const zoomOut = (): void => {
     'xaxis.range': [xCenter - 2 * xSpan, xCenter + 2 * xSpan],
     'yaxis.range': [yCenter - 2 * ySpan, yCenter + 2 * ySpan]
   });
-
-  emit('resetMargins');
 };
 
 const resetZoom = (): void => {
@@ -294,8 +315,6 @@ const resetZoom = (): void => {
     'xaxis.autorange': true,
     'yaxis.autorange': true
   });
-
-  emit('resetMargins');
 };
 
 const copyToClipboard = async (): Promise<void> => {
@@ -719,14 +738,14 @@ const plotlyTraceData = (): IPlotlyTraceState[] | undefined => {
 };
 
 const updatePlot = (): void => {
-  plotIsReady = false;
+  // Make sure that we haven't been unmounted (e.g., if this was scheduled using vue.nextTick() just before we got
+  // unmounted), in which case our plot has been purged and shouldn't be recreated.
 
-  // Reset our margins if they are not overridden.
-
-  if (!props.margins) {
-    margins.value.left = -1;
-    margins.value.right = -1;
+  if (isUnmounted) {
+    return;
   }
+
+  plotIsReady = false;
 
   // Update the plots.
 
@@ -806,12 +825,19 @@ const updatePlot = (): void => {
       // Note: the various keys can be found at https://plotly.com/javascript/configuration-options/.
 
       responsive: true,
+      // Note: to make our plot responsive means that Plotly sizes it relative to its container (rather than using a
+      //       fixed size), which is needed for our plot to shrink when our container does. It also means that Plotly
+      //       observes the size of our plot (using a ResizeObserver) and keeps a reference to it, hence we purge our
+      //       plot when we get unmounted (see onBeforeUnmount()).
       displayModeBar: false,
-      doubleClickDelay: DOUBLE_CLICK_DELAY,
       scrollZoom: true,
       showTips: false
     })
     .then(() => {
+      if (isUnmounted) {
+        return;
+      }
+
       plotIsReady = true;
 
       // Recompute margins after every plot update.
@@ -841,8 +867,11 @@ const handleContextMenu = (event: Event): void => {
 vue.onMounted(() => {
   window.addEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
 
+  // Note: we pass a getter rather than our ref since VueUse uses its own version of Vue's types, which are not
+  //       compatible with ours.
+
   const { stop } = vueusecore.useResizeObserver(
-    mainDivRef,
+    () => mainDivRef.value,
     () => {
       const width = mainDivRef.value?.clientWidth || 0;
       const height = mainDivRef.value?.clientHeight || 0;
@@ -868,24 +897,26 @@ vue.onMounted(() => {
   stopTrackingContainerSize = stop;
 
   vue.nextTick(() => {
-    // Reset our margins on double-click and relayout.
+    // Update our margins whenever our axes change (e.g., following a zoom, a pan, a double-click, or a call to
+    // zoomIn(), zoomOut(), or resetZoom()), since the width of our tick labels may have changed.
 
     const plotlyElement = mainDivRef.value as IPlotlyHTMLElement;
-
-    plotlyElement.on('plotly_doubleclick', () => {
-      emit('resetMargins');
-    });
 
     plotlyElement.on('plotly_relayout', (...args: unknown[]) => {
       const eventData = args[0] as Record<string, unknown> | undefined;
 
-      if (eventData && ('xaxis.range[0]' in eventData || 'yaxis.range[0]' in eventData)) {
-        emit('resetMargins');
+      if (eventData && Object.keys(eventData).some((key) => key.startsWith('xaxis.') || key.startsWith('yaxis.'))) {
+        updateMarginsAsync();
       }
     });
 
     // Intercept legend single-click to toggle trace visibility immediately, bypassing Plotly's setTimeout()-based
     // handler.
+    // Note: Plotly emits plotly_legendclick for both clicks of a double-click and then plotly_legenddoubleclick
+    //       straight after the second one (within the same call). So, rather than toggle the trace straight away, we do
+    //       it in a microtask, which gets cancelled if the click turns out to be the second click of a double-click
+    //       (see plotly_legenddoubleclick). This way, we rely on Plotly to tell a click from a double-click while still
+    //       toggling the trace without any noticeable delay.
 
     plotlyElement.on('plotly_legendclick', (...args: unknown[]) => {
       const eventData = args[0] as { curveNumber?: number } | undefined;
@@ -893,17 +924,6 @@ vue.onMounted(() => {
 
       if (curveNumber === undefined) {
         return;
-      }
-
-      const now = Date.now();
-
-      // If this is a rapid second click on the same trace, a double-click is in progress, so skip toggling and let
-      // plotly_legenddoubleclick() handle isolation.
-
-      if (curveNumber === lastLegendClickIndex && now - lastLegendClickTime < DOUBLE_CLICK_DELAY) {
-        lastLegendClickIndex = undefined;
-
-        return false;
       }
 
       // Toggle the trace visibility immediately.
@@ -914,13 +934,28 @@ vue.onMounted(() => {
         return false;
       }
 
-      const currentVisibility = plotlyData[curveNumber]?.visible;
-      const newVisibility = currentVisibility === 'legendonly' ? true : 'legendonly';
+      const legendToggle: ILegendToggle = {
+        curveNumber,
+        previousVisibility: plotlyData[curveNumber]?.visible
+      };
 
-      dependencies._plotlyJs.restyle(mainDivRef.value, 'visible', newVisibility, [curveNumber]);
+      pendingLegendToggle = legendToggle;
 
-      lastLegendClickIndex = curveNumber;
-      lastLegendClickTime = now;
+      queueMicrotask(() => {
+        if (pendingLegendToggle !== legendToggle || isUnmounted) {
+          return;
+        }
+
+        pendingLegendToggle = undefined;
+        lastLegendToggle = legendToggle;
+
+        dependencies._plotlyJs.restyle(
+          mainDivRef.value,
+          'visible',
+          legendToggle.previousVisibility === 'legendonly' ? true : 'legendonly',
+          [curveNumber]
+        );
+      });
 
       // Return false to cancel Plotly's own setTimeout()-based handler.
 
@@ -934,11 +969,21 @@ vue.onMounted(() => {
       const eventData = args[0] as { curveNumber?: number } | undefined;
       const curveNumber = eventData?.curveNumber;
 
+      // Cancel the toggle requested by the second click of this double-click (see plotly_legendclick).
+
+      pendingLegendToggle = undefined;
+
       if (curveNumber === undefined) {
         return false;
       }
 
-      lastLegendClickIndex = undefined;
+      // Note: the first click of this double-click has already toggled the visibility of the clicked trace (see
+      //       plotly_legendclick), so we use the visibility that it had before that click. Otherwise, double-clicking
+      //       the only visible trace would isolate it again rather than show all the traces again.
+
+      const firstClickToggle = lastLegendToggle?.curveNumber === curveNumber ? lastLegendToggle : undefined;
+
+      lastLegendToggle = undefined;
 
       const plotlyData = plotlyTraceData();
 
@@ -946,12 +991,15 @@ vue.onMounted(() => {
         return false;
       }
 
-      // Collect the indices of visible (not 'legendonly') traces.
+      // Collect the indices of visible (not 'legendonly') traces, as they were before this double-click.
 
       const visibleIndices: number[] = [];
 
       for (let i = 0; i < plotlyData.length; ++i) {
-        if (plotlyData[i] && plotlyData[i].visible !== 'legendonly' && plotlyData[i].visible !== false) {
+        const visibility =
+          i === curveNumber && firstClickToggle ? firstClickToggle.previousVisibility : plotlyData[i]?.visible;
+
+        if (plotlyData[i] && visibility !== 'legendonly' && visibility !== false) {
           visibleIndices.push(i);
         }
       }
@@ -976,6 +1024,29 @@ vue.onMounted(() => {
       return false;
     });
   });
+});
+
+// Release our plot before we get unmounted, i.e. while we still have access to it.
+// Note: Plotly keeps a lot of data (traces, calculated data, SVG elements, event handlers, etc.) attached to our plot,
+//       so we need to purge it to make sure that all of that data gets released.
+
+vue.onBeforeUnmount(() => {
+  isUnmounted = true;
+  plotIsReady = false;
+
+  for (const rafId of [marginsRafId, queueResizeRafId, resizeRafId]) {
+    if (rafId !== undefined) {
+      cancelAnimationFrame(rafId);
+    }
+  }
+
+  marginsRafId = undefined;
+  queueResizeRafId = undefined;
+  resizeRafId = undefined;
+
+  if (mainDivRef.value) {
+    dependencies._plotlyJs.purge(mainDivRef.value);
+  }
 });
 
 vue.onUnmounted(() => {
@@ -1011,7 +1082,13 @@ vue.watch(
 
 vue.watch(
   () => props.margins,
-  () => {
+  (newMargins, oldMargins) => {
+    // Nothing to do if our margins haven't actually changed (e.g., if we were given a new object with the same values).
+
+    if (newMargins && oldMargins && sameMargins(oldMargins, newMargins)) {
+      return;
+    }
+
     vue
       .nextTick(() => {
         if (plotIsReady && mainDivRef.value) {
@@ -1025,9 +1102,7 @@ vue.watch(
         if (!props.margins) {
           // When shared margins are unset, we need to clear our tracked margins so that we can emit them.
 
-          trackedMargins = undefined;
-
-          updateMarginsAsync();
+          resetMargins();
         }
       });
   },

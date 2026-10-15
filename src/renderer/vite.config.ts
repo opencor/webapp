@@ -11,8 +11,9 @@ import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
-import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js';
-import { libopencorVersion } from './scripts/libopencor.version';
+import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js.ts';
+import { libopencorVersion, opencorVersion } from './scripts/libopencor.version.ts';
+import { stripPrimeIconsFontFacePlugin } from './scripts/primeicons.plugin.ts';
 
 await downloadLibopencorJsIfNeeded(
   path.join(import.meta.dirname, 'public', 'libopencor', 'downloads', 'wasm', libopencorVersion)
@@ -22,35 +23,32 @@ export default vite.defineConfig({
   base: './',
   build: {
     chunkSizeWarningLimit: 2048,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        entryFileNames: `assets/[name].js`,
-        chunkFileNames: `assets/[name].js`,
-        assetFileNames: `assets/[name].[ext]`
+        // Note: our file names include a hash of their contents, so that they can be cached for a long time (since a
+        //       new version of a file will have a different name, see public/.htaccess). Only index.html and
+        //       assets/version.json have a fixed name, which is why they must never be cached for long (see
+        //       src/common/version.ts and public/.htaccess) and why they must be uploaded last when deploying our Web
+        //       app (see .github/workflows/cd.yml and cddev.yml). This also means that old files are left behind on our
+        //       server, hence we prune them after some time (see scripts/prune.web.ts).
+
+        entryFileNames: `assets/[name]-[hash].js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`
       }
     },
     target: 'esnext'
   },
   publicDir: path.join(import.meta.dirname, 'public'),
   define: {
-    __LIBOPENCOR_WASM_VERSION__: JSON.stringify(libopencorVersion)
+    __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
+    __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
 
-    {
-      // Plugin to strip unneeded PrimeIcons files.
-
-      name: 'strip-unneeded-primeicons-files',
-      generateBundle(_options, bundle) {
-        for (const fileName of Object.keys(bundle)) {
-          if (fileName.includes('assets/primeicons') && /\.(eot|svg|ttf|woff2?)$/.test(fileName)) {
-            delete bundle[fileName];
-          }
-        }
-      }
-    },
     tailwindcssPlugin(),
+    stripPrimeIconsFontFacePlugin(),
     vuePlugin({
       script: {
         fs: {

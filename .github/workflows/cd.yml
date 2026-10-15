@@ -43,13 +43,15 @@ jobs:
       DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 }}
     steps:
       - name: Set the timezone to New Zealand
-        uses: szenius/set-timezone@v2.0
-        with:
-          timezoneWindows: 'New Zealand Standard Time'
-          timezoneLinux: 'Pacific/Auckland'
-          timezoneMacos: 'Pacific/Auckland'
+        shell: bash
+        run: |
+          case "${RUNNER_OS}" in
+            Windows) MSYS_NO_PATHCONV=1 tzutil /s "New Zealand Standard Time" ;;
+            Linux) sudo timedatectl set-timezone Pacific/Auckland ;;
+            macOS) sudo systemsetup -settimezone Pacific/Auckland ;;
+          esac
       - name: Check out OpenCOR
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Retrieve the EV certificate (Windows only)
         if: ${{ runner.os == 'Windows' }}
         shell: bash
@@ -95,13 +97,16 @@ jobs:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
     runs-on: ubuntu-22.04
+    concurrency:
+      group: web-app-deployment-app
+      cancel-in-progress: false
+    # Note: our deployments must not overlap since they would otherwise interfere with one another, e.g. when uploading
+    #       index.html or when pruning our old assets (see below).
     steps:
       - name: Set the timezone to New Zealand
-        uses: szenius/set-timezone@v2.0
-        with:
-          timezoneLinux: 'Pacific/Auckland'
+        run: sudo timedatectl set-timezone Pacific/Auckland
       - name: Check out OpenCOR
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install bun
         uses: oven-sh/setup-bun@v2
       - name: OpenCOR dependencies
@@ -113,7 +118,13 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
           VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
         run: bun build:web
+      - name: Archive OpenCOR's Web app
+        id: archive
+        run: bun archive:web
+        # Note: we archive our Web app before deploying it since the deployment adds a .deploy-running file to
+        #       src/renderer/dist, which would otherwise end up in our archive.
       - name: Deploy to https://opencor.ws/app/
+        id: deploy
         uses: milanmk/actions-file-deployer@master
         with:
           remote-protocol: sftp
@@ -123,28 +134,48 @@ jobs:
           local-path: ./src/renderer/dist
           remote-path: /home/www/opencor.ws/app
           sync: full
-          # Note: we upload version.json last so that OpenCOR's Web app only reports a new version once all the other
-          #       files have been uploaded.
-          ftp-mirror-options: --exclude-glob=assets/version.json
-          ftp-post-sync-commands: put -O /home/www/opencor.ws/app/assets ./src/renderer/dist/assets/version.json
-      - name: Archive OpenCOR's Web app
-        run: bun archive:web
+          ftp-options: set cmd:fail-exit yes; set xfer:use-temp-file yes
+          # Note #1: lftp carries on after a command has failed, so we ask it to exit instead. Otherwise, if some of our
+          #          assets couldn't be uploaded, index.html and version.json would still get uploaded (see below), and
+          #          index.html would reference assets that are not available.
+          # Note #2: lftp uploads a file in place by default, and it uploads all our files on every deployment (since
+          #          they are all newer than their remote counterpart), including assets that are still referenced by
+          #          the live index.html. So, a browser could get a partially uploaded asset and, since our hashed
+          #          assets are cached for good (see public/.htaccess), keep using it. So, we ask lftp to upload each
+          #          file to a temporary file (named .in.<file name>), which it then renames to its final name.
+          ftp-mirror-options: --exclude-glob=index.html --exclude-glob=assets/version.json
+          ftp-post-sync-commands: put -O /home/www/opencor.ws/app ./src/renderer/dist/index.html; put -O /home/www/opencor.ws/app/assets ./src/renderer/dist/assets/version.json
+          # Note: our assets have a hash in their file names, so we upload index.html (which references them) once they
+          #       have all been uploaded, so that it never references assets that are not available yet. Then, we upload
+          #       version.json last so that OpenCOR's Web app only reports a new version once all the other files have
+          #       been uploaded.
       - name: Release OpenCOR's Web app
-        uses: softprops/action-gh-release@v2
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/OpenCOR-*-WebApp.tar.gz
+        # Note: we release our Web app even if it couldn't be deployed, so that a deployment failure (e.g., a transient
+        #       SFTP error) doesn't also deprive our release of its Web app archive.
+      - name: Prune old assets from https://opencor.ws/app/
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
+        env:
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: bun prune:web /home/www/opencor.ws/app
+        # Note: our assets have a hash in their file names, so old assets would otherwise accumulate on the server. They
+        #       are only deleted after a grace period since some clients may still be using a previous index.html (see
+        #       src/renderer/scripts/prune.web.ts).
   npm:
     if: ${{ github.repository == 'opencor/webapp' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Set the timezone to New Zealand
-        uses: szenius/set-timezone@v2.0
-        with:
-          timezoneLinux: 'Pacific/Auckland'
+        run: sudo timedatectl set-timezone Pacific/Auckland
       - name: Check out OpenCOR
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'

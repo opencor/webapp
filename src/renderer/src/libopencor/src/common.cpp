@@ -1,30 +1,75 @@
 #include "common.h"
 
 libOpenCOR::FileManager fileManager = libOpenCOR::FileManager::instance();
-std::map<std::string, libOpenCOR::FilePtr> files;
-std::map<size_t, libOpenCOR::SedDocumentPtr> sedDocuments;
-std::map<size_t, libOpenCOR::SedInstancePtr> sedInstances;
+
+// Note: our global maps are intentionally never destroyed (i.e. they are allocated on the heap and never deleted).
+//       Indeed, they would otherwise get destroyed during static destruction, i.e. possibly after libOpenCOR's own
+//       static objects (e.g., its file manager) have been destroyed, which would result in a crash (e.g., "mutex lock
+//       failed") when destroying what is left in them. Instead, we release what they hold when our Node.js environment
+//       gets torn down (see releaseAll()) and, if the process exits without tearing down our Node.js environment (e.g.,
+//       using process.exit()), the OS reclaims everything.
+
+std::map<std::string, libOpenCOR::FilePtr> &files = *new std::map<std::string, libOpenCOR::FilePtr>();
+std::map<size_t, libOpenCOR::SedDocumentPtr> &sedDocuments = *new std::map<size_t, libOpenCOR::SedDocumentPtr>();
+std::map<size_t, libOpenCOR::SedInstancePtr> &sedInstances = *new std::map<size_t, libOpenCOR::SedInstancePtr>();
+
+// Release all our SED-ML instances, SED-ML documents, and files.
+// Note: this is called when our Node.js environment gets torn down (e.g., when the renderer process exits or gets
+//       reloaded), i.e. while libOpenCOR's own static objects still exist (see the note about our global maps above).
+//       We release our SED-ML instances first (libOpenCOR stops any run, and waits for it to finish, before deleting an
+//       instance), then our SED-ML documents and finally our files, i.e. in the reverse order of their dependencies.
+
+void releaseAll()
+{
+    sedInstances.clear();
+    sedDocuments.clear();
+    files.clear();
+}
+
+// Note: the following functions throw a JavaScript exception (rather than return nullptr) if the file, SED-ML document,
+//       or SED-ML instance is unknown (e.g., it has been released). This way, an invalid call results in a JavaScript
+//       error rather than in a crash of the renderer process.
 
 libOpenCOR::FilePtr toFile(const Napi::Value &pValue)
 {
-    return fileManager.file(pValue.ToString().Utf8Value());
+    // Note: libOpenCOR's file manager canonicalises the given path (e.g., it resolves symbolic links and decodes URLs)
+    //       in the same way as File::create() does, so we can retrieve a file using any of its paths.
+
+    auto filePath = pValue.ToString().Utf8Value();
+    auto file = fileManager.file(filePath);
+
+    if (file == nullptr) {
+        throw Napi::Error::New(pValue.Env(), "Unknown file: " + filePath + ".");
+    }
+
+    return file;
 }
 
 // Note: we use find() rather than operator[] since the latter would (re)insert an entry for an unknown (e.g., released)
 //       ID.
 
-libOpenCOR::SedDocumentPtr toSedDocument(size_t pId)
+libOpenCOR::SedDocumentPtr toSedDocument(const Napi::Value &pValue)
 {
-    auto iter = sedDocuments.find(pId);
+    auto id = toSizeT(pValue);
+    auto iter = sedDocuments.find(id);
 
-    return (iter != sedDocuments.end()) ? iter->second : nullptr;
+    if (iter == sedDocuments.end()) {
+        throw Napi::Error::New(pValue.Env(), "Unknown SED-ML document: " + std::to_string(id) + ".");
+    }
+
+    return iter->second;
 }
 
-libOpenCOR::SedInstancePtr toSedInstance(size_t pId)
+libOpenCOR::SedInstancePtr toSedInstance(const Napi::Value &pValue)
 {
-    auto iter = sedInstances.find(pId);
+    auto id = toSizeT(pValue);
+    auto iter = sedInstances.find(id);
 
-    return (iter != sedInstances.end()) ? iter->second : nullptr;
+    if (iter == sedInstances.end()) {
+        throw Napi::Error::New(pValue.Env(), "Unknown SED-ML instance: " + std::to_string(id) + ".");
+    }
+
+    return iter->second;
 }
 
 size_t toSizeT(const Napi::Value &pValue)
@@ -69,7 +114,12 @@ napi_value doublesToNapiFloat64Array(const Napi::Env &pEnv, std::span<const doub
     const size_t byteLength = pDoubles.size() * sizeof(double);
     auto buffer = Napi::ArrayBuffer::New(pEnv, byteLength);
 
-    std::memcpy(buffer.Data(), pDoubles.data(), byteLength);
+    // Note: an empty slice of values may have no data (and so may an empty buffer), and std::memcpy() requires valid
+    //       pointers, even when there is nothing to copy.
+
+    if (byteLength != 0) {
+        std::memcpy(buffer.Data(), pDoubles.data(), byteLength);
+    }
 
     return Napi::Float64Array::New(pEnv, pDoubles.size(), buffer, 0);
 }

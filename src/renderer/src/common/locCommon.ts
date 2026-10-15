@@ -179,43 +179,18 @@ export const file = (
   if (typeof fileFilePathOrFileContents === 'string') {
     if (common.isUrl(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
-        // First try fetching the URL through OpenCOR's CORS proxy.
+        // Fetch the URL through OpenCOR's CORS proxy or, if that fails, directly (see common.fetchThroughCorsProxy()).
 
-        fetch(common.corsProxyUrl(fileFilePathOrFileContents))
+        common
+          .fetchThroughCorsProxy(fileFilePathOrFileContents)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer();
             }
 
-            // If the fetch through OpenCOR's CORS proxy failed, then throw an error to trigger the catch block below.
-
             throw new Error(
-              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${response.status}.`,
-              {
-                cause: response.status
-              }
+              `Failed to fetch the file through OpenCOR's CORS proxy. The server responded with a status of ${response.status}.`
             );
-          })
-          .catch((error: unknown) => {
-            // If the fetch through OpenCOR's CORS proxy failed, then try fetching the URL directly, unless the error
-            // was a TypeError or an HTTP 403 or 404 error.
-
-            if (
-              !(error instanceof TypeError) &&
-              (!(error instanceof Error) || typeof error.cause !== 'number' || ![403, 404].includes(error.cause))
-            ) {
-              throw new Error(common.formatError(error));
-            }
-
-            return fetch(fileFilePathOrFileContents).then((response) => {
-              if (response.ok) {
-                return response.arrayBuffer();
-              }
-
-              throw new Error(
-                `Failed to fetch the file directly. The server responded with a status of ${response.status}.`
-              );
-            });
           })
           .then((arrayBuffer) => {
             const fileContents = new Uint8Array(arrayBuffer);
@@ -306,7 +281,9 @@ export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: s
     };
   }
 
-  for (let i = 0; i < instanceTask.stateCount(); i++) {
+  const stateCount = instanceTask.stateCount();
+
+  for (let i = 0; i < stateCount; ++i) {
     if (name === instanceTask.stateName(i)) {
       return {
         type: ESimulationDataInfoType.STATE,
@@ -315,7 +292,9 @@ export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: s
     }
   }
 
-  for (let i = 0; i < instanceTask.rateCount(); i++) {
+  const rateCount = instanceTask.rateCount();
+
+  for (let i = 0; i < rateCount; ++i) {
     if (name === instanceTask.rateName(i)) {
       return {
         type: ESimulationDataInfoType.RATE,
@@ -324,7 +303,9 @@ export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: s
     }
   }
 
-  for (let i = 0; i < instanceTask.constantCount(); i++) {
+  const constantCount = instanceTask.constantCount();
+
+  for (let i = 0; i < constantCount; ++i) {
     if (name === instanceTask.constantName(i)) {
       return {
         type: ESimulationDataInfoType.CONSTANT,
@@ -333,7 +314,9 @@ export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: s
     }
   }
 
-  for (let i = 0; i < instanceTask.computedConstantCount(); i++) {
+  const computedConstantCount = instanceTask.computedConstantCount();
+
+  for (let i = 0; i < computedConstantCount; ++i) {
     if (name === instanceTask.computedConstantName(i)) {
       return {
         type: ESimulationDataInfoType.COMPUTED_CONSTANT,
@@ -342,7 +325,9 @@ export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: s
     }
   }
 
-  for (let i = 0; i < instanceTask.algebraicVariableCount(); i++) {
+  const algebraicVariableCount = instanceTask.algebraicVariableCount();
+
+  for (let i = 0; i < algebraicVariableCount; ++i) {
     if (name === instanceTask.algebraicVariableName(i)) {
       return {
         type: ESimulationDataInfoType.ALGEBRAIC,
@@ -354,41 +339,94 @@ export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: s
   return NoSimulationDataInfo;
 };
 
+// A method to retrieve the simulation data information of all the simulation data of an instance task, indexed by name.
+// Note: this is much faster than calling simulationDataInfo() for several names since retrieving a name requires a call
+//       to libOpenCOR (and, with the C++ version of libOpenCOR, a round trip through our preload script). Also, should
+//       several simulation data share the same name, the first one wins, as with simulationDataInfo().
+
+export const simulationDataInfos = (instanceTask: locApi.SedInstanceTask): Map<string, ISimulationDataInfo> => {
+  const res = new Map<string, ISimulationDataInfo>();
+  const addSimulationDataInfo = (name: string, type: ESimulationDataInfoType, index: number): void => {
+    if (name && !res.has(name)) {
+      res.set(name, { type, index });
+    }
+  };
+
+  addSimulationDataInfo(instanceTask.voiName(), ESimulationDataInfoType.VOI, -1);
+
+  const stateCount = instanceTask.stateCount();
+
+  for (let i = 0; i < stateCount; ++i) {
+    addSimulationDataInfo(instanceTask.stateName(i), ESimulationDataInfoType.STATE, i);
+  }
+
+  const rateCount = instanceTask.rateCount();
+
+  for (let i = 0; i < rateCount; ++i) {
+    addSimulationDataInfo(instanceTask.rateName(i), ESimulationDataInfoType.RATE, i);
+  }
+
+  const constantCount = instanceTask.constantCount();
+
+  for (let i = 0; i < constantCount; ++i) {
+    addSimulationDataInfo(instanceTask.constantName(i), ESimulationDataInfoType.CONSTANT, i);
+  }
+
+  const computedConstantCount = instanceTask.computedConstantCount();
+
+  for (let i = 0; i < computedConstantCount; ++i) {
+    addSimulationDataInfo(instanceTask.computedConstantName(i), ESimulationDataInfoType.COMPUTED_CONSTANT, i);
+  }
+
+  const algebraicVariableCount = instanceTask.algebraicVariableCount();
+
+  for (let i = 0; i < algebraicVariableCount; ++i) {
+    addSimulationDataInfo(instanceTask.algebraicVariableName(i), ESimulationDataInfoType.ALGEBRAIC, i);
+  }
+
+  return res;
+};
+
 // A method to retrieve the simulation data value for a given name from an instance task.
 
 export const simulationDataValue = (
   instanceTask: locApi.SedInstanceTask,
-  info: ISimulationDataInfo
+  info: ISimulationDataInfo,
+  start?: number,
+  end?: number
 ): IOpenCORSimulationDataValue => {
+  // Note: start and end allow us to retrieve only some of the values (e.g., those that have been computed since we last
+  //       retrieved some while a simulation is running), see locApi.SedInstanceTask.voi() for instance.
+
   switch (info.type) {
     case ESimulationDataInfoType.VOI:
       return {
-        data: instanceTask.voi(),
+        data: instanceTask.voi(start, end),
         unit: instanceTask.voiUnit()
       };
     case ESimulationDataInfoType.STATE:
       return {
-        data: instanceTask.state(info.index),
+        data: instanceTask.state(info.index, start, end),
         unit: instanceTask.stateUnit(info.index)
       };
     case ESimulationDataInfoType.RATE:
       return {
-        data: instanceTask.rate(info.index),
+        data: instanceTask.rate(info.index, start, end),
         unit: instanceTask.rateUnit(info.index)
       };
     case ESimulationDataInfoType.CONSTANT:
       return {
-        data: instanceTask.constant(info.index),
+        data: instanceTask.constant(info.index, start, end),
         unit: instanceTask.constantUnit(info.index)
       };
     case ESimulationDataInfoType.COMPUTED_CONSTANT:
       return {
-        data: instanceTask.computedConstant(info.index),
+        data: instanceTask.computedConstant(info.index, start, end),
         unit: instanceTask.computedConstantUnit(info.index)
       };
     case ESimulationDataInfoType.ALGEBRAIC:
       return {
-        data: instanceTask.algebraicVariable(info.index),
+        data: instanceTask.algebraicVariable(info.index, start, end),
         unit: instanceTask.algebraicVariableUnit(info.index)
       };
     default:

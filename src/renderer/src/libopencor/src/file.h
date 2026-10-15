@@ -4,6 +4,8 @@
 
 // FileManager API.
 
+napi_value fileManagerCanonicalPath(const Napi::CallbackInfo &pInfo);
+napi_value fileManagerHasFile(const Napi::CallbackInfo &pInfo);
 void fileManagerUnmanage(const Napi::CallbackInfo &pInfo);
 
 // File API.
