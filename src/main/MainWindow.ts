@@ -653,6 +653,16 @@ export class MainWindow extends ApplicationWindow {
       this._closing = true;
     });
 
+    // Note: on Windows, before-quit doesn't get emitted when the session ends (i.e. when shutting down or restarting
+    //       the system, or when logging off), and our renderer may get killed before we get closed, so we also rely on
+    //       session-end. We don't rely on query-session-end though since the session may not end after all (e.g., if
+    //       another application prevents it from ending), in which case we would ignore our renderer crashing (see
+    //       onRenderProcessGone()) for the rest of our lifetime.
+
+    this.once('session-end', () => {
+      this._closing = true;
+    });
+
     const loadingWasInterrupted = (error: unknown): boolean => {
       if (
         (error as { code?: string }).code === 'ERR_ABORTED' ||
