@@ -1046,25 +1046,33 @@ export class MainWindow extends ApplicationWindow {
   }
 
   // Handle our File|Open menu.
+  // Note: our renderer may get reloaded while our open dialog is shown (e.g., if it crashed and the user chose to
+  //       reload it), in which case we must wait for it to be ready before asking it to open the selected files (see
+  //       handleArguments()). Similarly, we must not enable our UI in that case since our reloaded renderer will enable
+  //       it once it is ready (see onRenderProcessGone()).
 
   open(): void {
     this.enableDisableUi(false);
+
+    const enableUiIfRendererReady = (): void => {
+      if (this._rendererReady) {
+        this.enableDisableUi(true);
+      }
+    };
 
     electron.dialog
       .showOpenDialog({
         properties: ['openFile', 'multiSelections']
       })
       .then(({ filePaths }) => {
-        for (const filePath of filePaths) {
-          this.send('open', filePath);
-        }
+        this.handleArguments(filePaths);
 
-        this.enableDisableUi(true);
+        enableUiIfRendererReady();
       })
       .catch((error: unknown) => {
         console.warn('OpenCOR: failed to open file(s):', formatError(error));
 
-        this.enableDisableUi(true);
+        enableUiIfRendererReady();
       });
   }
 }
