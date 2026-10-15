@@ -919,7 +919,14 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
       return null;
     }
 
-    cellmlDataUrlFileName = `${common.CELLML_PREFIX}${++globalCellmlDataUrlCounter}/${zipCellmlDataUriInfo.fileName as string}`;
+    // Note: we only use the name of the CellML file, not its path within the ZIP file. Indeed, its path may contain
+    //       path separators that JSZip doesn't resolve (e.g., "..\model.cellml"), in which case the canonical path of
+    //       our CellML file could end up without its prefix (e.g., "model.cellml" rather than "CellML #1/model.cellml"
+    //       on Windows), i.e. it wouldn't be recognised as a data URL file anymore (see common.isDataUrlFileName()).
+
+    const zipCellmlFileName = zipCellmlDataUriInfo.fileName as string;
+
+    cellmlDataUrlFileName = `${common.CELLML_PREFIX}${++globalCellmlDataUrlCounter}/${common.fileName(zipCellmlFileName) || zipCellmlFileName}`;
     fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
   } else {
     // Check whether we were passed a COMBINE archive data URL.
