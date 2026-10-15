@@ -9,7 +9,7 @@ import process from 'node:process';
 
 import { formatError, type ISettings, isObject } from '../renderer/src/common/common';
 import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants';
-import { isLinux, isPackaged, isWindows } from '../renderer/src/common/electron';
+import { appImagePath, isLinux, isPackaged, isWindows } from '../renderer/src/common/electron';
 /* TODO: enable once our GitHub integration is fully ready.
 import {
   clearGitHubCache,
@@ -267,15 +267,14 @@ const setupLinuxDesktopIntegration = async (): Promise<void> => {
 
     // Note #1: when running as an AppImage, process.execPath is the path of OpenCOR within the AppImage's temporary
     //          mount point (e.g., /tmp/.mount_OpenCOxxxxxx/OpenCOR), which disappears once OpenCOR exits, so we must
-    //          use the path of the AppImage itself (which the AppImage runtime provides through the APPIMAGE
-    //          environment variable).
+    //          use the path of the AppImage itself (see appImagePath()).
     // Note #2: the path of OpenCOR may contain spaces or other special characters, so we quote it as required by the
     //          Desktop Entry specification (see
     //          https://specifications.freedesktop.org/desktop-entry-spec/latest/exec-variables.html), i.e. we escape
     //          '"', '`', '$', and '\' with a backslash, double that backslash (since the general escape rule for string
     //          values is applied before the quoting rule), and double `%` (since it introduces a field code).
 
-    const executablePath = process.env.APPIMAGE || process.execPath;
+    const executablePath = appImagePath() ?? process.execPath;
     const quotedExecutablePath = `"${executablePath
       .replace(/["`$\\]/g, (character) => (character === '\\' ? '\\\\\\\\' : `\\\\${character}`))
       .replace(/%/g, '%%')}"`;
