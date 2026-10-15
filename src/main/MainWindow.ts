@@ -164,9 +164,13 @@ export const resetAll = (): void => {
 
   // Note: when running as an AppImage, process.execPath (which Electron relaunches by default) is within the AppImage's
   //       temporary mount point, which disappears once OpenCOR exits, so we relaunch the AppImage itself instead (see
-  //       the creation of our desktop file in index.ts).
+  //       the creation of our desktop file in index.ts). In that case, we must also pass our original arguments (e.g.,
+  //       --no-sandbox, which may be needed for OpenCOR to start at all) since, unlike by default, Electron doesn't
+  //       relaunch us with them when we specify the path to relaunch.
 
-  electron.app.relaunch(process.env.APPIMAGE ? { execPath: process.env.APPIMAGE } : undefined);
+  electron.app.relaunch(
+    process.env.APPIMAGE ? { execPath: process.env.APPIMAGE, args: process.argv.slice(1) } : undefined
+  );
   electron.app.quit();
 };
 
