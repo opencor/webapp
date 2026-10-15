@@ -31,7 +31,7 @@ export interface ICppLocApi {
 
   // SedModel API.
 
-  sedModelFilePath: (documentId: number, index: number) => string;
+  sedModelFilePath: (documentId: number, index: number) => string | null;
   sedModelAddChange: (
     documentId: number,
     index: number,

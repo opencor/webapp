@@ -289,7 +289,9 @@ export class SedModel extends SedIndex {
     // Note: the caller is responsible for releasing the returned file.
 
     if (cppVersion()) {
-      return fileManager.file(_cppLocApi.sedModelFilePath(this._cppDocumentId, this._index));
+      const filePath = _cppLocApi.sedModelFilePath(this._cppDocumentId, this._index);
+
+      return filePath === null ? null : fileManager.file(filePath);
     }
 
     const wasmFile = this._wasmSedModel.file;
@@ -701,10 +703,10 @@ export class SedInstanceTask extends SedIndex {
   }
 
   // Note: the various methods to retrieve simulation data accept an optional start and end (with the same semantics as
-  //       Array.prototype.slice(), except for negative values, which are not supported), which allow us to retrieve
-  //       only some of the values (e.g., those that have been computed since we last retrieved some while a simulation
-  //       is running). With the C++ version of libOpenCOR, this avoids copying values that are not needed. With the
-  //       WASM version of libOpenCOR, the simulation data is a view of the WASM heap, so we simply return a view of it.
+  //       TypedArray.prototype.subarray()), which allow us to retrieve only some of the values (e.g., those that have
+  //       been computed since we last retrieved some while a simulation is running). With the C++ version of
+  //       libOpenCOR, this avoids copying values that are not needed. With the WASM version of libOpenCOR, the
+  //       simulation data is a view of the WASM heap, so we simply return a view of it.
 
   voi(start?: number, end?: number): Float64Array {
     return cppVersion()

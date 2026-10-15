@@ -3,6 +3,8 @@
 
 #include <libopencor>
 
+#include <cmath>
+
 namespace {
 
 // Note: the following functions throw a JavaScript exception (rather than return nullptr) if the SED-ML model, SED-ML
@@ -43,17 +45,40 @@ libOpenCOR::SedInstanceTaskPtr toSedInstanceTask(const Napi::CallbackInfo &pInfo
     return task;
 }
 
+// Retrieve the index, within values of the given size, that corresponds to the given start or end of a slice, using
+// the same semantics as JavaScript's TypedArray.prototype.subarray() (e.g., a negative index is relative to the end of
+// the values and a non-finite index is clamped), so that we behave the same way as the WASM version of libOpenCOR (see
+// sliceValues() in src/renderer/src/libopencor/locSedApi.ts).
+
+size_t sliceIndex(const Napi::Value &pValue, size_t pSize, size_t pDefaultIndex)
+{
+    if (!pValue.IsNumber()) {
+        return pDefaultIndex;
+    }
+
+    const auto value = pValue.As<Napi::Number>().DoubleValue();
+
+    if (std::isnan(value)) {
+        return 0;
+    }
+
+    const auto size = static_cast<double>(pSize);
+    const auto index = std::trunc(value);
+
+    return static_cast<size_t>((index < 0.0) ? std::max(size + index, 0.0) : std::min(index, size));
+}
+
 // Retrieve a slice of the given values.
-// Note: the start and end of the slice are optional (with the same semantics as JavaScript's Array.prototype.slice(),
-//       except for negative values, which are not supported) and allow us to retrieve only some of the values (e.g.,
-//       the values that have been computed since we last retrieved some while a simulation is running), thus avoiding
-//       the copy of values that are not needed.
+// Note: the start and end of the slice are optional (with the same semantics as JavaScript's
+//       TypedArray.prototype.subarray(), see sliceIndex()) and allow us to retrieve only some of the values (e.g., the
+//       values that have been computed since we last retrieved some while a simulation is running), thus avoiding the
+//       copy of values that are not needed.
 
 std::span<const double> sliceValues(std::span<const double> pValues, const Napi::Value &pStart, const Napi::Value &pEnd)
 {
     const auto size = pValues.size();
-    const auto start = pStart.IsNumber() ? std::min(toSizeT(pStart), size) : 0;
-    const auto end = pEnd.IsNumber() ? std::min(toSizeT(pEnd), size) : size;
+    const auto start = sliceIndex(pStart, size, 0);
+    const auto end = sliceIndex(pEnd, size, size);
 
     return (start < end) ? pValues.subspan(start, end - start) : std::span<const double>();
 }
@@ -138,10 +163,14 @@ napi_value sedDocumentSimulationType(const Napi::CallbackInfo &pInfo)
 
 napi_value sedModelFilePath(const Napi::CallbackInfo &pInfo)
 {
+    // Note: a SED-ML model may have no file (e.g., if its source couldn't be resolved), in which case we return null,
+    //       just like the WASM version of libOpenCOR does (see SedModel.file() in
+    //       src/renderer/src/libopencor/locSedApi.ts).
+
     auto file = toSedModel(pInfo)->file();
 
     if (file == nullptr) {
-        throw Napi::Error::New(pInfo.Env(), "The SED-ML model has no file.");
+        return pInfo.Env().Null();
     }
 
     return Napi::String::New(pInfo.Env(), file->path());
