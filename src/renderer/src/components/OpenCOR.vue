@@ -828,9 +828,6 @@ const onUpdateAvailable = () => {
 
 // Open a file.
 
-let globalOmexDataUrlCounter = 0;
-let globalCellmlDataUrlCounter = 0;
-
 // The files that are being opened, keyed by their canonical path, each with a promise that gets resolved once the file
 // has been opened (or not).
 
@@ -927,7 +924,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
 
     const zipCellmlFileName = zipCellmlDataUriInfo.fileName as string;
 
-    cellmlDataUrlFileName = `${common.CELLML_PREFIX}${++globalCellmlDataUrlCounter}/${common.fileName(zipCellmlFileName) || zipCellmlFileName}`;
+    cellmlDataUrlFileName = `${common.CELLML_PREFIX}${common.nextCellmlDataUrlNumber()}/${common.fileName(zipCellmlFileName) || zipCellmlFileName}`;
     fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
   } else {
     // Check whether we were passed a COMBINE archive data URL.
@@ -941,7 +938,7 @@ const processFile = async (fileFilePathOrFileContents: string | Uint8Array | Fil
         return null;
       }
 
-      omexDataUrlCounter = ++globalOmexDataUrlCounter;
+      omexDataUrlCounter = common.nextOmexDataUrlNumber();
       fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
     }
   }

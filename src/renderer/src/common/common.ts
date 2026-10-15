@@ -88,6 +88,23 @@ export const enableDisableMainMenu = (enable: boolean): void => {
 export const OMEX_PREFIX = 'OMEX #';
 export const CELLML_PREFIX = 'CellML #';
 
+// The number to use in the name of the next file opened using a data URL (i.e. <n> above).
+// Note: libOpenCOR's file manager is shared by all the instances of OpenCOR (e.g., when OpenCOR is embedded more than
+//       once in a Web page), so those numbers must be shared by all of them too. Otherwise, two instances could end up
+//       with a file of the same name, in which case one instance would overwrite the file of the other instance and,
+//       once unmounted, unmanage it.
+
+let omexDataUrlCounter = 0;
+let cellmlDataUrlCounter = 0;
+
+export const nextOmexDataUrlNumber = (): number => {
+  return ++omexDataUrlCounter;
+};
+
+export const nextCellmlDataUrlNumber = (): number => {
+  return ++cellmlDataUrlCounter;
+};
+
 export const isDataUrlFileName = (fileName: string): boolean => {
   return fileName.startsWith(OMEX_PREFIX) || fileName.startsWith(CELLML_PREFIX);
 };
