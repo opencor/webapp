@@ -133,8 +133,11 @@ export const corsProxyUrl = (url: string): string => {
 
 // A method to fetch a URL through our CORS proxy or, if that fails, directly.
 // Note #1: our CORS proxy may not be reachable, not allow the content of the URL (HTTP 403 error), not find the URL
-//          (HTTP 404 error), or not be able to fetch the URL (HTTP 502 error; e.g., the URL is only reachable from the
-//          user's network), in which case fetching the URL directly may still work.
+//          (HTTP 404 error), not be able to fetch the URL (HTTP 502 error; e.g., the URL is only reachable from the
+//          user's network), be rate limited (HTTP 429 error), be unavailable (HTTP 5xx error), or get some other error
+//          from the server of the URL (e.g., because it blocks requests from our CORS proxy), in which case fetching
+//          the URL directly may still work. So, we fetch the URL directly whenever our CORS proxy doesn't give us an OK
+//          response.
 // Note #2: if fetching the URL directly also fails, then it is most likely because of CORS, about which a browser tells
 //          us next to nothing (e.g., "Failed to fetch"), so we report why our CORS proxy failed instead.
 // Note #3: we read the body of our CORS proxy's response before returning it, so that we can also fetch the URL
@@ -147,10 +150,10 @@ export const fetchThroughCorsProxy = async (url: string): Promise<Response> => {
   try {
     const response = await fetch(corsProxyUrl(url));
 
-    if (response.status !== 403 && response.status !== 404 && response.status !== 502) {
+    if (response.ok) {
       const body = await response.arrayBuffer();
 
-      // Note: a response with some statuses (e.g., 304) cannot have a body, not even an empty one.
+      // Note: a response with some statuses (e.g., 204) cannot have a body, not even an empty one.
 
       return new Response(body.byteLength ? body : null, {
         status: response.status,
