@@ -1374,7 +1374,9 @@ const onResetAll = (): void => {
 
 trackCleanup(
   electronApi?.onSelect((filePath: string) => {
-    contentsRef.value?.selectFile(filePath);
+    handleExternalRequest(() => {
+      contentsRef.value?.selectFile(filePath);
+    });
   })
 );
 
