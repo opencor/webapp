@@ -76,57 +76,31 @@ class FileManager {
       return _cppLocApi.fileManagerHasFile(path) ? new File(path, undefined, {}) : null;
     }
 
-    // Note: every access to a WASM vector (and to its elements) yields a new handle that must be deleted, except for
-    //       the handle of the file we are after, which our File object takes ownership of.
+    // Note #1: libOpenCOR's file manager canonicalises the given path in the same way as libOpenCOR does when creating
+    //          a file (see canonicalPath()), so we can retrieve a file using any of its paths.
+    // Note #2: our File object takes ownership of the WASM file handle.
 
-    // Note: the path of a WASM file is its canonical path (see canonicalPath()), so we look for the file using the
-    //       canonical version of the given path.
+    const wasmFile = this.fileManager().fileFromFileNameOrUrl(path);
 
-    const canonicalPath = this.canonicalPath(path);
-    const fileManager = this.fileManager();
-    const files = fileManager.files;
-    let res: File | null = null;
-
-    for (const file of files) {
-      if (!file) {
-        continue;
-      }
-
-      if (!res && file.path === canonicalPath) {
-        res = new File(path, undefined, { wasmFile: file });
-      } else {
-        file.delete();
-      }
-    }
-
-    files.delete();
-
-    return res;
+    return wasmFile ? new File(path, undefined, { wasmFile }) : null;
   }
 
   unmanage(path: string): void {
     if (cppVersion()) {
       _cppLocApi.fileManagerUnmanage(path);
     } else {
-      // Note: same as in file() above.
+      // Note: same as in file() above, except that we must delete the WASM file handle ourselves.
 
-      const canonicalPath = this.canonicalPath(path);
       const fileManager = this.fileManager();
-      const files = fileManager.files;
+      const wasmFile = fileManager.fileFromFileNameOrUrl(path);
 
-      for (const file of files) {
-        if (!file) {
-          continue;
+      if (wasmFile) {
+        try {
+          fileManager.unmanage(wasmFile);
+        } finally {
+          wasmFile.delete();
         }
-
-        if (file.path === canonicalPath) {
-          fileManager.unmanage(file);
-        }
-
-        file.delete();
       }
-
-      files.delete();
     }
   }
 }
