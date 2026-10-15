@@ -50,8 +50,11 @@ moduleWithResolveFilename._resolveFilename = function (request: string, parent: 
 // Note #2: Bun considers the code returned by a plugin with the `js` loader to be an ES module, but `tsc` is a CommonJS
 //          module, so we run its code ourselves (as Node.js would) and return its exports using the `object` loader.
 // Note #3: our Bun plugin only handles `tsc`, i.e. the file at tscPath (whatever path separator Bun uses). If it ended up
-//          not being used (e.g., if `vue-tsc` loaded `tsc` differently), then our type checking would silently succeed
-//          without having checked any Vue file, so we make it fail instead.
+//          not being used (e.g., if `vue-tsc` loaded `tsc` differently) or if the code it loaded didn't get patched
+//          (e.g., if `vue-tsc` only patches `tsc` when it is given a path that differs from the one Bun gives to our Bun
+//          plugin), then our type checking would silently succeed without having checked any Vue file, so we make it
+//          fail instead. To know whether `tsc` got patched, we check whether its code uses proxyCreateProgram(), which
+//          is what `vue-tsc` patches `tsc` with (see transformTscContent() in @volar/typescript).
 
 interface IBunPluginBuilder {
   onLoad(
@@ -71,11 +74,11 @@ if (bun) {
     .split(/[\\/]/)
     .map((segment) => segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const tscPathFilter = new RegExp(`^${escapedTscPathSegments.join('[\\\\/]')}$`);
-  let tscLoaded = false;
+  let tscPatched = false;
 
   process.on('exit', (code) => {
-    if (code === 0 && !tscLoaded) {
-      tscLoaded = true;
+    if (code === 0 && !tscPatched) {
+      tscPatched = true;
 
       console.error(`OpenCOR: \`tsc\` (${tscPath}) was not patched by \`vue-tsc\`, so no Vue file was type checked.`);
 
@@ -87,9 +90,9 @@ if (bun) {
     name: 'vue-tsc',
     setup(build) {
       build.onLoad({ filter: tscPathFilter }, (args) => {
-        tscLoaded = true;
-
         const code = fs.readFileSync(args.path, 'utf8');
+
+        tscPatched = code.includes('.proxyCreateProgram(');
         const module = { exports: {} };
 
         new Function('module', 'exports', 'require', '__filename', '__dirname', code)(
