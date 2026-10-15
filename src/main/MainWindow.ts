@@ -402,8 +402,8 @@ export class MainWindow extends ApplicationWindow {
   private _splashScreenWindow: SplashScreenWindow | null = null;
   private _rendererReady = false;
   private _closing = false;
-  // Note: whether we are being closed (e.g., because OpenCOR is being quit).
   private _rendererGone = false;
+  private _rendererGoneCount = 0;
   private _pendingArguments: string[] = [];
   private _recentFilePathsToCanonicalise: string[] = [];
   private _filesToReopen: IFilesToReopen | null = null;
@@ -755,6 +755,8 @@ export class MainWindow extends ApplicationWindow {
 
     this._rendererGone = true;
 
+    ++this._rendererGoneCount;
+
     console.error(`OpenCOR: the renderer process is gone (${details.reason}, exit code ${details.exitCode}).`);
 
     // Let the user know if our configuration file had to be reset, as part of our message box below, so that they get
@@ -1049,13 +1051,16 @@ export class MainWindow extends ApplicationWindow {
   // Note: our renderer may get reloaded while our open dialog is shown (e.g., if it crashed and the user chose to
   //       reload it), in which case we must wait for it to be ready before asking it to open the selected files (see
   //       handleArguments()). Similarly, we must not enable our UI in that case since our reloaded renderer will enable
-  //       it once it is ready (see onRenderProcessGone()).
+  //       it once it is ready (see onRenderProcessGone()). Otherwise, we must enable our UI, even if our renderer isn't
+  //       ready, i.e. if its initialisation failed (in which case it never tells us that it is ready), or our UI would
+  //       remain disabled.
 
   open(): void {
     this.enableDisableUi(false);
 
-    const enableUiIfRendererReady = (): void => {
-      if (this._rendererReady) {
+    const rendererGoneCount = this._rendererGoneCount;
+    const enableUiIfRendererNotGone = (): void => {
+      if (this._rendererGoneCount === rendererGoneCount) {
         this.enableDisableUi(true);
       }
     };
@@ -1067,12 +1072,12 @@ export class MainWindow extends ApplicationWindow {
       .then(({ filePaths }) => {
         this.handleArguments(filePaths);
 
-        enableUiIfRendererReady();
+        enableUiIfRendererNotGone();
       })
       .catch((error: unknown) => {
         console.warn('OpenCOR: failed to open file(s):', formatError(error));
 
-        enableUiIfRendererReady();
+        enableUiIfRendererNotGone();
       });
   }
 }
