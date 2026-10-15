@@ -92,12 +92,12 @@ The `@opencor/opencor` package does **not** ship `libopencor.js`. At runtime, Op
 libopencor/downloads/wasm/<version>/libopencor.js
 ```
 
-where `<version>` is the value of the `libopencorVersion` field in the package's `package.json` file. If your application doesn't serve it, then OpenCOR fetches it from `https://opencor.ws/libopencor/downloads/wasm/<version>/libopencor.js` and imports it from a [blob URL](https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static), so that its worker is same-origin. If your application uses a [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP), then this requires:
+where `<version>` is the value of the `libopencorVersion` field in the package's `package.json` file. If your application doesn't serve it, then OpenCOR fetches it from `https://opencor.ws/libopencor/downloads/wasm/<version>/libopencor.js` and imports it from a [blob URL](https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static), so that its pthread workers are same-origin. If your application uses a [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP), then this requires:
 
 - `connect-src` to allow `https://opencor.ws` (which is needed for the threaded WASM file anyway); and
 - `script-src` and `worker-src` to allow `blob:`.
 
-If you would rather not allow `blob:` (or would rather not fetch `libopencor.js` from `https://opencor.ws`), then you can self-host `libopencor.js` by downloading it from `https://opencor.ws/libopencor/downloads/wasm/<version>/libopencor.js` and serving it, as a JavaScript file, from the above URL. Make sure to do this again whenever you update the `@opencor/opencor` package, since `<version>` will then change.
+If you would rather not fetch `libopencor.js` from `https://opencor.ws`, then you can self-host it by downloading it from `https://opencor.ws/libopencor/downloads/wasm/<version>/libopencor.js` and serving it, as a JavaScript file, from the above URL. Note that `worker-src` must still allow `blob:` since, on the Web, `libopencor.js` always spawns its pthread workers from blob URLs. Make sure to do this again whenever you update the `@opencor/opencor` package, since `<version>` will then change.
 
 ## Usage
 
