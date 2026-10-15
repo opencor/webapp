@@ -348,13 +348,13 @@ const hasCsvExtension = (url) => {
 
 const isCsvFile = (bytes, complete, csvExtension) => {
   // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks).
-  // If the target URL (or the URL it redirects to) has a .csv extension, then that is all we check since the app can
-  // tell the user why the CSV file cannot be used, if needed (see parseExternalCsvData()). Otherwise, the content is
-  // all we have to go by, so we also check that the text looks like a CSV file as expected by the app, i.e. lines are
-  // separated by line breaks and values by commas, there are at least two lines (i.e. a header and some data), and
-  // every line has the same number of values, which must be at least two (i.e. a VOI column and a data column). Like
-  // the app, we decode the text as UTF-8 (replacing invalid byte sequences, like Response.text() does), trim lines, and
-  // skip blank lines.
+  // If the URL we ended up at (i.e. after following redirects) has a .csv extension, then that is all we check since
+  // the app can tell the user why the CSV file cannot be used, if needed (see parseExternalCsvData()). Otherwise, the
+  // content is all we have to go by, so we also check that the text looks like a CSV file as expected by the app, i.e.
+  // lines are separated by line breaks and values by commas, there are at least two lines (i.e. a header and some
+  // data), and every line has the same number of values, which must be at least two (i.e. a VOI column and a data
+  // column). Like the app, we decode the text as UTF-8 (replacing invalid byte sequences, like Response.text() does),
+  // trim lines, and skip blank lines.
   // Note: if we only have the start of the CSV file, then we ignore its last (and likely incomplete) line.
 
   const text = new TextDecoder().decode(bytes, { stream: !complete });
@@ -497,9 +497,10 @@ const forwardRequest = async (targetUrl, request) => {
   }
 
   // Note: the URL of the response is the one we ended up at, i.e. after following redirects (e.g., a figshare download
-  //       URL redirects to the actual file).
+  //       URL redirects to the actual file). We only check its extension, not that of the target URL, since the latter
+  //       could otherwise be used to proxy any text (e.g., https://example.com/file.csv redirecting to any Web page).
 
-  if (isCellmlOrSedmlFile(head) || isCsvFile(head, done, hasCsvExtension(targetUrl) || hasCsvExtension(response.url))) {
+  if (isCellmlOrSedmlFile(head) || isCsvFile(head, done, hasCsvExtension(response.url))) {
     if (done || hasKnownSize(response)) {
       return new Response(done ? head : replayStream(head, reader), {
         status: response.status,
