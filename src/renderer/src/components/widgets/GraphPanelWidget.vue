@@ -537,7 +537,7 @@ const themeData = (): IThemeData => {
 };
 
 interface IAxesDataAxis {
-  automargin: boolean;
+  automargin: string;
   range?: [number, number];
   tickangle: number;
   tickfont: {
@@ -578,7 +578,7 @@ const axesData = (): IAxesData => {
 
   cachedAxesData = {
     xaxis: {
-      automargin: true,
+      automargin: 'bottom',
       tickangle: 0,
       tickfont: {
         size: axisTickFontSize
@@ -589,7 +589,7 @@ const axesData = (): IAxesData => {
       }
     },
     yaxis: {
-      automargin: true,
+      automargin: 'left+right',
       tickangle: 0,
       tickfont: {
         size: axisTickFontSize
