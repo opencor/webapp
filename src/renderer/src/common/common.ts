@@ -120,6 +120,9 @@ export const corsProxyUrl = (url: string): string => {
 //          user's network), in which case fetching the URL directly may still work.
 // Note #2: if fetching the URL directly also fails, then it is most likely because of CORS, about which a browser tells
 //          us next to nothing (e.g., "Failed to fetch"), so we report why our CORS proxy failed instead.
+// Note #3: we read the body of our CORS proxy's response before returning it, so that we can also fetch the URL
+//          directly if reading it fails (e.g., if our CORS proxy aborts it because the content turns out to be too
+//          large). This doesn't cost anything since our callers need the whole body anyway.
 
 export const fetchThroughCorsProxy = async (url: string): Promise<Response> => {
   let corsProxyIssue: string;
@@ -128,7 +131,15 @@ export const fetchThroughCorsProxy = async (url: string): Promise<Response> => {
     const response = await fetch(corsProxyUrl(url));
 
     if (response.status !== 403 && response.status !== 404 && response.status !== 502) {
-      return response;
+      const body = await response.arrayBuffer();
+
+      // Note: a response with some statuses (e.g., 304) cannot have a body, not even an empty one.
+
+      return new Response(body.byteLength ? body : null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+      });
     }
 
     corsProxyIssue =

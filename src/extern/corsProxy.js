@@ -19,9 +19,10 @@ const CONTENT_HEADERS = {
 
 const SNIFF_SIZE = 64 * 1024; // 64 KB.
 const MAX_SIZE = 32 * 1024 * 1024; // 32 MB.
-// Note: an OMEX file needs to be fully read (see forwardRequest()), which means holding two copies of it (i.e. the
-//       chunks we read and their concatenation, see readChunks()), so MAX_SIZE must be small enough for at least two
-//       copies of it to fit in the memory available to a Cloudflare Worker (i.e. 128 MB).
+// Note: an OMEX file, as well as some content which size we don't know in advance, needs to be fully read (see
+//       forwardRequest()), which means holding two copies of it (i.e. the chunks we read and their concatenation, see
+//       readChunks()), so MAX_SIZE must be small enough for at least two copies of it to fit in the memory available to
+//       a Cloudflare Worker (i.e. 128 MB).
 
 const ZIP_LOCAL_FILE_HEADER_SIGNATURE = 0x04034b50;
 const ZIP_CENTRAL_DIRECTORY_HEADER_SIGNATURE = 0x02014b50;
@@ -85,6 +86,24 @@ const readBytes = async (reader, maxSize) => {
   const { chunks, length, done } = await readChunks(reader, maxSize);
 
   return { bytes: concatenate(chunks, length), done };
+};
+
+const readRest = async (reader, head) => {
+  // Read the rest of some content, the start of which we have already read, and return all of it, unless it is too
+  // large, in which case return null.
+  // Note: we read (up to) one more byte than allowed, so that we know whether the content is too large, in which case we
+  //       reject it without concatenating its chunks. Otherwise, we concatenate the start of the content and the rest of
+  //       it in one go.
+
+  const all = await readChunks(reader, MAX_SIZE + 1, [head]);
+
+  if (all.length > MAX_SIZE) {
+    await reader.cancel();
+
+    return null;
+  }
+
+  return concatenate(all.chunks, all.length);
 };
 
 const replayStream = (bytes, reader) => {
@@ -360,6 +379,20 @@ const errorMessage = (error) => (error instanceof Error ? error.message : String
 
 const rejectedResponse = (reason) => errorResponse(`Target content is not allowed (${reason}).`, 403);
 
+const hasKnownSize = (response) => {
+  // Check whether the size of the given response's content is known in advance, i.e. whether it has a content length
+  // and its content is not compressed.
+  // Note: if the content is compressed, then fetch() decompresses it for us, but the content length is that of the
+  //       compressed content.
+
+  const contentEncoding = response.headers.get('content-encoding');
+
+  return (
+    /^\d+$/.test(response.headers.get('content-length') ?? '') &&
+    (!contentEncoding || contentEncoding.toLowerCase() === 'identity')
+  );
+};
+
 const forwardRequest = async (targetUrl, request) => {
   const forwardHeaders = new Headers(request.headers);
 
@@ -406,13 +439,32 @@ const forwardRequest = async (targetUrl, request) => {
     return rejectedResponse('too large');
   }
 
-  // A CellML, SED-ML, or CSV file only needs its start to be checked, after which it can be streamed.
+  // A CellML, SED-ML, or CSV file only needs its start to be checked, after which it can be streamed, but only if we
+  // know that it isn't too large (see above). Otherwise, we need to fully read it first, so that we can reject it if it
+  // is too large. Indeed, once we have started streaming it, all we could do is abort it, which the app would see as a
+  // network error rather than as a rejection, so it wouldn't try to fetch the target URL directly instead (see
+  // fetchThroughCorsProxy() in src/renderer/src/common/common.ts).
+  // Note: when streaming, we still check the size of the content as we read it, in case the content length is wrong
+  //       (see replayStream()).
 
   const reader = response.body.getReader();
   const { bytes: head, done } = await readBytes(reader, SNIFF_SIZE);
 
   if (isCellmlOrSedmlFile(head) || isCsvFile(head, done, hasCsvExtension(targetUrl))) {
-    return new Response(done ? head : replayStream(head, reader), {
+    if (done || hasKnownSize(response)) {
+      return new Response(done ? head : replayStream(head, reader), {
+        status: response.status,
+        headers: CONTENT_HEADERS
+      });
+    }
+
+    const bytes = await readRest(reader, head);
+
+    if (!bytes) {
+      return rejectedResponse('too large');
+    }
+
+    return new Response(bytes, {
       status: response.status,
       headers: CONTENT_HEADERS
     });
@@ -426,22 +478,10 @@ const forwardRequest = async (targetUrl, request) => {
     return rejectedResponse('not a CellML, SED-ML, OMEX, or CSV file');
   }
 
-  let bytes = head;
+  const bytes = done ? head : await readRest(reader, head);
 
-  if (!done) {
-    // Note: we read (up to) one more byte than allowed, so that we know whether the OMEX file is too large, in which
-    //       case we reject it without concatenating its chunks. Otherwise, we concatenate the start of the OMEX file
-    //       and the rest of it in one go.
-
-    const all = await readChunks(reader, MAX_SIZE + 1, [head]);
-
-    if (all.length > MAX_SIZE) {
-      await reader.cancel();
-
-      return rejectedResponse('too large');
-    }
-
-    bytes = concatenate(all.chunks, all.length);
+  if (!bytes) {
+    return rejectedResponse('too large');
   }
 
   if (!isOmexFile(bytes)) {
