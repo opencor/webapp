@@ -30,7 +30,9 @@ const ZIP_END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054b50;
 const ZIP64_END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06064b50;
 const ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR_SIGNATURE = 0x07064b50;
 
-const extractTargetUrl = (url) => url.searchParams.get('url');
+const extractTargetUrl = (url) => {
+  return url.searchParams.get('url');
+};
 
 const isValidTargetUrl = (targetUrl) => {
   try {
@@ -314,7 +316,9 @@ const isCellmlOrSedmlFile = (bytes) => {
   );
 };
 
-const hasCsvExtension = (targetUrl) => new URL(targetUrl).pathname.toLowerCase().endsWith('.csv');
+const hasCsvExtension = (targetUrl) => {
+  return new URL(targetUrl).pathname.toLowerCase().endsWith('.csv');
+};
 
 const isCsvFile = (bytes, complete, csvExtension) => {
   // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks).
@@ -367,17 +371,22 @@ const isCsvFile = (bytes, complete, csvExtension) => {
   return nbOfLines >= 2;
 };
 
-const errorResponse = (message, status) =>
+const errorResponse = (message, status) => {
   // Note: our error responses must also have our CORS headers, so that a browser lets the app know why we failed.
 
-  new Response(message, {
+  return new Response(message, {
     status,
     headers: CONTENT_HEADERS
   });
+};
 
-const errorMessage = (error) => (error instanceof Error ? error.message : String(error)).replace(/\.+$/, '');
+const errorMessage = (error) => {
+  return (error instanceof Error ? error.message : String(error)).replace(/\.+$/, '');
+};
 
-const rejectedResponse = (reason) => errorResponse(`Target content is not allowed (${reason}).`, 403);
+const rejectedResponse = (reason) => {
+  return errorResponse(`Target content is not allowed (${reason}).`, 403);
+};
 
 const hasKnownSize = (response) => {
   // Check whether the size of the given response's content is known in advance, i.e. whether it has a content length
