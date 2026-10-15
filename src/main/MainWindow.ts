@@ -348,6 +348,24 @@ export const normaliseCommandLine = (commandLine: string[], workingDirectory: st
     );
 };
 
+// Retrieve the message to let the user know that our configuration file couldn't be loaded, and that our default
+// configuration is therefore used instead, if needed (see createElectronConf()).
+// Note: the backup of our configuration file is only retrieved once (see takeElectronConfBackupFileName()), so the user
+//       is only told about it once, whichever way they are told about it.
+
+const electronConfResetMessage = (): { message: string; detail: string } | null => {
+  const backupFileName = takeElectronConfBackupFileName();
+
+  if (!backupFileName) {
+    return null;
+  }
+
+  return {
+    message: 'OpenCOR could not read its configuration file, so it has been reset.',
+    detail: `The position and size of the window, the files that were open, the recent files, and the settings have been reset to their defaults.\n\nThe configuration file that could not be read has been kept as:\n${backupFileName}`
+  };
+};
+
 // Report a fatal error (e.g., OpenCOR couldn't be started) and quit.
 // Note: our splash screen window is always on top, so we must close it first. Otherwise, it would hide our error dialog
 //       and remain shown forever.
@@ -359,7 +377,15 @@ export const reportFatalErrorAndQuit = (message: string, splashScreenWindow?: Sp
     splashScreenWindow.close();
   }
 
-  electron.dialog.showErrorBox('OpenCOR', message);
+  // Let the user know if our configuration file had to be reset since we are about to quit, i.e. they wouldn't be told
+  // about it otherwise.
+
+  const confResetMessage = electronConfResetMessage();
+
+  electron.dialog.showErrorBox(
+    'OpenCOR',
+    confResetMessage ? `${message}\n\n${confResetMessage.message} ${confResetMessage.detail}` : message
+  );
 
   electron.app.quit();
 };
@@ -668,21 +694,21 @@ export class MainWindow extends ApplicationWindow {
 
   // Let the user know that our configuration file couldn't be loaded, and that our default configuration is therefore
   // used instead, if needed (see createElectronConf()).
-  // Note: we wait for our renderer to be ready and for our splash screen window to be closed, so that our message box
-  //       isn't shown while OpenCOR is still starting or hidden by our splash screen window (which is always on top).
+  // Note #1: we wait for our splash screen window to be closed, so that our message box isn't hidden by it (it is
+  //          always on top).
+  // Note #2: we don't wait for our renderer to be ready since it may never be (e.g., if its initialisation fails), in
+  //          which case the user would never be told about it. If our renderer crashes or OpenCOR cannot be loaded,
+  //          then the user is told about it as part of the error that gets reported (see onRenderProcessGone() and
+  //          reportFatalErrorAndQuit()).
 
   private reportElectronConfReset(): void {
-    if (
-      !this._rendererReady ||
-      (this._splashScreenWindow && !this._splashScreenWindow.isDestroyed()) ||
-      this.isDestroyed()
-    ) {
+    if ((this._splashScreenWindow && !this._splashScreenWindow.isDestroyed()) || this._closing || this.isDestroyed()) {
       return;
     }
 
-    const backupFileName = takeElectronConfBackupFileName();
+    const confResetMessage = electronConfResetMessage();
 
-    if (!backupFileName) {
+    if (!confResetMessage) {
       return;
     }
 
@@ -690,8 +716,7 @@ export class MainWindow extends ApplicationWindow {
       .showMessageBox(this, {
         type: 'warning',
         title: 'OpenCOR',
-        message: 'OpenCOR could not read its configuration file, so it has been reset.',
-        detail: `The position and size of the window, the files that were open, the recent files, and the settings have been reset to their defaults.\n\nThe configuration file that could not be read has been kept as:\n${backupFileName}`,
+        ...confResetMessage,
         buttons: ['OK']
       })
       .catch((error: unknown) => {
@@ -727,6 +752,13 @@ export class MainWindow extends ApplicationWindow {
 
     console.error(`OpenCOR: the renderer process is gone (${details.reason}, exit code ${details.exitCode}).`);
 
+    // Let the user know if our configuration file had to be reset, as part of our message box below, so that they get
+    // told about it even if they choose to quit OpenCOR.
+    // Note: this must be done before closing our splash screen window since it would otherwise be reported in a message
+    //       box of its own (see reportElectronConfReset()).
+
+    const confResetMessage = electronConfResetMessage();
+
     // Make sure that our splash screen window doesn't hide our message box and that we are visible.
 
     this.closeSplashScreenWindow();
@@ -743,7 +775,7 @@ export class MainWindow extends ApplicationWindow {
       type: 'error',
       title: 'OpenCOR',
       message: 'OpenCOR has encountered a problem and needs to be reloaded.',
-      detail: `Reason: ${details.reason} (exit code ${details.exitCode}).\n\nIf the problem keeps happening, reload OpenCOR without reopening the files that were open.`,
+      detail: `Reason: ${details.reason} (exit code ${details.exitCode}).\n\nIf the problem keeps happening, reload OpenCOR without reopening the files that were open.${confResetMessage ? `\n\n${confResetMessage.message} ${confResetMessage.detail}` : ''}`,
       buttons: ['Reload', 'Reload Without Files', 'Quit'],
       defaultId: RELOAD,
       cancelId: QUIT
@@ -865,10 +897,6 @@ export class MainWindow extends ApplicationWindow {
     if (this._recentFilePathsToCanonicalise.length) {
       this.send('canonicalise-recent-file-paths', this._recentFilePathsToCanonicalise.splice(0));
     }
-
-    // Let the user know if our configuration file had to be reset.
-
-    this.reportElectronConfReset();
 
     // Let our renderer know about the update that is being downloaded or installed, if any.
 

@@ -99,7 +99,7 @@ const sanitisedConfValue = (value: unknown, defaultValue: unknown): unknown => {
 let electronConfBackupFileName: string | null = null;
 
 // Retrieve the backup of our configuration file, if any, so that the user can be told about it (see
-// MainWindow.reportElectronConfReset()).
+// electronConfResetMessage() in MainWindow.ts).
 // Note: we only return it once, so that the user is only told about it once.
 
 export const takeElectronConfBackupFileName = (): string | null => {
@@ -114,8 +114,9 @@ export const takeElectronConfBackupFileName = (): string | null => {
 // Note #1: electron-conf throws if our configuration file cannot be parsed (e.g., if it is empty or truncated because
 //          it couldn't be fully written, or if it was edited by hand), in which case OpenCOR would never be able to
 //          start again. So, we back it up (so that it can be inspected or recovered), use our default configuration
-//          instead, and let the user know about it once OpenCOR is ready. If that fails too, then there is nothing more
-//          that we can do, so we let the error through.
+//          instead, and let the user know about it once OpenCOR is shown (or as part of the error that gets reported,
+//          if any, see MainWindow.reportElectronConfReset()). If that fails too, then there is nothing more that we can
+//          do, so we let the error through.
 // Note #2: electron-conf also throws if our configuration file cannot be read (e.g., because it is temporarily locked
 //          by an antivirus or a file synchronisation service on Windows, or because of its permissions), in which case
 //          our configuration file is most likely fine, so we must not reset it. Instead, we let the error through (so
