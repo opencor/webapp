@@ -10,6 +10,11 @@ jobs:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
     runs-on: ubuntu-22.04
+    concurrency:
+      group: web-app-deployment-appdev
+      cancel-in-progress: false
+    # Note: our deployments must not overlap since they would otherwise interfere with one another, e.g. when uploading
+    #       index.html or when pruning our old assets (see below).
     steps:
       - name: Set the timezone to New Zealand
         run: sudo timedatectl set-timezone Pacific/Auckland
@@ -46,3 +51,12 @@ jobs:
           #       have all been uploaded, so that it never references assets that are not available yet. Then, we upload
           #       version.json last so that OpenCOR's Web app only reports a new version once all the other files have
           #       been uploaded.
+      - name: Prune old assets from https://opencor.ws/appdev/
+        env:
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: bun prune:web /home/www/opencor.ws/appdev
+        # Note: our assets have a hash in their file names, so old assets would otherwise accumulate on the server. They
+        #       are only deleted after a grace period since some clients may still be using a previous index.html (see
+        #       src/renderer/scripts/prune.web.ts).
