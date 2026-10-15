@@ -92,6 +92,9 @@ vue.watch(
 //          browser takes over a touch gesture), so that, for instance, releasing a modifier key while dragging our
 //          slider doesn't end it. An interaction started using the keyboard ends when any key is released since a key
 //          may not get reported as released. Either way, an interaction ends when the window loses the focus.
+// Note #3: a pointer interaction takes over an interaction started using the keyboard (e.g., pressing a modifier key in
+//          our input and then dragging our slider), so that the latter doesn't end when that key gets released, i.e.
+//          while our slider is still being dragged.
 
 let interacting = false;
 let interactionPointerId: number | null = null;
@@ -105,13 +108,19 @@ const removeInteractionListeners = (): void => {
 };
 
 const onInteractionStart = (event: PointerEvent | KeyboardEvent): void => {
+  const isPointerEvent = event instanceof PointerEvent;
+
   if (interacting) {
-    return;
+    if (!isPointerEvent || interactionPointerId !== null) {
+      return;
+    }
+
+    onInteractionEnd();
   }
 
   interacting = true;
 
-  if (event instanceof PointerEvent) {
+  if (isPointerEvent) {
     interactionPointerId = event.pointerId;
 
     window.addEventListener('pointerup', onPointerInteractionEnd);
