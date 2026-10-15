@@ -604,6 +604,20 @@ const axesData = (): IAxesData => {
   return cachedAxesData;
 };
 
+const themeAndAxesData = (): IThemeData & IAxesData => {
+  // Merge our theme and axes data.
+  // Note: we merge each axis separately since spreading our axes data would otherwise replace our theme's axes data.
+
+  const themeLayout = themeData();
+  const axesLayout = axesData();
+
+  return {
+    ...themeLayout,
+    xaxis: { ...themeLayout.xaxis, ...axesLayout.xaxis },
+    yaxis: { ...themeLayout.yaxis, ...axesLayout.yaxis }
+  };
+};
+
 const resolvedMargin = (propValue: number | undefined, compValue: number): number => {
   if (propValue !== undefined) {
     return propValue;
@@ -798,7 +812,7 @@ const updatePlot = (): void => {
   const layout = {
     // Note: the various keys can be found at https://plotly.com/javascript/reference/.
 
-    ...themeData(),
+    ...themeAndAxesData(),
     margin: {
       t: 0,
       l: resolvedMargin(props.margins?.left, margins.value.left),
@@ -806,8 +820,7 @@ const updatePlot = (): void => {
       r: resolvedMargin(props.margins?.right, margins.value.right),
       pad: 0
     },
-    showlegend: props.showLegend,
-    ...axesData()
+    showlegend: props.showLegend
   };
 
   if (props.data.xAxisRange) {
@@ -1070,10 +1083,7 @@ vue.watch(
   () => {
     vue.nextTick(() => {
       if (plotIsReady && mainDivRef.value) {
-        dependencies._plotlyJs.relayout(mainDivRef.value, {
-          ...themeData(),
-          ...axesData()
-        });
+        dependencies._plotlyJs.relayout(mainDivRef.value, themeAndAxesData());
       }
     });
   },
