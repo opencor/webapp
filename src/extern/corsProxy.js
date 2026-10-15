@@ -18,6 +18,10 @@ const CONTENT_HEADERS = {
 };
 
 const SNIFF_SIZE = 64 * 1024; // 64 KB.
+const MAX_XML_PROLOG_SIZE = 1024 * 1024; // 1 MB.
+// Note: the prolog of an XML file (i.e. its XML declaration, processing instructions, comments, and document type
+//       declaration) may be longer than SNIFF_SIZE (e.g., because of a long licence comment), in which case we read up
+//       to MAX_XML_PROLOG_SIZE of it to find its root element (see forwardRequest()).
 const MAX_SIZE = 32 * 1024 * 1024; // 32 MB.
 // Note: an OMEX file, as well as some content which size we don't know in advance, needs to be fully read (see
 //       forwardRequest()), which means holding two copies of it (i.e. the chunks we read and their concatenation, see
@@ -229,7 +233,11 @@ const isOmexFile = (bytes) => {
 
 const xmlRootElement = (text) => {
   // Return the local name and namespace of the root element of the given XML text, skipping its prolog (i.e. its XML
-  // declaration, processing instructions, comments, and document type declaration).
+  // declaration, processing instructions, comments, and document type declaration), or null if there is no such root
+  // element. If the given XML text ends before the start tag of its root element does, i.e. if it is only the start of
+  // some XML text, then let the caller know that it is incomplete.
+
+  const INCOMPLETE = { incomplete: true };
 
   const skipPast = (string, marker, from = 0) => {
     const index = string.indexOf(marker, from);
@@ -250,23 +258,29 @@ const xmlRootElement = (text) => {
       const internalSubsetStart = rest.indexOf('[');
       const declarationEnd = rest.indexOf('>');
 
-      rest =
-        internalSubsetStart !== -1 && internalSubsetStart < declarationEnd
-          ? skipPast(rest, '>', rest.indexOf(']', internalSubsetStart))
-          : skipPast(rest, '>');
+      if (internalSubsetStart !== -1 && (declarationEnd === -1 || internalSubsetStart < declarationEnd)) {
+        const internalSubsetEnd = rest.indexOf(']', internalSubsetStart);
+
+        rest = internalSubsetEnd === -1 ? null : skipPast(rest, '>', internalSubsetEnd);
+      } else {
+        rest = skipPast(rest, '>');
+      }
     } else {
       break;
     }
 
     if (rest === null) {
-      return null;
+      return INCOMPLETE;
     }
   }
 
   const match = /^<(?:([\w.-]+):)?([\w.-]+)((?:\s+[^\s=/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*\/?>/.exec(rest);
 
   if (!match) {
-    return null;
+    // Note: our XML text is incomplete if it is empty (e.g., it only has some whitespace so far) or if it ends within a
+    //       start tag (e.g., that of our root element or of something that is part of our prolog, like "<!DOC").
+
+    return !rest || (rest.startsWith('<') && !rest.includes('>')) ? INCOMPLETE : null;
   }
 
   const [, prefix, name, attributes] = match;
@@ -303,8 +317,16 @@ const xmlEncoding = (bytes) => {
   return 'utf-8';
 };
 
+const xmlText = (bytes) => {
+  return new TextDecoder(xmlEncoding(bytes)).decode(bytes);
+};
+
+const isIncompleteXmlProlog = (bytes) => {
+  return xmlRootElement(xmlText(bytes))?.incomplete === true;
+};
+
 const isCellmlOrSedmlFile = (bytes) => {
-  const rootElement = xmlRootElement(new TextDecoder(xmlEncoding(bytes)).decode(bytes));
+  const rootElement = xmlRootElement(xmlText(bytes));
 
   if (!rootElement?.namespace) {
     return false;
@@ -316,18 +338,23 @@ const isCellmlOrSedmlFile = (bytes) => {
   );
 };
 
-const hasCsvExtension = (targetUrl) => {
-  return new URL(targetUrl).pathname.toLowerCase().endsWith('.csv');
+const hasCsvExtension = (url) => {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith('.csv');
+  } catch {
+    return false;
+  }
 };
 
 const isCsvFile = (bytes, complete, csvExtension) => {
   // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks).
-  // If the target URL has a .csv extension, then that is all we check since the app can tell the user why the CSV file
-  // cannot be used, if needed (see parseExternalCsvData()). Otherwise, the content is all we have to go by, so we also
-  // check that the text looks like a CSV file as expected by the app, i.e. lines are separated by line breaks and
-  // values by commas, there are at least two lines (i.e. a header and some data), and every line has the same number of
-  // values, which must be at least two (i.e. a VOI column and a data column). Like the app, we decode the text as UTF-8
-  // (replacing invalid byte sequences, like Response.text() does), trim lines, and skip blank lines.
+  // If the target URL (or the URL it redirects to) has a .csv extension, then that is all we check since the app can
+  // tell the user why the CSV file cannot be used, if needed (see parseExternalCsvData()). Otherwise, the content is
+  // all we have to go by, so we also check that the text looks like a CSV file as expected by the app, i.e. lines are
+  // separated by line breaks and values by commas, there are at least two lines (i.e. a header and some data), and
+  // every line has the same number of values, which must be at least two (i.e. a VOI column and a data column). Like
+  // the app, we decode the text as UTF-8 (replacing invalid byte sequences, like Response.text() does), trim lines, and
+  // skip blank lines.
   // Note: if we only have the start of the CSV file, then we ignore its last (and likely incomplete) line.
 
   const text = new TextDecoder().decode(bytes, { stream: !complete });
@@ -457,9 +484,22 @@ const forwardRequest = async (targetUrl, request) => {
   //       (see replayStream()).
 
   const reader = response.body.getReader();
-  const { bytes: head, done } = await readBytes(reader, SNIFF_SIZE);
+  let { bytes: head, done } = await readBytes(reader, SNIFF_SIZE);
 
-  if (isCellmlOrSedmlFile(head) || isCsvFile(head, done, hasCsvExtension(targetUrl))) {
+  // Read more of the content if it is an XML file which prolog is longer than what we have read so far (see
+  // MAX_XML_PROLOG_SIZE).
+
+  while (!done && head.length < MAX_XML_PROLOG_SIZE && isIncompleteXmlProlog(head)) {
+    const more = await readChunks(reader, Math.min(2 * head.length, MAX_XML_PROLOG_SIZE), [head]);
+
+    head = concatenate(more.chunks, more.length);
+    done = more.done;
+  }
+
+  // Note: the URL of the response is the one we ended up at, i.e. after following redirects (e.g., a figshare download
+  //       URL redirects to the actual file).
+
+  if (isCellmlOrSedmlFile(head) || isCsvFile(head, done, hasCsvExtension(targetUrl) || hasCsvExtension(response.url))) {
     if (done || hasKnownSize(response)) {
       return new Response(done ? head : replayStream(head, reader), {
         status: response.status,
