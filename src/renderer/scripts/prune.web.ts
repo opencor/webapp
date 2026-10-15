@@ -6,15 +6,21 @@ import os from 'node:os';
 import path from 'node:path';
 
 // Prune the assets of our deployed Web app that are not used anymore.
-// Note: our assets have a hash in their file names (see vite.config.ts), so every deployment that changes an asset
-//       uploads it under a new name and leaves the previous one behind. We cannot, however, delete an old asset as soon
-//       as it is not part of our current deployment since some clients may still be using a previous version of
-//       index.html (e.g., one that was loaded just before we deployed or one that was cached by a proxy). So, instead,
-//       we keep track of when we first noticed that an asset was not used anymore and we only delete it once it has
-//       been unused for a while.
-// Note: we use OpenSSH's sftp since it comes with all the GitHub-hosted runners.
+// Note #1: our assets have a hash in their file names (see vite.config.ts), so every deployment that changes an asset
+//          uploads it under a new name and leaves the previous one behind. We cannot, however, delete an old asset as
+//          soon as it is not part of our current deployment since some clients may still be using a previous version of
+//          index.html (e.g., one that was loaded just before we deployed or one that was cached by a proxy). So,
+//          instead, we keep track of when we first noticed that an asset was not used anymore and we only delete it
+//          once it has been unused for a while.
+// Note #2: our .htaccess file asks browsers to always check with the server before reusing index.html (see
+//          public/.htaccess), so a few minutes would normally be enough. However, our caching headers may not always be
+//          honoured (e.g., if mod_headers isn't available or by some proxies), in which case a browser may reuse an old
+//          index.html for up to 10% of the time since it was last modified (i.e. for up to 10 days if the previous
+//          version of our Web app was deployed 100 days earlier). So, we use a grace period that is generous enough to
+//          cover that case too.
+// Note #3: we use OpenSSH's sftp since it comes with all the GitHub-hosted runners.
 
-const GRACE_PERIOD = 7 * 24 * 60 * 60 * 1000; // 7 days, in milliseconds.
+const GRACE_PERIOD = 30 * 24 * 60 * 60 * 1000; // 30 days, in milliseconds.
 const HASHED_ASSET_REGEX = /^\w[\w.-]*-[\w-]{8}\.\w+$/;
 const PRUNE_FILE_NAME = '.prune.json';
 

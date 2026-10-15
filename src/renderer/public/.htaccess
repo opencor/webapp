@@ -1,0 +1,19 @@
+# Caching policy of OpenCOR's Web app.
+# Note #1: by default, Apache doesn't send any caching header, in which case browsers use a heuristic (typically 10% of
+#          the time since a file was last modified) to decide for how long they can reuse a file without checking with
+#          the server. This means that a browser could keep using an old index.html for days after a new version of
+#          OpenCOR's Web app has been deployed. So, we ask browsers to always check with the server before reusing a
+#          file (thanks to its ETag, this only costs a "304 Not Modified" response if the file hasn't changed), except
+#          for our hashed assets, which never change (a new version of an asset has a new name, see vite.config.ts), so
+#          they can be cached for good.
+# Note #2: our hashed assets are matched in the same way as when pruning them (see scripts/prune.web.ts).
+# Note #3: we use <IfModule> so that our Web app still works (albeit without our caching headers) if mod_headers isn't
+#          available.
+
+<IfModule mod_headers.c>
+  Header set Cache-Control "no-cache"
+
+  <FilesMatch "^\w[\w.-]*-[\w-]{8}\.\w+$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

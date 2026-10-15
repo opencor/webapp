@@ -44,7 +44,8 @@ export default vite.defineConfig({
     copyPublicDir: false
     // Note: our public folder only contains libOpenCOR's glue (see downloadLibopencorJsIfNeeded()), which host
     //       applications don't serve from our package anyway (we fall back on importing it from https://opencor.ws in
-    //       that case, see src/common/initialisation.ts), so there is no need to ship it.
+    //       that case, see src/common/initialisation.ts), and our Web app's .htaccess file, which is only relevant to
+    //       our Web app, so there is no need to ship them.
   },
   publicDir: path.join(import.meta.dirname, 'public'),
   define: {

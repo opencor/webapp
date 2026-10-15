@@ -33,9 +33,9 @@ export default electronVite.defineConfig({
     build: {
       target: 'esnext',
       copyPublicDir: false
-      // Note: our renderer's public folder only contains libOpenCOR's glue (see downloadLibopencorJsIfNeeded()), which
-      //       is only needed by our Web app (OpenCOR uses our C++ API, see initialiseLocApi()), so there is no need to
-      //       ship it.
+      // Note: our renderer's public folder only contains libOpenCOR's glue (see downloadLibopencorJsIfNeeded()) and our
+      //       Web app's .htaccess file, which are only needed by our Web app (OpenCOR uses our C++ API, see
+      //       initialiseLocApi(), and isn't served by Apache), so there is no need to ship them.
     },
     define: {
       __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
