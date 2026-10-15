@@ -373,9 +373,10 @@ const compUiEnabled = vue.computed<boolean>(() => {
 });
 
 // Enable/disable our main menu (in OpenCOR) whenever our UI gets enabled/disabled.
-// Note: our main menu must not be usable while our UI is blocked (e.g., while a model is being loaded) or while a dialog
-//       is open. Otherwise, the user could, for instance, close a file while it is being opened as part of several
-//       files (see openFiles()).
+// Note: our main menu must not be usable while our UI is blocked (e.g., while a remote model is being loaded) or while
+//       a dialog is open. Local files, however, don't block our UI while they are being opened, so a local file may get
+//       closed while it is being opened as part of several files (see openFiles()), something that
+//       ContentsComponent.openFile() handles.
 
 vue.watch(
   compUiEnabled,

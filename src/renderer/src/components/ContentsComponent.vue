@@ -284,11 +284,19 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
     activeViewId: uiJson ? 'simulation-experiment-interactive' : 'simulation-experiment-standard'
   });
 
-  await selectFile(filePath, wait);
+  // Select the file and let people know that it has been opened.
+  // Note: we let people know before waiting for our file tabs to be updated (see selectFile()) since the file may get
+  //       closed in the meantime (e.g., using File|Close), in which case people would otherwise be told that it has been
+  //       opened after having been told that it has been closed (and, in the case of Electron, it wouldn't be listed in
+  //       our recent files).
+
+  const fileSelected = selectFile(filePath, wait);
 
   electronApi?.fileOpened(filePath, file.canonicalPath());
 
   emit('fileOpened', filePath);
+
+  await fileSelected;
 };
 
 const closeFile = async (filePath: string): Promise<void> => {
