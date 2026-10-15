@@ -118,7 +118,13 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
           VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
         run: bun build:web
+      - name: Archive OpenCOR's Web app
+        id: archive
+        run: bun archive:web
+        # Note: we archive our Web app before deploying it since the deployment adds a .deploy-running file to
+        #       src/renderer/dist, which would otherwise end up in our archive.
       - name: Deploy to https://opencor.ws/app/
+        id: deploy
         uses: milanmk/actions-file-deployer@master
         with:
           remote-protocol: sftp
@@ -138,13 +144,15 @@ jobs:
           #       have all been uploaded, so that it never references assets that are not available yet. Then, we upload
           #       version.json last so that OpenCOR's Web app only reports a new version once all the other files have
           #       been uploaded.
-      - name: Archive OpenCOR's Web app
-        run: bun archive:web
       - name: Release OpenCOR's Web app
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
         uses: softprops/action-gh-release@v3
         with:
           files: dist/OpenCOR-*-WebApp.tar.gz
+        # Note: we release our Web app even if it couldn't be deployed, so that a deployment failure (e.g., a transient
+        #       SFTP error) doesn't also deprive our release of its Web app archive.
       - name: Prune old assets from https://opencor.ws/app/
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
         env:
           REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
