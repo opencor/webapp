@@ -135,7 +135,7 @@
                 </Fieldset>
                 <Fieldset v-if="preSimulationDuration" legend="Note" class="note">
                   The simulation was run for <br/>
-                  <strong>{{ preSimulationDuration }} {{ instanceTask ? instanceTask.voiUnit() : '' }}</strong> prior to plotting.
+                  <strong>{{ preSimulationDuration }} {{ voiUnit }}</strong> prior to plotting.
                 </Fieldset>
               </ScrollPanel>
             </div>
@@ -163,7 +163,7 @@
           :settings="settings"
           :voiId="voiId"
           :voiName="voiName"
-          :voiUnit="instanceTask ? instanceTask.voiUnit() : ''"
+          :voiUnit="voiUnit"
           :allModelParameters="allModelParameters"
           :editableModelParameters="editableModelParameters"
           @ok="onSettingsOk"
@@ -380,6 +380,7 @@ if (instanceTask) {
 
 const voiName = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const voiId = vue.ref(instanceTask ? (voiName.value.split('/')[1] ?? '') : '');
+const voiUnit = vue.ref(instanceTask ? instanceTask.voiUnit() : '');
 
 const actualUiJson = vue.ref<locApi.IUiJson>(
   // Note: we deep clone our UI JSON, sharing its external data values rather than copying them (see cloneUiJson()),
