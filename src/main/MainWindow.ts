@@ -3,6 +3,7 @@ import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { OpenCORTheme } from '../renderer/index';
 import { formatError, isDataUrlFileName, type ISettings, isUrl } from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY } from '../renderer/src/common/constants';
 import { appImagePath, isMacOs, isPackaged } from '../renderer/src/common/electron';
@@ -151,6 +152,13 @@ export const loadSettings = (): ISettings => {
 
 export const saveSettings = (settings: ISettings): void => {
   electronConf.set('settings', settings);
+};
+
+export const applyTheme = (theme: OpenCORTheme = electronConf.get('settings.general.theme')): void => {
+  // Apply the given theme (or the one in our settings if none is given) to OpenCOR, so that it is used by our renderer
+  // and by Electron (e.g., for its dialogs).
+
+  electron.nativeTheme.themeSource = theme === 'light' || theme === 'dark' ? theme : 'system';
 };
 
 let _resetAll = false;

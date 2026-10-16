@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
+import type { OpenCORTheme } from '../renderer/index';
 import { formatError, type ISettings, isObject } from '../renderer/src/common/common';
 import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants';
 import { appImagePath, isLinux, isPackaged, isWindows } from '../renderer/src/common/electron';
@@ -22,6 +23,7 @@ import { startRendererServer, stopRendererServer } from '../renderer/src/common/
 
 import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu } from './MainMenu';
 import {
+  applyTheme,
   checkForUpdates,
   downloadAndInstallUpdate,
   fileClosed,
@@ -370,7 +372,8 @@ electron.app
       },
       settings: {
         general: {
-          checkForUpdatesAtStartup: true
+          checkForUpdatesAtStartup: true,
+          theme: 'system'
         }
       }
     });
@@ -398,6 +401,10 @@ electron.app
         isFullScreen: state.isFullScreen
       });
     }
+
+    // Apply our theme, so that our splash screen window and main window use it from the start.
+
+    applyTheme();
 
     // Create our splash window.
 
@@ -448,6 +455,9 @@ electron.app
 
         // Handle some requests from our renderer process.
 
+        electron.ipcMain.handle('apply-theme', (_event, theme: OpenCORTheme) => {
+          applyTheme(theme);
+        });
         electron.ipcMain.handle('check-for-updates', (_event, atStartup: boolean) => {
           checkForUpdates(atStartup);
         });

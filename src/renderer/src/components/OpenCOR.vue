@@ -34,6 +34,7 @@
         :isActiveApp="compIsActiveApp"
         :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
+        :themeCanBeChanged="themeCanBeChanged"
         @about="onAboutMenu"
         @open="onOpenMenu"
         @openRemote="onOpenRemoteMenu"
@@ -94,6 +95,7 @@
         @close="openRemoteVisible = false"
       />
       <SettingsDialog v-model:visible="settingsVisible"
+        :themeCanBeChanged="themeCanBeChanged"
         @close="settingsVisible = false"
       />
       <YesNoQuestionDialog v-model:visible="resetAllVisible"
@@ -140,6 +142,7 @@ import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 */
 import * as initialisation from '../common/initialisation';
 import * as locCommon from '../common/locCommon';
+import { settings } from '../common/settings';
 import * as version from '../common/version';
 import { useViewRegistry, ViewCategory } from '../common/viewRegistry';
 import * as vueCommon from '../common/vueCommon';
@@ -480,7 +483,19 @@ if (crtVueAppInstance) {
   }
 }
 
+// Set our theme.
+// Note: the user can only change our theme if none was given to us and we are not running in isolation (i.e. if we are
+//       running the desktop version of OpenCOR or the full Web app), in which case we use the theme from our settings.
+
+const themeCanBeChanged = props.theme === undefined && !props.omex;
+
 vueCommon.useTheme().setTheme(props.theme);
+
+if (themeCanBeChanged) {
+  settings.onInitialised(() => {
+    vueCommon.useTheme().setTheme(settings.general.theme);
+  });
+}
 
 // Get ready to show toasts and provide a helper to show them that ensures that the proper group id is used and that the
 // instance becomes active before the message is pushed.
@@ -1718,34 +1733,32 @@ const onGitHubButtonClick = async (): Promise<void> => {
   color: var(--p-red-700);
 }
 
-@media (prefers-color-scheme: dark) {
-  .connected-to-github,
-  :deep(.connected-to-github .pi-github) {
-    background-color: var(--p-green-800);
-    border-color: var(--p-green-800);
-    color: var(--p-green-300);
-  }
+.opencor-dark-mode .connected-to-github,
+.opencor-dark-mode .opencor :deep(.connected-to-github .pi-github) {
+  background-color: var(--p-green-800);
+  border-color: var(--p-green-800);
+  color: var(--p-green-300);
+}
 
-  .connected-to-github:hover,
-  :deep(.connected-to-github:hover .pi-github) {
-    background-color: var(--p-green-700) !important;
-    border-color: var(--p-green-700) !important;
-    color: var(--p-green-200);
-  }
+.opencor-dark-mode .connected-to-github:hover,
+.opencor-dark-mode .opencor :deep(.connected-to-github:hover .pi-github) {
+  background-color: var(--p-green-700) !important;
+  border-color: var(--p-green-700) !important;
+  color: var(--p-green-200);
+}
 
-  .disconnected-from-github,
-  :deep(.disconnected-from-github .pi-github) {
-    background-color: var(--p-red-800);
-    border-color: var(--p-red-800);
-    color: var(--p-red-300);
-  }
+.opencor-dark-mode .disconnected-from-github,
+.opencor-dark-mode .opencor :deep(.disconnected-from-github .pi-github) {
+  background-color: var(--p-red-800);
+  border-color: var(--p-red-800);
+  color: var(--p-red-300);
+}
 
-  .disconnected-from-github:hover,
-  :deep(.disconnected-from-github:hover .pi-github) {
-    background-color: var(--p-red-700) !important;
-    border-color: var(--p-red-700) !important;
-    color: var(--p-red-200);
-  }
+.opencor-dark-mode .disconnected-from-github:hover,
+.opencor-dark-mode .opencor :deep(.disconnected-from-github:hover .pi-github) {
+  background-color: var(--p-red-700) !important;
+  border-color: var(--p-red-700) !important;
+  color: var(--p-red-200);
 }
 
 .opencor {

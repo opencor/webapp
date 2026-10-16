@@ -1,3 +1,5 @@
+import type { OpenCORTheme } from '../../index';
+
 import type { ISettings } from './common';
 
 interface IElectronApi {
@@ -9,6 +11,7 @@ interface IElectronApi {
 
   // Renderer process asking the main process to do something for it.
 
+  applyTheme: (theme: OpenCORTheme) => void;
   checkForUpdates: (atStartup: boolean) => void;
   clearGitHubCache: () => Promise<void>;
   deleteGitHubAccessToken: () => Promise<boolean>;

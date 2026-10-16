@@ -16,10 +16,14 @@
       overflow: hidden;
     }
     @media (prefers-color-scheme: dark) {
-      body {
+      :root:not(.opencor-light-mode) body {
         background-color: #18181b; /* Dark version of --p-content-background. */
         color: #ffffff; /* Dark version of --p-content-color. */
       }
+    }
+    :root.opencor-dark-mode body {
+      background-color: #18181b; /* Dark version of --p-content-background. */
+      color: #ffffff; /* Dark version of --p-content-color. */
     }
     </style>
   </head>

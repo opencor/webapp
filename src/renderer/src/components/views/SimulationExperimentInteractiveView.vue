@@ -2290,10 +2290,8 @@ vue.onMounted(() => {
   box-shadow: 0 2px 8px var(--p-shadow-color, rgba(0, 0, 0, 0.15));
 }
 
-@media (prefers-color-scheme: dark) {
-  .color-swatch:hover {
-    box-shadow: 0 2px 8px var(--p-shadow-color-dark, rgba(255, 255, 255, 0.15));
-  }
+.opencor-dark-mode .color-swatch:hover {
+  box-shadow: 0 2px 8px var(--p-shadow-color-dark, rgba(255, 255, 255, 0.15));
 }
 
 .color-swatch-selected {

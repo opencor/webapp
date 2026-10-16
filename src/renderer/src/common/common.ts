@@ -1,4 +1,4 @@
-import type { IOpenCORSimulationDataValue, OpenCORSimulationData } from '../../index';
+import type { IOpenCORSimulationDataValue, OpenCORSimulationData, OpenCORTheme } from '../../index';
 
 import * as dependencies from './dependencies';
 import { electronApi } from './electronApi';
@@ -7,6 +7,7 @@ import { electronApi } from './electronApi';
 
 export interface ISettingsGeneral {
   checkForUpdatesAtStartup: boolean;
+  theme: OpenCORTheme;
 }
 
 export interface ISettings {

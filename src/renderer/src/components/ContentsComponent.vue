@@ -742,9 +742,7 @@ if (common.isDesktop()) {
   color: var(--p-red-50);
 }
 
-@media (prefers-color-scheme: dark) {
-  .remove-button:hover {
-    background-color: var(--p-red-400);
-  }
+.opencor-dark-mode .remove-button:hover {
+  background-color: var(--p-red-400);
 }
 </style>

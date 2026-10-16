@@ -21,12 +21,13 @@
       </a>
     </template>
     <template #end>
-      <button v-if="updateAvailable" class="update-link flex items-center px-1.5 py-0.5 text-xs cursor-pointer rounded-full transition-colors duration-150 mr-1"
+      <button v-if="updateAvailable" class="update-link absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center whitespace-nowrap px-1.5 py-0.5 text-xs cursor-pointer rounded-full transition-colors duration-150"
         type="button"
         @click="emit('updateAvailable')"
       >
         New version available!
       </button>
+      <ThemeWidget v-if="props.themeCanBeChanged" :theme="theme.theme()" @switch="onThemeSwitch" />
     </template>
   </Menubar>
 </template>
@@ -37,14 +38,19 @@ import * as vueusecore from '@vueuse/core';
 import type Menubar from 'primevue/menubar';
 import * as vue from 'vue';
 
+import type { OpenCORTheme } from '../../index';
+
 import * as common from '../common/common';
+import { settings } from '../common/settings';
 import * as version from '../common/version';
+import * as vueCommon from '../common/vueCommon';
 
 const props = defineProps<{
   id?: string;
   isActiveApp: boolean;
   hasFiles: boolean;
   uiEnabled: boolean;
+  themeCanBeChanged: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -61,6 +67,22 @@ const emit = defineEmits<{
 const isWindowsOrLinux = common.isWindows() || common.isLinux();
 const isMacOs = common.isMacOs();
 const updateAvailable = version.updateAvailable;
+
+// Theme button, which allows the user to cycle through the system, light, and dark themes.
+
+const theme = vueCommon.useTheme();
+
+const onThemeSwitch = (newTheme: OpenCORTheme) => {
+  // Switch to the next theme, apply it, and save it in our settings.
+
+  theme.applyTheme(newTheme);
+
+  settings.general.theme = newTheme;
+
+  settings.save();
+};
+
+// Menu items, which are computed so that they can be reactive to changes in our props.
 
 const items = vue.computed(() => [
   {
@@ -232,6 +254,7 @@ if (common.isDesktop()) {
 
 <style scoped>
 .p-menubar {
+  position: relative;
   padding: 0.1rem;
   border: none;
   border-radius: 0;
