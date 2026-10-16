@@ -7,6 +7,7 @@ import type { OpenCORTheme } from '../../index';
 import * as locSedApi from '../libopencor/locSedApi';
 
 import { MEDIUM_DELAY, VERY_SHORT_DELAY } from './constants';
+import { electronApi } from './electronApi';
 
 // A constant to know the UID of the active instance of OpenCOR.
 
@@ -26,6 +27,7 @@ export const useTheme = vueusecore.createGlobalState(() => {
   };
 
   const updateDocumentClasses = () => {
+    document.documentElement.classList.toggle('opencor-light-mode', isLightMode.value);
     document.documentElement.classList.toggle('opencor-dark-mode', isDarkMode.value);
   };
 
@@ -41,7 +43,10 @@ export const useTheme = vueusecore.createGlobalState(() => {
   };
 
   const setTheme = (newTheme: OpenCORTheme | undefined) => {
-    _theme.value = newTheme ?? 'system';
+    // Note: the given theme may come from our settings, which may have been edited by hand, so we fall back on the
+    //       system theme for anything that is not a valid theme.
+
+    _theme.value = newTheme === 'light' || newTheme === 'dark' ? newTheme : 'system';
 
     if (_theme.value === 'light') {
       isLightMode.value = true;
@@ -56,6 +61,15 @@ export const useTheme = vueusecore.createGlobalState(() => {
     updateDocumentClasses();
   };
 
+  const applyTheme = (newTheme: OpenCORTheme) => {
+    // Set the given theme and let Electron know about it (e.g., for its dialogs), if we are running in Electron.
+    // Note: unlike setTheme(), this is to be used when the user changes our theme, not when we initialise it.
+
+    setTheme(newTheme);
+
+    electronApi?.applyTheme(_theme.value);
+  };
+
   const useLightMode = (): boolean => {
     return isLightMode.value;
   };
@@ -67,6 +81,7 @@ export const useTheme = vueusecore.createGlobalState(() => {
   return {
     theme,
     setTheme,
+    applyTheme,
     useLightMode,
     useDarkMode
   };

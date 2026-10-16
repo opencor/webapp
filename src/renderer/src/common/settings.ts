@@ -6,7 +6,8 @@ import { electronApi } from './electronApi';
 const defaultSettings = (): ISettings => {
   return {
     general: {
-      checkForUpdatesAtStartup: true
+      checkForUpdatesAtStartup: true,
+      theme: 'system'
     }
   };
 };

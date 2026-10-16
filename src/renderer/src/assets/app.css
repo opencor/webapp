@@ -15,6 +15,10 @@
 /* biome-ignore lint/correctness/noInvalidPositionAtImportRule: ignored using `--suppress` */
 @import "primeicons/primeicons.css";
 
+/* Make Tailwind CSS's dark variant follow our theme rather than (necessarily) the system's theme. */
+
+@custom-variant dark (&:where(.opencor-dark-mode, .opencor-dark-mode *));
+
 body {
   *,
   ::before,

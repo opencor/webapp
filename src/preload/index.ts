@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node';
 
+import type { OpenCORTheme } from '../renderer/index';
 import type { ISettings } from '../renderer/src/common/common';
 
 // A helper function to listen to a channel from the main process.
@@ -84,6 +85,7 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
 
   // Renderer process asking the main process to do something for it.
 
+  applyTheme: (theme: OpenCORTheme) => electron.ipcRenderer.invoke('apply-theme', theme),
   checkForUpdates: (atStartup: boolean) => electron.ipcRenderer.invoke('check-for-updates', atStartup),
   clearGitHubCache: (): Promise<void> => electron.ipcRenderer.invoke('clear-github-cache'),
   deleteGitHubAccessToken: (): Promise<boolean> => electron.ipcRenderer.invoke('delete-github-access-token'),
