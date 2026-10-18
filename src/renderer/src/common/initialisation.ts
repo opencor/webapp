@@ -38,6 +38,16 @@ const externalDependencies: ExternalDependency[] = [
     name: 'Plotly.js',
     url: 'https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.2/+esm',
     set: (m) => dependencies.setPlotlyJs(m)
+  },
+  {
+    // Note: the version of uPlot must be the same as the one of our uplot devDependency (which we use for its types)
+    //       in both package.json files, hence we pin the latter (so that bun run dependencies:update doesn't update
+    //       it on its own).
+
+    name: 'uPlot',
+    url: 'https://cdn.jsdelivr.net/npm/uplot@1.6.32/+esm',
+    set: (m) => dependencies.setUPlot(m),
+    cssUrl: 'https://cdn.jsdelivr.net/npm/uplot@1.6.32/dist/uPlot.min.css'
   }
 ];
 
