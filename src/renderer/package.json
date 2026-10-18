@@ -43,7 +43,7 @@
     "./style.css": "./dist/opencor.css"
   },
   "version": "1.20261019.0",
-  "libopencorVersion": "1.20261016.1",
+  "libopencorVersion": "1.20261019.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.ts",
     "build:lib": "vite build --config vite.lib.config.ts && bun --bun scripts/type.check.ts --project tsconfig.lib.types.json",
@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@napi-rs/keyring": "^2.1.1",
-    "@opencor/libopencor-types": "^1.20261016.1",
+    "@opencor/libopencor-types": "^1.20261019.0",
     "@primeuix/themes": "2.0.3",
     "@primevue/auto-import-resolver": "4.2.5",
     "@vueuse/core": "12.8.2",
@@ -87,7 +87,7 @@
     "@vitejs/plugin-vue": "^6.0.10",
     "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.6.1",
-    "postcss": "^8.5.30",
+    "postcss": "^8.5.31",
     "rollup-plugin-visualizer": "^7.1.1",
     "stylelint": "^17.16.0",
     "stylelint-config-standard": "^40.0.0",
