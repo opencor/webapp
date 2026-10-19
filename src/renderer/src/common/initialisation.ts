@@ -319,15 +319,26 @@ const createLazyInitialiser = (
 
       if (cssUrl) {
         if (!injectedCss.has(cssUrl)) {
-          const cssText = await withRetries(`${name}'s stylesheet`, async () => {
-            const response = await fetch(/* @vite-ignore */ cssUrl, { mode: 'cors' });
+          // Note: we report a failure to load the CSS as such since, unlike a failure to import a module, its error
+          //       (e.g., "Failed to fetch") doesn't otherwise tell what failed.
 
-            if (!response.ok) {
-              throw new Error(`Failed to load ${name ?? 'stylesheet'} (${response.status}: ${response.statusText}).`);
-            }
+          let cssText: string;
 
-            return response.text();
-          });
+          try {
+            cssText = await withRetries(`${name}'s stylesheet`, async (attempt) => {
+              const response = await fetch(/* @vite-ignore */ attemptUrl(cssUrl, attempt), { mode: 'cors' });
+
+              if (!response.ok) {
+                throw new Error(`${response.status}: ${response.statusText}`);
+              }
+
+              return response.text();
+            });
+          } catch (error: unknown) {
+            throw new Error(`Failed to load ${name}'s stylesheet from ${cssUrl} (${common.formatError(error)}).`, {
+              cause: error
+            });
+          }
 
           const style = document.createElement('style');
 
