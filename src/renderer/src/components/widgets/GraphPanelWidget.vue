@@ -417,6 +417,176 @@ const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
   };
 };
 
+const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, index0: number, index1: number) => {
+  // uPlot doesn't support unsorted X values (e.g., phase plots) and draws each (device) pixel column of a dense trace
+  // as a vertical line, which makes the steep parts of a trace look jagged. So, we use our own linear path builder
+  // instead.
+  // Note #1: for each set of consecutive points that are in the same (device) pixel column, we only draw its first,
+  //          minimum, maximum, and last points, in their original order and at their exact position (skipping any of
+  //          them that is at the same position as the point drawn before it). This means that a smooth trace is drawn
+  //          as-is while the number of segments that we draw (and therefore the time it takes to draw them) is limited
+  //          to four per set of consecutive points in a pixel column (e.g., with noisy data).
+  // Note #2: we only ever look at consecutive points, so this works whether or not our X values are sorted.
+  // Note #3: we break our path at non-finite values, so that a gap in the data is drawn as a gap in the trace.
+
+  const [xValues, yValues] = (u.data as unknown as [null, ...[math.FloatArray, math.FloatArray][]])[seriesIndex] ?? [];
+  const xMin = u.scales.x?.min;
+  const xMax = u.scales.x?.max;
+  const yMin = u.scales.y?.min;
+  const yMax = u.scales.y?.max;
+  const stroke = new Path2D();
+
+  if (xValues && yValues && xMin != null && xMax != null && yMin != null && yMax != null) {
+    const { left, top, width, height } = u.bbox;
+    const xFactor = width / (xMax - xMin);
+    const yFactor = height / (yMax - yMin);
+    const bottom = top + height;
+    const end = Math.min(index1, xValues.length - 1, yValues.length - 1);
+    let penDown = false;
+    let column = Number.NaN;
+    let firstIndex = -1;
+    let firstXPos = 0;
+    let firstYPos = 0;
+    let minIndex = -1;
+    let minXPos = 0;
+    let minYPos = 0;
+    let maxIndex = -1;
+    let maxXPos = 0;
+    let maxYPos = 0;
+    let lastIndex = -1;
+    let lastXPos = 0;
+    let lastYPos = 0;
+
+    const drawColumn = (): void => {
+      // Draw the minimum and maximum points of our current column (in their original order) unless they are its first
+      // point (which we have already drawn) or its last point (which we draw last), and skipping any point that is at
+      // the same position as the point drawn before it (since it would result in a zero-length segment).
+
+      // If we don't have a first point, then we don't have a column to draw.
+
+      if (firstIndex === -1) {
+        return;
+      }
+
+      // Draw the minimum and maximum points of our current column in their original order.
+
+      let drawnXPos = firstXPos;
+      let drawnYPos = firstYPos;
+
+      const drawTo = (xPos: number, yPos: number): void => {
+        if (xPos !== drawnXPos || yPos !== drawnYPos) {
+          stroke.lineTo(xPos, yPos);
+
+          drawnXPos = xPos;
+          drawnYPos = yPos;
+        }
+      };
+
+      const drawPoint = (index: number, xPos: number, yPos: number): void => {
+        if (index !== firstIndex && index !== lastIndex) {
+          drawTo(xPos, yPos);
+        }
+      };
+
+      if (minIndex < maxIndex) {
+        drawPoint(minIndex, minXPos, minYPos);
+        drawPoint(maxIndex, maxXPos, maxYPos);
+      } else {
+        drawPoint(maxIndex, maxXPos, maxYPos);
+        drawPoint(minIndex, minXPos, minYPos);
+      }
+
+      // Draw the last point of our current column.
+
+      if (lastIndex !== firstIndex) {
+        drawTo(lastXPos, lastYPos);
+      }
+
+      // Reset our state so that we start a new column with the next point.
+
+      firstIndex = -1;
+    };
+
+    // Process each point in our trace.
+
+    for (let i = index0; i <= end; ++i) {
+      // Make sure that our point has finite X and Y values.
+
+      const x = xValues[i] as number;
+      const y = yValues[i] as number;
+
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        // Either our X or Y value is not finite, so draw our previous column, if any.
+
+        drawColumn();
+
+        // Reset our state so that we start a new column with the next point.
+
+        penDown = false;
+        column = Number.NaN;
+
+        continue;
+      }
+
+      // Convert our point to device coordinates.
+
+      const xPos = left + (x - xMin) * xFactor;
+      const yPos = bottom - (y - yMin) * yFactor;
+      const xPixel = Math.round(xPos);
+
+      // If our point is in a different (device) pixel column than the previous point, then draw the previous column and
+      // start a new one.
+
+      if (xPixel !== column) {
+        // Draw our previous column, if any.
+
+        drawColumn();
+
+        // Draw our current point.
+
+        if (penDown) {
+          stroke.lineTo(xPos, yPos);
+        } else {
+          stroke.moveTo(xPos, yPos);
+
+          penDown = true;
+        }
+
+        // Start a new column.
+
+        column = xPixel;
+        firstIndex = minIndex = maxIndex = lastIndex = i;
+        firstXPos = minXPos = maxXPos = lastXPos = xPos;
+        firstYPos = minYPos = maxYPos = lastYPos = yPos;
+
+        continue;
+      }
+
+      // We are in the same column, so update our minimum and maximum points if needed.
+
+      if (yPos < minYPos) {
+        minIndex = i;
+        minXPos = xPos;
+        minYPos = yPos;
+      } else if (yPos > maxYPos) {
+        maxIndex = i;
+        maxXPos = xPos;
+        maxYPos = yPos;
+      }
+
+      // Update our last point to be our current point.
+
+      lastIndex = i;
+      lastXPos = xPos;
+      lastYPos = yPos;
+    }
+
+    drawColumn();
+  }
+
+  return { stroke, fill: null, clip: null, flags: 0 };
+};
+
 const plotData = (): uPlot.AlignedData => {
   // The data to be plotted.
   // Note: uPlot needs at least one series, hence we use an empty one if we have no traces.
@@ -436,7 +606,7 @@ const createPlot = (width: number, height: number): void => {
 
   plot?.destroy();
 
-  // Create a series for each trace, using the trace's color for the stroke and no points.
+  // Create a series for each trace, using the trace's color for the stroke, our linear path builder, and no points.
 
   const series: uPlot.Series[] = [{}];
 
@@ -444,6 +614,7 @@ const createPlot = (width: number, height: number): void => {
     series.push({
       stroke: (_plot: uPlot, seriesIndex: number) => props.data.traces[seriesIndex - 1]?.color ?? 'transparent',
       width: 2,
+      paths: linearPaths,
       points: { show: false },
       facets: [
         { scale: 'x', auto: true },
