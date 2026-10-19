@@ -140,6 +140,7 @@ import { useViewRegistry, ViewCategory } from '../common/viewRegistry';
 import * as vueCommon from '../common/vueCommon';
 import ContentsComponent from '../components/ContentsComponent.vue';
 import { provideOpenCORContext } from '../components/OpenCORContext';
+import { provideOpenCORProgressMessage } from '../components/OpenCORProgressMessage';
 import { provideOpenCORToast } from '../components/OpenCORToast';
 import * as locApi from '../libopencor/locApi';
 
@@ -346,6 +347,15 @@ trackCleanup(
   })
 );
 
+// Provide access to our progress message features.
+// Note: this must be done before compBlockUiEnabled is computed below since it relies on progressMessageVisible.
+
+const {
+  visible: progressMessageVisible,
+  message: progressMessageMessage,
+  progress: progressMessageProgress
+} = provideOpenCORProgressMessage();
+
 // Determine whether the component UI should be blocked/enabled.
 // Note: compBlockUiEnabled is used to determine whether PrimeVue's BlockUI component should be enabled, whereas
 //       compUiEnabled is used to determine whether the UI should be enabled (it checks whether various dialogs are
@@ -417,38 +427,6 @@ const compBackgroundVisible = vue.computed<boolean>(() => {
     !!props.omex
   );
 });
-
-// Provide access to our progress message features.
-
-export interface IProgressMessage {
-  show: (message: string) => void;
-  update: (percent: number) => void;
-  hide: () => void;
-}
-
-const show = (message: string): void => {
-  progressMessageMessage.value = message;
-  progressMessageProgress.value = 0;
-  progressMessageVisible.value = true;
-};
-
-const update = (percent: number): void => {
-  progressMessageProgress.value = percent;
-};
-
-const hide = (): void => {
-  progressMessageVisible.value = false;
-};
-
-vue.provide<IProgressMessage>('progressMessage', {
-  show,
-  update,
-  hide
-});
-
-const progressMessageVisible = vue.ref<boolean>(false);
-const progressMessageMessage = vue.ref<string>('');
-const progressMessageProgress = vue.ref<number>(0);
 
 // Get the current Vue app instance to use some PrimeVue plugins.
 

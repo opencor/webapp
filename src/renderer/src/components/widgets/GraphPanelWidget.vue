@@ -20,7 +20,7 @@ import * as dependencies from '../../common/dependencies';
 import * as math from '../../common/math';
 import * as vueCommon from '../../common/vueCommon';
 
-import type { IProgressMessage } from '../OpenCOR.vue';
+import { useOpenCORProgressMessage } from '../OpenCORProgressMessage';
 
 const CONTEXT_MENU_EVENT: string = 'graph-panel-context-menu-open';
 
@@ -157,7 +157,7 @@ const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
-const progressMessage = vue.inject<IProgressMessage>('progressMessage');
+const progressMessage = useOpenCORProgressMessage();
 let plotIsReady = false;
 let isUnmounted = false;
 let trackedWidth = 0;
@@ -370,9 +370,7 @@ const exportToCsv = async (): Promise<void> => {
 
   // Show the progress message.
 
-  if (progressMessage) {
-    progressMessage.show('Exporting data to CSV...');
-  }
+  progressMessage.show('Exporting data to CSV...');
 
   let successfulExport: boolean = true;
 
@@ -443,7 +441,7 @@ const exportToCsv = async (): Promise<void> => {
 
       ++processedRows;
 
-      if (progressMessage && (processedRows % chunkSize === 0 || processedRows === sortedXValues.length)) {
+      if (processedRows % chunkSize === 0 || processedRows === sortedXValues.length) {
         progressMessage.update(Math.floor(percentPerRow * processedRows));
 
         await common.sleep(NO_DELAY);
@@ -452,9 +450,7 @@ const exportToCsv = async (): Promise<void> => {
 
     // Make sure that we show 100% before finishing.
 
-    if (progressMessage) {
-      progressMessage.update(100);
-    }
+    progressMessage.update(100);
 
     // Create and download the CSV file.
 
@@ -467,13 +463,11 @@ const exportToCsv = async (): Promise<void> => {
     // Hide the progress message. If the export succeeded then delay briefly so that the user can see that we reached
     // 100%. Otherwise, hide immediately to avoid blocking the UI unnecessarily.
 
-    if (progressMessage) {
-      if (successfulExport) {
-        await common.sleep(LONG_DELAY);
-      }
-
-      progressMessage.hide();
+    if (successfulExport) {
+      await common.sleep(LONG_DELAY);
     }
+
+    progressMessage.hide();
   }
 };
 
