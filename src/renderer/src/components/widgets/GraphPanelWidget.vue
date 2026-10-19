@@ -1,7 +1,11 @@
 <template>
   <div ref="rootRef" class="flex flex-row h-full">
     <div v-if="showMarker" class="w-0.75 bg-primary" />
-    <div ref="mainDivRef" class="grow h-full" @contextmenu="onContextMenu" />
+    <div ref="mainDivRef" class="grow h-full min-w-0 relative overflow-hidden" :style="{ backgroundColor: themeColors.background }"
+      @contextmenu="onContextMenu"
+    >
+      <div ref="plotDivRef" class="absolute inset-0" />
+    </div>
     <ContextMenu ref="contextMenuRef" :model="contextMenuItems" :appendTo="appendTarget" />
   </div>
 </template>
@@ -11,11 +15,11 @@ import * as vueusecore from '@vueuse/core';
 
 import ContextMenu from 'primevue/contextmenu';
 import type { MenuItem } from 'primevue/menuitem';
+import type uPlot from 'uplot';
 import * as vue from 'vue';
 
-import * as colors from '../../common/colors';
 import * as common from '../../common/common';
-import { LONG_DELAY, NO_DELAY, SHORT_DELAY } from '../../common/constants';
+import { LONG_DELAY, NO_DELAY } from '../../common/constants';
 import * as dependencies from '../../common/dependencies';
 import * as math from '../../common/math';
 import * as vueCommon from '../../common/vueCommon';
@@ -23,15 +27,6 @@ import * as vueCommon from '../../common/vueCommon';
 import { useOpenCORProgressMessage } from '../OpenCORProgressMessage';
 
 const CONTEXT_MENU_EVENT: string = 'graph-panel-context-menu-open';
-
-interface IPlotlyAxis {
-  range?: [number, number];
-}
-
-interface IPlotlyLayout {
-  xaxis?: IPlotlyAxis;
-  yaxis?: IPlotlyAxis;
-}
 
 export interface IGraphPanelPlotTrace {
   name: string;
@@ -42,16 +37,6 @@ export interface IGraphPanelPlotTrace {
   y: math.FloatArray;
   color: string;
   zorder?: number;
-}
-
-type PlotlyTraceVisible = boolean | 'legendonly';
-
-interface IPlotlyTraceState {
-  name?: string;
-  traceId?: string;
-  xValue?: string;
-  yValue?: string;
-  visible?: PlotlyTraceVisible;
 }
 
 export interface IGraphPanelData {
@@ -67,10 +52,6 @@ export interface IGraphPanelMargins {
   right: number;
 }
 
-const sameMargins = (firstMargins: IGraphPanelMargins | undefined, secondMargins: IGraphPanelMargins): boolean => {
-  return firstMargins?.left === secondMargins.left && firstMargins?.right === secondMargins.right;
-};
-
 const props = withDefaults(
   defineProps<{
     data: IGraphPanelData;
@@ -84,65 +65,51 @@ const props = withDefaults(
   }
 );
 
-const emit = defineEmits<{
+defineEmits<{
   marginsUpdated: [newMargins: IGraphPanelMargins];
 }>();
 
-const trackSize = (): void => {
-  trackedWidth = mainDivRef.value?.clientWidth || 0;
-  trackedHeight = mainDivRef.value?.clientHeight || 0;
-};
-
 const queueResize = (): void => {
-  if (queueResizeRafId !== undefined) {
+  // Make sure that we don't queue multiple resizes at the same time.
+
+  if (resizeRafId !== undefined) {
     return;
   }
 
-  queueResizeRafId = requestAnimationFrame(() => {
-    queueResizeRafId = undefined;
-
-    resize();
-  });
-};
-
-const resize = (): Promise<unknown> => {
-  if (!mainDivRef.value || !plotIsReady) {
-    return Promise.resolve();
-  }
-
-  if (resizeRafId !== undefined) {
-    return Promise.resolve();
-  }
+  // Queue a resize to be performed on the next animation frame.
 
   resizeRafId = requestAnimationFrame(() => {
     resizeRafId = undefined;
 
-    // Note: Plotly rejects resizing a plot that is not displayed (e.g., in a hidden file tab), in which case there is
-    //       nothing to do.
+    // Make sure that we still have a valid size.
 
-    dependencies._plotlyJs.Plots.resize(mainDivRef.value)
-      .then(() => {
-        if (isUnmounted) {
-          return;
-        }
+    const width = mainDivRef.value?.clientWidth || 0;
+    const height = mainDivRef.value?.clientHeight || 0;
 
-        trackSize();
+    if (width <= 0 || height <= 0) {
+      return;
+    }
 
-        updateMarginsAsync();
-      })
-      .catch(() => {});
+    // Update our plot or its size, if needed.
+
+    if (!plot || isPlotOutdated) {
+      updatePlot();
+    } else if (plot.width !== width || plot.height !== height) {
+      plot.setSize({ width, height });
+    }
   });
+};
+
+const resize = (): Promise<unknown> => {
+  // Queue a resize to be performed on the next animation frame.
+
+  queueResize();
 
   return Promise.resolve();
 };
 
 const resetMargins = (): void => {
-  // Forget the margins that we last emitted, so that we emit our current margins (e.g., when the shared margins we are
-  // given are reset, see onResetMargins() in SimulationExperimentInteractiveView.vue).
-
-  trackedMargins = undefined;
-
-  updateMarginsAsync();
+  // Note: we don't share our margins with sibling panels yet, so there is nothing to reset.
 };
 
 defineExpose({
@@ -153,50 +120,53 @@ defineExpose({
 const instanceId = Symbol('GraphPanelWidget');
 const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const mainDivRef = vue.shallowRef<HTMLElement | null>(null);
-const margins = vue.ref<IGraphPanelMargins>({ left: -1, right: -1 });
+const plotDivRef = vue.shallowRef<HTMLElement | null>(null);
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
 const progressMessage = useOpenCORProgressMessage();
-let plotIsReady = false;
+let plot: uPlot | undefined;
+let plotSignature: string | undefined;
+let isPlotOutdated = false;
 let isUnmounted = false;
-let trackedWidth = 0;
-let trackedHeight = 0;
-let trackedMargins: IGraphPanelMargins | undefined;
 let stopTrackingContainerSize: (() => void) | undefined;
-let marginsRafId: number | undefined;
-let queueResizeRafId: number | undefined;
 let resizeRafId: number | undefined;
 
-interface ILegendToggle {
-  curveNumber: number;
-  previousVisibility: PlotlyTraceVisible | undefined;
+// Our theme.
+
+interface IThemeColors {
+  background: string;
+  text: string;
+  grid: string;
 }
 
-let pendingLegendToggle: ILegendToggle | undefined;
-let lastLegendToggle: ILegendToggle | undefined;
-// Note: pendingLegendToggle is the toggle requested by the latest legend click, which may still get cancelled by a
-//       double-click while lastLegendToggle is the latest toggle that was actually made. The latter tells us the
-//       visibility that its trace had before it, which we need if its click turns out to be the first click of a
-//       double-click (see plotly_legenddoubleclick).
+const themeColors = vue.computed<IThemeColors>(() => {
+  const useLightMode = theme.useLightMode();
 
-// Context menu functionality.
+  return {
+    background: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
+    text: useLightMode ? '#334155' : '#ffffff', // --p-text-color
+    grid: useLightMode ? '#e2e8f0' : '#3f3f46' // --p-surface-200 / --p-surface-700
+  };
+});
+
+// Context menu.
 
 const contextMenuItems = vue.computed<MenuItem[]>(() => [
   {
     icon: 'pi pi-search-plus',
     label: 'Zoom In',
-    command: () => zoomIn()
+    disabled: true
   },
   {
     icon: 'pi pi-search-minus',
     label: 'Zoom Out',
-    command: () => zoomOut()
+    disabled: true
   },
   {
     icon: 'pi pi-refresh',
     label: 'Reset Zoom',
-    command: () => resetZoom()
+    disabled: true
   },
   {
     separator: true
@@ -204,33 +174,12 @@ const contextMenuItems = vue.computed<MenuItem[]>(() => [
   {
     icon: 'pi pi-copy',
     label: 'Copy to Clipboard',
-    command: () => copyToClipboard()
+    disabled: true
   },
   {
     icon: 'pi pi-chart-line',
     label: 'Export Plot',
-    items: [
-      {
-        icon: 'pi pi-file',
-        label: 'Export to JPEG',
-        command: () => exportToImage('jpeg')
-      },
-      {
-        icon: 'pi pi-file',
-        label: 'Export to PNG',
-        command: () => exportToImage('png')
-      },
-      {
-        icon: 'pi pi-file',
-        label: 'Export to SVG',
-        command: () => exportToImage('svg')
-      },
-      {
-        icon: 'pi pi-file',
-        label: 'Export to WebP',
-        command: () => exportToImage('webp')
-      }
-    ]
+    disabled: true
   },
   {
     separator: true
@@ -243,7 +192,13 @@ const contextMenuItems = vue.computed<MenuItem[]>(() => [
 ]);
 
 const onContextMenu = (event: MouseEvent): void => {
+  // Prevent the default context menu from being shown.
+
   event.preventDefault();
+
+  // Dispatch a custom event to notify other instances of GraphPanelWidget that our context menu is being shown.
+  // Note: this allows those other instances to hide their context menus if they are open, ensuring that only one
+  //       context menu is open at any given time.
 
   window.dispatchEvent(
     new CustomEvent(CONTEXT_MENU_EVENT, {
@@ -253,110 +208,9 @@ const onContextMenu = (event: MouseEvent): void => {
     })
   );
 
+  // Show our context menu.
+
   contextMenuRef.value?.show(event);
-};
-
-const zoomIn = (): void => {
-  if (!mainDivRef.value) {
-    return;
-  }
-
-  const layout = (mainDivRef.value as unknown as { layout?: IPlotlyLayout }).layout;
-
-  if (!layout?.xaxis?.range || !layout?.yaxis?.range) {
-    return;
-  }
-
-  const xRange = layout.xaxis.range as [number, number];
-  const yRange = layout.yaxis.range as [number, number];
-
-  const xCenter = 0.5 * (xRange[0] + xRange[1]);
-  const yCenter = 0.5 * (yRange[0] + yRange[1]);
-  const xSpan = 0.5 * (xRange[1] - xRange[0]);
-  const ySpan = 0.5 * (yRange[1] - yRange[0]);
-
-  dependencies._plotlyJs.relayout(mainDivRef.value, {
-    'xaxis.range': [xCenter - 0.5 * xSpan, xCenter + 0.5 * xSpan],
-    'yaxis.range': [yCenter - 0.5 * ySpan, yCenter + 0.5 * ySpan]
-  });
-};
-
-const zoomOut = (): void => {
-  if (!mainDivRef.value) {
-    return;
-  }
-
-  const layout = (mainDivRef.value as unknown as { layout?: IPlotlyLayout }).layout;
-
-  if (!layout?.xaxis?.range || !layout?.yaxis?.range) {
-    return;
-  }
-
-  const xRange = layout.xaxis.range as [number, number];
-  const yRange = layout.yaxis.range as [number, number];
-
-  const xCenter = 0.5 * (xRange[0] + xRange[1]);
-  const yCenter = 0.5 * (yRange[0] + yRange[1]);
-  const xSpan = 0.5 * (xRange[1] - xRange[0]);
-  const ySpan = 0.5 * (yRange[1] - yRange[0]);
-
-  dependencies._plotlyJs.relayout(mainDivRef.value, {
-    'xaxis.range': [xCenter - 2 * xSpan, xCenter + 2 * xSpan],
-    'yaxis.range': [yCenter - 2 * ySpan, yCenter + 2 * ySpan]
-  });
-};
-
-const resetZoom = (): void => {
-  if (!mainDivRef.value) {
-    return;
-  }
-
-  dependencies._plotlyJs.relayout(mainDivRef.value, {
-    'xaxis.autorange': true,
-    'yaxis.autorange': true
-  });
-};
-
-const copyToClipboard = async (): Promise<void> => {
-  if (!mainDivRef.value) {
-    return;
-  }
-
-  try {
-    const imageData = await dependencies._plotlyJs.toImage(mainDivRef.value, {
-      format: 'png',
-      width: mainDivRef.value.clientWidth,
-      height: mainDivRef.value.clientHeight
-    });
-
-    const binaryData = atob(imageData.split(',')[1]);
-    const array = Uint8Array.from(binaryData, (c) => c.charCodeAt(0));
-
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        'image/png': new Blob([array], { type: 'image/png' })
-      })
-    ]);
-  } catch (error: unknown) {
-    console.warn('OpenCOR: failed to copy to clipboard:', common.formatError(error));
-  }
-};
-
-const exportToImage = async (format: 'jpeg' | 'png' | 'svg' | 'webp'): Promise<void> => {
-  if (!mainDivRef.value) {
-    return;
-  }
-
-  try {
-    await dependencies._plotlyJs.downloadImage(mainDivRef.value, {
-      format: format,
-      width: mainDivRef.value.clientWidth,
-      height: mainDivRef.value.clientHeight,
-      filename: 'plot'
-    });
-  } catch (error: unknown) {
-    console.warn('OpenCOR: failed to export image:', common.formatError(error));
-  }
 };
 
 const exportToCsv = async (): Promise<void> => {
@@ -376,8 +230,11 @@ const exportToCsv = async (): Promise<void> => {
 
   try {
     // Allow the UI to update before actually starting the export to CSV.
+    // Note: we do this by waiting for two animation frames. The first wait lands just before the next paint while the
+    //       second wait lands just after the next paint.
 
-    await common.sleep(SHORT_DELAY);
+    await common.waitForNextAnimationFrame();
+    await common.waitForNextAnimationFrame();
 
     // Perform the export itself.
     // Note: to efficiently export to CSV, we build an array of CSV lines and only join them together at the end. This is
@@ -432,7 +289,7 @@ const exportToCsv = async (): Promise<void> => {
       const rowParts: string[] = [String(sortedXValue)];
 
       for (let traceIndex = 0; traceIndex < props.data.traces.length; ++traceIndex) {
-        const yValue = traceMaps[traceIndex]?.get(sortedXValue);
+        const yValue = traceMaps[traceIndex].get(sortedXValue);
 
         rowParts.push(yValue !== undefined ? String(yValue) : '');
       }
@@ -471,396 +328,254 @@ const exportToCsv = async (): Promise<void> => {
   }
 };
 
-// Plotly theme and layout data generation.
+// Plotting.
+// Note: we use uPlot's mode 2, i.e. each trace has its own X and Y values, which means that we can plot both time
+//       series and phase plots.
 
-interface IAxisThemeData {
-  zerolinecolor: string;
-  gridcolor: string;
-  minor: {
-    gridcolor: string;
-  };
-}
+type AxisKey = 'x' | 'y';
+type Range = [number, number];
 
-interface IThemeData {
-  paper_bgcolor: string;
-  plot_bgcolor: string;
-  font: { color: string };
-  colorway: string[];
-  xaxis: IAxisThemeData;
-  yaxis: IAxisThemeData;
-}
+const finiteDataRange = (u: uPlot, axisKey: AxisKey): Range | undefined => {
+  // Determine the range of the (finite) values of our visible traces for the given axis.
 
-let cachedThemeMode: boolean | undefined;
-let cachedThemeData: IThemeData | undefined;
+  const data = u.data as unknown as [null, ...[math.FloatArray, math.FloatArray][]];
+  const facetIndex = axisKey === 'x' ? 0 : 1;
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
 
-const themeData = (): IThemeData => {
-  // Use our cached theme data if the theme mode hasn't changed since the last time we generated it.
+  for (let i = 1; i < data.length; ++i) {
+    const values = data[i]?.[facetIndex];
 
-  const useLightMode = theme.useLightMode();
+    if (!values || u.series[i]?.show === false) {
+      continue;
+    }
 
-  if (cachedThemeData !== undefined && cachedThemeMode === useLightMode) {
-    return cachedThemeData;
+    for (let j = 0; j < values.length; ++j) {
+      const value = values[j] as number;
+
+      if (Number.isFinite(value)) {
+        if (value < min) {
+          min = value;
+        }
+
+        if (value > max) {
+          max = value;
+        }
+      }
+    }
   }
 
-  // Generate our theme data.
-  // Note: the various keys can be found at https://plotly.com/javascript/reference/.
-
-  const axisThemeData = (): IAxisThemeData => {
-    return {
-      zerolinecolor: useLightMode ? '#94a3b8' : '#71717a', // --p-surface-400 / --p-surface-500
-      gridcolor: useLightMode ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
-      minor: {
-        gridcolor: useLightMode ? '#f1f5f9' : '#27272a' // --p-surface-100 / --p-surface-800
-      }
-    };
-  };
-
-  cachedThemeMode = useLightMode;
-  cachedThemeData = {
-    paper_bgcolor: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
-    plot_bgcolor: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
-    font: {
-      color: useLightMode ? '#334155' : '#ffffff' // --p-text-color
-    },
-    colorway: colors.PALETTE_COLORS,
-    xaxis: axisThemeData(),
-    yaxis: axisThemeData()
-  };
-
-  return cachedThemeData;
+  return min <= max ? [min, max] : undefined;
 };
 
-interface IAxesDataAxis {
-  automargin: string;
-  range?: [number, number];
-  tickangle: number;
-  tickfont: {
-    size: number;
+const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
+  return (u: uPlot, dataMin: number | null, dataMax: number | null): Range => {
+    // If a (finite) range was given for the axis, then we use it.
+
+    const range = axisKey === 'x' ? props.data.xAxisRange : props.data.yAxisRange;
+
+    if (range && Number.isFinite(range[0]) && Number.isFinite(range[1])) {
+      // Make sure that the given range is in increasing order (e.g., if our ending point is before our starting point)
+      // and has a non-zero width (e.g., if our starting and ending points are the same) since uPlot can handle neither.
+      // Note: like Plotly, we widen a zero-width range by 1 or 1ppm, whichever is bigger.
+
+      const min = Math.min(range[0], range[1]);
+      const max = Math.max(range[0], range[1]);
+
+      if (min === max) {
+        const delta = Math.max(1, 1e-6 * Math.abs(min));
+
+        return [min - delta, max + delta];
+      }
+
+      return [min, max];
+    }
+
+    // No range was given, so we use the range of our data.
+    // Note: uPlot's range of our data may not be finite, e.g., if a trace starts with a NaN value (uPlot then never
+    //       moves away from it) or has an infinite value. In that case, we determine the range of our data ourselves,
+    //       ignoring non-finite values.
+
+    let min = dataMin;
+    let max = dataMax;
+
+    if (min === null || max === null || !Number.isFinite(min) || !Number.isFinite(max)) {
+      const finiteRange = finiteDataRange(u, axisKey);
+
+      if (!finiteRange) {
+        // No (finite) data, so we use a default range.
+
+        return [0, 1000];
+      }
+
+      [min, max] = finiteRange;
+    }
+
+    // Make sure that we have a non-zero range.
+
+    return min === max ? [min - 1, max + 1] : [min, max];
   };
-  title: {
-    standoff: number;
-    text?: string;
-  };
-}
+};
 
-interface IAxesData {
-  xaxis: IAxesDataAxis;
-  yaxis: IAxesDataAxis;
-}
+const plotData = (): uPlot.AlignedData => {
+  // The data to be plotted.
+  // Note: uPlot needs at least one series, hence we use an empty one if we have no traces.
 
-let cachedAxesData: IAxesData | undefined;
-let cachedXAxisTitle: string | undefined;
-let cachedYAxisTitle: string | undefined;
+  const traces = props.data.traces;
 
-const axesData = (): IAxesData => {
-  // Use our cached axes data if the axis titles haven't changed since the last time we generated it.
+  return [
+    null,
+    ...(traces.length
+      ? traces.map((trace: IGraphPanelPlotTrace) => [trace.x, trace.y])
+      : [[common.EMPTY_FLOAT64_ARRAY, common.EMPTY_FLOAT64_ARRAY]])
+  ] as unknown as uPlot.AlignedData;
+};
 
-  const xTitle = props.data.xAxisTitle;
-  const yTitle = props.data.yAxisTitle;
+const createPlot = (width: number, height: number): void => {
+  // Destroy any existing plot before creating a new one.
 
-  if (cachedAxesData !== undefined && cachedXAxisTitle === xTitle && cachedYAxisTitle === yTitle) {
-    return cachedAxesData;
+  plot?.destroy();
+
+  // Create a series for each trace, using the trace's color for the stroke and no points.
+
+  const series: uPlot.Series[] = [{}];
+
+  for (let i = 0; i < Math.max(1, props.data.traces.length); ++i) {
+    series.push({
+      stroke: (_plot: uPlot, seriesIndex: number) => props.data.traces[seriesIndex - 1]?.color ?? 'transparent',
+      width: 2,
+      points: { show: false },
+      facets: [
+        { scale: 'x', auto: true },
+        { scale: 'y', auto: true }
+      ]
+    } as uPlot.Series);
   }
 
-  // Generate our axes data.
-  // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+  // Create our plot.
 
-  cachedXAxisTitle = xTitle;
-  cachedYAxisTitle = yTitle;
+  const colors = themeColors.value;
+  const axis: uPlot.Axis = {
+    stroke: colors.text,
+    ticks: { show: false },
+    grid: { stroke: colors.grid, width: 1 }
+  };
 
-  const axisTickFontSize = 10;
-
-  cachedAxesData = {
-    xaxis: {
-      automargin: 'bottom',
-      tickangle: 0,
-      tickfont: {
-        size: axisTickFontSize
+  plot = new dependencies._uPlot(
+    {
+      mode: 2,
+      width,
+      height,
+      legend: { show: false },
+      cursor: { show: false },
+      scales: {
+        x: { time: false, range: scaleRange('x') },
+        y: { range: scaleRange('y') }
       },
-      title: {
-        standoff: 8,
-        text: xTitle
+      axes: [
+        { ...axis, scale: 'x', side: 2, label: props.data.xAxisTitle },
+        { ...axis, scale: 'y', side: 3, label: props.data.yAxisTitle }
+      ],
+      series,
+      hooks: {
+        setSize: [
+          (u: uPlot) => {
+            // Make sure that our plotting area is at least one pixel wide and high (e.g., if our container is narrower
+            // than our Y axis).
+            // Note: uPlot doesn't prevent its plotting area from having a negative size, in which case it would render
+            //       our plot mirrored. This hook gets called after our plotting area has been laid out and before our
+            //       plot gets drawn, so we can check the size of our plotting area here.
+
+            const pxRatio = dependencies._uPlot.pxRatio as number;
+            const plotWidth = u.bbox.width / pxRatio;
+            const plotHeight = u.bbox.height / pxRatio;
+
+            if (plotWidth >= 1 && plotHeight >= 1) {
+              return;
+            }
+
+            // Enlarge our plot so that its plotting area is at least one pixel wide and high with whatever doesn't fit
+            // in our container getting clipped.
+            // Note #1: we can't enlarge our plot straight away since uPlot is in the middle of updating it, in which
+            //          case it would only partly take our new size into account. So, we enlarge our plot once uPlot is
+            //          done with its update, i.e. in a microtask, which also means that the mirrored plot that uPlot is
+            //          about to draw gets redrawn before the browser gets to paint it.
+            // Note #2: we check that our plot is still the same one as when this hook was called since it could have
+            //          been destroyed (and possibly replaced) in the meantime.
+            // Note #3: we only ever enlarge our plot here, so that we can't end up in an endless loop.
+
+            const width = Math.ceil(u.width + Math.max(0, 1 - plotWidth));
+            const height = Math.ceil(u.height + Math.max(0, 1 - plotHeight));
+
+            queueMicrotask(() => {
+              if (plot === u) {
+                u.setSize({ width, height });
+              }
+            });
+          }
+        ]
       }
-    },
-    yaxis: {
-      automargin: 'left+right',
-      tickangle: 0,
-      tickfont: {
-        size: axisTickFontSize
-      },
-      title: {
-        standoff: 8,
-        text: yTitle
-      }
-    }
-  };
-
-  return cachedAxesData;
-};
-
-const themeAndAxesData = (): IThemeData & IAxesData => {
-  // Merge our theme and axes data.
-  // Note: we merge each axis separately since spreading our axes data would otherwise replace our theme's axes data.
-
-  const themeLayout = themeData();
-  const axesLayout = axesData();
-
-  return {
-    ...themeLayout,
-    xaxis: { ...themeLayout.xaxis, ...axesLayout.xaxis },
-    yaxis: { ...themeLayout.yaxis, ...axesLayout.yaxis }
-  };
-};
-
-const resolvedMargin = (propValue: number | undefined, compValue: number): number => {
-  if (propValue !== undefined) {
-    return propValue;
-  }
-
-  return compValue === -1 ? 0 : compValue;
-};
-
-const compMargins = (): IGraphPanelMargins => {
-  const mainDiv = mainDivRef.value;
-
-  if (!mainDiv) {
-    return {
-      left: 0,
-      right: 0
-    };
-  }
-
-  // Retrieve the width of the Y ticks.
-
-  const yTicks = mainDiv.querySelectorAll('.ytick text');
-  let yTicksWidth = 0;
-
-  if (yTicks?.length) {
-    yTicks.forEach((yTick: Element) => {
-      yTicksWidth = Math.max(yTicksWidth, yTick.getBoundingClientRect()?.width || 0);
-    });
-  }
-
-  // Retrieve the width of the Y Axis title.
-
-  const yTitleWidth = props.data.yAxisTitle ? mainDiv.querySelector('.ytitle')?.getBoundingClientRect()?.width || 0 : 0;
-
-  // Compute the final left margin.
-
-  const leftMargin = yTicksWidth + yTitleWidth;
-
-  // Retrieve the width of the legend, if it's to be shown, and that last X tick.
-  // Note #1: for the last X tick, we only use half its width since the tick is centered on the tick mark.
-  // Note #2: to get the correct width of the last X tick, we temporarily set its display to block in case it was
-  //          hidden, something that can happen if the tick label is long for instance.
-
-  let rightMargin = 0;
-
-  if (props.showLegend) {
-    rightMargin = mainDiv.querySelector('.legend')?.getBoundingClientRect()?.width || 0;
-  }
-
-  const xTicks = mainDiv.querySelectorAll('.xtick text');
-
-  if (xTicks?.length) {
-    const lastTick = xTicks[xTicks.length - 1] as HTMLElement;
-    const originalDisplay = lastTick.style.display;
-
-    lastTick.style.display = 'block';
-
-    rightMargin += 0.5 * (lastTick?.getBoundingClientRect()?.width || 0);
-
-    lastTick.style.display = originalDisplay;
-  }
-
-  return {
-    left: leftMargin ? Math.ceil(leftMargin + 5) : 0,
-    right: rightMargin ? Math.ceil(rightMargin + 5) : 0
-  };
-};
-
-const canMeasureMargins = (): boolean => {
-  const mainDiv = mainDivRef.value;
-
-  if (!mainDiv) {
-    return false;
-  }
-
-  const { width, height } = mainDiv.getBoundingClientRect();
-
-  return width > 0 && height > 0;
-};
-
-const updateMarginsAsync = (): void => {
-  // Coalesce multiple margin update requests into a single requestAnimationFrame() callback.
-
-  if (marginsRafId !== undefined) {
-    return;
-  }
-
-  marginsRafId = requestAnimationFrame(() => {
-    marginsRafId = undefined;
-
-    // Make sure that we can measure our margins before proceeding.
-
-    if (!canMeasureMargins()) {
-      return;
-    }
-
-    const newMargins = compMargins();
-
-    // Emit an update if our margins have changed.
-
-    if (!sameMargins(trackedMargins, newMargins)) {
-      trackedMargins = newMargins;
-
-      emit('marginsUpdated', newMargins);
-    }
-
-    // Update our margins if they have changed.
-
-    const relayoutUpdates: Record<string, number> = {};
-
-    if (!props.margins) {
-      if (margins.value.left !== newMargins.left) {
-        margins.value.left = newMargins.left;
-
-        relayoutUpdates['margin.l'] = margins.value.left;
-      }
-
-      if (margins.value.right !== newMargins.right) {
-        margins.value.right = newMargins.right;
-
-        relayoutUpdates['margin.r'] = margins.value.right;
-      }
-    }
-
-    if (Object.keys(relayoutUpdates).length) {
-      dependencies._plotlyJs.relayout(mainDivRef.value, relayoutUpdates);
-    }
-  });
-};
-
-const plotlyTraceData = (): IPlotlyTraceState[] | undefined => {
-  return (mainDivRef.value as unknown as { data?: IPlotlyTraceState[] })?.data;
+    } as uPlot.Options,
+    plotData(),
+    plotDivRef.value as HTMLElement
+  ) as uPlot;
 };
 
 const updatePlot = (): void => {
   // Make sure that we haven't been unmounted (e.g., if this was scheduled using vue.nextTick() just before we got
-  // unmounted), in which case our plot has been purged and shouldn't be recreated.
+  // unmounted) and that we can be shown (e.g., we can't if we are in a hidden file tab, in which case we will be
+  // updated once we can be shown, see queueResize()).
 
-  if (isUnmounted) {
+  const mainDiv = mainDivRef.value;
+
+  if (isUnmounted || !mainDiv || !plotDivRef.value) {
     return;
   }
 
-  plotIsReady = false;
+  // Make sure that we have a valid size.
 
-  // Update the plots.
+  const width = mainDiv.clientWidth;
+  const height = mainDiv.clientHeight;
 
-  const traceVisibilityKey = (trace: IPlotlyTraceState): string | undefined => {
-    if (trace.traceId) {
-      return `id::${trace.traceId}`;
-    }
+  if (width <= 0 || height <= 0) {
+    isPlotOutdated = true;
 
-    if (trace.name && trace.xValue && trace.yValue) {
-      return `expr::${trace.xValue}::${trace.yValue}::${trace.name}`;
-    }
-
-    return undefined;
-  };
-
-  const previousTraceVisibilityByKey: Record<string, PlotlyTraceVisible> = {};
-  const previousPlotlyData = plotlyTraceData();
-
-  for (const plotlyTrace of previousPlotlyData ?? []) {
-    const plotlyTraceKey = traceVisibilityKey(plotlyTrace);
-
-    if (plotlyTraceKey && plotlyTrace.visible !== undefined) {
-      previousTraceVisibilityByKey[plotlyTraceKey] = plotlyTrace.visible;
-    }
+    return;
   }
 
-  // Pre-allocate the traces array and build each trace inline to avoid .map() closure overhead.
+  isPlotOutdated = false;
 
-  const dataTraces = props.data.traces;
-  const dataTraceCount = dataTraces.length;
-  const traces: unknown[] = new Array(dataTraceCount);
+  // Create or update our plot.
+  // Note: we only (re)create our plot if needed since it is much cheaper to update its data.
 
-  for (let i = 0; i < dataTraceCount; ++i) {
-    const dataTrace = dataTraces[i];
-    const dataTraceKey = traceVisibilityKey(dataTrace);
+  const signature = `${props.data.traces.length}::${props.data.xAxisTitle ?? ''}::${props.data.yAxisTitle ?? ''}::${theme.useLightMode()}`;
 
-    traces[i] = {
-      x: dataTrace.x,
-      y: dataTrace.y,
-      name: dataTrace.name,
-      traceId: dataTrace.traceId,
-      visible: dataTraceKey ? previousTraceVisibilityByKey[dataTraceKey] : undefined,
-      line: { color: dataTrace.color },
-      legendrank: dataTrace.zorder
-    };
-  }
+  if (!plot || signature !== plotSignature) {
+    // We don't yet have a plot or the signature of our plot has changed, so create a new plot.
 
-  // Incorporate any axis range constraints.
+    plotSignature = signature;
 
-  const layout = {
-    // Note: the various keys can be found at https://plotly.com/javascript/reference/.
+    createPlot(width, height);
+  } else {
+    // We already have a plot and its signature hasn't changed, so update its data and size, if needed.
 
-    ...themeAndAxesData(),
-    margin: {
-      t: 0,
-      l: resolvedMargin(props.margins?.left, margins.value.left),
-      b: props.data.xAxisTitle ? 35 : 20,
-      r: resolvedMargin(props.margins?.right, margins.value.right),
-      pad: 0
-    },
-    showlegend: props.showLegend
-  };
+    const currentPlot = plot;
 
-  if (props.data.xAxisRange) {
-    layout.xaxis = { ...layout.xaxis, range: props.data.xAxisRange };
-  }
+    currentPlot.batch(() => {
+      currentPlot.setData(plotData());
 
-  if (props.data.yAxisRange) {
-    layout.yaxis = { ...layout.yaxis, range: props.data.yAxisRange };
-  }
-
-  // Update the plot.
-
-  dependencies._plotlyJs
-    .react(mainDivRef.value, traces, layout, {
-      // Note: the various keys can be found at https://plotly.com/javascript/configuration-options/.
-
-      responsive: true,
-      // Note: to make our plot responsive means that Plotly sizes it relative to its container (rather than using a
-      //       fixed size), which is needed for our plot to shrink when our container does. It also means that Plotly
-      //       observes the size of our plot (using a ResizeObserver) and keeps a reference to it, hence we purge our
-      //       plot when we get unmounted (see onBeforeUnmount()).
-      displayModeBar: false,
-      scrollZoom: true,
-      showTips: false
-    })
-    .then(() => {
-      if (isUnmounted) {
-        return;
+      if (currentPlot.width !== width || currentPlot.height !== height) {
+        currentPlot.setSize({ width, height });
       }
-
-      plotIsReady = true;
-
-      // Recompute margins after every plot update.
-      // Note: this ensures sibling panels in interactive mode stay aligned when simulation data changes.
-
-      updateMarginsAsync();
     });
+  }
 };
 
-interface IPlotlyHTMLElement extends HTMLElement {
-  on(event: string, callback: (...args: unknown[]) => void): void;
-}
+// Context menu handling.
 
 const handleContextMenu = (event: Event): void => {
-  // Hide our context menu if the event was dispatched by another instance of the Graph Panel widget. This ensures that
-  // only one context menu is open at any given time.
+  // Hide our context menu if the event was dispatched by another instance of GraphPanelWidget.
+  // Note: this ensures that only one context menu is open at any given time.
 
   const detail = (event as CustomEvent<{ sourceId?: symbol }>)?.detail;
 
@@ -871,29 +586,20 @@ const handleContextMenu = (event: Event): void => {
   contextMenuRef.value?.hide?.();
 };
 
+// Vue lifecycle hooks.
+
 vue.onMounted(() => {
+  // Listen for the custom event that is dispatched when another instance of GraphPanelWidget shows its context menu.
+
   window.addEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
 
-  // Note: we pass a getter rather than our ref since VueUse uses its own version of Vue's types, which are not
-  //       compatible with ours.
+  // Start tracking the size of our container so that we can update our plot when it changes.
+  // Note: we pass a getter (i.e. mainDivRef.value) rather than our ref (i.e. mainDivRef) since VueUse uses its own
+  //       version of Vue's types, which are not compatible with ours.
 
   const { stop } = vueusecore.useResizeObserver(
     () => mainDivRef.value,
     () => {
-      const width = mainDivRef.value?.clientWidth || 0;
-      const height = mainDivRef.value?.clientHeight || 0;
-
-      if (!plotIsReady || width <= 0 || height <= 0) {
-        return;
-      }
-
-      if (width === trackedWidth && height === trackedHeight) {
-        return;
-      }
-
-      trackedWidth = width;
-      trackedHeight = height;
-
       queueResize();
     },
     {
@@ -902,165 +608,38 @@ vue.onMounted(() => {
   );
 
   stopTrackingContainerSize = stop;
-
-  vue.nextTick(() => {
-    // Update our margins whenever our axes change (e.g., following a zoom, a pan, a double-click, or a call to
-    // zoomIn(), zoomOut(), or resetZoom()), since the width of our tick labels may have changed.
-
-    const plotlyElement = mainDivRef.value as IPlotlyHTMLElement;
-
-    plotlyElement.on('plotly_relayout', (...args: unknown[]) => {
-      const eventData = args[0] as Record<string, unknown> | undefined;
-
-      if (eventData && Object.keys(eventData).some((key) => key.startsWith('xaxis.') || key.startsWith('yaxis.'))) {
-        updateMarginsAsync();
-      }
-    });
-
-    // Intercept legend single-click to toggle trace visibility immediately, bypassing Plotly's setTimeout()-based
-    // handler.
-    // Note: Plotly emits plotly_legendclick for both clicks of a double-click and then plotly_legenddoubleclick
-    //       straight after the second one (within the same call). So, rather than toggle the trace straight away, we do
-    //       it in a microtask, which gets cancelled if the click turns out to be the second click of a double-click
-    //       (see plotly_legenddoubleclick). This way, we rely on Plotly to tell a click from a double-click while still
-    //       toggling the trace without any noticeable delay.
-
-    plotlyElement.on('plotly_legendclick', (...args: unknown[]) => {
-      const eventData = args[0] as { curveNumber?: number } | undefined;
-      const curveNumber = eventData?.curveNumber;
-
-      if (curveNumber === undefined) {
-        return;
-      }
-
-      // Toggle the trace visibility immediately.
-
-      const plotlyData = plotlyTraceData();
-
-      if (!plotlyData || curveNumber >= plotlyData.length) {
-        return false;
-      }
-
-      const legendToggle: ILegendToggle = {
-        curveNumber,
-        previousVisibility: plotlyData[curveNumber]?.visible
-      };
-
-      pendingLegendToggle = legendToggle;
-
-      queueMicrotask(() => {
-        if (pendingLegendToggle !== legendToggle || isUnmounted) {
-          return;
-        }
-
-        pendingLegendToggle = undefined;
-        lastLegendToggle = legendToggle;
-
-        dependencies._plotlyJs.restyle(
-          mainDivRef.value,
-          'visible',
-          legendToggle.previousVisibility === 'legendonly' ? true : 'legendonly',
-          [curveNumber]
-        );
-      });
-
-      // Return false to cancel Plotly's own setTimeout()-based handler.
-
-      return false;
-    });
-
-    // Intercept legend double-click to implement trace isolation (show only the clicked trace) immediately, since we
-    // already cancelled the single-click path.
-
-    plotlyElement.on('plotly_legenddoubleclick', (...args: unknown[]) => {
-      const eventData = args[0] as { curveNumber?: number } | undefined;
-      const curveNumber = eventData?.curveNumber;
-
-      // Cancel the toggle requested by the second click of this double-click (see plotly_legendclick).
-
-      pendingLegendToggle = undefined;
-
-      if (curveNumber === undefined) {
-        return false;
-      }
-
-      // Note: the first click of this double-click has already toggled the visibility of the clicked trace (see
-      //       plotly_legendclick), so we use the visibility that it had before that click. Otherwise, double-clicking
-      //       the only visible trace would isolate it again rather than show all the traces again.
-
-      const firstClickToggle = lastLegendToggle?.curveNumber === curveNumber ? lastLegendToggle : undefined;
-
-      lastLegendToggle = undefined;
-
-      const plotlyData = plotlyTraceData();
-
-      if (!plotlyData || curveNumber >= plotlyData.length) {
-        return false;
-      }
-
-      // Collect the indices of visible (not 'legendonly') traces, as they were before this double-click.
-
-      const visibleIndices: number[] = [];
-
-      for (let i = 0; i < plotlyData.length; ++i) {
-        const visibility =
-          i === curveNumber && firstClickToggle ? firstClickToggle.previousVisibility : plotlyData[i]?.visible;
-
-        if (plotlyData[i] && visibility !== 'legendonly' && visibility !== false) {
-          visibleIndices.push(i);
-        }
-      }
-
-      // If the clicked trace is the only one visible, then show all traces again. Otherwise, isolate the clicked trace
-      // by hiding all the other traces (by setting them to 'legendonly').
-
-      const isSoleVisible = visibleIndices.length === 1 && visibleIndices[0] === curveNumber;
-
-      if (isSoleVisible) {
-        dependencies._plotlyJs.restyle(mainDivRef.value, 'visible', true);
-      } else {
-        const visibilityUpdates: PlotlyTraceVisible[] = new Array(plotlyData.length);
-
-        for (let i = 0; i < plotlyData.length; ++i) {
-          visibilityUpdates[i] = i === curveNumber ? true : 'legendonly';
-        }
-
-        dependencies._plotlyJs.restyle(mainDivRef.value, 'visible', visibilityUpdates);
-      }
-
-      return false;
-    });
-  });
 });
 
-// Release our plot before we get unmounted, i.e. while we still have access to it.
-// Note: Plotly keeps a lot of data (traces, calculated data, SVG elements, event handlers, etc.) attached to our plot,
-//       so we need to purge it to make sure that all of that data gets released.
-
 vue.onBeforeUnmount(() => {
+  // Make sure that we don't queue any more resizes after we are unmounted.
+
   isUnmounted = true;
-  plotIsReady = false;
 
-  for (const rafId of [marginsRafId, queueResizeRafId, resizeRafId]) {
-    if (rafId !== undefined) {
-      cancelAnimationFrame(rafId);
-    }
+  // Stop tracking the size of our container.
+
+  if (resizeRafId !== undefined) {
+    cancelAnimationFrame(resizeRafId);
+
+    resizeRafId = undefined;
   }
 
-  marginsRafId = undefined;
-  queueResizeRafId = undefined;
-  resizeRafId = undefined;
+  // Destroy our plot, if any.
 
-  if (mainDivRef.value) {
-    dependencies._plotlyJs.purge(mainDivRef.value);
-  }
+  plot?.destroy();
+
+  plot = undefined;
 });
 
 vue.onUnmounted(() => {
+  // Stop listening for the custom event that is dispatched when another instance of GraphPanelWidget shows its context
+  // menu.
+
   window.removeEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
 
   stopTrackingContainerSize?.();
 });
+
+// Update our plot when the data changes.
 
 vue.watch(
   () => props.data,
@@ -1072,74 +651,14 @@ vue.watch(
   { immediate: true }
 );
 
+// Update our plot when the theme changes.
+
 vue.watch(
   () => theme.useLightMode(),
   () => {
     vue.nextTick(() => {
-      if (plotIsReady && mainDivRef.value) {
-        dependencies._plotlyJs.relayout(mainDivRef.value, themeAndAxesData());
-      }
+      updatePlot();
     });
-  },
-  { immediate: true }
-);
-
-vue.watch(
-  () => props.margins,
-  (newMargins, oldMargins) => {
-    // Nothing to do if our margins haven't actually changed (e.g., if we were given a new object with the same values).
-
-    if (newMargins && oldMargins && sameMargins(oldMargins, newMargins)) {
-      return;
-    }
-
-    vue
-      .nextTick(() => {
-        if (plotIsReady && mainDivRef.value) {
-          return dependencies._plotlyJs.relayout(mainDivRef.value, {
-            'margin.l': resolvedMargin(props.margins?.left, margins.value.left),
-            'margin.r': resolvedMargin(props.margins?.right, margins.value.right)
-          });
-        }
-      })
-      .then(() => {
-        if (!props.margins) {
-          // When shared margins are unset, we need to clear our tracked margins so that we can emit them.
-
-          resetMargins();
-        }
-      });
-  },
-  { immediate: true }
-);
-
-vue.watch(
-  () => props.showLegend,
-  () => {
-    vue.nextTick(() => {
-      if (plotIsReady && mainDivRef.value) {
-        dependencies._plotlyJs
-          .relayout(mainDivRef.value, {
-            showlegend: props.showLegend
-          })
-          .then(() => {
-            updateMarginsAsync();
-          });
-      }
-    });
-  },
-  { immediate: true }
+  }
 );
 </script>
-
-<style scoped>
-  /**
-   * Plotly draws trace lines with vector-effect: non-scaling-stroke, but not legend line swatches. So, whenever the
-   * plot is scaled (e.g., Electron page zoom), legend swatches render thicker than the traces they represent. So, we
-   * give the legend the same behaviour so that it remains an accurate preview of the traces.
-   */
-
-  :deep(.legend path.js-line) {
-    vector-effect: non-scaling-stroke;
-  }
-</style>
