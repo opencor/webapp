@@ -69,6 +69,28 @@ defineEmits<{
   marginsUpdated: [newMargins: IGraphPanelMargins];
 }>();
 
+// Some constants (in CSS pixels, where relevant).
+// Note: we want to look and behave like Plotly, so most of these constants are either Plotly's defaults (see
+//       https://plotly.com/javascript/reference/) or what we used to give Plotly.
+
+const FONT_FAMILY = '"Open Sans", verdana, arial, sans-serif';
+const TICK_FONT_SIZE = 10;
+const TITLE_FONT_SIZE = 14;
+const TICK_LABEL_GAP = 1; // Gap between our plotting area and our tick labels.
+const TICK_LABEL_HALF_HEIGHT = 6; // Used to hide a Y tick label that would (partly) be above our container.
+const X_AXIS_SIZE_WITH_TITLE = 18; // Size of our X axis (without its title) if it has a title.
+const X_AXIS_SIZE_WITHOUT_TITLE = 20; // Size of our X axis if it doesn't have a title.
+const X_AXIS_TITLE_SIZE = 17;
+const Y_AXIS_TITLE_SIZE = 17;
+const Y_AXIS_TITLE_GAP = 1.5;
+const Y_AXIS_EXTRA_SIZE = 5; // Extra size of our Y axis, on top of the width of its tick labels.
+const MAJOR_TICK_MIN_X_SPACING = 80;
+const MAJOR_TICK_MIN_Y_SPACING = 40;
+const NB_OF_MINOR_TICKS = 5;
+const MAX_NB_OF_TICKS = 1000; // A safeguard against an axis needing an unreasonable number of ticks.
+
+// Resize handling.
+
 const queueResize = (): void => {
   // Make sure that we don't queue multiple resizes at the same time.
 
@@ -138,6 +160,8 @@ interface IThemeColors {
   background: string;
   text: string;
   grid: string;
+  minorGrid: string;
+  zeroLine: string;
 }
 
 const themeColors = vue.computed<IThemeColors>(() => {
@@ -146,7 +170,9 @@ const themeColors = vue.computed<IThemeColors>(() => {
   return {
     background: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
     text: useLightMode ? '#334155' : '#ffffff', // --p-text-color
-    grid: useLightMode ? '#e2e8f0' : '#3f3f46' // --p-surface-200 / --p-surface-700
+    grid: useLightMode ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
+    minorGrid: useLightMode ? '#f1f5f9' : '#27272a', // --p-surface-100 / --p-surface-800
+    zeroLine: useLightMode ? '#94a3b8' : '#71717a' // --p-surface-400 / --p-surface-500
   };
 });
 
@@ -417,6 +443,336 @@ const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
   };
 };
 
+// Number formatting like in Plotly (with its default 'B' exponent format, i.e. SI prefixes except for 10^9 which is B).
+
+const MINUS_SIGN = '−';
+const SI_PREFIXES = ['f', 'p', 'n', 'μ', 'm', '', 'k', 'M', 'G', 'T'];
+const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+
+const beyondSI = (exponent: number): boolean => {
+  // Return whether the given exponent is beyond our SI prefixes.
+
+  return exponent > 14 || exponent < -15;
+};
+
+const separateThousands = (text: string): string => {
+  // Separate the thousands of the given (positive) number, if it has some decimals or more than four digits.
+
+  const [integerPart = '', decimalPart] = text.split('.');
+  let res = integerPart;
+
+  if (decimalPart !== undefined || integerPart.length > 4) {
+    while (/(\d+)(\d{3})/.test(res)) {
+      res = res.replace(/(\d+)(\d{3})/, '$1,$2');
+    }
+  }
+
+  return decimalPart === undefined ? res : `${res}.${decimalPart}`;
+};
+
+interface INumberFormat {
+  tickRound: number; // Number of digits after the decimal point.
+  exponent: number; // Common exponent (of an SI prefix), if any.
+}
+
+const numberFormat = (dtick: number, maxEnd: number): INumberFormat => {
+  // Determine the format of our tick labels from our tick spacing and from the end of our axis that is the furthest
+  // away from zero.
+
+  const rangeExponent = Math.floor(Math.log10(maxEnd) + 0.01);
+
+  return {
+    tickRound: 2 - Math.floor(Math.log10(dtick) + 0.01),
+    exponent:
+      Number.isFinite(rangeExponent) && Math.abs(rangeExponent) > 3
+        ? beyondSI(rangeExponent)
+          ? rangeExponent
+          : 3 * Math.round((rangeExponent - 1) / 3)
+        : 0
+  };
+};
+
+const formatNumber = (value: number, format: INumberFormat): string => {
+  // The value is not finite, so we just return it as a string (e.g., 'NaN' or 'Infinity').
+
+  if (!Number.isFinite(value)) {
+    return String(value);
+  }
+
+  // A number that is (almost) zero is formatted as zero.
+
+  let absValue = Math.abs(value);
+  let tickRound = format.tickRound;
+
+  if (absValue < 10 ** -tickRound / 2) {
+    return '0';
+  }
+
+  // Apply our exponent, if any.
+
+  if (format.exponent) {
+    absValue *= 10 ** -format.exponent;
+    tickRound += format.exponent;
+  }
+
+  // Round our number and remove any trailing zeros.
+
+  let res: string;
+
+  if (tickRound === 0) {
+    res = String(Math.round(absValue));
+  } else if (tickRound < 0) {
+    const magnitude = 10 ** -tickRound;
+
+    res = String(Math.round(absValue / magnitude) * magnitude);
+  } else {
+    res = absValue.toFixed(Math.min(20, tickRound)).replace(/\.?0+$/, '');
+  }
+
+  // Determine whether our number is negative (we don't want to show a minus sign for zero).
+
+  let isNegative = value < 0;
+
+  if (res === '0') {
+    isNegative = false;
+  }
+
+  // Separate our thousands and add our SI prefix or exponent, if any.
+
+  res = separateThousands(res);
+
+  if (format.exponent) {
+    if (beyondSI(format.exponent)) {
+      res += `×10${[...String(format.exponent)].map((character: string) => (character === '-' ? '⁻' : SUPERSCRIPT_DIGITS[Number(character)])).join('')}`;
+    } else if (format.exponent === 9) {
+      res += 'B';
+    } else {
+      res += SI_PREFIXES[format.exponent / 3 + 5] ?? '';
+    }
+  }
+
+  // Add a minus sign if our number is negative.
+
+  return isNegative ? MINUS_SIGN + res : res;
+};
+
+// Ticks, like Plotly, i.e. major ticks that are multiples of a "nice" spacing (which depends on the length of our axis)
+// and minor ticks (only used for our minor grid lines) that split a major tick spacing in four or five.
+
+interface IAxisTicks {
+  format: INumberFormat;
+  minorTicks: number[];
+}
+
+const axisTicks: Partial<Record<AxisKey, IAxisTicks>> = {};
+
+const roundDTick = (roughDTick: number): number => {
+  // Round the given rough tick spacing up to the next "nice" value, i.e. 2, 5, or 10 times a power of ten.
+
+  const base = 10 ** Math.floor(Math.log10(roughDTick));
+  const value = roughDTick / base;
+
+  return base * ([2, 5, 10].find((niceValue: number) => niceValue > value) ?? 10);
+};
+
+const ticksBetween = (min: number, max: number, dtick: number): number[] => {
+  // Return the multiples of the given tick spacing that are between the given minimum and maximum values.
+  // Note #1: we round our ticks to 14 significant digits, so that they don't suffer from floating point errors (e.g.,
+  //          0.30000000000000004 rather than 0.3).
+  // Note #2: we count our ticks rather than increment our tick index since the latter may not change if it is big
+  //          enough (e.g., with a tiny range far away from zero), in which case we would end up in an endless loop.
+
+  const res: number[] = [];
+  const tolerance = 1e-9 * dtick;
+  const first = Math.ceil((min - tolerance) / dtick);
+  const nbOfTicks = Math.min(Math.floor((max + tolerance) / dtick) - first + 1, MAX_NB_OF_TICKS);
+
+  for (let i = 0; i < nbOfTicks; ++i) {
+    res.push(Number.parseFloat(((first + i) * dtick).toPrecision(14)));
+  }
+
+  return res;
+};
+
+const isMultiple = (bigger: number, smaller: number): boolean => {
+  // Return whether the given bigger number is (almost) a multiple of the given smaller number.
+
+  return Math.abs(((bigger / smaller + 0.5) % 1) - 0.5) < 0.001;
+};
+
+const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
+  // Return a function that computes the splits (i.e. the positions of our major ticks) for the given axis.
+
+  return (u: uPlot, _axisIndex: number, min: number, max: number): number[] => {
+    // Major ticks, like Plotly, i.e. we aim for one tick every 80 (X axis) or 40 (Y axis) pixels with at least four and
+    // at most nine tick spacings.
+
+    const length = (axisKey === 'x' ? u.bbox.width : u.bbox.height) / (dependencies._uPlot.pxRatio as number);
+    const minSpacing = axisKey === 'x' ? MAJOR_TICK_MIN_X_SPACING : MAJOR_TICK_MIN_Y_SPACING;
+    const nbOfTicks = Math.min(Math.max(length / minSpacing, 4), 9) + 1;
+    const dtick = roundDTick(Math.abs(max - min) / nbOfTicks);
+
+    // Make sure that our tick spacing is valid, i.e. that our range is neither too small (e.g., a subnormal range, in
+    // which case our tick spacing would be zero) nor too big (e.g., a range that overflows, in which case our tick
+    // spacing would be infinite).
+
+    if (!(dtick > 0 && Number.isFinite(dtick))) {
+      axisTicks[axisKey] = {
+        format: { tickRound: 0, exponent: 0 },
+        minorTicks: []
+      };
+
+      return [];
+    }
+
+    const ticks = ticksBetween(min, max, dtick);
+
+    // Minor ticks, like Plotly, i.e. we aim for five minor tick spacings per major tick spacing, making sure that our
+    // major tick spacing is a multiple of our minor tick spacing.
+
+    let minorDtick = roundDTick((0.99 * dtick) / NB_OF_MINOR_TICKS);
+
+    if (!isMultiple(dtick, minorDtick)) {
+      minorDtick = Math.abs(dtick / minorDtick - 2.5) < 0.001 * 2.5 ? dtick / 2 : dtick;
+    }
+
+    // Keep track of the format of our tick labels and of our minor ticks (excluding those that are also major ticks).
+
+    axisTicks[axisKey] = {
+      format: numberFormat(dtick, Math.max(Math.abs(min), Math.abs(max))),
+      minorTicks:
+        minorDtick < dtick
+          ? ticksBetween(min, max, minorDtick).filter((tick: number) => !isMultiple(Math.abs(tick) || dtick, dtick))
+          : []
+    };
+
+    // Return our major ticks.
+
+    return ticks;
+  };
+};
+
+const axisValues = (axisKey: AxisKey): uPlot.Axis.Values => {
+  // Return a function that formats the tick labels for the given axis.
+
+  return (u: uPlot, splits: number[]): string[] => {
+    // Format our tick labels.
+    // Note: our splits are computed (see axisSplits()) before our tick labels, so our format is up to date.
+
+    const format = axisTicks[axisKey]?.format ?? { tickRound: 0, exponent: 0 };
+    const plotTop = u.bbox.top / (dependencies._uPlot.pxRatio as number);
+
+    return splits.map((split: number) => {
+      // Like Plotly, hide a Y tick label that would (partly) be above our container.
+
+      if (axisKey === 'y' && plotTop + u.valToPos(split, 'y') < TICK_LABEL_HALF_HEIGHT) {
+        return '';
+      }
+
+      return formatNumber(split, format);
+    });
+  };
+};
+
+// Text measuring, which we use to size our Y axis.
+
+const tickFont = `${TICK_FONT_SIZE}px ${FONT_FAMILY}`;
+let measureContext: CanvasRenderingContext2D | null | undefined;
+
+const textWidth = (text: string, font: string): number => {
+  // Return the width (in CSS pixels) of the given text using the given font.
+
+  measureContext ??= document.createElement('canvas').getContext('2d');
+
+  if (!measureContext) {
+    return 0;
+  }
+
+  measureContext.font = font;
+
+  return measureContext.measureText(text).width;
+};
+
+const yAxisSize = (_u: uPlot, values: string[] | null): number => {
+  // Size our Y axis (without its title) based on the width of its widest tick label.
+
+  let maxWidth = 0;
+
+  for (const value of values ?? []) {
+    maxWidth = Math.max(maxWidth, textWidth(value, tickFont));
+  }
+
+  return Math.ceil(maxWidth + Y_AXIS_EXTRA_SIZE);
+};
+
+// Grid lines.
+
+const lineWidth = (): number => {
+  // Return the width (in canvas pixels) of a one (CSS) pixel wide line.
+  // Note: we make sure that it is at least one canvas pixel wide (e.g., if our page is zoomed out a lot) since a canvas
+  //       ignores a line width of zero, i.e. it would use whatever line width was used last.
+
+  return Math.max(1, Math.round(dependencies._uPlot.pxRatio as number));
+};
+
+const drawLine = (context: CanvasRenderingContext2D, horizontal: boolean, pos: number, u: uPlot): void => {
+  // Draw a crisp, one (CSS) pixel wide line across our plotting area at the given position (in canvas pixels), if it is
+  // within our plotting area.
+
+  const { left, top, width, height } = u.bbox;
+  const alignedPos = Math.round(pos) + 0.5 * (lineWidth() % 2);
+
+  if (horizontal) {
+    if (alignedPos >= top && alignedPos <= top + height) {
+      context.moveTo(left, alignedPos);
+      context.lineTo(left + width, alignedPos);
+    }
+  } else if (alignedPos >= left && alignedPos <= left + width) {
+    context.moveTo(alignedPos, top);
+    context.lineTo(alignedPos, top + height);
+  }
+};
+
+const drawLines = (u: uPlot, color: string, xValues: number[], yValues: number[]): void => {
+  // Draw vertical lines at the given X values and horizontal lines at the given Y values using the given color.
+  // Note: uPlot caches the state of its context, so we must restore it once we are done.
+
+  const context = u.ctx;
+
+  context.save();
+
+  context.strokeStyle = color;
+  context.lineWidth = lineWidth();
+
+  context.beginPath();
+
+  for (const xValue of xValues) {
+    drawLine(context, false, u.valToPos(xValue, 'x', true), u);
+  }
+
+  for (const yValue of yValues) {
+    drawLine(context, true, u.valToPos(yValue, 'y', true), u);
+  }
+
+  context.stroke();
+  context.restore();
+};
+
+const drawZeroLines = (u: uPlot): void => {
+  // Like Plotly, draw our zero lines.
+  // Note: this gets called after uPlot draws our (major) grid lines and before it draws our traces.
+
+  drawLines(u, themeColors.value.zeroLine, [0], [0]);
+};
+
+const drawMinorGrid = (u: uPlot): void => {
+  // Draw our minor grid lines.
+  // Note: this gets called before uPlot draws our (major) grid lines, so that the latter are drawn on top of the
+  //       former.
+
+  drawLines(u, themeColors.value.minorGrid, axisTicks.x?.minorTicks ?? [], axisTicks.y?.minorTicks ?? []);
+};
+
 const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, index0: number, index1: number) => {
   // uPlot doesn't support unsorted X values (e.g., phase plots) and draws each (device) pixel column of a dense trace
   // as a vertical line, which makes the steep parts of a trace look jagged. So, we use our own linear path builder
@@ -628,6 +984,11 @@ const createPlot = (width: number, height: number): void => {
   const colors = themeColors.value;
   const axis: uPlot.Axis = {
     stroke: colors.text,
+    font: tickFont,
+    labelFont: `${TITLE_FONT_SIZE}px ${FONT_FAMILY}`,
+    labelGap: 0,
+    gap: TICK_LABEL_GAP,
+    space: 1,
     ticks: { show: false },
     grid: { stroke: colors.grid, width: 1 }
   };
@@ -637,6 +998,7 @@ const createPlot = (width: number, height: number): void => {
       mode: 2,
       width,
       height,
+      padding: [0, null, 0, 0],
       legend: { show: false },
       cursor: { show: false },
       scales: {
@@ -644,11 +1006,32 @@ const createPlot = (width: number, height: number): void => {
         y: { range: scaleRange('y') }
       },
       axes: [
-        { ...axis, scale: 'x', side: 2, label: props.data.xAxisTitle },
-        { ...axis, scale: 'y', side: 3, label: props.data.yAxisTitle }
+        {
+          ...axis,
+          scale: 'x',
+          side: 2,
+          size: props.data.xAxisTitle ? X_AXIS_SIZE_WITH_TITLE : X_AXIS_SIZE_WITHOUT_TITLE,
+          label: props.data.xAxisTitle || undefined, // Note: uPlot reserves some space for an empty title.
+          labelSize: X_AXIS_TITLE_SIZE,
+          splits: axisSplits('x'),
+          values: axisValues('x')
+        },
+        {
+          ...axis,
+          scale: 'y',
+          side: 3,
+          size: yAxisSize,
+          label: props.data.yAxisTitle || undefined, // Note: uPlot reserves some space for an empty title.
+          labelSize: Y_AXIS_TITLE_SIZE,
+          labelGap: Y_AXIS_TITLE_GAP,
+          splits: axisSplits('y'),
+          values: axisValues('y')
+        }
       ],
       series,
       hooks: {
+        drawAxes: [drawZeroLines],
+        drawClear: [drawMinorGrid],
         setSize: [
           (u: uPlot) => {
             // Make sure that our plotting area is at least one pixel wide and high (e.g., if our container is narrower
