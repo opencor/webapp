@@ -422,10 +422,7 @@ const isFullWebApp = vue.computed<boolean>(() => {
 // Determine whether the background should be visible.
 
 const compBackgroundVisible = vue.computed<boolean>(() => {
-  return (
-    (initialisingOpencorMessageVisible.value || loadingModelMessageVisible.value || progressMessageVisible.value) &&
-    !!props.omex
-  );
+  return (initialisingOpencorMessageVisible.value || loadingModelMessageVisible.value) && !!props.omex;
 });
 
 // Get the current Vue app instance to use some PrimeVue plugins.
