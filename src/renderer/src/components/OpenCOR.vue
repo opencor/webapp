@@ -31,10 +31,7 @@
         <DragNDropComponent v-if="dragAndDropCounter" />
       </Transition>
       <MainMenu ref="mainMenuRef" v-if="isFullWebApp"
-        :isActiveApp="compIsActiveApp"
-        :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
-        :themeCanBeChanged="themeCanBeChanged"
         @about="onAboutMenu"
         @open="onOpenMenu"
         @openRemote="onOpenRemoteMenu"
@@ -59,9 +56,6 @@
       </div>
       -->
       <ContentsComponent ref="contentsRef" class="grow min-h-0"
-        :isActiveApp="compIsActiveApp"
-        :uiEnabled="compUiEnabled"
-        :simulationOnly="!!omex"
         @error="onError"
         @fileClosed="onFileClosed"
         @fileOpened="onFileOpened"
@@ -95,7 +89,6 @@
         @close="openRemoteVisible = false"
       />
       <SettingsDialog v-model:visible="settingsVisible"
-        :themeCanBeChanged="themeCanBeChanged"
         @close="settingsVisible = false"
       />
       <YesNoQuestionDialog v-model:visible="resetAllVisible"
@@ -130,7 +123,6 @@ import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
 import type { IOpenCOREmits, IOpenCORExternalDataEvent, IOpenCORProps, IOpenCORSimulationDataEvent } from '../../index';
-import { provideOpenCORToast } from '../components/OpenCORToast';
 
 import '../assets/app.css';
 import '../assets/primeicons-assets';
@@ -147,6 +139,9 @@ import * as version from '../common/version';
 import { useViewRegistry, ViewCategory } from '../common/viewRegistry';
 import * as vueCommon from '../common/vueCommon';
 import ContentsComponent from '../components/ContentsComponent.vue';
+import { provideOpenCORContext } from '../components/OpenCORContext';
+import { provideOpenCORProgressMessage } from '../components/OpenCORProgressMessage';
+import { provideOpenCORToast } from '../components/OpenCORToast';
 import * as locApi from '../libopencor/locApi';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
@@ -352,6 +347,15 @@ trackCleanup(
   })
 );
 
+// Provide access to our progress message features.
+// Note: this must be done before compBlockUiEnabled is computed below since it relies on progressMessageVisible.
+
+const {
+  visible: progressMessageVisible,
+  message: progressMessageMessage,
+  progress: progressMessageProgress
+} = provideOpenCORProgressMessage();
+
 // Determine whether the component UI should be blocked/enabled.
 // Note: compBlockUiEnabled is used to determine whether PrimeVue's BlockUI component should be enabled, whereas
 //       compUiEnabled is used to determine whether the UI should be enabled (it checks whether various dialogs are
@@ -418,43 +422,8 @@ const isFullWebApp = vue.computed<boolean>(() => {
 // Determine whether the background should be visible.
 
 const compBackgroundVisible = vue.computed<boolean>(() => {
-  return (
-    (initialisingOpencorMessageVisible.value || loadingModelMessageVisible.value || progressMessageVisible.value) &&
-    !!props.omex
-  );
+  return (initialisingOpencorMessageVisible.value || loadingModelMessageVisible.value) && !!props.omex;
 });
-
-// Provide access to our progress message features.
-
-export interface IProgressMessage {
-  show: (message: string) => void;
-  update: (percent: number) => void;
-  hide: () => void;
-}
-
-const show = (message: string): void => {
-  progressMessageMessage.value = message;
-  progressMessageProgress.value = 0;
-  progressMessageVisible.value = true;
-};
-
-const update = (percent: number): void => {
-  progressMessageProgress.value = percent;
-};
-
-const hide = (): void => {
-  progressMessageVisible.value = false;
-};
-
-vue.provide<IProgressMessage>('progressMessage', {
-  show,
-  update,
-  hide
-});
-
-const progressMessageVisible = vue.ref<boolean>(false);
-const progressMessageMessage = vue.ref<string>('');
-const progressMessageProgress = vue.ref<number>(0);
 
 // Get the current Vue app instance to use some PrimeVue plugins.
 
@@ -496,6 +465,17 @@ if (themeCanBeChanged) {
     vueCommon.useTheme().setTheme(settings.general.theme);
   });
 }
+
+// Provide our context to our components.
+
+provideOpenCORContext({
+  isActiveApp: compIsActiveApp,
+  uiEnabled: compUiEnabled,
+  simulationOnly: vue.computed<boolean>(() => {
+    return !!props.omex;
+  }),
+  themeCanBeChanged
+});
 
 // Get ready to show toasts and provide a helper to show them that ensures that the proper group id is used and that the
 // instance becomes active before the message is pushed.

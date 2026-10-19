@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "1.20261019.0",
+  "version": "1.20261019.1",
   "engines": {
     "bun": ">=1.2.0"
   },
@@ -57,7 +57,7 @@
     "vue": "3.4.21"
   },
   "dependencies": {
-    "@napi-rs/keyring": "^2.1.1",
+    "@napi-rs/keyring": "^2.1.2",
     "xxhash-wasm": "^1.1.0"
   },
   "devDependencies": {

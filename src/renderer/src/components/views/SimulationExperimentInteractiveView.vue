@@ -208,6 +208,7 @@ import * as locSedApi from '../../libopencor/locSedApi';
 import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 
 import type { ISimulationExperimentInteractiveViewSettingsDialog } from '../dialogs/SimulationExperimentInteractiveViewSettingsDialog.vue';
+import { useOpenCORContext } from '../OpenCORContext';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
 import type { IGraphPanelData, IGraphPanelMargins, IGraphPanelPlotTrace } from '../widgets/GraphPanelWidget.vue';
 
@@ -230,7 +231,6 @@ interface IExternalDataValues {
 
 const props = defineProps<{
   file: locApi.File;
-  simulationOnly?: boolean;
   uiJson?: locApi.IUiJson;
 }>();
 
@@ -238,6 +238,8 @@ const emit = defineEmits<{
   error: [message: string];
   simulationData: [];
 }>();
+
+const { simulationOnly } = useOpenCORContext();
 
 const opencorElement = vue.shallowRef<HTMLElement | null>(null);
 const fileTabElement = vue.shallowRef<HTMLElement | null>(null);
@@ -641,7 +643,7 @@ const informationIssue: locApi.IIssue = {
 };
 
 const addInformationIssue = (issues: locApi.IIssue[]): void => {
-  if (!props.simulationOnly) {
+  if (!simulationOnly.value) {
     issues.push(informationIssue);
   }
 };
@@ -735,7 +737,7 @@ const addExternalData = async (
 
   // Make sure that we are in simulation-only mode.
 
-  if (!props.simulationOnly) {
+  if (!simulationOnly.value) {
     return Promise.resolve(
       issueEvent(['The exposed addExternalData() method is only available in simulation-only mode.'])
     );
@@ -994,7 +996,7 @@ const addExternalData = async (
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
   const simulationDataResult = common.emptySimulationData(modelParameters);
 
-  if (!props.simulationOnly) {
+  if (!simulationOnly.value) {
     return Promise.resolve({
       type: 'issue',
       simulationData: simulationDataResult,

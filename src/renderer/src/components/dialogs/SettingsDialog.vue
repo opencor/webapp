@@ -25,13 +25,13 @@ import type { OpenCORTheme } from '../../../index';
 import { settings } from '../../common/settings';
 import * as vueCommon from '../../common/vueCommon';
 
-const props = defineProps<{
-  themeCanBeChanged: boolean;
-}>();
+import { useOpenCORContext } from '../OpenCORContext';
 
 const emit = defineEmits<{
   close: [];
 }>();
+
+const { themeCanBeChanged } = useOpenCORContext();
 
 const checkForUpdatesAtStartup = vue.ref(settings.general.checkForUpdatesAtStartup);
 const theme = vue.ref<OpenCORTheme>(vueCommon.useTheme().theme());
@@ -63,7 +63,7 @@ const onThemeSwitch = (newTheme: OpenCORTheme) => {
 const onOk = () => {
   settings.general.checkForUpdatesAtStartup = checkForUpdatesAtStartup.value;
 
-  if (props.themeCanBeChanged) {
+  if (themeCanBeChanged) {
     settings.general.theme = theme.value;
   }
 
@@ -76,7 +76,7 @@ const onHide = () => {
   // Apply the theme from our settings, i.e. revert to it if the dialog was cancelled or confirm it if the user clicked
   // on OK (since our settings will have been updated by then).
 
-  if (props.themeCanBeChanged) {
+  if (themeCanBeChanged) {
     vueCommon.useTheme().applyTheme(settings.general.theme);
   }
 

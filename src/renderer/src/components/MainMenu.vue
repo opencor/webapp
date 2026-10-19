@@ -27,14 +27,12 @@
       >
         New version available!
       </button>
-      <ThemeWidget v-if="props.themeCanBeChanged" :theme="theme.theme()" @switch="onThemeSwitch" />
+      <ThemeWidget v-if="themeCanBeChanged" :theme="theme.theme()" @switch="onThemeSwitch" />
     </template>
   </Menubar>
 </template>
 
 <script setup lang="ts">
-import * as vueusecore from '@vueuse/core';
-
 import type Menubar from 'primevue/menubar';
 import * as vue from 'vue';
 
@@ -45,12 +43,11 @@ import { settings } from '../common/settings';
 import * as version from '../common/version';
 import * as vueCommon from '../common/vueCommon';
 
+import { useOpenCORContext, useOpenCORKeyStroke } from './OpenCORContext';
+
 const props = defineProps<{
   id?: string;
-  isActiveApp: boolean;
   hasFiles: boolean;
-  uiEnabled: boolean;
-  themeCanBeChanged: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -63,6 +60,8 @@ const emit = defineEmits<{
   settings: [];
   updateAvailable: [];
 }>();
+
+const { themeCanBeChanged } = useOpenCORContext();
 
 const isWindowsOrLinux = common.isWindows() || common.isLinux();
 const isMacOs = common.isMacOs();
@@ -217,39 +216,27 @@ vue.onMounted(() => {
 
 // Keyboard shortcuts.
 
-if (common.isDesktop()) {
-  vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActiveApp || !props.uiEnabled) {
-      return;
-    }
+useOpenCORKeyStroke((event: KeyboardEvent) => {
+  if (common.isCtrlOrCmd(event) && !event.shiftKey && event.altKey && event.code === 'KeyO') {
+    event.preventDefault();
 
-    if (common.isCtrlOrCmd(event) && !event.shiftKey && event.altKey && event.code === 'KeyO') {
-      event.preventDefault();
+    emit('open');
+  } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.altKey && event.code === 'KeyO') {
+    event.preventDefault();
 
-      emit('open');
-    } else if (common.isCtrlOrCmd(event) && event.shiftKey && event.altKey && event.code === 'KeyO') {
-      event.preventDefault();
+    emit('openRemote');
+  } else if (props.hasFiles && common.isCtrlOrCmd(event) && !event.shiftKey && event.altKey && event.code === 'KeyW') {
+    event.preventDefault();
 
-      emit('openRemote');
-    } else if (
-      props.hasFiles &&
-      common.isCtrlOrCmd(event) &&
-      !event.shiftKey &&
-      event.altKey &&
-      event.code === 'KeyW'
-    ) {
-      event.preventDefault();
+    emit('close');
+    /* TODO: enable the settings menu once we have settings for OpenCOR's Web app.
+  } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.altKey && event.code === 'Comma') {
+    event.preventDefault();
 
-      emit('close');
-      /* TODO: enable the settings menu once we have settings for OpenCOR's Web app.
-    } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.altKey && event.code === 'Comma') {
-      event.preventDefault();
-
-      emit('settings');
-      */
-    }
-  });
-}
+    emit('settings');
+    */
+  }
+});
 </script>
 
 <style scoped>
