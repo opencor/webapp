@@ -61,8 +61,6 @@
 </template>
 
 <script setup lang="ts">
-import * as vueusecore from '@vueuse/core';
-
 import * as vue from 'vue';
 
 import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../index';
@@ -74,6 +72,7 @@ import * as locApi from '../libopencor/locApi';
 
 import SimulationExperimentInteractiveView from './views/SimulationExperimentInteractiveView.vue';
 import UnsupportedFileTypeView from './views/UnsupportedFileTypeView.vue';
+import { useOpenCORContext, useOpenCORKeyStroke } from './OpenCORContext';
 
 interface IFileTab {
   file: locApi.File;
@@ -81,18 +80,14 @@ interface IFileTab {
   activeViewId: string;
 }
 
-const props = defineProps<{
-  isActiveApp: boolean;
-  simulationOnly?: boolean;
-  uiEnabled: boolean;
-}>();
-
 const emit = defineEmits<{
   error: [message: string];
   fileClosed: [filePath: string];
   fileOpened: [filePath: string];
   simulationData: [];
 }>();
+
+const { simulationOnly } = useOpenCORContext();
 
 const viewRegistry = useViewRegistry();
 const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof SimulationExperimentInteractiveView> | null>(
@@ -163,11 +158,8 @@ const view = (fileTab: IFileTab): IView => {
       return {
         component: viewDescriptor.component,
         props: {
-          isActiveApp: props.isActiveApp,
-          uiEnabled: props.uiEnabled,
           file: fileTab.file,
-          isActiveFile: props.simulationOnly || fileTab.file.path() === activeFile.value,
-          simulationOnly: props.simulationOnly
+          isActiveFile: simulationOnly.value || fileTab.file.path() === activeFile.value
         }
       };
     case 'simulation-experiment-interactive':
@@ -175,7 +167,6 @@ const view = (fileTab: IFileTab): IView => {
         component: viewDescriptor.component,
         props: {
           file: fileTab.file,
-          simulationOnly: props.simulationOnly,
           uiJson: fileTab.uiJson
         }
       };
@@ -196,7 +187,7 @@ const findFileTab = (filePath: string): IFileTab | undefined => {
   // Note: a file may be referred to using different paths (e.g., through a symbolic link), hence we also compare
   //       canonical paths, but only if needed since it is more costly.
 
-  if (props.simulationOnly) {
+  if (simulationOnly.value) {
     return undefined;
   }
 
@@ -216,7 +207,7 @@ const hasFile = (filePath: string): boolean => {
 };
 
 const hasFiles = (): boolean => {
-  if (props.simulationOnly) {
+  if (simulationOnly.value) {
     return false;
   }
 
@@ -336,7 +327,7 @@ const closeFile = async (filePath: string): Promise<void> => {
 };
 
 const closeCurrentFile = async (): Promise<void> => {
-  if (props.simulationOnly) {
+  if (simulationOnly.value) {
     return;
   }
 
@@ -344,7 +335,7 @@ const closeCurrentFile = async (): Promise<void> => {
 };
 
 const closeAllFiles = async (): Promise<void> => {
-  if (props.simulationOnly) {
+  if (simulationOnly.value) {
     return;
   }
 
@@ -556,7 +547,7 @@ const addExternalData = async (
 // Retrieve some simulation data from the current simulation experiment view.
 
 const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
-  if (!props.simulationOnly) {
+  if (!simulationOnly.value) {
     return Promise.resolve({
       type: 'issue',
       simulationData: common.emptySimulationData(modelParameters),
@@ -652,23 +643,21 @@ vue.watch(activeFile, (newActiveFile: string) => {
 
 // Keyboard shortcuts.
 
-if (common.isDesktop()) {
-  vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActiveApp || !props.uiEnabled || !fileTabs.value.length) {
-      return;
-    }
+useOpenCORKeyStroke((event: KeyboardEvent) => {
+  if (!fileTabs.value.length) {
+    return;
+  }
 
-    if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
-      event.preventDefault();
+  if (event.ctrlKey && !event.shiftKey && event.code === 'Tab') {
+    event.preventDefault();
 
-      selectNextFile();
-    } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
-      event.preventDefault();
+    selectNextFile();
+  } else if (event.ctrlKey && event.shiftKey && event.code === 'Tab') {
+    event.preventDefault();
 
-      selectPreviousFile();
-    }
-  });
-}
+    selectPreviousFile();
+  }
+});
 </script>
 
 <style scoped>

@@ -31,10 +31,7 @@
         <DragNDropComponent v-if="dragAndDropCounter" />
       </Transition>
       <MainMenu ref="mainMenuRef" v-if="isFullWebApp"
-        :isActiveApp="compIsActiveApp"
-        :uiEnabled="compUiEnabled"
         :hasFiles="hasFiles"
-        :themeCanBeChanged="themeCanBeChanged"
         @about="onAboutMenu"
         @open="onOpenMenu"
         @openRemote="onOpenRemoteMenu"
@@ -59,9 +56,6 @@
       </div>
       -->
       <ContentsComponent ref="contentsRef" class="grow min-h-0"
-        :isActiveApp="compIsActiveApp"
-        :uiEnabled="compUiEnabled"
-        :simulationOnly="!!omex"
         @error="onError"
         @fileClosed="onFileClosed"
         @fileOpened="onFileOpened"
@@ -95,7 +89,6 @@
         @close="openRemoteVisible = false"
       />
       <SettingsDialog v-model:visible="settingsVisible"
-        :themeCanBeChanged="themeCanBeChanged"
         @close="settingsVisible = false"
       />
       <YesNoQuestionDialog v-model:visible="resetAllVisible"
@@ -130,7 +123,6 @@ import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
 import type { IOpenCOREmits, IOpenCORExternalDataEvent, IOpenCORProps, IOpenCORSimulationDataEvent } from '../../index';
-import { provideOpenCORToast } from '../components/OpenCORToast';
 
 import '../assets/app.css';
 import '../assets/primeicons-assets';
@@ -147,6 +139,8 @@ import * as version from '../common/version';
 import { useViewRegistry, ViewCategory } from '../common/viewRegistry';
 import * as vueCommon from '../common/vueCommon';
 import ContentsComponent from '../components/ContentsComponent.vue';
+import { provideOpenCORContext } from '../components/OpenCORContext';
+import { provideOpenCORToast } from '../components/OpenCORToast';
 import * as locApi from '../libopencor/locApi';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
@@ -496,6 +490,17 @@ if (themeCanBeChanged) {
     vueCommon.useTheme().setTheme(settings.general.theme);
   });
 }
+
+// Provide our context to our components.
+
+provideOpenCORContext({
+  isActiveApp: compIsActiveApp,
+  uiEnabled: compUiEnabled,
+  simulationOnly: vue.computed<boolean>(() => {
+    return !!props.omex;
+  }),
+  themeCanBeChanged
+});
 
 // Get ready to show toasts and provide a helper to show them that ensures that the proper group id is used and that the
 // instance becomes active before the message is pushed.

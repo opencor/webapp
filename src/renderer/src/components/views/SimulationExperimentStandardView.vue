@@ -87,7 +87,6 @@
 </template>
 
 <script setup lang="ts">
-import * as vueusecore from '@vueuse/core';
 import * as vue from 'vue';
 
 import * as colors from '../../common/colors';
@@ -98,21 +97,21 @@ import * as vueCommon from '../../common/vueCommon';
 import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
 
+import { useOpenCORContext, useOpenCORKeyStroke } from '../OpenCORContext';
 import type { IGraphPanelData } from '../widgets/GraphPanelWidget.vue';
 
 import './simulation-experiment-view.css';
 
 const props = defineProps<{
   file: locApi.File;
-  isActiveApp: boolean;
   isActiveFile: boolean;
-  simulationOnly?: boolean;
-  uiEnabled: boolean;
 }>();
 
 const emit = defineEmits<{
   simulationData: [];
 }>();
+
+const { simulationOnly } = useOpenCORContext();
 
 const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const editorRef = vue.shallowRef<HTMLElement | null>(null);
@@ -590,24 +589,22 @@ vue.onDeactivated(() => {
 
 // Keyboard shortcuts.
 
-if (common.isDesktop()) {
-  vueusecore.onKeyStroke((event: KeyboardEvent) => {
-    if (!props.isActiveApp || !isActiveView || !props.uiEnabled) {
-      return;
-    }
+useOpenCORKeyStroke((event: KeyboardEvent) => {
+  if (!isActiveView) {
+    return;
+  }
 
-    if (
-      props.isActiveFile &&
-      issues.length === 0 &&
-      !event.ctrlKey &&
-      !event.shiftKey &&
-      !event.metaKey &&
-      event.code === 'F9'
-    ) {
-      event.preventDefault();
+  if (
+    props.isActiveFile &&
+    issues.length === 0 &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.metaKey &&
+    event.code === 'F9'
+  ) {
+    event.preventDefault();
 
-      onRunPause();
-    }
-  });
-}
+    onRunPause();
+  }
+});
 </script>
