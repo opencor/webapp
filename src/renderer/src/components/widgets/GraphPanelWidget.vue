@@ -1,10 +1,56 @@
 <template>
   <div ref="rootRef" class="flex flex-row h-full">
     <div v-if="showMarker" class="w-0.75 bg-primary" />
-    <div ref="mainDivRef" class="grow h-full min-w-0 relative overflow-hidden" :style="{ backgroundColor: themeColors.background }"
+    <div ref="mainDivRef" class="grow h-full min-w-0 relative overflow-hidden"
+      :style="{
+        backgroundColor: themeColors.background,
+        color: themeColors.text,
+        fontFamily: FONT_FAMILY
+      }"
       @contextmenu="onContextMenu"
     >
       <div ref="plotDivRef" class="absolute inset-0" />
+      <template v-if="plotRect">
+        <div v-if="data.xAxisTitle" class="axis-title"
+          :style="{
+            left: `${plotRect.left + 0.5 * plotRect.width}px`,
+            top: `${plotRect.top + plotRect.height + X_AXIS_SIZE_WITH_TITLE}px`,
+            fontSize: `${TITLE_FONT_SIZE}px`,
+            transform: 'translateX(-50%)'
+          }"
+          v-html="data.xAxisTitle"
+        />
+        <div v-if="data.yAxisTitle" class="axis-title"
+          :style="{
+            left: `${Y_AXIS_TITLE_SIZE - Y_AXIS_TITLE_GAP - TITLE_FONT_SIZE}px`,
+            top: `${plotRect.top + 0.5 * plotRect.height}px`,
+            fontSize: `${TITLE_FONT_SIZE}px`,
+            writingMode: 'vertical-rl',
+            transform: 'translateY(-50%) rotate(180deg)'
+          }"
+          v-html="data.yAxisTitle"
+        />
+      </template>
+      <div v-if="showLegend && legendItems.length" ref="legendRef" class="legend"
+        :style="{
+          left: `${legendLeft}px`,
+          top: `${plotRect?.top ?? 0}px`,
+          maxHeight: plotRect ? `${plotRect.height}px` : undefined,
+          visibility: plotRect ? undefined : 'hidden',
+          backgroundColor: themeColors.background,
+          fontSize: `${LEGEND_FONT_SIZE}px`
+        }"
+      >
+        <div v-for="legendItem in legendItems" :key="legendItem.index" class="legend-item" :class="{ 'legend-item-hidden': !legendItem.visible }"
+          @click="onLegendClick($event, legendItem.index)"
+          @dblclick="onLegendDoubleClick(legendItem.index)"
+        >
+          <span class="legend-swatch" :style="{ backgroundColor: legendItem.color }">
+            <span v-if="legendItem.markers" class="legend-marker" />
+          </span>
+          <span v-html="legendItem.name" />
+        </div>
+      </div>
     </div>
     <ContextMenu ref="contextMenuRef" :model="contextMenuItems" :appendTo="appendTarget" />
   </div>
@@ -76,6 +122,10 @@ defineEmits<{
 const FONT_FAMILY = '"Open Sans", verdana, arial, sans-serif';
 const TICK_FONT_SIZE = 10;
 const TITLE_FONT_SIZE = 14;
+const LEGEND_FONT_SIZE = 12;
+const LEGEND_LEFT_MARGIN = 8; // Margin between our plotting area and our legend.
+const LEGEND_RIGHT_MARGIN = 8; // Margin between our legend (or last X tick label) and the right edge of our container.
+const DEFAULT_ZORDER = 1000; // Like Plotly's default legend rank.
 const TICK_LABEL_GAP = 1; // Gap between our plotting area and our tick labels.
 const TICK_LABEL_HALF_HEIGHT = 6; // Used to hide a Y tick label that would (partly) be above our container.
 const X_AXIS_SIZE_WITH_TITLE = 18; // Size of our X axis (without its title) if it has a title.
@@ -151,6 +201,7 @@ const instanceId = Symbol('GraphPanelWidget');
 const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const mainDivRef = vue.shallowRef<HTMLElement | null>(null);
 const plotDivRef = vue.shallowRef<HTMLElement | null>(null);
+const legendRef = vue.shallowRef<HTMLElement | null>(null);
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
@@ -160,6 +211,7 @@ let plotSignature: string | undefined;
 let isPlotOutdated = false;
 let isUnmounted = false;
 let stopTrackingContainerSize: (() => void) | undefined;
+let stopTrackingLegendSize: (() => void) | undefined;
 let resizeRafId: number | undefined;
 
 // Our theme.
@@ -183,6 +235,230 @@ const themeColors = vue.computed<IThemeColors>(() => {
     zeroLine: useLightMode ? '#94a3b8' : '#71717a' // --p-surface-400 / --p-surface-500
   };
 });
+
+// Our traces' visibility, which we keep track of across data updates (e.g., while a simulation is running or when runs
+// get tracked in interactive mode).
+
+const traceVisibilityKey = (trace: IGraphPanelPlotTrace): string | undefined => {
+  // Return a key that identifies the given trace across data updates, if possible.
+
+  if (trace.traceId) {
+    return `id::${trace.traceId}`;
+  }
+
+  if (trace.name && trace.xValue && trace.yValue) {
+    return `expr::${trace.xValue}::${trace.yValue}::${trace.name}`;
+  }
+
+  return undefined;
+};
+
+const traceVisibilities = vue.shallowRef<boolean[]>([]);
+
+vue.watch(
+  () => props.data.traces,
+  (traces: IGraphPanelPlotTrace[], oldTraces: IGraphPanelPlotTrace[] | undefined) => {
+    // Keep the visibility of the traces that we already know about and make any new trace visible.
+
+    const previousVisibilityByKey = new Map<string, boolean>();
+
+    (oldTraces ?? []).forEach((trace: IGraphPanelPlotTrace, index: number) => {
+      const key = traceVisibilityKey(trace);
+
+      if (key) {
+        previousVisibilityByKey.set(key, traceVisibilities.value[index] ?? true);
+      }
+    });
+
+    traceVisibilities.value = traces.map((trace: IGraphPanelPlotTrace) => {
+      const key = traceVisibilityKey(trace);
+
+      return key ? (previousVisibilityByKey.get(key) ?? true) : true;
+    });
+  },
+  { immediate: true }
+);
+
+// Our legend, which, like Plotly's, is to the right of our plotting area and lets the user toggle the visibility of a
+// trace (by clicking on it) or isolate a trace (by double-clicking on it).
+// Note: our legend lists our traces by increasing zorder (and then in the order in which they are given), while our
+//       traces are drawn in the order in which they are given.
+
+interface ILegendItem {
+  index: number;
+  color: string;
+  name: string;
+  visible: boolean;
+  markers: boolean;
+  zorder: number;
+}
+
+const legendItems = vue.computed<ILegendItem[]>(() => {
+  const visibilities = traceVisibilities.value;
+
+  return props.data.traces
+    .map((trace: IGraphPanelPlotTrace, index: number) => ({
+      index,
+      color: trace.color,
+      name: trace.name,
+      visible: visibilities[index] ?? true,
+      markers: hasMarkers(trace.x, trace.y),
+      zorder: trace.zorder ?? DEFAULT_ZORDER
+    }))
+    .sort((item1: ILegendItem, item2: ILegendItem) => item1.zorder - item2.zorder || item1.index - item2.index);
+});
+
+// Our plotting area, which we use to position our legend.
+
+interface IPlotRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+const plotRect = vue.shallowRef<IPlotRect | undefined>();
+
+const updatePlotRect = (u: uPlot): void => {
+  // Keep track of our plotting area (in CSS pixels, relative to our container), which we use to position our legend.
+
+  const pxRatio = dependencies._uPlot.pxRatio as number;
+  const newPlotRect = {
+    left: u.bbox.left / pxRatio,
+    top: u.bbox.top / pxRatio,
+    width: u.bbox.width / pxRatio,
+    height: u.bbox.height / pxRatio
+  };
+  const oldPlotRect = plotRect.value;
+
+  if (
+    !oldPlotRect ||
+    oldPlotRect.left !== newPlotRect.left ||
+    oldPlotRect.top !== newPlotRect.top ||
+    oldPlotRect.width !== newPlotRect.width ||
+    oldPlotRect.height !== newPlotRect.height
+  ) {
+    plotRect.value = newPlotRect;
+  }
+};
+
+// The position and width of our legend.
+
+const legendLeft = vue.computed<number>(() => {
+  // Our legend is to the right of our plotting area, with a small gap in between.
+
+  const rect = plotRect.value;
+
+  return rect ? rect.left + rect.width + LEGEND_LEFT_MARGIN : 0;
+});
+
+let legendWidth = 0;
+
+const measureLegendWidth = (): number => {
+  // Return the width of our legend, if it is shown.
+  // Note: we round up its exact width rather than use its offsetWidth, which is rounded to the nearest integer (and
+  //       could therefore be smaller than its exact width, in which case our legend would overflow our container).
+
+  return props.showLegend ? Math.ceil(legendRef.value?.getBoundingClientRect().width ?? 0) : 0;
+};
+
+const syncLegendWidth = (): void => {
+  // Get our plot to recompute its layout if the width of our legend has changed since it is part of our right margin.
+
+  const newLegendWidth = measureLegendWidth();
+
+  if (newLegendWidth !== legendWidth) {
+    legendWidth = newLegendWidth;
+
+    plot?.setSize({ width: plot.width, height: plot.height });
+  }
+};
+
+// Trace visibility handling through our legend.
+
+const setTraceVisibilities = (visibilities: boolean[]): void => {
+  // Set the visibility of our traces, both in our legend and in our plot.
+  // Note: uPlot autoranges our axes again when the visibility of a trace changes.
+
+  traceVisibilities.value = visibilities;
+
+  // Update the visibility of our traces in our plot, if needed.
+
+  const currentPlot = plot;
+
+  if (!currentPlot) {
+    return;
+  }
+
+  currentPlot.batch(() => {
+    visibilities.forEach((visible: boolean, index: number) => {
+      const plotSeries = currentPlot.series[index + 1];
+
+      if (plotSeries && plotSeries.show !== visible) {
+        currentPlot.setSeries(index + 1, { show: visible });
+      }
+    });
+  });
+};
+
+interface ILegendToggle {
+  index: number;
+  previousVisibility: boolean;
+}
+
+let lastLegendToggle: ILegendToggle | undefined;
+
+const onLegendClick = (event: MouseEvent, index: number): void => {
+  // Toggle the visibility of the clicked trace, unless this is the second click of a double-click (see
+  // onLegendDoubleClick()).
+
+  if (event.detail > 1) {
+    return;
+  }
+
+  // Use a copy of our visibilities so that we can update all of them at once, which is more efficient than updating
+  // them one by one.
+
+  const visibilities = traceVisibilities.value.slice();
+
+  lastLegendToggle = {
+    index,
+    previousVisibility: visibilities[index] ?? true
+  };
+
+  visibilities[index] = !lastLegendToggle.previousVisibility;
+
+  setTraceVisibilities(visibilities);
+};
+
+const onLegendDoubleClick = (index: number): void => {
+  // Like Plotly, isolate the double-clicked trace (i.e. hide all the other traces) or, if it is already the only
+  // visible trace, show all the traces again.
+  // Note: the first click of this double-click has already toggled the visibility of the clicked trace (see
+  //       onLegendClick()), so we use the visibility that it had before that click. Otherwise, double-clicking the only
+  //       visible trace would isolate it again rather than show all the traces again.
+
+  const firstClickToggle = lastLegendToggle?.index === index ? lastLegendToggle : undefined;
+  const visibilities = traceVisibilities.value;
+
+  lastLegendToggle = undefined;
+
+  // Collect the indices of visible traces, as they were before this double-click.
+
+  const visibleIndices: number[] = [];
+
+  for (let i = 0; i < visibilities.length; ++i) {
+    if (i === index && firstClickToggle ? firstClickToggle.previousVisibility : visibilities[i]) {
+      visibleIndices.push(i);
+    }
+  }
+
+  // If the clicked trace is the only visible one, then show all our traces again. Otherwise, isolate the clicked trace.
+
+  const isSoleVisible = visibleIndices.length === 1 && visibleIndices[0] === index;
+
+  setTraceVisibilities(visibilities.map((_visible: boolean, i: number) => isSoleVisible || i === index));
+};
 
 // Context menu.
 
@@ -375,20 +651,27 @@ const seriesData = (u: uPlot, seriesIndex: number): [math.FloatArray, math.Float
   return (u.data as unknown as [null, ...[math.FloatArray, math.FloatArray][]])[seriesIndex] ?? undefined;
 };
 
-const hasMarkers = (u: uPlot, seriesIndex: number): boolean => {
+const hasMarkers = (xValues?: math.FloatArray, yValues?: math.FloatArray): boolean => {
   // Like Plotly, a trace with fewer than 20 points also has markers.
 
-  const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
   const nbOfPoints = xValues && yValues ? Math.min(xValues.length, yValues.length) : 0;
 
   return nbOfPoints > 0 && nbOfPoints < MIN_NB_OF_POINTS_WITHOUT_MARKERS;
+};
+
+const seriesHasMarkers = (u: uPlot, seriesIndex: number): boolean => {
+  // Return whether the given series has markers.
+
+  const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
+
+  return hasMarkers(xValues, yValues);
 };
 
 const anyMarkers = (u: uPlot): boolean => {
   // Return whether any of our visible traces has markers.
 
   for (let i = 1; i < u.series.length; ++i) {
-    if (u.series[i]?.show && hasMarkers(u, i)) {
+    if (u.series[i]?.show && seriesHasMarkers(u, i)) {
       return true;
     }
   }
@@ -459,7 +742,7 @@ const autoRange = (u: uPlot, axisKey: AxisKey, min: number, max: number): Range 
   const maxExtrema: IExtremum[] = [{ value: max, padding }];
 
   for (let i = 1; i < u.series.length; ++i) {
-    if (u.series[i]?.show && hasMarkers(u, i)) {
+    if (u.series[i]?.show && seriesHasMarkers(u, i)) {
       const traceRange = finiteDataRange(u, axisKey, i);
 
       if (traceRange) {
@@ -492,6 +775,8 @@ const autoRange = (u: uPlot, axisKey: AxisKey, min: number, max: number): Range 
 
   return res;
 };
+
+const lastAutoRanges: Partial<Record<AxisKey, Range>> = {};
 
 const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
   return (u: uPlot, dataMin: number | null, dataMax: number | null): Range => {
@@ -528,7 +813,15 @@ const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
       const finiteRange = finiteDataRange(u, axisKey);
 
       if (!finiteRange) {
-        // No (finite) data, so we use Plotly's default range.
+        // No (finite) data, so if some of our traces are hidden (e.g., the user hid all of them using our legend), then
+        // we keep our last autorange (so that the user sees the same view when showing some traces again). Otherwise,
+        // we use Plotly's default range.
+
+        const lastAutoRange = lastAutoRanges[axisKey];
+
+        if (lastAutoRange && u.series.some((series: uPlot.Series, index: number) => index > 0 && !series.show)) {
+          return [...lastAutoRange];
+        }
 
         return axisKey === 'x' ? [...DEFAULT_X_RANGE] : [...DEFAULT_Y_RANGE];
       }
@@ -536,9 +829,15 @@ const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
       [min, max] = finiteRange;
     }
 
-    // Autorange our axis.
+    // Autorange our axis and keep track of it.
+    // Note: we keep track of it here rather than rely on uPlot's scales since our plot may get recreated (e.g., when the
+    //       theme changes) while all our traces are hidden.
 
-    return autoRange(u, axisKey, min, max);
+    const res = autoRange(u, axisKey, min, max);
+
+    lastAutoRanges[axisKey] = res;
+
+    return [...res];
   };
 };
 
@@ -824,6 +1123,8 @@ const textWidth = (text: string, font: string): number => {
   return measureContext.measureText(text).width;
 };
 
+// Our Y axis size.
+
 const yAxisSize = (_u: uPlot, values: string[] | null): number => {
   // Size our Y axis (without its title) based on the width of its widest tick label.
 
@@ -834,6 +1135,28 @@ const yAxisSize = (_u: uPlot, values: string[] | null): number => {
   }
 
   return Math.ceil(maxWidth + Y_AXIS_EXTRA_SIZE);
+};
+
+// Right margin, which we use to make sure that our legend and last X tick label are not cut off.
+
+interface IAxisInternals {
+  _values?: (string | number | null)[];
+}
+
+const rightMargin = (u: uPlot): number => {
+  // Our right margin must leave room for our legend (if any), with a margin on both sides of it (see legendLeft), and
+  // for half our last X tick label (since it is centred on its tick), with a margin on its right side.
+  // Note #1: our legend is to the right of our plotting area and no taller than it while our last X tick label is below
+  //          our plotting area, so they can't overlap and our right margin only needs to fit the wider of the two.
+  // Note #2: uPlot computes our tick labels (see axisValues()) before our padding, so our last X tick label is up to
+  //          date.
+
+  const xValues = (u.axes[0] as unknown as IAxisInternals | undefined)?._values;
+  const lastXValue = xValues?.[xValues.length - 1];
+  const legendSize = legendWidth ? LEGEND_LEFT_MARGIN + legendWidth + LEGEND_RIGHT_MARGIN : 0;
+  const lastXTickLabelSize = lastXValue ? 0.5 * textWidth(String(lastXValue), tickFont) + LEGEND_RIGHT_MARGIN : 0;
+
+  return Math.ceil(Math.max(legendSize, lastXTickLabelSize));
 };
 
 // Grid lines.
@@ -1148,11 +1471,12 @@ const createPlot = (width: number, height: number): void => {
 
   for (let i = 0; i < Math.max(1, props.data.traces.length); ++i) {
     series.push({
+      show: traceVisibilities.value[i] ?? true,
       stroke: (_plot: uPlot, seriesIndex: number) => props.data.traces[seriesIndex - 1]?.color ?? 'transparent',
       width: LINE_WIDTH,
       paths: linearPaths,
       points: {
-        show: (u: uPlot, seriesIndex: number) => hasMarkers(u, seriesIndex),
+        show: (u: uPlot, seriesIndex: number) => seriesHasMarkers(u, seriesIndex),
         paths: markerPaths,
         size: MARKER_SIZE,
         width: 0 // Note: this means that our markers are filled using the trace's color.
@@ -1183,20 +1507,23 @@ const createPlot = (width: number, height: number): void => {
       mode: 2,
       width,
       height,
-      padding: [0, null, 0, 0],
+      padding: [0, rightMargin, 0, 0],
       legend: { show: false },
       cursor: { show: false },
       scales: {
         x: { time: false, range: scaleRange('x') },
         y: { range: scaleRange('y') }
       },
+      // Note: our axis titles may contain some basic HTML (e.g., "<i>I<sub>K,r</sub></i>") while uPlot can only render
+      //       plain text, so we render them ourselves (see our template), where uPlot would have rendered them. We
+      //       still give uPlot an empty label for an axis that has a title, so that it reserves some space for it.
       axes: [
         {
           ...axis,
           scale: 'x',
           side: 2,
           size: props.data.xAxisTitle ? X_AXIS_SIZE_WITH_TITLE : X_AXIS_SIZE_WITHOUT_TITLE,
-          label: props.data.xAxisTitle || undefined, // Note: uPlot reserves some space for an empty title.
+          label: props.data.xAxisTitle ? '' : undefined,
           labelSize: X_AXIS_TITLE_SIZE,
           splits: axisSplits('x'),
           values: axisValues('x')
@@ -1206,7 +1533,7 @@ const createPlot = (width: number, height: number): void => {
           scale: 'y',
           side: 3,
           size: yAxisSize,
-          label: props.data.yAxisTitle || undefined, // Note: uPlot reserves some space for an empty title.
+          label: props.data.yAxisTitle ? '' : undefined,
           labelSize: Y_AXIS_TITLE_SIZE,
           labelGap: Y_AXIS_TITLE_GAP,
           splits: axisSplits('y'),
@@ -1215,6 +1542,7 @@ const createPlot = (width: number, height: number): void => {
       ],
       series,
       hooks: {
+        draw: [updatePlotRect],
         drawAxes: [drawZeroLines],
         drawClear: [drawMinorGrid],
         setSize: [
@@ -1288,6 +1616,10 @@ const updatePlot = (): void => {
   // Note: we only (re)create our plot if needed since it is much cheaper to update its data.
 
   const signature = `${props.data.traces.length}::${props.data.xAxisTitle ?? ''}::${props.data.yAxisTitle ?? ''}::${theme.useLightMode()}`;
+  const newLegendWidth = measureLegendWidth();
+  const legendWidthChanged = newLegendWidth !== legendWidth;
+
+  legendWidth = newLegendWidth;
 
   if (!plot || signature !== plotSignature) {
     // We don't yet have a plot or the signature of our plot has changed, so create a new plot.
@@ -1296,14 +1628,24 @@ const updatePlot = (): void => {
 
     createPlot(width, height);
   } else {
-    // We already have a plot and its signature hasn't changed, so update its data and size, if needed.
+    // We already have a plot and its signature hasn't changed, so update the visibility of its series (since our traces
+    // may be different ones, e.g., when runs get tracked in interactive mode), its data, and its size (or layout, if the
+    // width of our legend has changed since it is part of our right margin), if needed.
 
     const currentPlot = plot;
 
     currentPlot.batch(() => {
+      for (let i = 1; i < currentPlot.series.length; ++i) {
+        const plotSeries = currentPlot.series[i];
+
+        if (plotSeries) {
+          plotSeries.show = traceVisibilities.value[i - 1] ?? true;
+        }
+      }
+
       currentPlot.setData(plotData());
 
-      if (currentPlot.width !== width || currentPlot.height !== height) {
+      if (currentPlot.width !== width || currentPlot.height !== height || legendWidthChanged) {
         currentPlot.setSize({ width, height });
       }
     });
@@ -1336,7 +1678,7 @@ vue.onMounted(() => {
   // Note: we pass a getter (i.e. mainDivRef.value) rather than our ref (i.e. mainDivRef) since VueUse uses its own
   //       version of Vue's types, which are not compatible with ours.
 
-  const { stop } = vueusecore.useResizeObserver(
+  const { stop: stopContainer } = vueusecore.useResizeObserver(
     () => mainDivRef.value,
     () => {
       queueResize();
@@ -1346,7 +1688,24 @@ vue.onMounted(() => {
     }
   );
 
-  stopTrackingContainerSize = stop;
+  stopTrackingContainerSize = stopContainer;
+
+  // Start tracking the size of our legend so that we can update the layout of our plot when its width changes since it
+  // is part of our right margin.
+  // Note: its width can change without our data changing, e.g., when our legend becomes scrollable (or stops being
+  //       scrollable) as a result of our plot being resized, in which case it may get a (classic) scrollbar.
+
+  const { stop: stopLegend } = vueusecore.useResizeObserver(
+    () => legendRef.value,
+    () => {
+      syncLegendWidth();
+    },
+    {
+      box: 'border-box'
+    }
+  );
+
+  stopTrackingLegendSize = stopLegend;
 });
 
 vue.onBeforeUnmount(() => {
@@ -1376,6 +1735,7 @@ vue.onUnmounted(() => {
   window.removeEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
 
   stopTrackingContainerSize?.();
+  stopTrackingLegendSize?.();
 });
 
 // Update our plot when the data changes.
@@ -1390,6 +1750,17 @@ vue.watch(
   { immediate: true }
 );
 
+// Update the layout of our plot when our legend gets shown or hidden.
+
+vue.watch(
+  () => props.showLegend,
+  () => {
+    vue.nextTick(() => {
+      syncLegendWidth();
+    });
+  }
+);
+
 // Update our plot when the theme changes.
 
 vue.watch(
@@ -1401,3 +1772,83 @@ vue.watch(
   }
 );
 </script>
+
+<style scoped>
+  .axis-title {
+    position: absolute;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .axis-title :deep(sub),
+  .axis-title :deep(sup),
+  .legend :deep(sub),
+  .legend :deep(sup) {
+    position: static;
+  }
+
+  .axis-title :deep(sub),
+  .axis-title :deep(sup),
+  .hover-name :deep(sub),
+  .hover-name :deep(sup) {
+    font-size: 80%;
+  }
+
+  .legend :deep(sub),
+  .legend :deep(sup) {
+    font-size: 70%;
+  }
+
+  .axis-title :deep(sub),
+  .legend :deep(sub) {
+    vertical-align: sub;
+  }
+
+  .axis-title :deep(sup),
+  .legend :deep(sup) {
+    vertical-align: super;
+  }
+
+  .legend {
+    position: absolute;
+    z-index: 2;
+    padding: 5px 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #808ba4 transparent;
+    user-select: none;
+  }
+
+  .legend-item {
+    position: relative;
+    min-height: 19px;
+    padding: 0 5px 0 40px;
+    line-height: 19px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .legend-item-hidden {
+    opacity: 0.5;
+  }
+
+  .legend-marker {
+    position: absolute;
+    top: -2px;
+    left: 12px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: inherit;
+  }
+
+  .legend-swatch {
+    position: absolute;
+    top: 8.5px;
+    left: 5px;
+    width: 30px;
+    height: 2px;
+  }
+</style>
