@@ -111,7 +111,7 @@ const props = withDefaults(
   }
 );
 
-defineEmits<{
+const emit = defineEmits<{
   marginsUpdated: [newMargins: IGraphPanelMargins];
 }>();
 
@@ -189,7 +189,12 @@ const resize = (): Promise<unknown> => {
 };
 
 const resetMargins = (): void => {
-  // Note: we don't share our margins with sibling panels yet, so there is nothing to reset.
+  // Forget the margins that we last emitted, so that we emit our current margins (e.g., when the shared margins we are
+  // given are reset, see onResetMargins() in SimulationExperimentInteractiveView.vue).
+
+  trackedMargins = undefined;
+
+  updateMarginsAsync();
 };
 
 defineExpose({
@@ -213,6 +218,8 @@ let isUnmounted = false;
 let stopTrackingContainerSize: (() => void) | undefined;
 let stopTrackingLegendSize: (() => void) | undefined;
 let resizeRafId: number | undefined;
+let marginsRafId: number | undefined;
+let trackedMargins: IGraphPanelMargins | undefined;
 
 // Our theme.
 
@@ -1125,8 +1132,17 @@ const textWidth = (text: string, font: string): number => {
 
 // Our Y axis size.
 
+let naturalYAxisSize = 0;
+
+const yAxisTitleSize = (): number => {
+  // Return the size of our Y axis title, if any.
+
+  return props.data.yAxisTitle ? Y_AXIS_TITLE_SIZE : 0;
+};
+
 const yAxisSize = (_u: uPlot, values: string[] | null): number => {
-  // Size our Y axis (without its title) based on the width of its widest tick label.
+  // Size our Y axis (without its title) based on the width of its widest tick label or, if we are given some shared
+  // margins, based on the shared left margin (but never less than what we need).
 
   let maxWidth = 0;
 
@@ -1134,7 +1150,9 @@ const yAxisSize = (_u: uPlot, values: string[] | null): number => {
     maxWidth = Math.max(maxWidth, textWidth(value, tickFont));
   }
 
-  return Math.ceil(maxWidth + Y_AXIS_EXTRA_SIZE);
+  naturalYAxisSize = Math.ceil(maxWidth + Y_AXIS_EXTRA_SIZE);
+
+  return props.margins ? Math.max(naturalYAxisSize, props.margins.left - yAxisTitleSize()) : naturalYAxisSize;
 };
 
 // Right margin, which we use to make sure that our legend and last X tick label are not cut off.
@@ -1143,7 +1161,7 @@ interface IAxisInternals {
   _values?: (string | number | null)[];
 }
 
-const rightMargin = (u: uPlot): number => {
+const naturalRightMargin = (u: uPlot): number => {
   // Our right margin must leave room for our legend (if any), with a margin on both sides of it (see legendLeft), and
   // for half our last X tick label (since it is centred on its tick), with a margin on its right side.
   // Note #1: our legend is to the right of our plotting area and no taller than it while our last X tick label is below
@@ -1157,6 +1175,67 @@ const rightMargin = (u: uPlot): number => {
   const lastXTickLabelSize = lastXValue ? 0.5 * textWidth(String(lastXValue), tickFont) + LEGEND_RIGHT_MARGIN : 0;
 
   return Math.ceil(Math.max(legendSize, lastXTickLabelSize));
+};
+
+const rightMargin = (u: uPlot): number => {
+  // Use our natural right margin or, if we are given some shared margins, the shared right margin (but never less than
+  // what we need).
+
+  const res = naturalRightMargin(u);
+
+  return props.margins ? Math.max(res, props.margins.right) : res;
+};
+
+// Update our margins asynchronously, i.e. after our plot has been laid out and we know how much space it needs for its
+// axes and legend. This allows us to share our margins with other instances of GraphPanelWidget, so that they can align
+// their plots with ours.
+// Note: we emit our natural margins (i.e. the margins that we need) whenever they change, and get given some shared
+//       margins (i.e. the biggest natural margins of all our sibling panels), which we then use (see yAxisSize() and
+//       rightMargin()).
+
+const sameMargins = (
+  firstMargins: IGraphPanelMargins | undefined,
+  secondMargins: IGraphPanelMargins | undefined
+): boolean => {
+  return (
+    firstMargins !== undefined &&
+    secondMargins !== undefined &&
+    firstMargins.left === secondMargins.left &&
+    firstMargins.right === secondMargins.right
+  );
+};
+
+const updateMarginsAsync = (): void => {
+  // Coalesce multiple margin update requests into a single requestAnimationFrame() callback.
+
+  if (marginsRafId !== undefined) {
+    return;
+  }
+
+  marginsRafId = requestAnimationFrame(() => {
+    marginsRafId = undefined;
+
+    // Make sure that we have a plot and that it can be shown.
+
+    const currentPlot = plot;
+
+    if (!currentPlot || isUnmounted || isPlotOutdated) {
+      return;
+    }
+
+    // Emit our natural margins if they have changed.
+
+    const newMargins = {
+      left: naturalYAxisSize + yAxisTitleSize(),
+      right: naturalRightMargin(currentPlot)
+    };
+
+    if (!sameMargins(newMargins, trackedMargins)) {
+      trackedMargins = newMargins;
+
+      emit('marginsUpdated', newMargins);
+    }
+  });
 };
 
 // Grid lines.
@@ -1542,7 +1621,12 @@ const createPlot = (width: number, height: number): void => {
       ],
       series,
       hooks: {
-        draw: [updatePlotRect],
+        draw: [
+          (u: uPlot) => {
+            updatePlotRect(u);
+            updateMarginsAsync();
+          }
+        ],
         drawAxes: [drawZeroLines],
         drawClear: [drawMinorGrid],
         setSize: [
@@ -1721,6 +1805,14 @@ vue.onBeforeUnmount(() => {
     resizeRafId = undefined;
   }
 
+  // Stop updating our margins.
+
+  if (marginsRafId !== undefined) {
+    cancelAnimationFrame(marginsRafId);
+
+    marginsRafId = undefined;
+  }
+
   // Destroy our plot, if any.
 
   plot?.destroy();
@@ -1748,6 +1840,30 @@ vue.watch(
     });
   },
   { immediate: true }
+);
+
+// Update the layout of our plot when our shared margins change.
+
+vue.watch(
+  () => props.margins,
+  (newMargins: IGraphPanelMargins | undefined, oldMargins: IGraphPanelMargins | undefined) => {
+    // Nothing to do if our margins haven't actually changed (e.g., if we were given a new object with the same values).
+
+    if (sameMargins(newMargins, oldMargins)) {
+      return;
+    }
+
+    vue.nextTick(() => {
+      plot?.setSize({ width: plot.width, height: plot.height });
+
+      // If we are not given shared margins anymore, then emit our margins again (since they may be needed to compute
+      // new shared margins).
+
+      if (!props.margins) {
+        resetMargins();
+      }
+    });
+  }
 );
 
 // Update the layout of our plot when our legend gets shown or hidden.
