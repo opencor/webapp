@@ -89,6 +89,13 @@ const MAJOR_TICK_MIN_Y_SPACING = 40;
 const NB_OF_MINOR_TICKS = 5;
 const TICK_LABEL_MIN_SPACING = 10; // Minimum spacing between two consecutive tick labels.
 const MAX_NB_OF_TICKS = 1000; // A safeguard against an axis needing an unreasonable number of ticks.
+const LINE_WIDTH = 2;
+const MARKER_SIZE = 6;
+const MARKER_PADDING = Math.max(MARKER_SIZE / 1.6, 3); // Autorange padding for markers.
+const MIN_NB_OF_POINTS_WITHOUT_MARKERS = 20; // Like in Plotly, traces with fewer than 20 points also have markers.
+const AUTORANGE_PADDING = 0.05; // As a fraction of the length of an axis.
+const DEFAULT_X_RANGE: [number, number] = [-1, 6];
+const DEFAULT_Y_RANGE: [number, number] = [-1, 4];
 
 // Resize handling.
 
@@ -118,7 +125,7 @@ const queueResize = (): void => {
     if (!plot || isPlotOutdated) {
       updatePlot();
     } else if (plot.width !== width || plot.height !== height) {
-      plot.setSize({ width, height });
+      setPlotSize(plot, width, height);
     }
   });
 };
@@ -362,18 +369,46 @@ const exportToCsv = async (): Promise<void> => {
 type AxisKey = 'x' | 'y';
 type Range = [number, number];
 
-const finiteDataRange = (u: uPlot, axisKey: AxisKey): Range | undefined => {
-  // Determine the range of the (finite) values of our visible traces for the given axis.
+const seriesData = (u: uPlot, seriesIndex: number): [math.FloatArray, math.FloatArray] | undefined => {
+  // Return the X and Y values of the given series.
 
-  const data = u.data as unknown as [null, ...[math.FloatArray, math.FloatArray][]];
+  return (u.data as unknown as [null, ...[math.FloatArray, math.FloatArray][]])[seriesIndex] ?? undefined;
+};
+
+const hasMarkers = (u: uPlot, seriesIndex: number): boolean => {
+  // Like Plotly, a trace with fewer than 20 points also has markers.
+
+  const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
+  const nbOfPoints = xValues && yValues ? Math.min(xValues.length, yValues.length) : 0;
+
+  return nbOfPoints > 0 && nbOfPoints < MIN_NB_OF_POINTS_WITHOUT_MARKERS;
+};
+
+const anyMarkers = (u: uPlot): boolean => {
+  // Return whether any of our visible traces has markers.
+
+  for (let i = 1; i < u.series.length; ++i) {
+    if (u.series[i]?.show && hasMarkers(u, i)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const finiteDataRange = (u: uPlot, axisKey: AxisKey, seriesIndex?: number): Range | undefined => {
+  // Determine the range of the (finite) values of our visible traces (or of the given trace) for the given axis.
+
   const facetIndex = axisKey === 'x' ? 0 : 1;
+  const firstIndex = seriesIndex ?? 1;
+  const lastIndex = seriesIndex ?? u.series.length - 1;
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
 
-  for (let i = 1; i < data.length; ++i) {
-    const values = data[i]?.[facetIndex];
+  for (let i = firstIndex; i <= lastIndex; ++i) {
+    const values = seriesData(u, i)?.[facetIndex];
 
-    if (!values || u.series[i]?.show === false) {
+    if (!values || !u.series[i]?.show) {
       continue;
     }
 
@@ -393,6 +428,69 @@ const finiteDataRange = (u: uPlot, axisKey: AxisKey): Range | undefined => {
   }
 
   return min <= max ? [min, max] : undefined;
+};
+
+interface IExtremum {
+  value: number;
+  padding: number; // In CSS pixels.
+}
+
+const autoRange = (u: uPlot, axisKey: AxisKey, min: number, max: number): Range => {
+  // Autorange the given axis like Plotly, i.e. our X axis is tight while our Y axis is padded by 5% of its length on
+  // both ends, and the points of a trace with markers are padded by 5% of the length of both axes plus some padding for
+  // the markers themselves. This means that we have a minimum and a maximum extremum for our traces and for each trace
+  // with markers, each extremum with its own padding. The range that we want is the one that fits all of those extrema,
+  // i.e. the one that needs the most value per pixel.
+  // Note: the minimum and maximum extrema of a trace with markers are also within the range of our traces, but they get
+  //       padded more, so we consider them separately.
+
+  // Make sure that our range is not zero-width, since uPlot can handle neither.
+
+  if (min === max) {
+    return [min - 1, max + 1];
+  }
+
+  // Determine the extrema of our traces and of our traces with markers, each with its own padding.
+
+  const length = (axisKey === 'x' ? u.bbox.width : u.bbox.height) / (dependencies._uPlot.pxRatio as number);
+  const padding = axisKey === 'y' ? AUTORANGE_PADDING * length : 0;
+  const markersPadding = AUTORANGE_PADDING * length + MARKER_PADDING;
+  const minExtrema: IExtremum[] = [{ value: min, padding }];
+  const maxExtrema: IExtremum[] = [{ value: max, padding }];
+
+  for (let i = 1; i < u.series.length; ++i) {
+    if (u.series[i]?.show && hasMarkers(u, i)) {
+      const traceRange = finiteDataRange(u, axisKey, i);
+
+      if (traceRange) {
+        minExtrema.push({ value: traceRange[0], padding: markersPadding });
+        maxExtrema.push({ value: traceRange[1], padding: markersPadding });
+      }
+    }
+  }
+
+  // Determine the range that fits all of our extrema, falling back to a tight range if there is not enough room for
+  // our padding (e.g., if our axis is really short).
+
+  let res: Range = [min, max];
+  let maxValuePerPixel = 0;
+
+  for (const minExtremum of minExtrema) {
+    for (const maxExtremum of maxExtrema) {
+      const valueRange = maxExtremum.value - minExtremum.value;
+      const pixelRange = length - minExtremum.padding - maxExtremum.padding;
+
+      if (valueRange > 0 && pixelRange > 0 && valueRange / pixelRange > maxValuePerPixel) {
+        maxValuePerPixel = valueRange / pixelRange;
+        res = [
+          minExtremum.value - maxValuePerPixel * minExtremum.padding,
+          maxExtremum.value + maxValuePerPixel * maxExtremum.padding
+        ];
+      }
+    }
+  }
+
+  return res;
 };
 
 const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
@@ -430,17 +528,17 @@ const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
       const finiteRange = finiteDataRange(u, axisKey);
 
       if (!finiteRange) {
-        // No (finite) data, so we use a default range.
+        // No (finite) data, so we use Plotly's default range.
 
-        return [0, 1000];
+        return axisKey === 'x' ? [...DEFAULT_X_RANGE] : [...DEFAULT_Y_RANGE];
       }
 
       [min, max] = finiteRange;
     }
 
-    // Make sure that we have a non-zero range.
+    // Autorange our axis.
 
-    return min === max ? [min - 1, max + 1] : [min, max];
+    return autoRange(u, axisKey, min, max);
   };
 };
 
@@ -818,7 +916,7 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
   // Note #2: we only ever look at consecutive points, so this works whether or not our X values are sorted.
   // Note #3: we break our path at non-finite values, so that a gap in the data is drawn as a gap in the trace.
 
-  const [xValues, yValues] = (u.data as unknown as [null, ...[math.FloatArray, math.FloatArray][]])[seriesIndex] ?? [];
+  const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
   const xMin = u.scales.x?.min;
   const xMax = u.scales.x?.max;
   const yMin = u.scales.y?.min;
@@ -976,6 +1074,54 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
   return { stroke, fill: null, clip: null, flags: 0 };
 };
 
+const markerPaths: uPlot.Series.Points.PathBuilder = (u: uPlot, seriesIndex: number) => {
+  // Like Plotly, draw a marker for each point of our trace that has finite X and Y values, clipping our markers to our
+  // plotting area.
+  // Note: uPlot's markers path builder draws all the points of our trace in mode 2 (rather than only those that are in
+  //       our plotting area, as in mode 1) and doesn't clip our markers to our plotting area, hence we use our own.
+
+  const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
+  const fill = new Path2D();
+  const clip = new Path2D();
+  const { left, top, width, height } = u.bbox;
+
+  clip.rect(left, top, width, height);
+
+  if (xValues && yValues) {
+    const radius = 0.5 * MARKER_SIZE * (dependencies._uPlot.pxRatio as number);
+    const nbOfPoints = Math.min(xValues.length, yValues.length);
+
+    for (let i = 0; i < nbOfPoints; ++i) {
+      const x = xValues[i] as number;
+      const y = yValues[i] as number;
+
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        const xPos = u.valToPos(x, 'x', true);
+        const yPos = u.valToPos(y, 'y', true);
+
+        fill.moveTo(xPos + radius, yPos);
+        fill.arc(xPos, yPos, radius, 0, 2 * Math.PI);
+      }
+    }
+  }
+
+  return { stroke: null, fill, clip, flags: 0 };
+};
+
+const setPlotSize = (u: uPlot, width: number, height: number): void => {
+  // Set the size of our plot.
+  // Note: if some of our visible traces have markers, then our autorange depends on the length of our axes (since the
+  //       padding for markers is in pixels), so we need to autorange our axes again, which we do by resetting our data.
+
+  u.batch(() => {
+    u.setSize({ width, height });
+
+    if (anyMarkers(u)) {
+      u.setData(u.data);
+    }
+  });
+};
+
 const plotData = (): uPlot.AlignedData => {
   // The data to be plotted.
   // Note: uPlot needs at least one series, hence we use an empty one if we have no traces.
@@ -995,16 +1141,22 @@ const createPlot = (width: number, height: number): void => {
 
   plot?.destroy();
 
-  // Create a series for each trace, using the trace's color for the stroke, our linear path builder, and no points.
+  // Create a series for each trace, using the trace's color for the stroke, our linear path builder, and our markers
+  // path builder (for traces with markers).
 
   const series: uPlot.Series[] = [{}];
 
   for (let i = 0; i < Math.max(1, props.data.traces.length); ++i) {
     series.push({
       stroke: (_plot: uPlot, seriesIndex: number) => props.data.traces[seriesIndex - 1]?.color ?? 'transparent',
-      width: 2,
+      width: LINE_WIDTH,
       paths: linearPaths,
-      points: { show: false },
+      points: {
+        show: (u: uPlot, seriesIndex: number) => hasMarkers(u, seriesIndex),
+        paths: markerPaths,
+        size: MARKER_SIZE,
+        width: 0 // Note: this means that our markers are filled using the trace's color.
+      },
       facets: [
         { scale: 'x', auto: true },
         { scale: 'y', auto: true }
@@ -1096,7 +1248,7 @@ const createPlot = (width: number, height: number): void => {
 
             queueMicrotask(() => {
               if (plot === u) {
-                u.setSize({ width, height });
+                setPlotSize(u, width, height);
               }
             });
           }
