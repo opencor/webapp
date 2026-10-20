@@ -87,6 +87,7 @@ const Y_AXIS_EXTRA_SIZE = 5; // Extra size of our Y axis, on top of the width of
 const MAJOR_TICK_MIN_X_SPACING = 80;
 const MAJOR_TICK_MIN_Y_SPACING = 40;
 const NB_OF_MINOR_TICKS = 5;
+const TICK_LABEL_MIN_SPACING = 10; // Minimum spacing between two consecutive tick labels.
 const MAX_NB_OF_TICKS = 1000; // A safeguard against an axis needing an unreasonable number of ticks.
 
 // Resize handling.
@@ -557,7 +558,9 @@ const formatNumber = (value: number, format: INumberFormat): string => {
 };
 
 // Ticks, like Plotly, i.e. major ticks that are multiples of a "nice" spacing (which depends on the length of our axis)
-// and minor ticks (only used for our minor grid lines) that split a major tick spacing in four or five.
+// and minor ticks (only used for our minor grid lines) that split a major tick spacing in four or five. Unlike Plotly,
+// though, we use fewer major ticks if their labels would otherwise overlap (Plotly rotates its X tick labels instead
+// and lets its Y tick labels overlap).
 
 interface IAxisTicks {
   format: INumberFormat;
@@ -610,7 +613,9 @@ const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
     const length = (axisKey === 'x' ? u.bbox.width : u.bbox.height) / (dependencies._uPlot.pxRatio as number);
     const minSpacing = axisKey === 'x' ? MAJOR_TICK_MIN_X_SPACING : MAJOR_TICK_MIN_Y_SPACING;
     const nbOfTicks = Math.min(Math.max(length / minSpacing, 4), 9) + 1;
-    const dtick = roundDTick(Math.abs(max - min) / nbOfTicks);
+    const range = Math.abs(max - min);
+    const maxEnd = Math.max(Math.abs(min), Math.abs(max));
+    let dtick = roundDTick(range / nbOfTicks);
 
     // Make sure that our tick spacing is valid, i.e. that our range is neither too small (e.g., a subnormal range, in
     // which case our tick spacing would be zero) nor too big (e.g., a range that overflows, in which case our tick
@@ -625,7 +630,35 @@ const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
       return [];
     }
 
-    const ticks = ticksBetween(min, max, dtick);
+    let ticks = ticksBetween(min, max, dtick);
+    let format = numberFormat(dtick, maxEnd);
+
+    // Make sure that our tick labels don't overlap by increasing our tick spacing (to the next "nice" value) for as long
+    // as they would.
+    // Note: this always ends since we end up with at most one tick once our tick spacing is bigger than our range.
+
+    const tickLabelSize = (): number => {
+      // Return the size of our biggest tick label along our axis, i.e. its width for our X axis and its height for our Y
+      // axis.
+
+      if (axisKey === 'y') {
+        return TICK_FONT_SIZE;
+      }
+
+      let res = 0;
+
+      for (const tick of ticks) {
+        res = Math.max(res, textWidth(formatNumber(tick, format), tickFont));
+      }
+
+      return res;
+    };
+
+    while (ticks.length > 1 && (length * dtick) / range < tickLabelSize() + TICK_LABEL_MIN_SPACING) {
+      dtick = roundDTick(dtick);
+      ticks = ticksBetween(min, max, dtick);
+      format = numberFormat(dtick, maxEnd);
+    }
 
     // Minor ticks, like Plotly, i.e. we aim for five minor tick spacings per major tick spacing, making sure that our
     // major tick spacing is a multiple of our minor tick spacing.
@@ -639,7 +672,7 @@ const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
     // Keep track of the format of our tick labels and of our minor ticks (excluding those that are also major ticks).
 
     axisTicks[axisKey] = {
-      format: numberFormat(dtick, Math.max(Math.abs(min), Math.abs(max))),
+      format,
       minorTicks:
         minorDtick < dtick
           ? ticksBetween(min, max, minorDtick).filter((tick: number) => !isMultiple(Math.abs(tick) || dtick, dtick))
@@ -674,7 +707,7 @@ const axisValues = (axisKey: AxisKey): uPlot.Axis.Values => {
   };
 };
 
-// Text measuring, which we use to size our Y axis.
+// Text measuring, which we use to make sure that our X tick labels don't overlap and to size our Y axis.
 
 const tickFont = `${TICK_FONT_SIZE}px ${FONT_FAMILY}`;
 let measureContext: CanvasRenderingContext2D | null | undefined;
