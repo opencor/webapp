@@ -1161,37 +1161,47 @@ interface IAxisInternals {
   _values?: (string | number | null)[];
 }
 
-const naturalRightMargin = (u: uPlot): number => {
-  // Our right margin must leave room for our legend (if any), with a margin on both sides of it (see legendLeft), and
-  // for half our last X tick label (since it is centred on its tick), with a margin on its right side.
+const legendRightMargin = (): number => {
+  // Return the right margin needed by our legend (if any), with a margin on both sides of it (see legendLeft).
+  // Note: this is our natural right margin, i.e. the right margin that we share with our sibling panels (see
+  //       updateMarginsAsync()).
+
+  return legendWidth ? Math.ceil(LEGEND_LEFT_MARGIN + legendWidth + LEGEND_RIGHT_MARGIN) : 0;
+};
+
+const rightMargin = (u: uPlot): number => {
+  // Our right margin must leave room for our legend (or, if we are given some shared margins, for the shared right
+  // margin) and for half our last X tick label (since it is centred on its tick), with a margin on its right side.
   // Note #1: our legend is to the right of our plotting area and no taller than it while our last X tick label is below
   //          our plotting area, so they can't overlap and our right margin only needs to fit the wider of the two.
+  //          In practice, our last X tick label only matters when we don't have a legend (e.g., in the standard view
+  //          or if we have no traces) since our legend is otherwise always wider than half our last X tick label.
+  //          Also, unlike our legend, our last X tick label is not part of our shared right margin (see
+  //          updateMarginsAsync()).
   // Note #2: uPlot computes our tick labels (see axisValues()) before our padding, so our last X tick label is up to
   //          date.
 
   const xValues = (u.axes[0] as unknown as IAxisInternals | undefined)?._values;
   const lastXValue = xValues?.[xValues.length - 1];
-  const legendSize = legendWidth ? LEGEND_LEFT_MARGIN + legendWidth + LEGEND_RIGHT_MARGIN : 0;
+  const legendSize = props.margins ? Math.max(legendRightMargin(), props.margins.right) : legendRightMargin();
   const lastXTickLabelSize = lastXValue ? 0.5 * textWidth(String(lastXValue), tickFont) + LEGEND_RIGHT_MARGIN : 0;
 
   return Math.ceil(Math.max(legendSize, lastXTickLabelSize));
 };
 
-const rightMargin = (u: uPlot): number => {
-  // Use our natural right margin or, if we are given some shared margins, the shared right margin (but never less than
-  // what we need).
-
-  const res = naturalRightMargin(u);
-
-  return props.margins ? Math.max(res, props.margins.right) : res;
-};
-
 // Update our margins asynchronously, i.e. after our plot has been laid out and we know how much space it needs for its
 // axes and legend. This allows us to share our margins with other instances of GraphPanelWidget, so that they can align
 // their plots with ours.
-// Note: we emit our natural margins (i.e. the margins that we need) whenever they change, and get given some shared
-//       margins (i.e. the biggest natural margins of all our sibling panels), which we then use (see yAxisSize() and
-//       rightMargin()).
+// Note #1: we emit our natural margins (i.e. the margins that we need) whenever they change, and get given some shared
+//          margins (i.e. the biggest natural margins of all our sibling panels), which we then use (see yAxisSize() and
+//          rightMargin()).
+// Note #2: our natural margins must not depend on our shared margins, or our sibling panels could keep adjusting to
+//          each other's margins. Our natural left margin depends on our Y tick labels, i.e. on the height of our
+//          plotting area, which doesn't depend on our shared margins. However, our last X tick label depends on our X
+//          ticks, i.e. on the width of our plotting area, which does depend on our shared margins. So, our natural
+//          right margin only accounts for our legend (see legendRightMargin()) and each panel makes room for its own
+//          last X tick label (see rightMargin()). The (unlikely) cost is that a panel which last X tick label needs
+//          more room than our shared right margin has a narrower plotting area than its sibling panels.
 
 const sameMargins = (
   firstMargins: IGraphPanelMargins | undefined,
@@ -1217,17 +1227,16 @@ const updateMarginsAsync = (): void => {
 
     // Make sure that we have a plot and that it can be shown.
 
-    const currentPlot = plot;
-
-    if (!currentPlot || isUnmounted || isPlotOutdated) {
+    if (!plot || isUnmounted || isPlotOutdated) {
       return;
     }
 
     // Emit our natural margins if they have changed.
+    // Note: our natural right margin only accounts for our legend (see legendRightMargin()).
 
     const newMargins = {
       left: naturalYAxisSize + yAxisTitleSize(),
-      right: naturalRightMargin(currentPlot)
+      right: legendRightMargin()
     };
 
     if (!sameMargins(newMargins, trackedMargins)) {
