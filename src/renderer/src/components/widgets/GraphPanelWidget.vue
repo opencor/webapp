@@ -149,41 +149,29 @@ const DEFAULT_Y_RANGE: [number, number] = [-1, 4];
 
 // Resize handling.
 
-const queueResize = (): void => {
-  // Make sure that we don't queue multiple resizes at the same time.
+const doResize = (): void => {
+  // Make sure that we have a valid size.
 
-  if (resizeRafId !== undefined) {
+  const width = mainDivRef.value?.clientWidth || 0;
+  const height = mainDivRef.value?.clientHeight || 0;
+
+  if (width <= 0 || height <= 0) {
     return;
   }
 
-  // Queue a resize to be performed on the next animation frame.
+  // Update our plot or its size, if needed.
 
-  resizeRafId = requestAnimationFrame(() => {
-    resizeRafId = undefined;
-
-    // Make sure that we still have a valid size.
-
-    const width = mainDivRef.value?.clientWidth || 0;
-    const height = mainDivRef.value?.clientHeight || 0;
-
-    if (width <= 0 || height <= 0) {
-      return;
-    }
-
-    // Update our plot or its size, if needed.
-
-    if (!plot || isPlotOutdated) {
-      updatePlot();
-    } else if (plot.width !== width || plot.height !== height) {
-      setPlotSize(plot, width, height);
-    }
-  });
+  if (!plot || isPlotOutdated) {
+    updatePlot();
+  } else if (plot.width !== width || plot.height !== height) {
+    setPlotSize(plot, width, height);
+  }
 };
 
 const resize = (): Promise<unknown> => {
-  // Queue a resize to be performed on the next animation frame.
+  // Resize our plot.
 
-  queueResize();
+  doResize();
 
   return Promise.resolve();
 };
@@ -217,8 +205,7 @@ let isPlotOutdated = false;
 let isUnmounted = false;
 let stopTrackingContainerSize: (() => void) | undefined;
 let stopTrackingLegendSize: (() => void) | undefined;
-let resizeRafId: number | undefined;
-let marginsRafId: number | undefined;
+let marginsUpdatePending = false;
 let trackedMargins: IGraphPanelMargins | undefined;
 
 // Our theme.
@@ -1216,14 +1203,19 @@ const sameMargins = (
 };
 
 const updateMarginsAsync = (): void => {
-  // Coalesce multiple margin update requests into a single requestAnimationFrame() callback.
+  // Coalesce multiple margin update requests into a single microtask.
+  // Note: we use a microtask rather than an animation frame, so that our sibling panels (and ourselves) get relaid out
+  //       using our new shared margins before the browser gets to paint us (e.g., while being resized). Otherwise, our
+  //       sibling panels would be misaligned for one frame, i.e. they would flicker.
 
-  if (marginsRafId !== undefined) {
+  if (marginsUpdatePending) {
     return;
   }
 
-  marginsRafId = requestAnimationFrame(() => {
-    marginsRafId = undefined;
+  marginsUpdatePending = true;
+
+  queueMicrotask(() => {
+    marginsUpdatePending = false;
 
     // Make sure that we have a plot and that it can be shown.
 
@@ -1684,7 +1676,7 @@ const createPlot = (width: number, height: number): void => {
 const updatePlot = (): void => {
   // Make sure that we haven't been unmounted (e.g., if this was scheduled using vue.nextTick() just before we got
   // unmounted) and that we can be shown (e.g., we can't if we are in a hidden file tab, in which case we will be
-  // updated once we can be shown, see queueResize()).
+  // updated once we can be shown, see doResize()).
 
   const mainDiv = mainDivRef.value;
 
@@ -1768,13 +1760,19 @@ vue.onMounted(() => {
   window.addEventListener(CONTEXT_MENU_EVENT, handleContextMenu);
 
   // Start tracking the size of our container so that we can update our plot when it changes.
-  // Note: we pass a getter (i.e. mainDivRef.value) rather than our ref (i.e. mainDivRef) since VueUse uses its own
-  //       version of Vue's types, which are not compatible with ours.
+  // Note #1: we pass a getter (i.e. mainDivRef.value) rather than our ref (i.e. mainDivRef) since VueUse uses its own
+  //          version of Vue's types, which are not compatible with ours.
+  // Note #2: we resize our plot straight away rather than on the next animation frame. Indeed, a resize observer gets
+  //          notified after layout but before paint, and uPlot (and Vue) update our plot (and legend) in a microtask,
+  //          i.e. before paint too. So, our resized plot gets painted in the same frame as our resized container. This
+  //          wouldn't be the case if we were to resize our plot on the next animation frame, in which case our plot
+  //          (and legend) would be painted at their old size and position for one frame, i.e. they would flicker. Also,
+  //          there is no need to coalesce our resizes since a resize observer gets notified at most once per frame.
 
   const { stop: stopContainer } = vueusecore.useResizeObserver(
     () => mainDivRef.value,
     () => {
-      queueResize();
+      doResize();
     },
     {
       box: 'border-box'
@@ -1802,25 +1800,9 @@ vue.onMounted(() => {
 });
 
 vue.onBeforeUnmount(() => {
-  // Make sure that we don't queue any more resizes after we are unmounted.
+  // Make sure that we don't do anything else after we are unmounted.
 
   isUnmounted = true;
-
-  // Stop tracking the size of our container.
-
-  if (resizeRafId !== undefined) {
-    cancelAnimationFrame(resizeRafId);
-
-    resizeRafId = undefined;
-  }
-
-  // Stop updating our margins.
-
-  if (marginsRafId !== undefined) {
-    cancelAnimationFrame(marginsRafId);
-
-    marginsRafId = undefined;
-  }
 
   // Destroy our plot, if any.
 
