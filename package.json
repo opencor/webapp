@@ -53,9 +53,6 @@
       "vue": "3.4.21"
     }
   },
-  "peerDependencies": {
-    "vue": "3.4.21"
-  },
   "dependencies": {
     "@napi-rs/keyring": "^2.1.2",
     "xxhash-wasm": "^1.1.0"
