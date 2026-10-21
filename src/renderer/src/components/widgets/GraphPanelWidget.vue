@@ -55,6 +55,32 @@
           v-html="data.yAxisTitle"
         />
       </template>
+      <svg v-if="hoverLabel" class="absolute inset-0 z-3 pointer-events-none" width="100%" height="100%">
+        <g :transform="`translate(${hoverLabel.x} ${hoverLabel.y})`"
+          :font-family="HOVER_FONT"
+          :font-size="HOVER_FONT_SIZE"
+          :text-anchor="hoverLabel.anchor"
+          dominant-baseline="central"
+        >
+          <path :d="hoverLabel.path" :fill="hoverLabel.color" :stroke="hoverLabel.contrastColor" stroke-width="1" />
+          <text :x="hoverLabel.textX" :fill="hoverLabel.contrastColor">{{ hoverLabel.text }}</text>
+        </g>
+      </svg>
+      <div v-if="hoverLabel?.name" class="hover-name"
+        :style="{
+          left: `${hoverLabel.nameX}px`,
+          top: `${hoverLabel.y - 0.5 * HOVER_LABEL_HEIGHT}px`,
+          height: `${HOVER_LABEL_HEIGHT}px`,
+          padding: `0 ${HOVER_TEXT_PADDING}px`,
+          transform: hoverLabel.anchor === 'start' ? undefined : 'translateX(-100%)',
+          fontFamily: HOVER_FONT,
+          fontSize: `${HOVER_FONT_SIZE}px`,
+          lineHeight: `${HOVER_LABEL_HEIGHT}px`,
+          color: hoverLabel.color,
+          backgroundColor: `color-mix(in srgb, ${themeColors.background} 80%, transparent)`
+        }"
+        v-html="hoverLabel.name"
+      />
       <div v-if="showLegend && legendItems.length" ref="legendRef" class="legend"
         :style="{
           left: `${legendLeft}px`,
@@ -178,6 +204,13 @@ const MIN_DRAG = 8; // Like Plotly, the minimum distance that we must drag (alon
 const MIN_ZOOM = 20; // Like Plotly, the distance below which a drag is considered to be along one axis only.
 const ZOOM_FACTOR = 0.5; // Factor by which our ranges get scaled when zooming in (or its inverse when zooming out).
 const DRAGGER_SIZE = 20; // Like Plotly, the thickness of our axis (and corner) draggers.
+const HOVER_FONT = 'Arial, sans-serif'; // Like Plotly, the font of our hover label.
+const HOVER_FONT_SIZE = 13; // Like Plotly, the font size of our hover label.
+const HOVER_LABEL_HEIGHT = 21; // Like Plotly, the height of our hover label (in CSS pixels).
+const HOVER_ARROW_SIZE = 6; // Like Plotly, the size of the arrow of our hover label (in CSS pixels).
+const HOVER_TEXT_PADDING = 3; // Like Plotly, the horizontal padding of our hover label's text (in CSS pixels).
+const HOVER_NAME_LENGTH = 15; // Like Plotly, the maximum length of a trace name in our hover label.
+const HOVER_DISTANCE = 20; // Like Plotly, the maximum distance between the mouse pointer and a point to hover it.
 
 // Resize handling.
 
@@ -431,7 +464,9 @@ const setTraceVisibilities = (visibilities: boolean[]): void => {
       const plotSeries = currentPlot.series[index + 1];
 
       if (plotSeries && plotSeries.show !== visible) {
-        currentPlot.setSeries(index + 1, { show: visible });
+        currentPlot.setSeries(index + 1, {
+          show: visible
+        });
       }
     });
   });
@@ -943,7 +978,10 @@ const setScales = (ranges: Partial<Record<AxisKey, Range | null>>): void => {
       const range = ranges[axisKey];
 
       if (range !== undefined) {
-        currentPlot.setScale(axisKey, { min: range?.[0], max: range?.[1] } as { min: number; max: number });
+        currentPlot.setScale(axisKey, {
+          min: range?.[0],
+          max: range?.[1]
+        } as { min: number; max: number });
       }
     }
   });
@@ -1142,7 +1180,7 @@ const yCorners = (box: IBox, x0: number): string => {
 const xyCorners = (box: IBox): string => {
   // Like Plotly, the corners of a zoom box along both of our axes.
 
-  const length = Math.floor(Math.min(box.bottom - box.top, box.right - box.left, MIN_ZOOM) / 2);
+  const length = Math.floor(0.5 * Math.min(box.bottom - box.top, box.right - box.left, MIN_ZOOM));
 
   return (
     `M${box.left - 3.5},${box.top - 0.5 + length}h3v${-length}h${length}v-3h-${length + 3}Z` +
@@ -1152,7 +1190,13 @@ const xyCorners = (box: IBox): string => {
   );
 };
 
-const plotPosition = (event: MouseEvent, rect: IPlotRect): { x: number; y: number } => {
+const plotPosition = (
+  event: MouseEvent,
+  rect: IPlotRect
+): {
+  x: number;
+  y: number;
+} => {
   // Return the position of the given mouse event relative to our plotting area.
 
   const mainDivRect = mainDivRef.value?.getBoundingClientRect();
@@ -1264,8 +1308,15 @@ const onDragStart = (event: MouseEvent, type: DragType): void => {
     xRange,
     yRange,
     zoomMode: '',
-    zoomRanges: { ...zoomRanges },
-    box: { left: 0, right: 0, top: 0, bottom: 0 }
+    zoomRanges: {
+      ...zoomRanges
+    },
+    box: {
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0
+    }
   };
 
   // Listen for mouse events on the window, so that we can continue to drag even if the mouse leaves our plotting area.
@@ -1572,6 +1623,7 @@ const stopDrag = (): void => {
   }
 
   drag = undefined;
+  hoverLabel.value = null;
   dragCursor.value = null;
   zoomBox.value = null;
 };
@@ -1661,7 +1713,7 @@ const formatNumber = (value: number, format: INumberFormat): string => {
   let absValue = Math.abs(value);
   let tickRound = format.tickRound;
 
-  if (absValue < 10 ** -tickRound / 2) {
+  if (absValue < 0.5 * 10 ** -tickRound) {
     return '0';
   }
 
@@ -1779,7 +1831,10 @@ const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
 
     if (!(dtick > 0 && Number.isFinite(dtick))) {
       axisTicks[axisKey] = {
-        format: { tickRound: 0, exponent: 0 },
+        format: {
+          tickRound: 0,
+          exponent: 0
+        },
         minorTicks: []
       };
 
@@ -1822,7 +1877,7 @@ const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
     let minorDtick = roundDTick((0.99 * dtick) / NB_OF_MINOR_TICKS);
 
     if (!isMultiple(dtick, minorDtick)) {
-      minorDtick = Math.abs(dtick / minorDtick - 2.5) < 0.001 * 2.5 ? dtick / 2 : dtick;
+      minorDtick = Math.abs(dtick / minorDtick - 2.5) < 0.001 * 2.5 ? 0.5 * dtick : dtick;
     }
 
     // Keep track of the format of our tick labels and of our minor ticks (excluding those that are also major ticks).
@@ -2341,11 +2396,337 @@ const setPlotSize = (u: uPlot, width: number, height: number): void => {
   });
 };
 
+// Hover functionality, like Plotly (with its default 'closest' hover mode), i.e. a label for the point that is closest
+// to the mouse pointer (within HOVER_DISTANCE pixels) with its coordinates (and the name of its trace if we have
+// several traces).
+
+interface IHoverLabel {
+  x: number;
+  y: number;
+  anchor: 'start' | 'end';
+  path: string;
+  text: string;
+  textX: number;
+  name: string;
+  nameX: number;
+  color: string;
+  contrastColor: string;
+}
+
+const hoverLabel = vue.shallowRef<IHoverLabel | null>(null);
+let hoverRafId: number | undefined;
+let sortedXValues: boolean[] = [];
+
+const lowerBound = (values: math.FloatArray, value: number, end: number): number => {
+  // Return the index of the first of the given (sorted) values that is not less than the given value.
+
+  let low = 0;
+  let high = end;
+
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+
+    if ((values[middle] as number) < value) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+
+  return low;
+};
+
+const relativeLuminance = (color: string): number | undefined => {
+  // Return the (WCAG) relative luminance of the given (hexadecimal) colour, if valid.
+
+  const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
+
+  if (!match?.[1]) {
+    return undefined;
+  }
+
+  const hex =
+    match[1].length === 3 ? [...match[1]].map((character: string) => character + character).join('') : match[1];
+  const [red, green, blue] = [0, 2, 4].map((index: number) => {
+    const value = Number.parseInt(hex.slice(index, index + 2), 16) / 255;
+
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  }) as [number, number, number];
+
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+};
+
+const contrastRatio = (luminance1: number, luminance2: number): number => {
+  // Return the (WCAG) contrast ratio between two colours of the given relative luminances.
+
+  return (Math.max(luminance1, luminance2) + 0.05) / (Math.min(luminance1, luminance2) + 0.05);
+};
+
+const contrastColor = (color: string): string => {
+  // Like Plotly (see its Color.contrast()), return Plotly's background colour (i.e. white) for a colour that is dark,
+  // i.e. that contrasts more with Plotly's background colour than with its default line colour, and Plotly's default
+  // line colour otherwise.
+
+  const PLOTLY_BACKGROUND = '#fff';
+  const PLOTLY_DEFAULT_LINE = '#444';
+
+  const luminance = relativeLuminance(color);
+
+  if (luminance === undefined) {
+    return PLOTLY_BACKGROUND;
+  }
+
+  const backgroundLuminance = relativeLuminance(PLOTLY_BACKGROUND) as number;
+  const defaultLineLuminance = relativeLuminance(PLOTLY_DEFAULT_LINE) as number;
+
+  return contrastRatio(luminance, backgroundLuminance) > contrastRatio(luminance, defaultLineLuminance)
+    ? PLOTLY_BACKGROUND
+    : PLOTLY_DEFAULT_LINE;
+};
+
+const hoverName = (name: string): string => {
+  // Like Plotly (see its svgTextUtils.plainText()), return the given (HTML) trace name with only some basic tags (which
+  // don't count towards its length) and truncated to HOVER_NAME_LENGTH characters (with an ellipsis), if needed.
+
+  const HOVER_NAME_TAGS = ['br', 'sub', 'sup', 'b', 'i', 'em', 's', 'u'];
+
+  const ellipsis = '...';
+  const res: string[] = [];
+  let previousTag = '';
+  let length = 0;
+
+  for (const part of name.split(/(<[^<>]*>)/)) {
+    // Keep any part that is an HTML tag that we support, but without its attributes (which Plotly ignores for those
+    // tags anyway), and skip any other HTML tag.
+
+    const tagMatch = /<(\/?)([^ >]*)(\s+(.*))?>/i.exec(part);
+    const tag = tagMatch?.[2]?.toLowerCase();
+
+    if (tag) {
+      if (HOVER_NAME_TAGS.includes(tag)) {
+        res.push(`<${tagMatch?.[1] ?? ''}${tag}>`);
+
+        previousTag = tag;
+      }
+
+      continue;
+    }
+
+    // Make sure that our name doesn't exceed HOVER_NAME_LENGTH characters, truncating it if needed.
+
+    if (length + part.length < HOVER_NAME_LENGTH) {
+      res.push(part);
+
+      length += part.length;
+    } else if (length < HOVER_NAME_LENGTH) {
+      const remainingLength = HOVER_NAME_LENGTH - length;
+
+      if (
+        previousTag &&
+        (previousTag !== 'br' || remainingLength <= ellipsis.length || part.length <= ellipsis.length)
+      ) {
+        res.pop();
+      }
+
+      res.push(part.slice(0, Math.max(0, remainingLength - ellipsis.length)) + ellipsis);
+
+      break;
+    }
+
+    // Our part is some text (rather than an HTML tag), so reset our previous tag.
+
+    previousTag = '';
+  }
+
+  return res.join('');
+};
+
+const formatHoverValue = (value: number): string => {
+  // Like Plotly, format a value in our hover label using the value itself as the tick spacing and adding four digits of
+  // precision.
+
+  const absValue = Math.abs(value) || 1;
+  const format = numberFormat(absValue, absValue);
+
+  return formatNumber(value, {
+    ...format,
+    tickRound: format.tickRound + 4
+  });
+};
+
+const plainText = (html: string): string => {
+  // Return the given HTML (e.g., a trace name) as plain text.
+  // Note: the document created by DOMParser is inert, i.e. no script gets executed and no resource gets loaded.
+
+  return new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '';
+};
+
+const updateHover = (): void => {
+  // Make sure that we have a plot, that the mouse pointer is over our plotting area, and that we are not dragging.
+
+  const u = plot;
+  const rect = plotRect.value;
+  const left = u?.cursor.left;
+  const top = u?.cursor.top;
+  const xMin = u?.scales.x?.min;
+  const xMax = u?.scales.x?.max;
+  const yMin = u?.scales.y?.min;
+  const yMax = u?.scales.y?.max;
+
+  if (
+    !u ||
+    !rect ||
+    drag ||
+    left == null ||
+    top == null ||
+    left < 0 ||
+    top < 0 ||
+    xMin == null ||
+    xMax == null ||
+    yMin == null ||
+    yMax == null
+  ) {
+    hoverLabel.value = null;
+
+    return;
+  }
+
+  // Find the point that is closest to the mouse pointer (within HOVER_DISTANCE pixels), if any.
+
+  const xFactor = rect.width / (xMax - xMin);
+  const yFactor = rect.height / (yMax - yMin);
+  let closestDistance = HOVER_DISTANCE * HOVER_DISTANCE;
+  let closestSeriesIndex = -1;
+  let closestIndex = -1;
+
+  for (let seriesIndex = 1; seriesIndex < u.series.length; ++seriesIndex) {
+    // Make sure that our series is visible and that it has data.
+
+    const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
+
+    if (!u.series[seriesIndex]?.show || !xValues || !yValues) {
+      continue;
+    }
+
+    // Determine the points that we need to look at, i.e. all of them unless our X values are sorted, in which case we
+    // only look at the points that are within HOVER_DISTANCE pixels horizontally (using a binary search).
+
+    const nbOfPoints = Math.min(xValues.length, yValues.length);
+    let start = 0;
+    let end = nbOfPoints;
+
+    if (sortedXValues[seriesIndex - 1]) {
+      start = lowerBound(xValues, xMin + (left - HOVER_DISTANCE) / xFactor, nbOfPoints);
+      end = lowerBound(xValues, xMin + (left + HOVER_DISTANCE) / xFactor, nbOfPoints);
+    }
+
+    // Find the point that is closest to the mouse pointer (within HOVER_DISTANCE pixels) among the points that we are
+    // looking at.
+
+    for (let i = start; i < end; ++i) {
+      // Skip our point if it is further away horizontally than the closest point so far (or than HOVER_DISTANCE pixels
+      // if we haven't found one yet), in which case it can't be closer to the mouse pointer.
+      // Note: we negate our comparison so that a point with a NaN X value gets skipped.
+
+      const dx = ((xValues[i] as number) - xMin) * xFactor - left;
+      const dx2 = dx * dx;
+
+      if (!(dx2 < closestDistance)) {
+        continue;
+      }
+
+      // Keep track of our point if it is the closest one to the mouse pointer so far.
+      // Note: a point with a NaN Y value gets skipped since its distance is NaN.
+
+      const dy = rect.height - ((yValues[i] as number) - yMin) * yFactor - top;
+      const distance = dx2 + dy * dy;
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestSeriesIndex = seriesIndex;
+        closestIndex = i;
+      }
+    }
+  }
+
+  // Make sure that we found a point that is close enough to the mouse pointer, and hide our hover label if we didn't.
+
+  const closestTrace = props.data.traces[closestSeriesIndex - 1];
+  const [closestXValues, closestYValues] = seriesData(u, closestSeriesIndex) ?? [];
+
+  if (!closestTrace || !closestXValues || !closestYValues) {
+    hoverLabel.value = null;
+
+    return;
+  }
+
+  // Build our label, which points to the right of our point unless there isn't enough room for it, in which case it
+  // points to the left of our point.
+
+  const hoverFont = `${HOVER_FONT_SIZE}px ${HOVER_FONT}`;
+  const xValue = closestXValues[closestIndex] as number;
+  const yValue = closestYValues[closestIndex] as number;
+  const text = `(${formatHoverValue(xValue)}, ${formatHoverValue(yValue)})`;
+  const name = props.data.traces.length > 1 ? hoverName(closestTrace.name) : '';
+  const boxWidth = textWidth(text, hoverFont) + 2 * HOVER_TEXT_PADDING;
+  const nameWidth = name ? textWidth(plainText(name), hoverFont) + 2 * HOVER_TEXT_PADDING : 0;
+  // Note: our name may contain some subscripts/superscripts, which are smaller, so nameWidth may overestimate the width
+  //       of our name, but that's fine since we only use it to decide whether our label should point to the left.
+  const x = rect.left + (xValue - xMin) * xFactor;
+  const y = rect.top + rect.height - (yValue - yMin) * yFactor;
+  const anchor = x + HOVER_ARROW_SIZE + boxWidth + nameWidth <= (mainDivRef.value?.clientWidth || 0) ? 'start' : 'end';
+  const sign = anchor === 'start' ? 1 : -1;
+  const halfHeight = 0.5 * HOVER_LABEL_HEIGHT;
+
+  hoverLabel.value = {
+    x,
+    y,
+    anchor,
+    path: `M0,0L${sign * HOVER_ARROW_SIZE},${HOVER_ARROW_SIZE}v${halfHeight - HOVER_ARROW_SIZE}h${sign * boxWidth}v${-HOVER_LABEL_HEIGHT}H${sign * HOVER_ARROW_SIZE}V${-HOVER_ARROW_SIZE}Z`,
+    text,
+    textX: sign * (HOVER_ARROW_SIZE + HOVER_TEXT_PADDING),
+    name,
+    nameX: x + sign * (HOVER_ARROW_SIZE + boxWidth),
+    color: closestTrace.color,
+    contrastColor: contrastColor(closestTrace.color)
+  };
+};
+
+const queueHoverUpdate = (): void => {
+  // Coalesce multiple hover update requests into a single requestAnimationFrame() callback.
+
+  if (hoverRafId !== undefined) {
+    return;
+  }
+
+  hoverRafId = requestAnimationFrame(() => {
+    hoverRafId = undefined;
+
+    updateHover();
+  });
+};
+
+const isSorted = (values: math.FloatArray): boolean => {
+  // Return whether the given values are sorted in increasing order.
+  // Note: we negate our comparison so that NaN values (for which all comparisons are false) mean unsorted values.
+
+  for (let i = 1; i < values.length; ++i) {
+    if (!((values[i] as number) >= (values[i - 1] as number))) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 const plotData = (): uPlot.AlignedData => {
   // The data to be plotted.
-  // Note: uPlot needs at least one series, hence we use an empty one if we have no traces.
+  // Note #1: we also keep track of whether the X values of our traces are sorted (see updateHover()).
+  // Note #2: uPlot needs at least one series, hence we use an empty one if we have no traces.
 
   const traces = props.data.traces;
+
+  sortedXValues = traces.map((trace: IGraphPanelPlotTrace) => isSorted(trace.x));
 
   return [
     null,
@@ -2393,8 +2774,13 @@ const createPlot = (width: number, height: number): void => {
     labelGap: 0,
     gap: TICK_LABEL_GAP,
     space: 1,
-    ticks: { show: false },
-    grid: { stroke: colors.cssColor(themeColors.value.grid), width: 1 }
+    ticks: {
+      show: false
+    },
+    grid: {
+      stroke: colors.cssColor(themeColors.value.grid),
+      width: 1
+    }
   };
 
   plot = new dependencies._uPlot(
@@ -2403,11 +2789,37 @@ const createPlot = (width: number, height: number): void => {
       width,
       height,
       padding: [0, rightMargin, 0, 0],
-      legend: { show: false },
-      cursor: { show: false },
+      legend: {
+        show: false
+      },
+      cursor: {
+        // Note: we only use uPlot's cursor to keep track of the mouse pointer (see updateHover()), and we handle mouse
+        //       presses and double-clicks ourselves (see onDragStart() and onDoubleClick()).
+
+        x: false,
+        y: false,
+        points: {
+          show: false
+        },
+        drag: {
+          x: false,
+          y: false,
+          setScale: false
+        },
+        bind: {
+          mousedown: () => null,
+          mouseup: () => null,
+          dblclick: () => null
+        }
+      },
       scales: {
-        x: { time: false, range: scaleRange('x') },
-        y: { range: scaleRange('y') }
+        x: {
+          time: false,
+          range: scaleRange('x')
+        },
+        y: {
+          range: scaleRange('y')
+        }
       },
       // Note: our axis titles may contain some basic HTML (e.g., "<i>I<sub>K,r</sub></i>") while uPlot can only render
       //       plain text, so we render them ourselves (see our template), where uPlot would have rendered them. We
@@ -2441,8 +2853,16 @@ const createPlot = (width: number, height: number): void => {
           (u: uPlot) => {
             updatePlotRect(u);
             updateMarginsAsync();
+
+            // Update our hover label, if any, since our plot may have changed (e.g., our data got updated or we zoomed
+            // in/out).
+
+            if (hoverLabel.value) {
+              queueHoverUpdate();
+            }
           }
         ],
+        setCursor: [queueHoverUpdate],
         drawAxes: [drawZeroLines],
         drawClear: [drawMinorGrid],
         setSize: [
@@ -2492,7 +2912,9 @@ const createPlot = (width: number, height: number): void => {
 
   plot.over.addEventListener('mousedown', (event: MouseEvent) => onDragStart(event, 'nsew'));
   plot.over.addEventListener('dblclick', () => onDoubleClick('nsew'));
-  plot.over.addEventListener('wheel', (event: WheelEvent) => onWheel(event, 'nsew'), { passive: false });
+  plot.over.addEventListener('wheel', (event: WheelEvent) => onWheel(event, 'nsew'), {
+    passive: false
+  });
 };
 
 const updatePlot = (): void => {
@@ -2635,12 +3057,18 @@ vue.onBeforeUnmount(() => {
 
   isUnmounted = true;
 
-  // Stop zooming.
+  // Stop zooming and hovering.
 
   if (wheelRafId !== undefined) {
     cancelAnimationFrame(wheelRafId);
 
     wheelRafId = undefined;
+  }
+
+  if (hoverRafId !== undefined) {
+    cancelAnimationFrame(hoverRafId);
+
+    hoverRafId = undefined;
   }
 
   stopDrag();
@@ -2732,29 +3160,22 @@ vue.watch(
 
   .axis-title :deep(sub),
   .axis-title :deep(sup),
+  .hover-name :deep(sub),
+  .hover-name :deep(sup),
   .legend :deep(sub),
   .legend :deep(sup) {
     position: static;
-  }
-
-  .axis-title :deep(sub),
-  .axis-title :deep(sup),
-  .hover-name :deep(sub),
-  .hover-name :deep(sup) {
-    font-size: 80%;
-  }
-
-  .legend :deep(sub),
-  .legend :deep(sup) {
     font-size: 70%;
   }
 
   .axis-title :deep(sub),
+  .hover-name :deep(sub),
   .legend :deep(sub) {
     vertical-align: sub;
   }
 
   .axis-title :deep(sup),
+  .hover-name :deep(sup),
   .legend :deep(sup) {
     vertical-align: super;
   }
@@ -2771,6 +3192,14 @@ vue.watch(
     to {
       opacity: 1;
     }
+  }
+
+  .hover-name {
+    position: absolute;
+    z-index: 3;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
   }
 
   .legend {
