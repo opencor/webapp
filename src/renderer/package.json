@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@napi-rs/keyring": "^2.1.2",
-    "@opencor/libopencor-types": "^1.20261019.0",
+    "@opencor/libopencor-types": "^1.20261020.0",
     "@primeuix/themes": "2.0.3",
     "@primevue/auto-import-resolver": "4.2.5",
     "@vueuse/core": "12.8.2",
