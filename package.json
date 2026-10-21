@@ -82,7 +82,7 @@
     "stylelint": "^17.16.0",
     "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4.3.3",
-    "tailwindcss-primeui": "0.6.1",
+    "tailwindcss-primeui": "^0.6.1",
     "tar": "^7.5.22",
     "typescript": "^7.0.2",
     "typescript-6": "npm:typescript@^6.0.3",
