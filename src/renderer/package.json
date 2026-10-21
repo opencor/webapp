@@ -58,11 +58,6 @@
     "typecheck": "bun --bun scripts/type.check.ts --noEmit",
     "version:new": "bun scripts/version.new.ts"
   },
-  "bun": {
-    "overrides": {
-      "vue": "3.4.21"
-    }
-  },
   "peerDependencies": {
     "vue": "3.4.21"
   },

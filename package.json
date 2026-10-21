@@ -48,11 +48,6 @@
     "typecheck": "bun --bun src/renderer/scripts/type.check.ts --noEmit -p tsconfig.app.json",
     "version:new": "bun src/renderer/scripts/version.new.ts"
   },
-  "bun": {
-    "overrides": {
-      "vue": "3.4.21"
-    }
-  },
   "dependencies": {
     "@napi-rs/keyring": "^2.1.2",
     "xxhash-wasm": "^1.1.0"
