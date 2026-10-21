@@ -185,6 +185,7 @@ const updateDependencies = async (dir: string): Promise<void> => {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
   };
   const allDependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
   const padEnd = Math.max(0, ...Object.keys(allDependencies).map((name) => name.length)) + 1;
@@ -265,6 +266,19 @@ const updateDependencies = async (dir: string): Promise<void> => {
     }
 
     console.log(`  ✓ ${item.name}: ${item.range} → ${newRange}`);
+
+    // Keep the peer dependency (e.g., vue) in sync, keeping its own range prefix.
+
+    const peerDependencies = packageJson.peerDependencies;
+    const peerRange = peerDependencies?.[item.name];
+
+    if (peerDependencies && peerRange !== undefined) {
+      const newPeerRange = buildRange(peerRange, item.latest);
+
+      peerDependencies[item.name] = newPeerRange;
+
+      console.log(`  ✓ ${item.name} (peer): ${peerRange} → ${newPeerRange}`);
+    }
   }
 
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
