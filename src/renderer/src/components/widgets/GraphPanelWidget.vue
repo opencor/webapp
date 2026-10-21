@@ -120,10 +120,10 @@ const emit = defineEmits<{
 // Note: we want to look and behave like Plotly, so most of these constants are either Plotly's defaults (see
 //       https://plotly.com/javascript/reference/) or what we used to give Plotly.
 
-const FONT_FAMILY = '"Open Sans", verdana, arial, sans-serif';
-const TICK_FONT_SIZE = 10;
-const TITLE_FONT_SIZE = 14;
-const LEGEND_FONT_SIZE = 12;
+const FONT_FAMILY = '"Open Sans", verdana, arial, sans-serif'; // Like Plotly, the font family of our tick labels and titles.
+const TICK_FONT_SIZE = 10; // Like Plotly, the font size of our tick labels.
+const TITLE_FONT_SIZE = 14; // Like Plotly, the font size of our axis titles.
+const LEGEND_FONT_SIZE = 12; // Like Plotly, the font size of our legend items.
 const LEGEND_LEFT_MARGIN = 8; // Margin between our plotting area and our legend.
 const LEGEND_RIGHT_MARGIN = 8; // Margin between our legend (or last X tick label) and the right edge of our container.
 const DEFAULT_ZORDER = 1000; // Like Plotly's default legend rank.
@@ -131,22 +131,22 @@ const TICK_LABEL_GAP = 1; // Gap between our plotting area and our tick labels.
 const TICK_LABEL_HALF_HEIGHT = 6; // Used to hide a Y tick label that would (partly) be above our container.
 const X_AXIS_SIZE_WITH_TITLE = 18; // Size of our X axis (without its title) if it has a title.
 const X_AXIS_SIZE_WITHOUT_TITLE = 20; // Size of our X axis if it doesn't have a title.
-const X_AXIS_TITLE_SIZE = 17;
-const Y_AXIS_TITLE_SIZE = 17;
-const Y_AXIS_TITLE_GAP = 1.5;
+const X_AXIS_TITLE_SIZE = 17; // Size of our X axis title.
+const Y_AXIS_TITLE_SIZE = 17; // Size of our Y axis title.
+const Y_AXIS_TITLE_GAP = 1.5; // Gap between our Y axis title and our Y axis (i.e. the right edge of our Y tick labels).
 const Y_AXIS_EXTRA_SIZE = 5; // Extra size of our Y axis, on top of the width of its tick labels.
-const MAJOR_TICK_MIN_X_SPACING = 80;
-const MAJOR_TICK_MIN_Y_SPACING = 40;
-const NB_OF_MINOR_TICKS = 5;
+const MAJOR_TICK_MIN_X_SPACING = 80; // Minimum spacing between two consecutive major ticks along the X axis.
+const MAJOR_TICK_MIN_Y_SPACING = 40; // Minimum spacing between two consecutive major ticks along the Y axis.
+const NB_OF_MINOR_TICKS = 5; // Number of minor ticks between two consecutive major ticks (like Plotly).
 const TICK_LABEL_MIN_SPACING = 10; // Minimum spacing between two consecutive tick labels.
 const MAX_NB_OF_TICKS = 1000; // A safeguard against an axis needing an unreasonable number of ticks.
-const LINE_WIDTH = 2;
-const MARKER_SIZE = 6;
+const LINE_WIDTH = 2; // Like Plotly, the width of our traces' lines (in CSS pixels).
+const MARKER_SIZE = 6; // Like Plotly, the size of our markers (in CSS pixels).
 const MARKER_PADDING = Math.max(MARKER_SIZE / 1.6, 3); // Autorange padding for markers.
 const MIN_NB_OF_POINTS_WITHOUT_MARKERS = 20; // Like in Plotly, traces with fewer than 20 points also have markers.
 const AUTORANGE_PADDING = 0.05; // As a fraction of the length of an axis.
-const DEFAULT_X_RANGE: [number, number] = [-1, 6];
-const DEFAULT_Y_RANGE: [number, number] = [-1, 4];
+const DEFAULT_X_RANGE: [number, number] = [-1, 6]; // Like Plotly, the default X range.
+const DEFAULT_Y_RANGE: [number, number] = [-1, 4]; // Like Plotly, the default Y range.
 
 // Resize handling.
 
