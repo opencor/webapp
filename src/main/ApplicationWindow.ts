@@ -1,12 +1,13 @@
 import electron from 'electron';
 import path from 'node:path';
 
-export const backgroundColor = (): string => {
-  // Return the background colour of our windows.
-  // Note: the colours used here should be the same as the ones used by --p-content-background in PrimeVue, i.e. what we
-  //       are using as a background for our app (see src/renderer/src/assets/app.css).
+import { primeVueColor } from '../renderer/src/common/colors';
 
-  return electron.nativeTheme.shouldUseDarkColors ? '#18181b' : '#ffffff';
+export const backgroundColor = (): string | undefined => {
+  // Return the background colour of our windows, i.e. PrimeVue's content background colour, which is what we are using
+  // as a background for our app (see src/renderer/src/assets/app.css).
+
+  return primeVueColor('content.background', electron.nativeTheme.shouldUseDarkColors);
 };
 
 export class ApplicationWindow extends electron.BrowserWindow {
@@ -43,8 +44,10 @@ export class ApplicationWindow extends electron.BrowserWindow {
     //       the user changes our theme or the system one), or there would be some flickering.
 
     const updateBackgroundColor = (): void => {
-      if (!this.isDestroyed()) {
-        this.setBackgroundColor(backgroundColor());
+      const color = backgroundColor();
+
+      if (color && !this.isDestroyed()) {
+        this.setBackgroundColor(color);
       }
     };
 

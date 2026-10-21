@@ -64,6 +64,7 @@ import type { MenuItem } from 'primevue/menuitem';
 import type uPlot from 'uplot';
 import * as vue from 'vue';
 
+import * as colors from '../../common/colors';
 import * as common from '../../common/common';
 import { LONG_DELAY, NO_DELAY } from '../../common/constants';
 import * as dependencies from '../../common/dependencies';
@@ -208,7 +209,11 @@ let stopTrackingLegendSize: (() => void) | undefined;
 let marginsUpdatePending = false;
 let trackedMargins: IGraphPanelMargins | undefined;
 
-// Our theme.
+// Our theme, which uses PrimeVue's CSS variables, so that it is consistent with the rest of OpenCOR.
+// Note: a canvas doesn't understand CSS variables, so we resolve them (see colors.cssColor()) for what uPlot draws on its
+//       canvas (i.e. our tick labels and grid lines). This is fine since we resolve them whenever our plot gets created
+//       (which it does whenever our theme changes, see updatePlot()) or drawn, and PrimeVue's CSS variables get updated
+//       as soon as our theme changes (see useTheme() in vueCommon.ts).
 
 interface IThemeColors {
   background: string;
@@ -222,11 +227,11 @@ const themeColors = vue.computed<IThemeColors>(() => {
   const useLightMode = theme.useLightMode();
 
   return {
-    background: useLightMode ? '#ffffff' : '#18181b', // --p-content-background
-    text: useLightMode ? '#334155' : '#ffffff', // --p-text-color
-    grid: useLightMode ? '#e2e8f0' : '#3f3f46', // --p-surface-200 / --p-surface-700
-    minorGrid: useLightMode ? '#f1f5f9' : '#27272a', // --p-surface-100 / --p-surface-800
-    zeroLine: useLightMode ? '#94a3b8' : '#71717a' // --p-surface-400 / --p-surface-500
+    background: 'var(--p-content-background)',
+    text: 'var(--p-text-color)',
+    grid: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-700)',
+    minorGrid: useLightMode ? 'var(--p-surface-100)' : 'var(--p-surface-800)',
+    zeroLine: useLightMode ? 'var(--p-surface-400)' : 'var(--p-surface-500)'
   };
 });
 
@@ -1296,7 +1301,7 @@ const drawZeroLines = (u: uPlot): void => {
   // Like Plotly, draw our zero lines.
   // Note: this gets called after uPlot draws our (major) grid lines and before it draws our traces.
 
-  drawLines(u, themeColors.value.zeroLine, [0], [0]);
+  drawLines(u, colors.cssColor(themeColors.value.zeroLine), [0], [0]);
 };
 
 const drawMinorGrid = (u: uPlot): void => {
@@ -1304,7 +1309,12 @@ const drawMinorGrid = (u: uPlot): void => {
   // Note: this gets called before uPlot draws our (major) grid lines, so that the latter are drawn on top of the
   //       former.
 
-  drawLines(u, themeColors.value.minorGrid, axisTicks.x?.minorTicks ?? [], axisTicks.y?.minorTicks ?? []);
+  drawLines(
+    u,
+    colors.cssColor(themeColors.value.minorGrid),
+    axisTicks.x?.minorTicks ?? [],
+    axisTicks.y?.minorTicks ?? []
+  );
 };
 
 const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, index0: number, index1: number) => {
@@ -1570,16 +1580,15 @@ const createPlot = (width: number, height: number): void => {
 
   // Create our plot.
 
-  const colors = themeColors.value;
   const axis: uPlot.Axis = {
-    stroke: colors.text,
+    stroke: colors.cssColor(themeColors.value.text),
     font: tickFont,
     labelFont: `${TITLE_FONT_SIZE}px ${FONT_FAMILY}`,
     labelGap: 0,
     gap: TICK_LABEL_GAP,
     space: 1,
     ticks: { show: false },
-    grid: { stroke: colors.grid, width: 1 }
+    grid: { stroke: colors.cssColor(themeColors.value.grid), width: 1 }
   };
 
   plot = new dependencies._uPlot(
