@@ -10,6 +10,18 @@
       @contextmenu="onContextMenu"
     >
       <div ref="plotDivRef" class="absolute inset-0" />
+      <svg v-if="zoomBox && plotRect" class="absolute z-2 pointer-events-none"
+        :style="{ left: `${plotRect.left}px`, top: `${plotRect.top}px` }"
+        :width="plotRect.width"
+        :height="plotRect.height"
+      >
+        <path class="fade-in" :d="zoomBox.path" :style="{ fill: themeColors.zoomMask }" />
+        <path v-if="zoomBox.corners" class="fade-in" :d="zoomBox.corners"
+          :fill="themeColors.zoomCornersFill"
+          :stroke="themeColors.zoomCornersStroke"
+          stroke-width="1"
+        />
+      </svg>
       <template v-if="plotRect">
         <div v-if="data.xAxisTitle" class="axis-title"
           :style="{
@@ -147,6 +159,9 @@ const MIN_NB_OF_POINTS_WITHOUT_MARKERS = 20; // Like in Plotly, traces with fewe
 const AUTORANGE_PADDING = 0.05; // As a fraction of the length of an axis.
 const DEFAULT_X_RANGE: [number, number] = [-1, 6]; // Like Plotly, the default X range.
 const DEFAULT_Y_RANGE: [number, number] = [-1, 4]; // Like Plotly, the default Y range.
+const MIN_DRAG = 8; // Like Plotly, the minimum distance that we must drag (along an axis) to zoom (along that axis).
+const MIN_ZOOM = 20; // Like Plotly, the distance below which a drag is considered to be along one axis only.
+const ZOOM_FACTOR = 0.5; // Factor by which our ranges get scaled when zooming in (or its inverse when zooming out).
 
 // Resize handling.
 
@@ -221,6 +236,9 @@ interface IThemeColors {
   grid: string;
   minorGrid: string;
   zeroLine: string;
+  zoomMask: string;
+  zoomCornersFill: string;
+  zoomCornersStroke: string;
 }
 
 const themeColors = vue.computed<IThemeColors>(() => {
@@ -231,7 +249,10 @@ const themeColors = vue.computed<IThemeColors>(() => {
     text: 'var(--p-text-color)',
     grid: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-700)',
     minorGrid: useLightMode ? 'var(--p-surface-100)' : 'var(--p-surface-800)',
-    zeroLine: useLightMode ? 'var(--p-surface-400)' : 'var(--p-surface-500)'
+    zeroLine: useLightMode ? 'var(--p-surface-400)' : 'var(--p-surface-500)',
+    zoomMask: `color-mix(in srgb, ${useLightMode ? 'var(--p-surface-400)' : 'var(--p-surface-500)'} 50%, transparent)`,
+    zoomCornersFill: useLightMode ? 'var(--p-surface-800)' : 'var(--p-surface-100)',
+    zoomCornersStroke: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-700)'
   };
 });
 
@@ -465,17 +486,17 @@ const contextMenuItems = vue.computed<MenuItem[]>(() => [
   {
     icon: 'pi pi-search-plus',
     label: 'Zoom In',
-    disabled: true
+    command: () => zoomIn()
   },
   {
     icon: 'pi pi-search-minus',
     label: 'Zoom Out',
-    disabled: true
+    command: () => zoomOut()
   },
   {
     icon: 'pi pi-refresh',
     label: 'Reset Zoom',
-    disabled: true
+    command: () => resetZoom()
   },
   {
     separator: true
@@ -504,6 +525,29 @@ const onContextMenu = (event: MouseEvent): void => {
   // Prevent the default context menu from being shown.
 
   event.preventDefault();
+
+  // Keep track of where our context menu was requested, so that we can zoom in/out around that position (see zoomIn()
+  // and zoomOut()).
+  // Note: we only consider the position along an axis if it is within our plotting area along that axis (e.g., not if
+  //       our context menu was requested on our Y axis, in which case we use the middle of our X axis).
+
+  const rect = plotRect.value;
+
+  contextMenuCenterFractions = {};
+
+  if (rect) {
+    const position = plotPosition(event, rect);
+    const xFraction = position.x / rect.width;
+    const yFraction = (rect.height - position.y) / rect.height;
+
+    if (xFraction >= 0 && xFraction <= 1) {
+      contextMenuCenterFractions.x = xFraction;
+    }
+
+    if (yFraction >= 0 && yFraction <= 1) {
+      contextMenuCenterFractions.y = yFraction;
+    }
+  }
 
   // Dispatch a custom event to notify other instances of GraphPanelWidget that our context menu is being shown.
   // Note: this allows those other instances to hide their context menus if they are open, ensuring that only one
@@ -776,9 +820,23 @@ const autoRange = (u: uPlot, axisKey: AxisKey, min: number, max: number): Range 
 };
 
 const lastAutoRanges: Partial<Record<AxisKey, Range>> = {};
+let zoomRanges: Partial<Record<AxisKey, Range>> = {};
+let zoomTitles: string | undefined;
+// Note: we keep track of the user's zoom ranges, so that they are kept when our data gets updated (e.g., while a
+//       simulation is running). They get reset when the user resets the zoom (using our context menu or by
+//       double-clicking on our plotting area) or when our axis titles change (i.e. when we are plotting something else,
+//       see updatePlot()).
 
 const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
   return (u: uPlot, dataMin: number | null, dataMax: number | null): Range => {
+    // If the user zoomed into a range for the axis, then we use it.
+
+    const zoomRange = zoomRanges[axisKey];
+
+    if (zoomRange) {
+      return [...zoomRange];
+    }
+
     // If a (finite) range was given for the axis, then we use it.
 
     const range = axisKey === 'x' ? props.data.xAxisRange : props.data.yAxisRange;
@@ -838,6 +896,437 @@ const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
 
     return [...res];
   };
+};
+
+// Zoom functionality.
+
+const currentRange = (axisKey: AxisKey): Range | undefined => {
+  // Return the current range of the given axis, if any.
+
+  const min = plot?.scales[axisKey]?.min;
+  const max = plot?.scales[axisKey]?.max;
+
+  return min == null || max == null ? undefined : [min, max];
+};
+
+const setScales = (ranges: Partial<Record<AxisKey, Range | null>>): void => {
+  // Set the scales of our plot to the given ranges with a null range meaning that the corresponding axis gets
+  // autoranged (see scaleRange()).
+  // Note #1: uPlot calls our range function when the min/max of a scale is null, hence the cast.
+  // Note #2: in mode 2, uPlot only invalidates the paths of our traces when our Y scale changes, but it also does so
+  //          whenever our X scale is set, so our traces always get redrawn.
+
+  const currentPlot = plot;
+
+  if (!currentPlot) {
+    return;
+  }
+
+  currentPlot.batch(() => {
+    for (const axisKey of ['x', 'y'] as AxisKey[]) {
+      const range = ranges[axisKey];
+
+      if (range !== undefined) {
+        currentPlot.setScale(axisKey, { min: range?.[0], max: range?.[1] } as { min: number; max: number });
+      }
+    }
+  });
+};
+
+const zoomTo = (ranges: Partial<Record<AxisKey, Range>>): void => {
+  // Zoom into the given ranges, but only if they are all valid (e.g., not if we zoomed in so much that the two ends of
+  // a range are the same number).
+
+  for (const range of Object.values(ranges)) {
+    if (!Number.isFinite(range[0]) || !Number.isFinite(range[1]) || range[0] >= range[1]) {
+      return;
+    }
+  }
+
+  zoomRanges = { ...zoomRanges, ...ranges };
+
+  setScales(ranges);
+};
+
+const zoomBy = (factor: number, axisKeys: AxisKey[], centerFractions: Partial<Record<AxisKey, number>>): void => {
+  // Scale the range of the given axes by the given factor around the given fractions of their range (or their middle
+  // for an axis without a fraction).
+
+  const ranges: Partial<Record<AxisKey, Range>> = {};
+
+  for (const axisKey of axisKeys) {
+    const range = currentRange(axisKey);
+
+    if (range) {
+      const center = range[0] + (range[1] - range[0]) * (centerFractions[axisKey] ?? 0.5);
+
+      ranges[axisKey] = [center + factor * (range[0] - center), center + factor * (range[1] - center)];
+    }
+  }
+
+  zoomTo(ranges);
+};
+
+let contextMenuCenterFractions: Partial<Record<AxisKey, number>> = {};
+
+const zoomIn = (): void => {
+  // Zoom in around where our context menu was requested (see onContextMenu()).
+
+  zoomBy(ZOOM_FACTOR, ['x', 'y'], contextMenuCenterFractions);
+};
+
+const zoomOut = (): void => {
+  // Zoom out around where our context menu was requested (see onContextMenu()).
+
+  zoomBy(1 / ZOOM_FACTOR, ['x', 'y'], contextMenuCenterFractions);
+};
+
+const resetZoom = (): void => {
+  // Like Plotly, reset our zoom, i.e. go back to the given ranges, if any, or autorange our axes.
+
+  zoomRanges = {};
+
+  setScales({ x: null, y: null });
+};
+
+// Mouse interaction with our plotting area, like with Plotly: drag to zoom (along both axes or, for a mostly horizontal
+// or vertical drag, along one of them), use the mouse wheel to zoom around the mouse pointer, and double-click to reset
+// the zoom.
+// Note: a zoom can be cancelled by dragging back to where it started (like with Plotly), by pressing the Escape key or
+//       another mouse button (e.g., the right one), or by our window losing the focus.
+
+type ZoomMode = '' | 'x' | 'y' | 'xy';
+
+interface IZoomBox {
+  path: string;
+  corners: string;
+}
+
+interface IBox {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+interface IDrag {
+  startX: number;
+  startY: number;
+  xRange: Range;
+  yRange: Range;
+  zoomMode: ZoomMode;
+  box: IBox;
+}
+
+interface IWheelZoom {
+  factor: number;
+  centerFractions: Record<AxisKey, number>;
+}
+
+const zoomBox = vue.shallowRef<IZoomBox | null>(null);
+let drag: IDrag | undefined;
+let pendingWheelZoom: IWheelZoom | undefined;
+let wheelRafId: number | undefined;
+
+const xCorners = (box: IBox, y0: number): string => {
+  // Like Plotly, the "corners" of a zoom box along our X axis.
+
+  return (
+    `M${box.left - 0.5},${y0 - MIN_ZOOM - 0.5}h-3v${2 * MIN_ZOOM + 1}h3Z` +
+    `M${box.right + 0.5},${y0 - MIN_ZOOM - 0.5}h3v${2 * MIN_ZOOM + 1}h-3Z`
+  );
+};
+
+const yCorners = (box: IBox, x0: number): string => {
+  // Like Plotly, the "corners" of a zoom box along our Y axis.
+
+  return (
+    `M${x0 - MIN_ZOOM - 0.5},${box.top - 0.5}v-3h${2 * MIN_ZOOM + 1}v3Z` +
+    `M${x0 - MIN_ZOOM - 0.5},${box.bottom + 0.5}v3h${2 * MIN_ZOOM + 1}v-3Z`
+  );
+};
+
+const xyCorners = (box: IBox): string => {
+  // Like Plotly, the corners of a zoom box along both of our axes.
+
+  const length = Math.floor(Math.min(box.bottom - box.top, box.right - box.left, MIN_ZOOM) / 2);
+
+  return (
+    `M${box.left - 3.5},${box.top - 0.5 + length}h3v${-length}h${length}v-3h-${length + 3}Z` +
+    `M${box.right + 3.5},${box.top - 0.5 + length}h-3v${-length}h${-length}v-3h${length + 3}Z` +
+    `M${box.right + 3.5},${box.bottom + 0.5 - length}h-3v${length}h${-length}v3h${length + 3}Z` +
+    `M${box.left - 3.5},${box.bottom + 0.5 - length}h3v${length}h${length}v3h-${length + 3}Z`
+  );
+};
+
+const plotPosition = (event: MouseEvent, rect: IPlotRect): { x: number; y: number } => {
+  // Return the position of the given mouse event relative to our plotting area.
+
+  const mainDivRect = mainDivRef.value?.getBoundingClientRect();
+
+  return {
+    x: event.clientX - (mainDivRect?.left ?? 0) - rect.left,
+    y: event.clientY - (mainDivRect?.top ?? 0) - rect.top
+  };
+};
+
+const onDragStart = (event: MouseEvent): void => {
+  // Start dragging, but only with the main mouse button and if our plot has been laid out.
+
+  const rect = plotRect.value;
+  const xRange = currentRange('x');
+  const yRange = currentRange('y');
+
+  if (event.button !== 0 || !rect || !xRange || !yRange) {
+    return;
+  }
+
+  event.preventDefault();
+
+  // Make sure that we are not already dragging (e.g., if we missed a mouseup event because the mouse button was
+  // released outside of our window).
+
+  stopDrag();
+
+  // Keep track of our starting position, our current ranges, and our zoom box.
+
+  const position = plotPosition(event, rect);
+
+  drag = {
+    startX: position.x,
+    startY: position.y,
+    xRange,
+    yRange,
+    zoomMode: '',
+    box: { left: 0, right: 0, top: 0, bottom: 0 }
+  };
+
+  // Listen for mouse events on the window, so that we can continue to drag even if the mouse leaves our plotting area.
+
+  window.addEventListener('mousedown', onDragMouseDown, true);
+  window.addEventListener('mousemove', onDragMove);
+  window.addEventListener('mouseup', onDragEnd);
+  window.addEventListener('keydown', onDragKeyDown, true);
+  window.addEventListener('blur', stopDrag);
+};
+
+const onDragMove = (event: MouseEvent): void => {
+  // Make sure that we are dragging and that our plot has been laid out.
+
+  const currentDrag = drag;
+  const rect = plotRect.value;
+
+  if (!currentDrag || !rect) {
+    return;
+  }
+
+  // Determine the zoom mode based on how far we have dragged along each axis.
+
+  const position = plotPosition(event, rect);
+  const x0 = currentDrag.startX;
+  const y0 = currentDrag.startY;
+  const x1 = Math.max(0, Math.min(rect.width, position.x));
+  const y1 = Math.max(0, Math.min(rect.height, position.y));
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const box = { left: Math.min(x0, x1), right: Math.max(x0, x1), top: Math.min(y0, y1), bottom: Math.max(y0, y1) };
+  let corners = '';
+
+  if (dy < Math.min(Math.max(0.6 * dx, MIN_DRAG), MIN_ZOOM)) {
+    if (dx < MIN_DRAG) {
+      currentDrag.zoomMode = '';
+      box.right = box.left;
+      box.top = box.bottom;
+    } else {
+      currentDrag.zoomMode = 'x';
+      box.top = 0;
+      box.bottom = rect.height;
+      corners = xCorners(box, y0);
+    }
+  } else if (dx < Math.min(0.6 * dy, MIN_ZOOM)) {
+    currentDrag.zoomMode = 'y';
+    box.left = 0;
+    box.right = rect.width;
+    corners = yCorners(box, x0);
+  } else {
+    currentDrag.zoomMode = 'xy';
+    corners = xyCorners(box);
+  }
+
+  currentDrag.box = box;
+
+  // Update our zoom box, which is shown on top of our plot.
+
+  zoomBox.value = {
+    path:
+      `M0,0H${rect.width}V${rect.height}H0V0` +
+      `M${box.left},${box.top}v${box.bottom - box.top}h${box.right - box.left}v-${box.bottom - box.top}h-${box.right - box.left}Z`,
+    corners
+  };
+};
+
+const onDragEnd = (event: MouseEvent): void => {
+  // Zoom into our zoom box, if any, but only if it is the main mouse button that has been released (see
+  // onDragMouseDown()).
+
+  if (event.button !== 0) {
+    return;
+  }
+
+  // Stop dragging, even if we don't zoom into our zoom box.
+  // Note: we must keep track of our drag before stopping it since stopping it resets it.
+
+  const currentDrag = drag;
+
+  stopDrag();
+
+  // Make sure that we were dragging, that we have a zoom box, and that our plot has been laid out.
+
+  const rect = plotRect.value;
+
+  if (!currentDrag?.zoomMode || !rect) {
+    return;
+  }
+
+  // Determine the new ranges of our axes based on our zoom box.
+
+  const { zoomMode, box, xRange, yRange } = currentDrag;
+  const ranges: Partial<Record<AxisKey, Range>> = {};
+
+  if (zoomMode === 'x' || zoomMode === 'xy') {
+    ranges.x = [
+      xRange[0] + ((xRange[1] - xRange[0]) * box.left) / rect.width,
+      xRange[0] + ((xRange[1] - xRange[0]) * box.right) / rect.width
+    ];
+  }
+
+  if (zoomMode === 'y' || zoomMode === 'xy') {
+    ranges.y = [
+      yRange[1] - ((yRange[1] - yRange[0]) * box.bottom) / rect.height,
+      yRange[1] - ((yRange[1] - yRange[0]) * box.top) / rect.height
+    ];
+  }
+
+  // Zoom into the given ranges, but only if they are all valid (e.g., not if we zoomed in so much that the two ends of
+  // a range are the same number).
+
+  zoomTo(ranges);
+};
+
+const onDragKeyDown = (event: KeyboardEvent): void => {
+  // Cancel our zoom if the user presses the Escape key.
+  // Note: we stop the propagation of the event, so that it doesn't also get handled by something else (e.g., a dialog
+  //       that would get closed).
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+
+    stopDrag();
+  }
+};
+
+const onDragMouseDown = (event: MouseEvent): void => {
+  // Cancel our zoom if the user presses another mouse button (e.g., the right one), in which case we also prevent the
+  // context menu that would normally be shown as a result of that mouse button being pressed (see
+  // preventContextMenu()).
+  // Note: a context menu is shown either when the right mouse button is pressed (e.g., on macOS) or released (e.g., on
+  //       Windows), so we prevent the next context menu from being shown, whenever that is. We also stop preventing it
+  //       when another mouse button gets pressed (e.g., if the context menu event didn't get fired for some reason).
+
+  if (event.button === 0) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  stopDrag();
+
+  window.addEventListener('contextmenu', preventContextMenu, true);
+  window.addEventListener(
+    'mousedown',
+    () => {
+      window.removeEventListener('contextmenu', preventContextMenu, true);
+    },
+    { capture: true, once: true }
+  );
+};
+
+const onWheel = (event: WheelEvent): void => {
+  // Zoom in/out around the mouse pointer, coalescing wheel events into one zoom per frame.
+  // Note: like Plotly, we use an exponential scale for the zoom factor, so that the zoom is more sensitive to the mouse
+  //       wheel.
+
+  const rect = plotRect.value;
+
+  if (!plot || !rect) {
+    return;
+  }
+
+  // Prevent the default behavior of the mouse wheel, which is to scroll the page.
+
+  event.preventDefault();
+
+  // Determine the position of the mouse pointer relative to our plotting area and the zoom factor based on the wheel
+  // delta. We limit the wheel delta to avoid zooming in/out too much at once.
+
+  const position = plotPosition(event, rect);
+  const wheelDelta = event.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? event.deltaY : 40 * event.deltaY;
+  const factor = Math.exp(Math.min(Math.max(wheelDelta, -20), 20) / 200);
+
+  pendingWheelZoom = {
+    factor: (pendingWheelZoom?.factor ?? 1) * factor,
+    centerFractions: {
+      x: position.x / rect.width,
+      y: (rect.height - position.y) / rect.height
+    }
+  };
+
+  // If we already have a pending wheel zoom, then we don't need to schedule another one.
+
+  if (wheelRafId !== undefined) {
+    return;
+  }
+
+  // We use requestAnimationFrame() to coalesce wheel events into one zoom per frame, which is more efficient and also
+  // allows us to zoom in/out more smoothly when the user scrolls quickly.
+
+  wheelRafId = requestAnimationFrame(() => {
+    wheelRafId = undefined;
+
+    if (!pendingWheelZoom) {
+      return;
+    }
+
+    const { factor, centerFractions } = pendingWheelZoom;
+
+    pendingWheelZoom = undefined;
+
+    zoomBy(factor, ['x', 'y'], centerFractions);
+  });
+};
+
+const stopDrag = (): void => {
+  // Stop dragging, if we are.
+
+  window.removeEventListener('mousemove', onDragMove);
+  window.removeEventListener('mouseup', onDragEnd);
+  window.removeEventListener('mousedown', onDragMouseDown, true);
+  window.removeEventListener('keydown', onDragKeyDown, true);
+  window.removeEventListener('blur', stopDrag);
+
+  drag = undefined;
+  zoomBox.value = null;
+};
+
+const preventContextMenu = (event: MouseEvent): void => {
+  // Prevent a context menu from being shown (see onDragMouseDown()).
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  window.removeEventListener('contextmenu', preventContextMenu, true);
 };
 
 // Number formatting like in Plotly (with its default 'B' exponent format, i.e. SI prefixes except for 10^9 which is B).
@@ -1328,6 +1817,10 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
   //          to four per set of consecutive points in a pixel column (e.g., with noisy data).
   // Note #2: we only ever look at consecutive points, so this works whether or not our X values are sorted.
   // Note #3: we break our path at non-finite values, so that a gap in the data is drawn as a gap in the trace.
+  // Note #4: we skip any segment that is entirely outside our plotting area (e.g., when we are zoomed in), i.e. which
+  //          two points are beyond the same edge of our plotting area (by more than our line width, since uPlot draws
+  //          our traces with round joins and clips them to our plotting area, give or take half our line width). This
+  //          means that we only draw the part of our trace that can be seen.
 
   const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
   const xMin = u.scales.x?.min;
@@ -1341,8 +1834,14 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
     const xFactor = width / (xMax - xMin);
     const yFactor = height / (yMax - yMin);
     const bottom = top + height;
+    const right = left + width;
+    const margin = LINE_WIDTH * (dependencies._uPlot.pxRatio as number);
     const end = Math.min(index1, xValues.length - 1, yValues.length - 1);
     let penDown = false;
+    let hasPendingPoint = false;
+    let pendingXPos = 0;
+    let pendingYPos = 0;
+    let previousOutCode = 0;
     let column = Number.NaN;
     let firstIndex = -1;
     let firstXPos = 0;
@@ -1356,6 +1855,15 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
     let lastIndex = -1;
     let lastXPos = 0;
     let lastYPos = 0;
+
+    const outCode = (xPos: number, yPos: number): number => {
+      // Return a bit mask of the edges of our plotting area (left, right, top, bottom) that the given point is beyond.
+
+      return (
+        (xPos < left - margin ? 1 : xPos > right + margin ? 2 : 0) |
+        (yPos < top - margin ? 4 : yPos > bottom + margin ? 8 : 0)
+      );
+    };
 
     const drawColumn = (): void => {
       // Draw the minimum and maximum points of our current column (in their original order) unless they are its first
@@ -1420,9 +1928,10 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
 
         drawColumn();
 
-        // Reset our state so that we start a new column with the next point.
+        // Reset our state so that we start a new path with the next point.
 
         penDown = false;
+        hasPendingPoint = false;
         column = Number.NaN;
 
         continue;
@@ -1433,6 +1942,37 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
       const xPos = left + (x - xMin) * xFactor;
       const yPos = bottom - (y - yMin) * yFactor;
       const xPixel = Math.round(xPos);
+      const pointOutCode = outCode(xPos, yPos);
+
+      // Make sure that the segment between our previous point and our current point may be visible. If it isn't, then
+      // we break our path and keep track of our current point, which may be the start of a visible segment.
+
+      if (!(penDown || hasPendingPoint) || (previousOutCode & pointOutCode) !== 0) {
+        if (penDown) {
+          drawColumn();
+
+          penDown = false;
+          column = Number.NaN;
+        }
+
+        hasPendingPoint = true;
+        pendingXPos = xPos;
+        pendingYPos = yPos;
+        previousOutCode = pointOutCode;
+
+        continue;
+      }
+
+      // Start a new path from our pending point, if needed.
+
+      if (!penDown) {
+        stroke.moveTo(pendingXPos, pendingYPos);
+
+        penDown = true;
+        hasPendingPoint = false;
+      }
+
+      previousOutCode = pointOutCode;
 
       // If our point is in a different (device) pixel column than the previous point, then draw the previous column and
       // start a new one.
@@ -1443,14 +1983,9 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
         drawColumn();
 
         // Draw our current point.
+        // Note: our pen is always down at this stage (see above).
 
-        if (penDown) {
-          stroke.lineTo(xPos, yPos);
-        } else {
-          stroke.moveTo(xPos, yPos);
-
-          penDown = true;
-        }
+        stroke.lineTo(xPos, yPos);
 
         // Start a new column.
 
@@ -1680,6 +2215,13 @@ const createPlot = (width: number, height: number): void => {
     plotData(),
     plotDivRef.value as HTMLElement
   ) as uPlot;
+
+  // Handle mouse interaction with our plotting area.
+  // Note: uPlot's plotting area (i.e. its "over" element) gets destroyed with our plot, and its event listeners with it.
+
+  plot.over.addEventListener('mousedown', onDragStart);
+  plot.over.addEventListener('dblclick', resetZoom);
+  plot.over.addEventListener('wheel', onWheel, { passive: false });
 };
 
 const updatePlot = (): void => {
@@ -1706,10 +2248,19 @@ const updatePlot = (): void => {
 
   isPlotOutdated = false;
 
+  // Reset our zoom if we are plotting something else.
+
+  const titles = `${props.data.xAxisTitle ?? ''}::${props.data.yAxisTitle ?? ''}`;
+
+  if (titles !== zoomTitles) {
+    zoomTitles = titles;
+    zoomRanges = {};
+  }
+
   // Create or update our plot.
   // Note: we only (re)create our plot if needed since it is much cheaper to update its data.
 
-  const signature = `${props.data.traces.length}::${props.data.xAxisTitle ?? ''}::${props.data.yAxisTitle ?? ''}::${theme.useLightMode()}`;
+  const signature = `${props.data.traces.length}::${titles}::${theme.useLightMode()}`;
   const newLegendWidth = measureLegendWidth();
   const legendWidthChanged = newLegendWidth !== legendWidth;
 
@@ -1812,6 +2363,16 @@ vue.onBeforeUnmount(() => {
   // Make sure that we don't do anything else after we are unmounted.
 
   isUnmounted = true;
+
+  // Stop zooming.
+
+  if (wheelRafId !== undefined) {
+    cancelAnimationFrame(wheelRafId);
+
+    wheelRafId = undefined;
+  }
+
+  stopDrag();
 
   // Destroy our plot, if any.
 
@@ -1927,6 +2488,20 @@ vue.watch(
     vertical-align: super;
   }
 
+  .fade-in {
+    animation: fade-in 200ms;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
   .legend {
     position: absolute;
     z-index: 2;
@@ -1966,5 +2541,9 @@ vue.watch(
     left: 5px;
     width: 30px;
     height: 2px;
+  }
+
+  :deep(.u-over) {
+    cursor: crosshair;
   }
 </style>
