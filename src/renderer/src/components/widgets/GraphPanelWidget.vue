@@ -23,6 +23,18 @@
         />
       </svg>
       <template v-if="plotRect">
+        <div v-for="dragger in draggers" :key="dragger.type" class="absolute z-1"
+          :style="{
+            left: `${dragger.left}px`,
+            top: `${dragger.top}px`,
+            width: `${dragger.width}px`,
+            height: `${dragger.height}px`,
+            cursor: `${dragger.type}-resize`
+          }"
+          @mousedown="onDragStart($event, dragger.type)"
+          @dblclick="onDoubleClick(dragger.type)"
+          @wheel="onWheel($event, dragger.type)"
+        />
         <div v-if="data.xAxisTitle" class="axis-title"
           :style="{
             left: `${plotRect.left + 0.5 * plotRect.width}px`,
@@ -65,6 +77,9 @@
       </div>
     </div>
     <ContextMenu ref="contextMenuRef" :model="contextMenuItems" :appendTo="appendTarget" />
+    <Teleport v-if="dragCursor" :to="appendTarget ?? 'body'">
+      <div class="fixed inset-0 z-9999" :style="{ cursor: dragCursor }" @wheel.prevent />
+    </Teleport>
   </div>
 </template>
 
@@ -162,6 +177,7 @@ const DEFAULT_Y_RANGE: [number, number] = [-1, 4]; // Like Plotly, the default Y
 const MIN_DRAG = 8; // Like Plotly, the minimum distance that we must drag (along an axis) to zoom (along that axis).
 const MIN_ZOOM = 20; // Like Plotly, the distance below which a drag is considered to be along one axis only.
 const ZOOM_FACTOR = 0.5; // Factor by which our ranges get scaled when zooming in (or its inverse when zooming out).
+const DRAGGER_SIZE = 20; // Like Plotly, the thickness of our axis (and corner) draggers.
 
 // Resize handling.
 
@@ -981,19 +997,85 @@ const zoomOut = (): void => {
   zoomBy(1 / ZOOM_FACTOR, ['x', 'y'], contextMenuCenterFractions);
 };
 
-const resetZoom = (): void => {
-  // Like Plotly, reset our zoom, i.e. go back to the given ranges, if any, or autorange our axes.
+const resetZoom = (axisKeys: AxisKey[] = ['x', 'y']): void => {
+  // Like Plotly, reset the zoom of the given axes, i.e. go back to the given ranges, if any, or autorange the axes.
 
-  zoomRanges = {};
+  const ranges: Partial<Record<AxisKey, null>> = {};
 
-  setScales({ x: null, y: null });
+  for (const axisKey of axisKeys) {
+    delete zoomRanges[axisKey];
+
+    ranges[axisKey] = null;
+  }
+
+  setScales(ranges);
 };
 
-// Mouse interaction with our plotting area, like with Plotly: drag to zoom (along both axes or, for a mostly horizontal
-// or vertical drag, along one of them), use the mouse wheel to zoom around the mouse pointer, and double-click to reset
-// the zoom.
-// Note: a zoom can be cancelled by dragging back to where it started (like with Plotly), by pressing the Escape key or
-//       another mouse button (e.g., the right one), or by our window losing the focus.
+// Mouse interaction, like with Plotly:
+//  - our plotting area ('nsew'): drag to zoom (along both axes or, for a mostly horizontal or vertical drag, along one
+//    of them), use the mouse wheel to zoom around the mouse pointer, and double-click to reset the zoom;
+//  - the middle (80%) of our axes ('ew' and 'ns'): drag to pan along that axis;
+//  - the ends (10%) of our axes ('w', 'e', 'n', and 's') and the bottom corners of our plotting area ('sw' and 'se'):
+//    drag to move the corresponding end(s) of our axes; and
+//  - our axes and corners: use the mouse wheel to zoom and double-click to reset the zoom along the corresponding axes.
+// Note #1: unlike Plotly, we don't have top corners (i.e. 'nw' and 'ne') since they would be above our plotting area,
+//          i.e. outside of our container since we don't have a top margin (and having one, just for them, would waste
+//          some valuable vertical space, especially when we have several plots stacked on top of each other). So, they
+//          wouldn't be reachable (as is the case with Plotly when it doesn't have a top margin either).
+// Note #2: a drag can be cancelled by pressing the Escape key or another mouse button (e.g., the right one), or by our
+//          window losing the focus, in which case our ranges are restored (if they were changed while dragging). A zoom
+//          can also be cancelled by dragging back to where it started (like with Plotly).
+
+type DragType = 'nsew' | 'ew' | 'w' | 'e' | 'ns' | 'n' | 's' | 'sw' | 'se';
+
+interface IDragger {
+  type: DragType;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+const draggers = vue.computed<IDragger[]>(() => {
+  // Our axis (and corner) draggers, which are positioned around our plotting area.
+
+  const rect = plotRect.value;
+
+  if (!rect) {
+    return [];
+  }
+
+  const { left, top, width, height } = rect;
+  const right = left + width;
+  const bottom = top + height;
+
+  return [
+    { type: 'ew', left: left + 0.1 * width, top: bottom, width: 0.8 * width, height: DRAGGER_SIZE },
+    { type: 'w', left, top: bottom, width: 0.1 * width, height: DRAGGER_SIZE },
+    { type: 'e', left: left + 0.9 * width, top: bottom, width: 0.1 * width, height: DRAGGER_SIZE },
+    { type: 'ns', left: left - DRAGGER_SIZE, top: top + 0.1 * height, width: DRAGGER_SIZE, height: 0.8 * height },
+    { type: 's', left: left - DRAGGER_SIZE, top: top + 0.9 * height, width: DRAGGER_SIZE, height: 0.1 * height },
+    { type: 'n', left: left - DRAGGER_SIZE, top, width: DRAGGER_SIZE, height: 0.1 * height },
+    { type: 'sw', left: left - DRAGGER_SIZE, top: bottom, width: DRAGGER_SIZE, height: DRAGGER_SIZE },
+    { type: 'se', left: right, top: bottom, width: DRAGGER_SIZE, height: DRAGGER_SIZE }
+  ];
+});
+
+const draggedAxes = (type: DragType): AxisKey[] => {
+  // Return the axes that are affected by the given type of drag.
+
+  const res: AxisKey[] = [];
+
+  if (type === 'nsew' || /[ew]/.test(type)) {
+    res.push('x');
+  }
+
+  if (type === 'nsew' || /[ns]/.test(type)) {
+    res.push('y');
+  }
+
+  return res;
+};
 
 type ZoomMode = '' | 'x' | 'y' | 'xy';
 
@@ -1010,21 +1092,32 @@ interface IBox {
 }
 
 interface IDrag {
+  type: DragType;
   startX: number;
   startY: number;
+  dx: number;
+  dy: number;
   xRange: Range;
   yRange: Range;
   zoomMode: ZoomMode;
+  zoomRanges: Partial<Record<AxisKey, Range>>;
   box: IBox;
 }
 
 interface IWheelZoom {
   factor: number;
+  axisKeys: AxisKey[];
   centerFractions: Record<AxisKey, number>;
 }
 
 const zoomBox = vue.shallowRef<IZoomBox | null>(null);
+const dragCursor = vue.shallowRef<string | null>(null);
+// Note: while dragging, we cover the whole window with an element that uses the cursor of our drag (see our template),
+//       like Plotly does. This means that our cursor doesn't change while dragging (e.g., when moving over one of our
+//       axis draggers or over another part of the window), which would otherwise give the impression that another
+//       action could be started. We also prevent the page from scrolling if the mouse wheel is used over that element.
 let drag: IDrag | undefined;
+let dragRafId: number | undefined;
 let pendingWheelZoom: IWheelZoom | undefined;
 let wheelRafId: number | undefined;
 
@@ -1070,7 +1163,76 @@ const plotPosition = (event: MouseEvent, rect: IPlotRect): { x: number; y: numbe
   };
 };
 
-const onDragStart = (event: MouseEvent): void => {
+const dZoom = (fraction: number): number => {
+  // Like Plotly, the (non-linear) scaling of a range when moving one of its ends by the given fraction of its length.
+
+  return 1 - (fraction >= 0 ? Math.min(fraction, 0.9) : 1 / (1 / Math.max(fraction, -0.3) + 3.222));
+};
+
+const applyDrag = (currentDrag: IDrag): void => {
+  // Make sure that our plot has been laid out and that we are not dragging our plotting area (see onDragMove()).
+
+  const rect = plotRect.value;
+
+  if (!rect || currentDrag.type === 'nsew') {
+    return;
+  }
+
+  // Determine the new ranges of our axes based on how far we have dragged.
+
+  const { type, dx, dy, xRange, yRange } = currentDrag;
+  const ranges: Partial<Record<AxisKey, Range>> = {};
+
+  const moveEnd = (range: Range, end: 0 | 1, distance: number, length: number): Range => {
+    const otherEnd = 1 - end;
+    const res: Range = [range[0], range[1]];
+
+    res[end] = range[otherEnd] + (range[end] - range[otherEnd]) / dZoom(distance / length);
+
+    return res;
+  };
+
+  // Move our axes or move one/both ends of our axes, depending on what we are dragging.
+
+  if (type === 'ew') {
+    const delta = (dx * (xRange[1] - xRange[0])) / rect.width;
+
+    ranges.x = [xRange[0] - delta, xRange[1] - delta];
+  } else if (type === 'ns') {
+    const delta = (dy * (yRange[1] - yRange[0])) / rect.height;
+
+    ranges.y = [yRange[0] + delta, yRange[1] + delta];
+  } else {
+    if (type.includes('w')) {
+      ranges.x = moveEnd(xRange, 0, dx, rect.width);
+    } else if (type.includes('e')) {
+      ranges.x = moveEnd(xRange, 1, -dx, rect.width);
+    }
+
+    if (type.includes('n')) {
+      ranges.y = moveEnd(yRange, 1, dy, rect.height);
+    } else if (type.includes('s')) {
+      ranges.y = moveEnd(yRange, 0, -dy, rect.height);
+    }
+  }
+
+  // Zoom into the new ranges.
+
+  zoomTo(ranges);
+};
+
+const onDragStart = (event: MouseEvent, type: DragType): void => {
+  // Apply our pending wheel zoom, if any, so that it doesn't get applied while dragging (in which case our drag would
+  // be based on ranges that are not the ones that are shown anymore).
+
+  if (wheelRafId !== undefined) {
+    cancelAnimationFrame(wheelRafId);
+
+    wheelRafId = undefined;
+
+    applyWheelZoom();
+  }
+
   // Start dragging, but only with the main mouse button and if our plot has been laid out.
 
   const rect = plotRect.value;
@@ -1083,21 +1245,26 @@ const onDragStart = (event: MouseEvent): void => {
 
   event.preventDefault();
 
-  // Make sure that we are not already dragging (e.g., if we missed a mouseup event because the mouse button was
-  // released outside of our window).
+  // Make sure that we are not already dragging.
+  // Note: this shouldn't be the case since we ignore any press of the main mouse button while dragging (see
+  //       onDragMouseDown()), but better be safe than sorry.
 
   stopDrag();
 
-  // Keep track of our starting position, our current ranges, and our zoom box.
+  // Keep track of what we are dragging, our starting position, our current ranges, and our zoom box.
 
   const position = plotPosition(event, rect);
 
   drag = {
+    type,
     startX: position.x,
     startY: position.y,
+    dx: 0,
+    dy: 0,
     xRange,
     yRange,
     zoomMode: '',
+    zoomRanges: { ...zoomRanges },
     box: { left: 0, right: 0, top: 0, bottom: 0 }
   };
 
@@ -1107,7 +1274,7 @@ const onDragStart = (event: MouseEvent): void => {
   window.addEventListener('mousemove', onDragMove);
   window.addEventListener('mouseup', onDragEnd);
   window.addEventListener('keydown', onDragKeyDown, true);
-  window.addEventListener('blur', stopDrag);
+  window.addEventListener('blur', cancelDrag);
 };
 
 const onDragMove = (event: MouseEvent): void => {
@@ -1120,9 +1287,45 @@ const onDragMove = (event: MouseEvent): void => {
     return;
   }
 
-  // Determine the zoom mode based on how far we have dragged along each axis.
+  // Determine the position of our mouse relative to our plotting area.
 
   const position = plotPosition(event, rect);
+
+  // Use the cursor of our drag while dragging (see dragCursor), but only once our mouse has moved far enough from where
+  // our drag started.
+  // Note: a click (or a double-click) often comes with a bit of mouse movement, in which case our mouse button would be
+  //       released over the element that we use to cover the whole window. The click would then be dispatched to the
+  //       nearest common ancestor of where our mouse button was pressed and released, i.e. not to us, so we wouldn't
+  //       get it (e.g., we wouldn't reset our zoom when our plotting area gets double-clicked).
+
+  if (
+    !dragCursor.value &&
+    Math.max(Math.abs(position.x - currentDrag.startX), Math.abs(position.y - currentDrag.startY)) >= MIN_DRAG
+  ) {
+    dragCursor.value = currentDrag.type === 'nsew' ? 'crosshair' : `${currentDrag.type}-resize`;
+  }
+
+  // If we are dragging an axis (or a corner), then pan/move our axes, coalescing our pans/moves into one per frame.
+
+  if (currentDrag.type !== 'nsew') {
+    currentDrag.dx = position.x - currentDrag.startX;
+    currentDrag.dy = position.y - currentDrag.startY;
+
+    if (dragRafId === undefined) {
+      dragRafId = requestAnimationFrame(() => {
+        dragRafId = undefined;
+
+        if (drag) {
+          applyDrag(drag);
+        }
+      });
+    }
+
+    return;
+  }
+
+  // We are dragging our plotting area, so determine the zoom mode based on how far we have dragged along each axis.
+
   const x0 = currentDrag.startX;
   const y0 = currentDrag.startY;
   const x1 = Math.max(0, Math.min(rect.width, position.x));
@@ -1166,31 +1369,51 @@ const onDragMove = (event: MouseEvent): void => {
 };
 
 const onDragEnd = (event: MouseEvent): void => {
-  // Zoom into our zoom box, if any, but only if it is the main mouse button that has been released (see
-  // onDragMouseDown()).
+  // Finish our drag, but only if it is the main mouse button that has been released (see onDragMouseDown()).
 
   if (event.button !== 0) {
     return;
   }
 
-  // Stop dragging, even if we don't zoom into our zoom box.
+  // Stop dragging.
   // Note: we must keep track of our drag before stopping it since stopping it resets it.
 
   const currentDrag = drag;
 
   stopDrag();
 
-  // Make sure that we were dragging, that we have a zoom box, and that our plot has been laid out.
+  // Make sure that we were dragging.
+  // Note: this should always be the case since we only listen to mouseup events while dragging (see onDragStart() and
+  //       stopDrag()).
+
+  if (!currentDrag) {
+    return;
+  }
+
+  // If we were dragging an axis (or a corner), then make sure that our axes reflect where we stopped dragging.
+
+  if (currentDrag.type !== 'nsew') {
+    applyDrag(currentDrag);
+
+    return;
+  }
+
+  // We were dragging our plotting area, so make sure that we have a zoom box and that our plot has been laid out.
 
   const rect = plotRect.value;
 
-  if (!currentDrag?.zoomMode || !rect) {
+  if (!currentDrag.zoomMode || !rect) {
     return;
   }
 
   // Determine the new ranges of our axes based on our zoom box.
+  // Note: our zoom box is relative to what is currently shown, which may not be what was shown when we started dragging
+  //       (e.g., if our data got updated while a simulation is running, in which case our axes may have been autoranged
+  //       again), so we use our current ranges rather than the ones from when we started dragging.
 
-  const { zoomMode, box, xRange, yRange } = currentDrag;
+  const { zoomMode, box } = currentDrag;
+  const xRange = currentRange('x') ?? currentDrag.xRange;
+  const yRange = currentRange('y') ?? currentDrag.yRange;
   const ranges: Partial<Record<AxisKey, Range>> = {};
 
   if (zoomMode === 'x' || zoomMode === 'xy') {
@@ -1214,7 +1437,7 @@ const onDragEnd = (event: MouseEvent): void => {
 };
 
 const onDragKeyDown = (event: KeyboardEvent): void => {
-  // Cancel our zoom if the user presses the Escape key.
+  // Cancel our drag if the user presses the Escape key.
   // Note: we stop the propagation of the event, so that it doesn't also get handled by something else (e.g., a dialog
   //       that would get closed).
 
@@ -1222,26 +1445,32 @@ const onDragKeyDown = (event: KeyboardEvent): void => {
     event.preventDefault();
     event.stopPropagation();
 
-    stopDrag();
+    cancelDrag();
   }
 };
 
 const onDragMouseDown = (event: MouseEvent): void => {
-  // Cancel our zoom if the user presses another mouse button (e.g., the right one), in which case we also prevent the
-  // context menu that would normally be shown as a result of that mouse button being pressed (see
-  // preventContextMenu()).
-  // Note: a context menu is shown either when the right mouse button is pressed (e.g., on macOS) or released (e.g., on
-  //       Windows), so we prevent the next context menu from being shown, whenever that is. We also stop preventing it
-  //       when another mouse button gets pressed (e.g., if the context menu event didn't get fired for some reason).
+  // Ignore any other press of the main mouse button while dragging (e.g., using another pointing device), so that it
+  // can't start another drag (e.g., of one of our axes while zooming into our plotting area). Otherwise, cancel our
+  // drag if the user presses another mouse button (e.g., the right one), in which case we also prevent the context menu
+  // that would normally be shown as a result of that mouse button being pressed (see preventContextMenu()).
+  // Note #1: we listen to mouse presses in the capture phase (see onDragStart()), so we get them before anything else.
+  // Note #2: a context menu is shown either when the right mouse button is pressed (e.g., on macOS) or released (e.g.,
+  //          on Windows), so we prevent the next context menu from being shown, whenever that is. We also stop
+  //          preventing it when another mouse button gets pressed (e.g., if the context menu event didn't get fired for
+  //          some reason).
 
   if (event.button === 0) {
+    event.preventDefault();
+    event.stopPropagation();
+
     return;
   }
 
   event.preventDefault();
   event.stopPropagation();
 
-  stopDrag();
+  cancelDrag();
 
   window.addEventListener('contextmenu', preventContextMenu, true);
   window.addEventListener(
@@ -1253,30 +1482,59 @@ const onDragMouseDown = (event: MouseEvent): void => {
   );
 };
 
-const onWheel = (event: WheelEvent): void => {
-  // Zoom in/out around the mouse pointer, coalescing wheel events into one zoom per frame.
-  // Note: like Plotly, we use an exponential scale for the zoom factor, so that the zoom is more sensitive to the mouse
-  //       wheel.
+const onDoubleClick = (type: DragType): void => {
+  // Reset the zoom along the axes that correspond to what was double-clicked unless we are dragging (in which case only
+  // our drag should have an effect).
 
-  const rect = plotRect.value;
-
-  if (!plot || !rect) {
+  if (drag) {
     return;
   }
 
+  resetZoom(draggedAxes(type));
+};
+
+const applyWheelZoom = (): void => {
+  // Apply our pending wheel zoom, if any.
+
+  if (!pendingWheelZoom) {
+    return;
+  }
+
+  const { factor, axisKeys, centerFractions } = pendingWheelZoom;
+
+  pendingWheelZoom = undefined;
+
+  zoomBy(factor, axisKeys, centerFractions);
+};
+
+const onWheel = (event: WheelEvent, type: DragType): void => {
   // Prevent the default behavior of the mouse wheel, which is to scroll the page.
 
   event.preventDefault();
 
+  // Make sure that we have a plot, that it has been laid out, and that we are not dragging (in which case only our drag
+  // should have an effect).
+
+  const rect = plotRect.value;
+
+  if (!plot || !rect || drag) {
+    return;
+  }
+
   // Determine the position of the mouse pointer relative to our plotting area and the zoom factor based on the wheel
-  // delta. We limit the wheel delta to avoid zooming in/out too much at once.
+  // delta.
+  // Note: if the wheel events that we coalesce are for different axes (e.g., if the mouse pointer moved from our
+  //       plotting area to one of our axes), then we only consider the axes of the last one.
 
   const position = plotPosition(event, rect);
   const wheelDelta = event.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? event.deltaY : 40 * event.deltaY;
   const factor = Math.exp(Math.min(Math.max(wheelDelta, -20), 20) / 200);
+  const axisKeys = draggedAxes(type);
 
   pendingWheelZoom = {
-    factor: (pendingWheelZoom?.factor ?? 1) * factor,
+    factor:
+      (pendingWheelZoom && pendingWheelZoom.axisKeys.join() === axisKeys.join() ? pendingWheelZoom.factor : 1) * factor,
+    axisKeys,
     centerFractions: {
       x: position.x / rect.width,
       y: (rect.height - position.y) / rect.height
@@ -1289,21 +1547,12 @@ const onWheel = (event: WheelEvent): void => {
     return;
   }
 
-  // We use requestAnimationFrame() to coalesce wheel events into one zoom per frame, which is more efficient and also
-  // allows us to zoom in/out more smoothly when the user scrolls quickly.
+  // Schedule a wheel zoom to be applied on the next animation frame.
 
   wheelRafId = requestAnimationFrame(() => {
     wheelRafId = undefined;
 
-    if (!pendingWheelZoom) {
-      return;
-    }
-
-    const { factor, centerFractions } = pendingWheelZoom;
-
-    pendingWheelZoom = undefined;
-
-    zoomBy(factor, ['x', 'y'], centerFractions);
+    applyWheelZoom();
   });
 };
 
@@ -1314,10 +1563,32 @@ const stopDrag = (): void => {
   window.removeEventListener('mouseup', onDragEnd);
   window.removeEventListener('mousedown', onDragMouseDown, true);
   window.removeEventListener('keydown', onDragKeyDown, true);
-  window.removeEventListener('blur', stopDrag);
+  window.removeEventListener('blur', cancelDrag);
+
+  if (dragRafId !== undefined) {
+    cancelAnimationFrame(dragRafId);
+
+    dragRafId = undefined;
+  }
 
   drag = undefined;
+  dragCursor.value = null;
   zoomBox.value = null;
+};
+
+const cancelDrag = (): void => {
+  // Cancel our drag, if any, restoring our ranges if we were dragging an axis (or a corner) since our ranges get
+  // updated while dragging an axis (or a corner) unlike while dragging our plotting area.
+
+  const currentDrag = drag;
+
+  stopDrag();
+
+  if (currentDrag && currentDrag.type !== 'nsew') {
+    zoomRanges = { ...currentDrag.zoomRanges };
+
+    setScales({ x: zoomRanges.x ?? null, y: zoomRanges.y ?? null });
+  }
 };
 
 const preventContextMenu = (event: MouseEvent): void => {
@@ -2219,9 +2490,9 @@ const createPlot = (width: number, height: number): void => {
   // Handle mouse interaction with our plotting area.
   // Note: uPlot's plotting area (i.e. its "over" element) gets destroyed with our plot, and its event listeners with it.
 
-  plot.over.addEventListener('mousedown', onDragStart);
-  plot.over.addEventListener('dblclick', resetZoom);
-  plot.over.addEventListener('wheel', onWheel, { passive: false });
+  plot.over.addEventListener('mousedown', (event: MouseEvent) => onDragStart(event, 'nsew'));
+  plot.over.addEventListener('dblclick', () => onDoubleClick('nsew'));
+  plot.over.addEventListener('wheel', (event: WheelEvent) => onWheel(event, 'nsew'), { passive: false });
 };
 
 const updatePlot = (): void => {
