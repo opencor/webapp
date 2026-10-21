@@ -186,11 +186,11 @@ const X_AXIS_SIZE_WITH_TITLE = 18; // Size of our X axis (without its title) if 
 const X_AXIS_SIZE_WITHOUT_TITLE = 20; // Size of our X axis if it doesn't have a title.
 const X_AXIS_TITLE_SIZE = 17; // Size of our X axis title.
 const Y_AXIS_TITLE_SIZE = 17; // Size of our Y axis title.
-const Y_AXIS_TITLE_GAP = 1.5; // Gap between our Y axis title and our Y axis (i.e. the right edge of our Y tick labels).
+const Y_AXIS_TITLE_GAP = 1.5; // Gap between our Y axis title and (the left edge of) our Y axis.
 const Y_AXIS_EXTRA_SIZE = 5; // Extra size of our Y axis, on top of the width of its tick labels.
-const MAJOR_TICK_MIN_X_SPACING = 80; // Minimum spacing between two consecutive major ticks along the X axis.
-const MAJOR_TICK_MIN_Y_SPACING = 40; // Minimum spacing between two consecutive major ticks along the Y axis.
-const NB_OF_MINOR_TICKS = 5; // Number of minor ticks between two consecutive major ticks (like Plotly).
+const MAJOR_TICK_MIN_X_SPACING = 80; // Target spacing between two consecutive major ticks along the X axis.
+const MAJOR_TICK_MIN_Y_SPACING = 40; // Target spacing between two consecutive major ticks along the Y axis.
+const NB_OF_MINOR_TICKS = 5; // Number of minor tick spacings per major tick spacing (like Plotly).
 const TICK_LABEL_MIN_SPACING = 10; // Minimum spacing between two consecutive tick labels.
 const MAX_NB_OF_TICKS = 1000; // A safeguard against an axis needing an unreasonable number of ticks.
 const LINE_WIDTH = 2; // Like Plotly, the width of our traces' lines (in CSS pixels).
@@ -275,9 +275,9 @@ let trackedMargins: IGraphPanelMargins | undefined;
 
 // Our theme, which uses PrimeVue's CSS variables, so that it is consistent with the rest of OpenCOR.
 // Note: a canvas doesn't understand CSS variables, so we resolve them (see colors.cssColor()) for what uPlot draws on its
-//       canvas (i.e. our tick labels and grid lines). This is fine since we resolve them whenever our plot gets created
-//       (which it does whenever our theme changes, see updatePlot()) or drawn, and PrimeVue's CSS variables get updated
-//       as soon as our theme changes (see useTheme() in vueCommon.ts).
+//       canvas (i.e. our tick labels, grid lines, and zero lines). This is fine since we resolve them whenever our plot
+//       gets created (which it does whenever our theme changes, see updatePlot()) or drawn, and PrimeVue's CSS variables
+//       get updated as soon as our theme changes (see useTheme() in vueCommon.ts).
 
 interface IThemeColors {
   background: string;
@@ -377,7 +377,7 @@ const legendItems = vue.computed<ILegendItem[]>(() => {
     .sort((item1: ILegendItem, item2: ILegendItem) => item1.zorder - item2.zorder || item1.index - item2.index);
 });
 
-// Our plotting area, which we use to position our legend.
+// Our plotting area, which we use to position our axis titles, axis draggers, zoom box, hover label, and legend.
 
 interface IPlotRect {
   left: number;
@@ -389,7 +389,7 @@ interface IPlotRect {
 const plotRect = vue.shallowRef<IPlotRect | undefined>();
 
 const updatePlotRect = (u: uPlot): void => {
-  // Keep track of our plotting area (in CSS pixels, relative to our container), which we use to position our legend.
+  // Keep track of our plotting area (in CSS pixels, relative to our container).
 
   const pxRatio = dependencies._uPlot.pxRatio as number;
   const newPlotRect = {
@@ -487,8 +487,8 @@ const onLegendClick = (event: MouseEvent, index: number): void => {
     return;
   }
 
-  // Use a copy of our visibilities so that we can update all of them at once, which is more efficient than updating
-  // them one by one.
+  // Use a copy of our visibilities since traceVisibilities is a shallow ref, i.e. we need to assign it a new array for
+  // our change to be picked up.
 
   const visibilities = traceVisibilities.value.slice();
 
@@ -821,7 +821,7 @@ const autoRange = (u: uPlot, axisKey: AxisKey, min: number, max: number): Range 
   // Note: the minimum and maximum extrema of a trace with markers are also within the range of our traces, but they get
   //       padded more, so we consider them separately.
 
-  // Make sure that our range is not zero-width, since uPlot can handle neither.
+  // Make sure that our range is not zero-width, since uPlot can't handle it.
 
   if (min === max) {
     return [min - 1, max + 1];
@@ -875,8 +875,8 @@ let zoomRanges: Partial<Record<AxisKey, Range>> = {};
 let zoomTitles: string | undefined;
 // Note: we keep track of the user's zoom ranges, so that they are kept when our data gets updated (e.g., while a
 //       simulation is running). They get reset when the user resets the zoom (using our context menu or by
-//       double-clicking on our plotting area) or when our axis titles change (i.e. when we are plotting something else,
-//       see updatePlot()).
+//       double-clicking on our plotting area or on an axis, in which case only the zoom along that axis gets reset) or
+//       when our axis titles change (i.e. when we are plotting something else, see updatePlot()).
 
 const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
   return (u: uPlot, dataMin: number | null, dataMax: number | null): Range => {
@@ -1295,7 +1295,8 @@ const onDragStart = (event: MouseEvent, type: DragType): void => {
 
   stopDrag();
 
-  // Keep track of what we are dragging, our starting position, our current ranges, and our zoom box.
+  // Keep track of what we are dragging, our starting position, our current ranges, a copy of our zoom ranges (so that
+  // cancelDrag() can restore them), and our zoom box.
 
   const position = plotPosition(event, rect);
 
@@ -1319,7 +1320,8 @@ const onDragStart = (event: MouseEvent, type: DragType): void => {
     }
   };
 
-  // Listen for mouse events on the window, so that we can continue to drag even if the mouse leaves our plotting area.
+  // Listen for mouse and keyboard events on the window, as well as for it losing focus, so that we can continue to drag
+  // even if the mouse leaves our plotting area, and cancel our drag if needed.
 
   window.addEventListener('mousedown', onDragMouseDown, true);
   window.addEventListener('mousemove', onDragMove);
@@ -2270,8 +2272,9 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
       const xPixel = Math.round(xPos);
       const pointOutCode = outCode(xPos, yPos);
 
-      // Make sure that the segment between our previous point and our current point may be visible. If it isn't, then
-      // we break our path and keep track of our current point, which may be the start of a visible segment.
+      // Make sure that we have a previous point and that the segment between it and our current point may be visible.
+      // If not, then we break our path and keep track of our current point, which may be the start of a visible
+      // segment.
 
       if (!(penDown || hasPendingPoint) || (previousOutCode & pointOutCode) !== 0) {
         if (penDown) {
@@ -2351,8 +2354,8 @@ const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, in
 const markerPaths: uPlot.Series.Points.PathBuilder = (u: uPlot, seriesIndex: number) => {
   // Like Plotly, draw a marker for each point of our trace that has finite X and Y values, clipping our markers to our
   // plotting area.
-  // Note: uPlot's markers path builder draws all the points of our trace in mode 2 (rather than only those that are in
-  //       our plotting area, as in mode 1) and doesn't clip our markers to our plotting area, hence we use our own.
+  // Note: uPlot's markers path builder clips our markers to our plotting area extended by a marker's diameter on each
+  //       side, i.e. our markers could be drawn over our axes, hence we use our own.
 
   const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
   const fill = new Path2D();
@@ -2418,7 +2421,8 @@ let hoverRafId: number | undefined;
 let sortedXValues: boolean[] = [];
 
 const lowerBound = (values: math.FloatArray, value: number, end: number): number => {
-  // Return the index of the first of the given (sorted) values that is not less than the given value.
+  // Return the index of the first of the given (sorted) values (up to the given end index) that is not less than the
+  // given value, or the given end index if there is none.
 
   let low = 0;
   let high = end;
@@ -2496,8 +2500,8 @@ const hoverName = (name: string): string => {
   let length = 0;
 
   for (const part of name.split(/(<[^<>]*>)/)) {
-    // Keep any part that is an HTML tag that we support, but without its attributes (which Plotly ignores for those
-    // tags anyway), and skip any other HTML tag.
+    // Keep any part that is an HTML tag that we support, but without its attributes (since our name gets rendered using
+    // v-html), and skip any other HTML tag.
 
     const tagMatch = /<(\/?)([^ >]*)(\s+(.*))?>/i.exec(part);
     const tag = tagMatch?.[2]?.toLowerCase();
@@ -2660,8 +2664,8 @@ const updateHover = (): void => {
     return;
   }
 
-  // Build our label, which points to the right of our point unless there isn't enough room for it, in which case it
-  // points to the left of our point.
+  // Build our label, which is to the right of our point unless there isn't enough room for it, in which case it is to
+  // the left of our point.
 
   const hoverFont = `${HOVER_FONT_SIZE}px ${HOVER_FONT}`;
   const xValue = closestXValues[closestIndex] as number;
@@ -2671,7 +2675,8 @@ const updateHover = (): void => {
   const boxWidth = textWidth(text, hoverFont) + 2 * HOVER_TEXT_PADDING;
   const nameWidth = name ? textWidth(plainText(name), hoverFont) + 2 * HOVER_TEXT_PADDING : 0;
   // Note: our name may contain some subscripts/superscripts, which are smaller, so nameWidth may overestimate the width
-  //       of our name, but that's fine since we only use it to decide whether our label should point to the left.
+  //       of our name, but that's fine since we only use it to decide whether our label should be to the left of our
+  //       point.
   const x = rect.left + (xValue - xMin) * xFactor;
   const y = rect.top + rect.height - (yValue - yMin) * yFactor;
   const anchor = x + HOVER_ARROW_SIZE + boxWidth + nameWidth <= (mainDivRef.value?.clientWidth || 0) ? 'start' : 'end';
@@ -3057,7 +3062,7 @@ vue.onBeforeUnmount(() => {
 
   isUnmounted = true;
 
-  // Stop zooming and hovering.
+  // Stop zooming, hovering, and dragging.
 
   if (wheelRafId !== undefined) {
     cancelAnimationFrame(wheelRafId);
