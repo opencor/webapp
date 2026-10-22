@@ -14,11 +14,13 @@
         :width="plotRect.width"
         :height="plotRect.height"
       >
-        <path class="fade-in" :d="zoomBox.path" :style="{ fill: themeColors.zoomMask }" />
-        <path v-if="zoomBox.corners" class="fade-in" :d="zoomBox.corners"
-          :fill="themeColors.zoomCornersFill"
-          :stroke="themeColors.zoomCornersStroke"
-          stroke-width="1"
+        <rect class="fade-in"
+          :x="zoomBox.x"
+          :y="zoomBox.y"
+          :width="zoomBox.width"
+          :height="zoomBox.height"
+          :style="{ fill: themeColors.zoomFill, stroke: themeColors.zoomStroke }"
+          :stroke-width="zoomBox.strokeWidth"
         />
       </svg>
       <template v-if="plotRect">
@@ -304,9 +306,8 @@ interface IThemeColors {
   tickLabel: string;
   grid: string;
   zeroLine: string;
-  zoomMask: string;
-  zoomCornersFill: string;
-  zoomCornersStroke: string;
+  zoomFill: string;
+  zoomStroke: string;
 }
 
 const themeColors = vue.computed<IThemeColors>(() => {
@@ -318,9 +319,8 @@ const themeColors = vue.computed<IThemeColors>(() => {
     tickLabel: 'var(--p-text-muted-color)',
     grid: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-800)',
     zeroLine: useLightMode ? 'var(--p-surface-300)' : 'var(--p-surface-600)',
-    zoomMask: `color-mix(in srgb, ${useLightMode ? 'var(--p-surface-400)' : 'var(--p-surface-500)'} 50%, transparent)`,
-    zoomCornersFill: useLightMode ? 'var(--p-surface-800)' : 'var(--p-surface-100)',
-    zoomCornersStroke: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-700)'
+    zoomFill: 'color-mix(in srgb, var(--p-primary-color) 12%, transparent)',
+    zoomStroke: 'var(--p-primary-color)'
   };
 });
 
@@ -1587,8 +1587,11 @@ const draggedAxes = (type: DragType): AxisKey[] => {
 type ZoomMode = '' | 'x' | 'y' | 'xy';
 
 interface IZoomBox {
-  path: string;
-  corners: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  strokeWidth: number;
 }
 
 interface IBox {
@@ -1627,37 +1630,6 @@ let drag: IDrag | undefined;
 let dragRafId: number | undefined;
 let pendingWheelZoom: IWheelZoom | undefined;
 let wheelRafId: number | undefined;
-
-const xCorners = (box: IBox, y0: number): string => {
-  // Like Plotly, the "corners" of a zoom box along our X axis.
-
-  return (
-    `M${box.left - 0.5},${y0 - MIN_ZOOM - 0.5}h-3v${2 * MIN_ZOOM + 1}h3Z` +
-    `M${box.right + 0.5},${y0 - MIN_ZOOM - 0.5}h3v${2 * MIN_ZOOM + 1}h-3Z`
-  );
-};
-
-const yCorners = (box: IBox, x0: number): string => {
-  // Like Plotly, the "corners" of a zoom box along our Y axis.
-
-  return (
-    `M${x0 - MIN_ZOOM - 0.5},${box.top - 0.5}v-3h${2 * MIN_ZOOM + 1}v3Z` +
-    `M${x0 - MIN_ZOOM - 0.5},${box.bottom + 0.5}v3h${2 * MIN_ZOOM + 1}v-3Z`
-  );
-};
-
-const xyCorners = (box: IBox): string => {
-  // Like Plotly, the corners of a zoom box along both of our axes.
-
-  const length = Math.floor(0.5 * Math.min(box.bottom - box.top, box.right - box.left, MIN_ZOOM));
-
-  return (
-    `M${box.left - 3.5},${box.top - 0.5 + length}h3v${-length}h${length}v-3h-${length + 3}Z` +
-    `M${box.right + 3.5},${box.top - 0.5 + length}h-3v${-length}h${-length}v-3h${length + 3}Z` +
-    `M${box.right + 3.5},${box.bottom + 0.5 - length}h-3v${length}h${-length}v3h${length + 3}Z` +
-    `M${box.left - 3.5},${box.bottom + 0.5 - length}h3v${length}h${length}v3h-${length + 3}Z`
-  );
-};
 
 const plotPosition = (
   event: MouseEvent,
@@ -1865,7 +1837,6 @@ const onDragMove = (event: MouseEvent): void => {
   const dx = Math.abs(x1 - x0);
   const dy = Math.abs(y1 - y0);
   const box = { left: Math.min(x0, x1), right: Math.max(x0, x1), top: Math.min(y0, y1), bottom: Math.max(y0, y1) };
-  let corners = '';
 
   if (dy < Math.min(Math.max(0.6 * dx, MIN_DRAG), MIN_ZOOM)) {
     if (dx < MIN_DRAG) {
@@ -1876,28 +1847,40 @@ const onDragMove = (event: MouseEvent): void => {
       currentDrag.zoomMode = 'x';
       box.top = 0;
       box.bottom = rect.height;
-      corners = xCorners(box, y0);
     }
   } else if (dx < Math.min(0.6 * dy, MIN_ZOOM)) {
     currentDrag.zoomMode = 'y';
     box.left = 0;
     box.right = rect.width;
-    corners = yCorners(box, x0);
   } else {
     currentDrag.zoomMode = 'xy';
-    corners = xyCorners(box);
   }
 
   currentDrag.box = box;
 
-  // Update our zoom box, which is shown on top of our plot.
+  // Update our zoom box, which is shown on top of our plot (unless we haven't dragged far enough to zoom yet).
+  // Note: like our grid and zero lines (see linesPath()), our zoom box is snapped to whole device pixels and its border
+  //       is a whole number of device pixels wide (see lineWidth()), so that it is crisp whatever our pixel ratio (e.g.,
+  //       125%). Its border is also drawn inside our zoom box, which itself is kept within our plotting area.
 
-  zoomBox.value = {
-    path:
-      `M0,0H${rect.width}V${rect.height}H0V0` +
-      `M${box.left},${box.top}v${box.bottom - box.top}h${box.right - box.left}v-${box.bottom - box.top}h-${box.right - box.left}Z`,
-    corners
-  };
+  if (currentDrag.zoomMode) {
+    const pxRatio = dependencies._uPlot.pxRatio as number;
+    const strokeWidth = lineWidth(pxRatio);
+    const left = Math.round(box.left * pxRatio);
+    const top = Math.round(box.top * pxRatio);
+    const right = Math.min(Math.round(box.right * pxRatio), Math.round(rect.width * pxRatio));
+    const bottom = Math.min(Math.round(box.bottom * pxRatio), Math.round(rect.height * pxRatio));
+
+    zoomBox.value = {
+      x: (left + 0.5 * strokeWidth) / pxRatio,
+      y: (top + 0.5 * strokeWidth) / pxRatio,
+      width: Math.max(0, right - left - strokeWidth) / pxRatio,
+      height: Math.max(0, bottom - top - strokeWidth) / pxRatio,
+      strokeWidth: strokeWidth / pxRatio
+    };
+  } else {
+    zoomBox.value = null;
+  }
 };
 
 const onDragEnd = (event: MouseEvent): void => {
