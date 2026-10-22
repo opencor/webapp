@@ -35,7 +35,7 @@
           @dblclick="onDoubleClick(dragger.type)"
           @wheel="onWheel($event, dragger.type)"
         />
-        <div v-if="data.xAxisTitle" class="axis-title"
+        <div v-if="data.xAxisTitle" ref="xAxisTitleRef" class="axis-title"
           :style="{
             left: `${plotRect.left + 0.5 * plotRect.width}px`,
             top: `${plotRect.top + plotRect.height + X_AXIS_SIZE_WITH_TITLE}px`,
@@ -44,7 +44,7 @@
           }"
           v-html="data.xAxisTitle"
         />
-        <div v-if="data.yAxisTitle" class="axis-title"
+        <div v-if="data.yAxisTitle" ref="yAxisTitleRef" class="axis-title"
           :style="{
             left: `${Y_AXIS_TITLE_SIZE - Y_AXIS_TITLE_GAP - TITLE_FONT_SIZE}px`,
             top: `${plotRect.top + 0.5 * plotRect.height}px`,
@@ -260,6 +260,8 @@ const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const mainDivRef = vue.shallowRef<HTMLElement | null>(null);
 const plotDivRef = vue.shallowRef<HTMLElement | null>(null);
 const legendRef = vue.shallowRef<HTMLElement | null>(null);
+const xAxisTitleRef = vue.shallowRef<HTMLElement | null>(null);
+const yAxisTitleRef = vue.shallowRef<HTMLElement | null>(null);
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
@@ -277,7 +279,8 @@ let trackedMargins: IGraphPanelMargins | undefined;
 // Note: a canvas doesn't understand CSS variables, so we resolve them (see colors.cssColor()) for what uPlot draws on its
 //       canvas (i.e. our tick labels, grid lines, and zero lines). This is fine since we resolve them whenever our plot
 //       gets created (which it does whenever our theme changes, see updatePlot()) or drawn, and PrimeVue's CSS variables
-//       get updated as soon as our theme changes (see useTheme() in vueCommon.ts).
+//       get updated as soon as our theme changes (see useTheme() in vueCommon.ts). We also resolve them for our exports
+//       (see svgDocument()) since our CSS variables are not available to them.
 
 interface IThemeColors {
   background: string;
@@ -555,12 +558,33 @@ const contextMenuItems = vue.computed<MenuItem[]>(() => [
   {
     icon: 'pi pi-copy',
     label: 'Copy to Clipboard',
-    disabled: true
+    command: () => copyToClipboard()
   },
   {
     icon: 'pi pi-chart-line',
     label: 'Export Plot',
-    disabled: true
+    items: [
+      {
+        icon: 'pi pi-file',
+        label: 'Export to JPEG',
+        command: () => exportToImage('jpeg')
+      },
+      {
+        icon: 'pi pi-file',
+        label: 'Export to PNG',
+        command: () => exportToImage('png')
+      },
+      {
+        icon: 'pi pi-file',
+        label: 'Export to SVG',
+        command: () => exportToImage('svg')
+      },
+      {
+        icon: 'pi pi-file',
+        label: 'Export to WebP',
+        command: () => exportToImage('webp')
+      }
+    ]
   },
   {
     separator: true
@@ -615,6 +639,462 @@ const onContextMenu = (event: MouseEvent): void => {
   // Show our context menu.
 
   contextMenuRef.value?.show(event);
+};
+
+// Copy and export, like Plotly, i.e. an image of our plot and of our legend (but not of our hover label or zoom box).
+// Note: we build an SVG document from what we currently show, which we either export as is or rasterise. For our axis
+//       titles and legend, we use where the browser renders their text, so that any HTML they contain (e.g.,
+//       subscripts and superscripts) gets rendered as it is in our panel.
+
+type ImageFormat = 'jpeg' | 'png' | 'svg' | 'webp';
+type RasterImageFormat = Exclude<ImageFormat, 'svg'>;
+
+interface ISvgPath extends IPath {
+  data: string[];
+}
+
+interface ISvgDocument {
+  svg: string;
+  width: number;
+  height: number;
+}
+
+const svgNumber = (value: number): string => {
+  // Return the given number with at most two decimals, which is more than precise enough for an SVG document.
+  // Note: we divide by 100 rather than multiply by 0.01 since the latter would introduce some floating point errors
+  //       (e.g., 0.01 * 57 is 0.5700000000000001 while 57 / 100 is 0.57).
+
+  return String(Math.round(100 * value) / 100);
+};
+
+const escapeXml = (text: string): string => {
+  // Escape the given text, so that it can be used in an SVG document (as some text or as the value of an attribute).
+
+  return text.replace(/[&<>"']/g, (character: string) => `&#${character.charCodeAt(0)};`);
+};
+
+const svgPath = (): ISvgPath => {
+  // Return a path that builds some SVG path data.
+
+  const data: string[] = [];
+
+  return {
+    data,
+    moveTo: (x: number, y: number) => {
+      data.push(`M${svgNumber(x)} ${svgNumber(y)}`);
+    },
+    lineTo: (x: number, y: number) => {
+      data.push(`L${svgNumber(x)} ${svgNumber(y)}`);
+    },
+    arc: (x: number, y: number, radius: number) => {
+      // Note: we only ever draw full circles from their rightmost point (see markerPath()), so we draw two half circles.
+
+      const r = svgNumber(radius);
+
+      data.push(
+        `A${r} ${r} 0 1 0 ${svgNumber(x - radius)} ${svgNumber(y)}A${r} ${r} 0 1 0 ${svgNumber(x + radius)} ${svgNumber(y)}`
+      );
+    }
+  };
+};
+
+const svgPathElement = (path: ISvgPath, attributes: string): string => {
+  // Return an SVG path element for the given path, if it isn't empty.
+
+  return path.data.length ? `<path d="${path.data.join('')}" ${attributes}/>` : '';
+};
+
+const svgHtmlText = (element: HTMLElement | null, origin: DOMRect, vertical: boolean): string => {
+  // Return the text of the given (rendered) element as SVG text elements (one per text node), positioned relative to the
+  // given origin.
+  // Note: the client rectangle of a text node is the content area of its font, i.e. its alphabetic baseline is the
+  //       font's ascent below its top. However, if our text is vertical (i.e. our Y axis title, which reads from bottom
+  //       to top), then its baseline is the font's ascent to the right of its left.
+
+  // Make sure that we have a valid element.
+
+  if (!element) {
+    return '';
+  }
+
+  // Walk the text nodes of our element and add an SVG text element for each one that has some rendered text.
+
+  const res: string[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    // Make sure that our text node has some text (other than whitespace) and that it is rendered.
+    // Note: we only consider the whitespace that the browser collapses (i.e. not non-breaking spaces).
+
+    const text = node.textContent ?? '';
+    const start = text.search(/[^ \t\n\r\f]/);
+    const end = text.search(/[ \t\n\r\f]*$/);
+    const parent = node.parentElement;
+
+    if (start === -1 || !parent) {
+      continue;
+    }
+
+    // Get the client rectangle of our text node and skip it if it has no width or height (e.g., if it is hidden).
+
+    range.setStart(node, start);
+    range.setEnd(node, end);
+
+    const rect = range.getBoundingClientRect();
+
+    if (!rect.width || !rect.height) {
+      continue;
+    }
+
+    // Determine the decorations of our text, which, unlike its other styles, are not inherited, so we must also look
+    // at the ancestors of our text node.
+
+    const style = getComputedStyle(parent);
+    const decorations = new Set<string>();
+
+    for (let ancestor: HTMLElement | null = parent; ancestor; ancestor = ancestor.parentElement) {
+      for (const decoration of getComputedStyle(ancestor).textDecorationLine.split(' ')) {
+        if (decoration !== 'none') {
+          decorations.add(decoration);
+        }
+      }
+
+      if (ancestor === element) {
+        break;
+      }
+    }
+
+    // Add an SVG text element for our text node.
+
+    const ascent =
+      fontMetrics(`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`)
+        ?.fontBoundingBoxAscent ?? 0;
+    const x = vertical ? rect.left - origin.left + ascent : rect.left - origin.left;
+    const y = vertical ? rect.bottom - origin.top : rect.top - origin.top + ascent;
+
+    res.push(
+      `<text ${vertical ? `transform="translate(${svgNumber(x)} ${svgNumber(y)}) rotate(-90)"` : `x="${svgNumber(x)}" y="${svgNumber(y)}"`}` +
+        ` font-family="${escapeXml(style.fontFamily)}" font-size="${style.fontSize}" font-style="${style.fontStyle}"` +
+        ` font-weight="${style.fontWeight}" fill="${style.color}"` +
+        (decorations.size ? ` text-decoration="${[...decorations].join(' ')}"` : '') +
+        `>${escapeXml(text.slice(start, end).replace(/[ \t\n\r\f]+/g, ' '))}</text>`
+    );
+  }
+
+  // Return our SVG text elements.
+
+  return res.join('');
+};
+
+const svgLegend = (origin: DOMRect, scale: number): string => {
+  // Return our legend, if it is shown, as an SVG group, clipped to what can currently be seen of it (e.g., if it is
+  // scrollable).
+
+  // Make sure that we have a legend to export.
+
+  const legend = legendRef.value;
+
+  if (!props.showLegend || !legend) {
+    return '';
+  }
+
+  // Clip our legend to its client area, i.e. to what can currently be seen of it.
+
+  const legendRect = legend.getBoundingClientRect();
+  const res: string[] = [
+    `<clipPath id="legend"><rect x="${svgNumber(legendRect.left - origin.left + legend.clientLeft)}" y="${svgNumber(legendRect.top - origin.top + legend.clientTop)}" width="${legend.clientWidth}" height="${legend.clientHeight}"/></clipPath>`,
+    '<g clip-path="url(#legend)">'
+  ];
+
+  Array.from(legend.children).forEach((legendItemElement: Element, index: number) => {
+    // Make sure that we have a legend item to export.
+
+    const legendItem = legendItems.value[index];
+
+    if (!legendItem) {
+      return;
+    }
+
+    res.push(legendItem.visible ? '<g>' : '<g opacity="0.5">');
+
+    // Add the swatch of our legend item, if it has one.
+
+    const swatch = legendItemElement.querySelector('.legend-swatch')?.getBoundingClientRect();
+
+    if (swatch) {
+      // Note: like the browser, we snap our swatch to whole (scaled) pixels, so that it is crisp.
+
+      const snap = (value: number): number => Math.round(scale * value) / scale;
+      const swatchLeft = snap(swatch.left - origin.left);
+      const swatchTop = snap(swatch.top - origin.top);
+
+      res.push(
+        `<rect x="${svgNumber(swatchLeft)}" y="${svgNumber(swatchTop)}" width="${svgNumber(snap(swatch.right - origin.left) - swatchLeft)}" height="${svgNumber(snap(swatch.bottom - origin.top) - swatchTop)}" fill="${escapeXml(legendItem.color)}"/>`
+      );
+    }
+
+    // Add the marker of our legend item, if it has one.
+
+    const marker = legendItemElement.querySelector('.legend-marker')?.getBoundingClientRect();
+
+    if (marker) {
+      res.push(
+        `<circle cx="${svgNumber(marker.left + 0.5 * marker.width - origin.left)}" cy="${svgNumber(marker.top + 0.5 * marker.height - origin.top)}" r="${svgNumber(0.5 * marker.width)}" fill="${escapeXml(legendItem.color)}"/>`
+      );
+    }
+
+    // Add the text of our legend item, which is the last child of our legend item element.
+
+    res.push(svgHtmlText(legendItemElement.lastElementChild as HTMLElement | null, origin, false), '</g>');
+  });
+
+  res.push('</g>');
+
+  // Return our legend as an SVG group.
+
+  return res.join('');
+};
+
+const svgDocument = (scale: number = 1): ISvgDocument => {
+  // Return our SVG document, which is the size of our container times the given scale.
+
+  // Make sure that we have a plot to export.
+
+  const mainDiv = mainDivRef.value;
+  const u = plot;
+  const canvasArea = u ? pathArea(u) : undefined;
+
+  if (!mainDiv || !u || !canvasArea) {
+    throw new Error('There is no plot to export.');
+  }
+
+  // Our plotting area and the ranges of our axes, in scaled pixels (i.e. in CSS pixels times the given scale).
+  // Note: we draw our plot in scaled pixels (and the rest in CSS pixels, scaled using a transform), so that if the
+  //       given scale is our device pixel ratio, our grid lines, traces, and markers are drawn exactly as uPlot draws
+  //       them (e.g., our grid lines are aligned to the same pixels).
+
+  const factor = scale / canvasArea.pxRatio;
+  const area: IPathArea = {
+    ...canvasArea,
+    left: factor * canvasArea.left,
+    top: factor * canvasArea.top,
+    width: factor * canvasArea.width,
+    height: factor * canvasArea.height,
+    pxRatio: scale
+  };
+  const { left, top, width, height } = area;
+  const bottom = top + height;
+  const xFactor = width / (area.xMax - area.xMin);
+  const yFactor = height / (area.yMax - area.yMin);
+  const origin = mainDiv.getBoundingClientRect();
+  const scaledWidth = Math.round(scale * mainDiv.clientWidth);
+  const scaledHeight = Math.round(scale * mainDiv.clientHeight);
+  const traceLineWidth = LINE_WIDTH * scale;
+  const res: string[] = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${scaledWidth}" height="${scaledHeight}" viewBox="0 0 ${scaledWidth} ${scaledHeight}">`,
+    `<clipPath id="traces"><rect x="${svgNumber(left - 0.5 * traceLineWidth)}" y="${svgNumber(top - 0.5 * traceLineWidth)}" width="${svgNumber(width + traceLineWidth)}" height="${svgNumber(height + traceLineWidth)}"/></clipPath>`,
+    `<clipPath id="markers"><rect x="${svgNumber(left)}" y="${svgNumber(top)}" width="${svgNumber(width)}" height="${svgNumber(height)}"/></clipPath>`,
+    `<rect width="${scaledWidth}" height="${scaledHeight}" fill="${colors.cssColor(themeColors.value.background)}"/>`
+  ];
+
+  // Our minor and major grid lines, and our zero lines, which uPlot draws in that order (see drawMinorGrid() and
+  // drawZeroLines()).
+  // Note: uPlot draws all our major grid lines, including one that is at the right (or bottom) edge of our plotting
+  //       area, i.e. that is just outside of it once aligned (if our line width is an odd number of pixels).
+
+  const [xAxis, yAxis] = u.axes as unknown as IAxisInternals[];
+  const xSplits = xAxis?._splits ?? [];
+  const ySplits = yAxis?._splits ?? [];
+
+  const lines = (color: string, xValues: number[], yValues: number[], withinPlottingArea?: boolean): string => {
+    const path = svgPath();
+
+    linesPath(path, xValues, yValues, area, withinPlottingArea);
+
+    return svgPathElement(path, `stroke="${colors.cssColor(color)}" stroke-width="${lineWidth(scale)}" fill="none"`);
+  };
+
+  res.push(
+    lines(themeColors.value.minorGrid, axisTicks.x?.minorTicks ?? [], axisTicks.y?.minorTicks ?? []),
+    lines(themeColors.value.grid, xSplits, ySplits, false),
+    lines(themeColors.value.zeroLine, [0], [0])
+  );
+
+  // Our visible traces and their markers, if any, which uPlot draws in that order, trace by trace.
+
+  for (let seriesIndex = 1; seriesIndex < u.series.length; ++seriesIndex) {
+    const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
+    const color = props.data.traces[seriesIndex - 1]?.color;
+
+    if (!u.series[seriesIndex]?.show || !xValues || !yValues || !color) {
+      continue;
+    }
+
+    const tracePath = svgPath();
+
+    linearPath(tracePath, xValues, yValues, 0, Math.min(xValues.length, yValues.length) - 1, area);
+
+    res.push(
+      svgPathElement(
+        tracePath,
+        `stroke="${escapeXml(color)}" stroke-width="${svgNumber(traceLineWidth)}" stroke-linejoin="round" fill="none" clip-path="url(#traces)"`
+      )
+    );
+
+    if (hasMarkers(xValues, yValues)) {
+      const markersPath = svgPath();
+
+      markerPath(markersPath, xValues, yValues, area);
+
+      res.push(svgPathElement(markersPath, `fill="${escapeXml(color)}" clip-path="url(#markers)"`));
+    }
+  }
+
+  // The rest of our document is in CSS pixels.
+
+  res.push(`<g transform="scale(${scale})">`);
+
+  // Our tick labels, which uPlot draws below our plotting area (with their top at TICK_LABEL_GAP pixels from it) for
+  // our X axis and to the left of our plotting area (with their middle at the level of their tick) for our Y axis.
+  // Note: like uPlot, we position our tick labels at whole (scaled) pixels.
+
+  const xTickLabelOffset = -(fontMetrics(tickFont, 'top')?.alphabeticBaseline ?? 0);
+  const yTickLabelOffset = -(fontMetrics(tickFont, 'middle')?.alphabeticBaseline ?? 0);
+  const tickLabelGap = Math.round(scale * TICK_LABEL_GAP);
+  const tickLabels: string[] = [];
+
+  xSplits.forEach((split: number, index: number) => {
+    const value = xAxis?._values?.[index];
+
+    if (value) {
+      tickLabels.push(
+        `<text x="${svgNumber(Math.round(left + (split - area.xMin) * xFactor) / scale)}" y="${svgNumber((Math.round(bottom) + tickLabelGap) / scale + xTickLabelOffset)}" text-anchor="middle">${escapeXml(String(value))}</text>`
+      );
+    }
+  });
+
+  ySplits.forEach((split: number, index: number) => {
+    const value = yAxis?._values?.[index];
+
+    if (value) {
+      tickLabels.push(
+        `<text x="${svgNumber((Math.round(left) - tickLabelGap) / scale)}" y="${svgNumber(Math.round(bottom - (split - area.yMin) * yFactor) / scale + yTickLabelOffset)}" text-anchor="end">${escapeXml(String(value))}</text>`
+      );
+    }
+  });
+
+  res.push(
+    `<g font-family="${escapeXml(FONT_FAMILY)}" font-size="${TICK_FONT_SIZE}" fill="${colors.cssColor(themeColors.value.text)}">${tickLabels.join('')}</g>`
+  );
+
+  // Our axis titles and legend, which we render on top of our plot.
+
+  res.push(
+    svgHtmlText(xAxisTitleRef.value, origin, false),
+    svgHtmlText(yAxisTitleRef.value, origin, true),
+    svgLegend(origin, scale),
+    '</g></svg>'
+  );
+
+  // Return our SVG document and its size in scaled pixels.
+
+  return {
+    svg: res.join(''),
+    width: scaledWidth,
+    height: scaledHeight
+  };
+};
+
+const rasterImage = async (format: RasterImageFormat): Promise<Blob> => {
+  // Rasterise our SVG document at our device pixel ratio, so that our image is as sharp as our plot (unlike Plotly,
+  // which rasterises its SVG document at the size of its container).
+
+  const { svg, width, height } = svgDocument(dependencies._uPlot.pxRatio as number);
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+
+  try {
+    // Load our SVG document as an image and wait for it to be decoded.
+
+    const image = new Image();
+
+    image.src = url;
+
+    await image.decode();
+
+    // Draw our image on a canvas, so that we can get it in the given format.
+
+    const canvas = document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error('Failed to create a canvas context.');
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    // Get our image in the given format.
+    // Note: a browser falls back to PNG if it can't encode an image in the given format (e.g., WebP in Safari).
+
+    const type = `image/${format}`;
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, type);
+    });
+
+    if (blob?.type !== type) {
+      throw new Error(`Failed to generate a ${format.toUpperCase()} image.`);
+    }
+
+    // Return our image as a blob.
+
+    return blob;
+  } finally {
+    // Revoke the URL that we created for our SVG document, so that it can be garbage collected.
+
+    URL.revokeObjectURL(url);
+  }
+};
+
+const copyToClipboard = (): void => {
+  // Copy our plot to the clipboard as a PNG image.
+  // Note #1: we give ClipboardItem a promise (rather than a blob) since Safari requires navigator.clipboard.write() to
+  //          be called straight away, i.e. while handling the user's action.
+  // Note #2: navigator.clipboard and ClipboardItem may not be available (e.g., in an insecure context), in which case
+  //          an error gets thrown straight away, hence our try...catch.
+
+  const warn = (error: unknown): void => {
+    console.warn('OpenCOR: failed to copy to clipboard:', common.formatError(error));
+  };
+
+  try {
+    navigator.clipboard
+      .write([
+        new ClipboardItem({
+          'image/png': rasterImage('png')
+        })
+      ])
+      .catch(warn);
+  } catch (error: unknown) {
+    warn(error);
+  }
+};
+
+const exportToImage = async (format: ImageFormat): Promise<void> => {
+  // Export our plot to an image in the given format.
+
+  try {
+    if (format === 'svg') {
+      common.downloadFile('plot.svg', svgDocument().svg, 'image/svg+xml');
+    } else {
+      common.downloadFile(`plot.${format}`, await rasterImage(format), `image/${format}`);
+    }
+  } catch (error: unknown) {
+    console.warn('OpenCOR: failed to export image:', common.formatError(error));
+  }
 };
 
 const exportToCsv = async (): Promise<void> => {
@@ -1920,7 +2400,8 @@ const axisValues = (axisKey: AxisKey): uPlot.Axis.Values => {
   };
 };
 
-// Text measuring, which we use to make sure that our X tick labels don't overlap and to size our Y axis.
+// Text measuring, which we use to make sure that our X tick labels don't overlap, to size our Y axis, right margin, and
+// hover label, and to position the text in our exports.
 
 const tickFont = `${TICK_FONT_SIZE}px ${FONT_FAMILY}`;
 let measureContext: CanvasRenderingContext2D | null | undefined;
@@ -1937,6 +2418,32 @@ const textWidth = (text: string, font: string): number => {
   measureContext.font = font;
 
   return measureContext.measureText(text).width;
+};
+
+const fontMetrics = (font: string, baseline: CanvasTextBaseline = 'alphabetic'): TextMetrics | undefined => {
+  // Make sure that we have a canvas context to measure our text with.
+
+  measureContext ??= document.createElement('canvas').getContext('2d');
+
+  if (!measureContext) {
+    return undefined;
+  }
+
+  // Set the font and text baseline of our context since the metrics that we use (e.g., alphabeticBaseline) are
+  // relative to our text baseline.
+
+  measureContext.font = font;
+  measureContext.textBaseline = baseline;
+
+  // Measure some text and restore the default text baseline of our context, which we share with textWidth().
+  // Note: the metrics that we use (i.e. fontBoundingBoxAscent and alphabeticBaseline) depend on our font, not on the
+  //       text that we measure.
+
+  const res = measureContext.measureText('0');
+
+  measureContext.textBaseline = 'alphabetic';
+
+  return res;
 };
 
 // Our Y axis size.
@@ -1967,6 +2474,7 @@ const yAxisSize = (_u: uPlot, values: string[] | null): number => {
 // Right margin, which we use to make sure that our legend and last X tick label are not cut off.
 
 interface IAxisInternals {
+  _splits?: number[];
   _values?: (string | number | null)[];
 }
 
@@ -2061,36 +2569,101 @@ const updateMarginsAsync = (): void => {
   });
 };
 
-// Grid lines.
+// Paths, which we build both for uPlot (in canvas pixels) and for our exports (in scaled pixels, see svgDocument()).
 
-const lineWidth = (): number => {
-  // Return the width (in canvas pixels) of a one (CSS) pixel wide line.
-  // Note: we make sure that it is at least one canvas pixel wide (e.g., if our page is zoomed out a lot) since a canvas
-  //       ignores a line width of zero, i.e. it would use whatever line width was used last.
+interface IPath {
+  moveTo: (x: number, y: number) => void;
+  lineTo: (x: number, y: number) => void;
+  arc: (x: number, y: number, radius: number, startAngle: number, endAngle: number) => void;
+}
 
-  return Math.max(1, Math.round(dependencies._uPlot.pxRatio as number));
+interface IPathArea extends IPlotRect {
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+  pxRatio: number;
+}
+
+const pathArea = (u: uPlot): IPathArea | undefined => {
+  // Make sure that we have a plotting area and that our axes have ranges, so that we can build paths in it.
+
+  const xMin = u.scales.x?.min;
+  const xMax = u.scales.x?.max;
+  const yMin = u.scales.y?.min;
+  const yMax = u.scales.y?.max;
+
+  if (xMin == null || xMax == null || yMin == null || yMax == null) {
+    return undefined;
+  }
+
+  // Return our plotting area in canvas pixels, so that we can build paths in it.
+
+  return {
+    ...u.bbox,
+    xMin,
+    xMax,
+    yMin,
+    yMax,
+    pxRatio: dependencies._uPlot.pxRatio as number
+  };
 };
 
-const drawLine = (context: CanvasRenderingContext2D, horizontal: boolean, pos: number, u: uPlot): void => {
-  // Draw a crisp, one (CSS) pixel wide line across our plotting area at the given position (in canvas pixels), if it is
-  // within our plotting area.
+// Grid lines.
 
-  const { left, top, width, height } = u.bbox;
-  const alignedPos = Math.round(pos) + 0.5 * (lineWidth() % 2);
+const lineWidth = (pxRatio: number): number => {
+  // Return the width (in pixels of the given pixel ratio, e.g., canvas pixels) of a one (CSS) pixel wide line.
+  // Note: we make sure that it is at least one pixel wide (e.g., if our page is zoomed out a lot) since a canvas
+  //       ignores a line width of zero, i.e. it would use whatever line width was used last.
 
-  if (horizontal) {
-    if (alignedPos >= top && alignedPos <= top + height) {
-      context.moveTo(left, alignedPos);
-      context.lineTo(left + width, alignedPos);
+  return Math.max(1, Math.round(pxRatio));
+};
+
+const linesPath = (
+  path: IPath,
+  xValues: number[],
+  yValues: number[],
+  area: IPathArea,
+  withinPlottingArea: boolean = true
+): void => {
+  // Add crisp, one (CSS) pixel wide lines across our plotting area to the given path, i.e. vertical lines at the given
+  // X values and horizontal lines at the given Y values, if they are within our plotting area (or regardless, if
+  // requested).
+
+  const { left, top, width, height, xMin, xMax, yMin, yMax } = area;
+  const right = left + width;
+  const bottom = top + height;
+  const offset = 0.5 * (lineWidth(area.pxRatio) % 2);
+
+  for (const xValue of xValues) {
+    const xPos = Math.round(left + ((xValue - xMin) * width) / (xMax - xMin)) + offset;
+
+    if (!withinPlottingArea || (xPos >= left && xPos <= right)) {
+      path.moveTo(xPos, top);
+      path.lineTo(xPos, bottom);
     }
-  } else if (alignedPos >= left && alignedPos <= left + width) {
-    context.moveTo(alignedPos, top);
-    context.lineTo(alignedPos, top + height);
+  }
+
+  for (const yValue of yValues) {
+    const yPos = Math.round(bottom - ((yValue - yMin) * height) / (yMax - yMin)) + offset;
+
+    if (!withinPlottingArea || (yPos >= top && yPos <= bottom)) {
+      path.moveTo(left, yPos);
+      path.lineTo(right, yPos);
+    }
   }
 };
 
 const drawLines = (u: uPlot, color: string, xValues: number[], yValues: number[]): void => {
-  // Draw vertical lines at the given X values and horizontal lines at the given Y values using the given color.
+  // Make sure that we have a plotting area and that our axes have ranges, so that we can draw our lines.
+
+  const area = pathArea(u);
+
+  if (!area) {
+    return;
+  }
+
+  // Draw our lines in canvas pixels, so that they are crisp and one (CSS) pixel wide.
   // Note: uPlot caches the state of its context, so we must restore it once we are done.
 
   const context = u.ctx;
@@ -2098,17 +2671,11 @@ const drawLines = (u: uPlot, color: string, xValues: number[], yValues: number[]
   context.save();
 
   context.strokeStyle = color;
-  context.lineWidth = lineWidth();
+  context.lineWidth = lineWidth(area.pxRatio);
 
   context.beginPath();
 
-  for (const xValue of xValues) {
-    drawLine(context, false, u.valToPos(xValue, 'x', true), u);
-  }
-
-  for (const yValue of yValues) {
-    drawLine(context, true, u.valToPos(yValue, 'y', true), u);
-  }
+  linesPath(context, xValues, yValues, area);
 
   context.stroke();
   context.restore();
@@ -2134,252 +2701,275 @@ const drawMinorGrid = (u: uPlot): void => {
   );
 };
 
-const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, index0: number, index1: number) => {
-  // uPlot doesn't support unsorted X values (e.g., phase plots) and draws each (device) pixel column of a dense trace
+// Traces and markers.
+
+const linearPath = (
+  path: IPath,
+  xValues: math.FloatArray,
+  yValues: math.FloatArray,
+  index0: number,
+  index1: number,
+  area: IPathArea
+): void => {
+  // uPlot doesn't support unsorted X values (e.g., phase plots) and draws each (canvas) pixel column of a dense trace
   // as a vertical line, which makes the steep parts of a trace look jagged. So, we use our own linear path builder
-  // instead.
-  // Note #1: for each set of consecutive points that are in the same (device) pixel column, we only draw its first,
-  //          minimum, maximum, and last points, in their original order and at their exact position (skipping any of
-  //          them that is at the same position as the point drawn before it). This means that a smooth trace is drawn
-  //          as-is while the number of segments that we draw (and therefore the time it takes to draw them) is limited
-  //          to four per set of consecutive points in a pixel column (e.g., with noisy data).
+  // instead, both for uPlot and for our exports.
+  // Note #1: for each set of consecutive points that are in the same pixel column (of our path), we only draw its
+  //          first, minimum, maximum, and last points, in their original order and at their exact position (skipping
+  //          any of them that is at the same position as the point drawn before it). This means that a smooth trace is
+  //          drawn as-is while the number of segments that we draw (and therefore the time it takes to draw them) is
+  //          limited to four per set of consecutive points in a pixel column (e.g., with noisy data).
   // Note #2: we only ever look at consecutive points, so this works whether or not our X values are sorted.
   // Note #3: we break our path at non-finite values, so that a gap in the data is drawn as a gap in the trace.
   // Note #4: we skip any segment that is entirely outside our plotting area (e.g., when we are zoomed in), i.e. which
-  //          two points are beyond the same edge of our plotting area (by more than our line width, since uPlot draws
-  //          our traces with round joins and clips them to our plotting area, give or take half our line width). This
-  //          means that we only draw the part of our trace that can be seen.
+  //          two points are beyond the same edge of our plotting area (by more than our line width since our traces are
+  //          drawn with round joins and clipped to our plotting area, give or take half our line width, by uPlot and in
+  //          our exports). This means that we only draw the part of our trace that can be seen.
 
-  const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
-  const xMin = u.scales.x?.min;
-  const xMax = u.scales.x?.max;
-  const yMin = u.scales.y?.min;
-  const yMax = u.scales.y?.max;
-  const stroke = new Path2D();
+  const { left, top, width, height, xMin, xMax, yMin, yMax } = area;
+  const xFactor = width / (xMax - xMin);
+  const yFactor = height / (yMax - yMin);
+  const bottom = top + height;
+  const right = left + width;
+  const margin = LINE_WIDTH * area.pxRatio;
+  const end = Math.min(index1, xValues.length - 1, yValues.length - 1);
+  let penDown = false;
+  let hasPendingPoint = false;
+  let pendingXPos = 0;
+  let pendingYPos = 0;
+  let previousOutCode = 0;
+  let column = Number.NaN;
+  let firstIndex = -1;
+  let firstXPos = 0;
+  let firstYPos = 0;
+  let minIndex = -1;
+  let minXPos = 0;
+  let minYPos = 0;
+  let maxIndex = -1;
+  let maxXPos = 0;
+  let maxYPos = 0;
+  let lastIndex = -1;
+  let lastXPos = 0;
+  let lastYPos = 0;
 
-  if (xValues && yValues && xMin != null && xMax != null && yMin != null && yMax != null) {
-    const { left, top, width, height } = u.bbox;
-    const xFactor = width / (xMax - xMin);
-    const yFactor = height / (yMax - yMin);
-    const bottom = top + height;
-    const right = left + width;
-    const margin = LINE_WIDTH * (dependencies._uPlot.pxRatio as number);
-    const end = Math.min(index1, xValues.length - 1, yValues.length - 1);
-    let penDown = false;
-    let hasPendingPoint = false;
-    let pendingXPos = 0;
-    let pendingYPos = 0;
-    let previousOutCode = 0;
-    let column = Number.NaN;
-    let firstIndex = -1;
-    let firstXPos = 0;
-    let firstYPos = 0;
-    let minIndex = -1;
-    let minXPos = 0;
-    let minYPos = 0;
-    let maxIndex = -1;
-    let maxXPos = 0;
-    let maxYPos = 0;
-    let lastIndex = -1;
-    let lastXPos = 0;
-    let lastYPos = 0;
+  const outCode = (xPos: number, yPos: number): number => {
+    // Return a bit mask of the edges of our plotting area (left, right, top, bottom) that the given point is beyond.
 
-    const outCode = (xPos: number, yPos: number): number => {
-      // Return a bit mask of the edges of our plotting area (left, right, top, bottom) that the given point is beyond.
+    return (
+      (xPos < left - margin ? 1 : xPos > right + margin ? 2 : 0) |
+      (yPos < top - margin ? 4 : yPos > bottom + margin ? 8 : 0)
+    );
+  };
 
-      return (
-        (xPos < left - margin ? 1 : xPos > right + margin ? 2 : 0) |
-        (yPos < top - margin ? 4 : yPos > bottom + margin ? 8 : 0)
-      );
-    };
+  const drawColumn = (): void => {
+    // Draw the minimum and maximum points of our current column (in their original order) unless they are its first
+    // point (which we have already drawn) or its last point (which we draw last), and skipping any point that is at
+    // the same position as the point drawn before it (since it would result in a zero-length segment).
 
-    const drawColumn = (): void => {
-      // Draw the minimum and maximum points of our current column (in their original order) unless they are its first
-      // point (which we have already drawn) or its last point (which we draw last), and skipping any point that is at
-      // the same position as the point drawn before it (since it would result in a zero-length segment).
+    // If we don't have a first point, then we don't have a column to draw.
 
-      // If we don't have a first point, then we don't have a column to draw.
-
-      if (firstIndex === -1) {
-        return;
-      }
-
-      // Draw the minimum and maximum points of our current column in their original order.
-
-      let drawnXPos = firstXPos;
-      let drawnYPos = firstYPos;
-
-      const drawTo = (xPos: number, yPos: number): void => {
-        if (xPos !== drawnXPos || yPos !== drawnYPos) {
-          stroke.lineTo(xPos, yPos);
-
-          drawnXPos = xPos;
-          drawnYPos = yPos;
-        }
-      };
-
-      const drawPoint = (index: number, xPos: number, yPos: number): void => {
-        if (index !== firstIndex && index !== lastIndex) {
-          drawTo(xPos, yPos);
-        }
-      };
-
-      if (minIndex < maxIndex) {
-        drawPoint(minIndex, minXPos, minYPos);
-        drawPoint(maxIndex, maxXPos, maxYPos);
-      } else {
-        drawPoint(maxIndex, maxXPos, maxYPos);
-        drawPoint(minIndex, minXPos, minYPos);
-      }
-
-      // Draw the last point of our current column.
-
-      if (lastIndex !== firstIndex) {
-        drawTo(lastXPos, lastYPos);
-      }
-
-      // Reset our state so that we start a new column with the next point.
-
-      firstIndex = -1;
-    };
-
-    // Process each point in our trace.
-
-    for (let i = index0; i <= end; ++i) {
-      // Make sure that our point has finite X and Y values.
-
-      const x = xValues[i] as number;
-      const y = yValues[i] as number;
-
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        // Either our X or Y value is not finite, so draw our previous column, if any.
-
-        drawColumn();
-
-        // Reset our state so that we start a new path with the next point.
-
-        penDown = false;
-        hasPendingPoint = false;
-        column = Number.NaN;
-
-        continue;
-      }
-
-      // Convert our point to device coordinates.
-
-      const xPos = left + (x - xMin) * xFactor;
-      const yPos = bottom - (y - yMin) * yFactor;
-      const xPixel = Math.round(xPos);
-      const pointOutCode = outCode(xPos, yPos);
-
-      // Make sure that we have a previous point and that the segment between it and our current point may be visible.
-      // If not, then we break our path and keep track of our current point, which may be the start of a visible
-      // segment.
-
-      if (!(penDown || hasPendingPoint) || (previousOutCode & pointOutCode) !== 0) {
-        if (penDown) {
-          drawColumn();
-
-          penDown = false;
-          column = Number.NaN;
-        }
-
-        hasPendingPoint = true;
-        pendingXPos = xPos;
-        pendingYPos = yPos;
-        previousOutCode = pointOutCode;
-
-        continue;
-      }
-
-      // Start a new path from our pending point, if needed.
-
-      if (!penDown) {
-        stroke.moveTo(pendingXPos, pendingYPos);
-
-        penDown = true;
-        hasPendingPoint = false;
-      }
-
-      previousOutCode = pointOutCode;
-
-      // If our point is in a different (device) pixel column than the previous point, then draw the previous column and
-      // start a new one.
-
-      if (xPixel !== column) {
-        // Draw our previous column, if any.
-
-        drawColumn();
-
-        // Draw our current point.
-        // Note: our pen is always down at this stage (see above).
-
-        stroke.lineTo(xPos, yPos);
-
-        // Start a new column.
-
-        column = xPixel;
-        firstIndex = minIndex = maxIndex = lastIndex = i;
-        firstXPos = minXPos = maxXPos = lastXPos = xPos;
-        firstYPos = minYPos = maxYPos = lastYPos = yPos;
-
-        continue;
-      }
-
-      // We are in the same column, so update our minimum and maximum points if needed.
-
-      if (yPos < minYPos) {
-        minIndex = i;
-        minXPos = xPos;
-        minYPos = yPos;
-      } else if (yPos > maxYPos) {
-        maxIndex = i;
-        maxXPos = xPos;
-        maxYPos = yPos;
-      }
-
-      // Update our last point to be our current point.
-
-      lastIndex = i;
-      lastXPos = xPos;
-      lastYPos = yPos;
+    if (firstIndex === -1) {
+      return;
     }
 
-    drawColumn();
+    // Draw the minimum and maximum points of our current column in their original order.
+
+    let drawnXPos = firstXPos;
+    let drawnYPos = firstYPos;
+
+    const drawTo = (xPos: number, yPos: number): void => {
+      if (xPos !== drawnXPos || yPos !== drawnYPos) {
+        path.lineTo(xPos, yPos);
+
+        drawnXPos = xPos;
+        drawnYPos = yPos;
+      }
+    };
+
+    const drawPoint = (index: number, xPos: number, yPos: number): void => {
+      if (index !== firstIndex && index !== lastIndex) {
+        drawTo(xPos, yPos);
+      }
+    };
+
+    if (minIndex < maxIndex) {
+      drawPoint(minIndex, minXPos, minYPos);
+      drawPoint(maxIndex, maxXPos, maxYPos);
+    } else {
+      drawPoint(maxIndex, maxXPos, maxYPos);
+      drawPoint(minIndex, minXPos, minYPos);
+    }
+
+    // Draw the last point of our current column.
+
+    if (lastIndex !== firstIndex) {
+      drawTo(lastXPos, lastYPos);
+    }
+
+    // Reset our state so that we start a new column with the next point.
+
+    firstIndex = -1;
+  };
+
+  // Process each point in our trace.
+
+  for (let i = index0; i <= end; ++i) {
+    // Make sure that our point has finite X and Y values.
+
+    const x = xValues[i] as number;
+    const y = yValues[i] as number;
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      // Either our X or Y value is not finite, so draw our previous column, if any.
+
+      drawColumn();
+
+      // Reset our state so that we start a new path with the next point.
+
+      penDown = false;
+      hasPendingPoint = false;
+      column = Number.NaN;
+
+      continue;
+    }
+
+    // Convert our point to the coordinates of our path (i.e. canvas pixels for uPlot and scaled pixels for our
+    // exports).
+
+    const xPos = left + (x - xMin) * xFactor;
+    const yPos = bottom - (y - yMin) * yFactor;
+    const xPixel = Math.round(xPos);
+    const pointOutCode = outCode(xPos, yPos);
+
+    // Make sure that we have a previous point and that the segment between it and our current point may be visible.
+    // If not, then we break our path and keep track of our current point, which may be the start of a visible
+    // segment.
+
+    if (!(penDown || hasPendingPoint) || (previousOutCode & pointOutCode) !== 0) {
+      if (penDown) {
+        drawColumn();
+
+        penDown = false;
+        column = Number.NaN;
+      }
+
+      hasPendingPoint = true;
+      pendingXPos = xPos;
+      pendingYPos = yPos;
+      previousOutCode = pointOutCode;
+
+      continue;
+    }
+
+    // Start a new path from our pending point, if needed.
+
+    if (!penDown) {
+      path.moveTo(pendingXPos, pendingYPos);
+
+      penDown = true;
+      hasPendingPoint = false;
+    }
+
+    previousOutCode = pointOutCode;
+
+    // If our point is in a different pixel column than the previous point, then draw the previous column and start a
+    // new one.
+
+    if (xPixel !== column) {
+      // Draw our previous column, if any.
+
+      drawColumn();
+
+      // Draw our current point.
+      // Note: our pen is always down at this stage (see above).
+
+      path.lineTo(xPos, yPos);
+
+      // Start a new column.
+
+      column = xPixel;
+      firstIndex = minIndex = maxIndex = lastIndex = i;
+      firstXPos = minXPos = maxXPos = lastXPos = xPos;
+      firstYPos = minYPos = maxYPos = lastYPos = yPos;
+
+      continue;
+    }
+
+    // We are in the same column, so update our minimum and maximum points if needed.
+
+    if (yPos < minYPos) {
+      minIndex = i;
+      minXPos = xPos;
+      minYPos = yPos;
+    } else if (yPos > maxYPos) {
+      maxIndex = i;
+      maxXPos = xPos;
+      maxYPos = yPos;
+    }
+
+    // Update our last point to be our current point.
+
+    lastIndex = i;
+    lastXPos = xPos;
+    lastYPos = yPos;
+  }
+
+  drawColumn();
+};
+
+const linearPaths: uPlot.Series.PathBuilder = (u: uPlot, seriesIndex: number, index0: number, index1: number) => {
+  // Use our linear path builder for our trace (see linearPath()).
+
+  const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
+  const area = pathArea(u);
+  const stroke = new Path2D();
+
+  if (xValues && yValues && area) {
+    linearPath(stroke, xValues, yValues, index0, index1, area);
   }
 
   return { stroke, fill: null, clip: null, flags: 0 };
 };
 
+const markerPath = (path: IPath, xValues: math.FloatArray, yValues: math.FloatArray, area: IPathArea): void => {
+  // Like Plotly, draw a marker for each point of our trace that has finite X and Y values.
+
+  const { left, top, width, height, xMin, xMax, yMin, yMax } = area;
+  const xFactor = width / (xMax - xMin);
+  const yFactor = height / (yMax - yMin);
+  const bottom = top + height;
+  const radius = 0.5 * MARKER_SIZE * area.pxRatio;
+  const nbOfPoints = Math.min(xValues.length, yValues.length);
+
+  for (let i = 0; i < nbOfPoints; ++i) {
+    const x = xValues[i] as number;
+    const y = yValues[i] as number;
+
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      const xPos = left + (x - xMin) * xFactor;
+      const yPos = bottom - (y - yMin) * yFactor;
+
+      path.moveTo(xPos + radius, yPos);
+      path.arc(xPos, yPos, radius, 0, 2 * Math.PI);
+    }
+  }
+};
+
 const markerPaths: uPlot.Series.Points.PathBuilder = (u: uPlot, seriesIndex: number) => {
-  // Like Plotly, draw a marker for each point of our trace that has finite X and Y values, clipping our markers to our
-  // plotting area.
+  // Use our markers path builder for our trace (see markerPath()), clipping our markers to our plotting area.
   // Note: uPlot's markers path builder clips our markers to our plotting area extended by a marker's diameter on each
   //       side, i.e. our markers could be drawn over our axes, hence we use our own.
 
   const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
+  const area = pathArea(u);
   const fill = new Path2D();
   const clip = new Path2D();
   const { left, top, width, height } = u.bbox;
 
   clip.rect(left, top, width, height);
 
-  if (xValues && yValues) {
-    const radius = 0.5 * MARKER_SIZE * (dependencies._uPlot.pxRatio as number);
-    const nbOfPoints = Math.min(xValues.length, yValues.length);
-
-    for (let i = 0; i < nbOfPoints; ++i) {
-      const x = xValues[i] as number;
-      const y = yValues[i] as number;
-
-      if (Number.isFinite(x) && Number.isFinite(y)) {
-        const xPos = u.valToPos(x, 'x', true);
-        const yPos = u.valToPos(y, 'y', true);
-
-        fill.moveTo(xPos + radius, yPos);
-        fill.arc(xPos, yPos, radius, 0, 2 * Math.PI);
-      }
-    }
+  if (xValues && yValues && area) {
+    markerPath(fill, xValues, yValues, area);
   }
 
   return { stroke: null, fill, clip, flags: 0 };
