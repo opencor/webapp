@@ -4,8 +4,7 @@
     <div ref="mainDivRef" class="grow h-full min-w-0 relative overflow-hidden"
       :style="{
         backgroundColor: themeColors.background,
-        color: themeColors.text,
-        fontFamily: FONT_FAMILY
+        color: themeColors.text
       }"
       @contextmenu="onContextMenu"
     >
@@ -183,13 +182,13 @@ const emit = defineEmits<{
 }>();
 
 // Some constants (in CSS pixels, where relevant).
-// Note: we want to look and behave like Plotly, so most of these constants are either Plotly's defaults (see
-//       https://plotly.com/javascript/reference/) or what we used to give Plotly.
+// Note: we want to behave like Plotly, so many of these constants are either Plotly's defaults (see
+//       https://plotly.com/javascript/reference/) or what we used to give Plotly. However, we want to look more modern,
+//       so we use OpenCOR's font (rather than Plotly's) with font sizes of our own.
 
-const FONT_FAMILY = '"Open Sans", verdana, arial, sans-serif'; // Like Plotly, the font family of our tick labels and titles.
-const TICK_FONT_SIZE = 10; // Like Plotly, the font size of our tick labels.
-const TITLE_FONT_SIZE = 14; // Like Plotly, the font size of our axis titles.
-const LEGEND_FONT_SIZE = 12; // Like Plotly, the font size of our legend items.
+const TICK_FONT_SIZE = 11; // Font size of our tick labels.
+const TITLE_FONT_SIZE = 13; // Font size of our axis titles.
+const LEGEND_FONT_SIZE = 12; // Font size of our legend items.
 const LEGEND_LEFT_MARGIN = 8; // Margin between our plotting area and our legend.
 const LEGEND_RIGHT_MARGIN = 8; // Margin between our legend (or last X tick label) and the right edge of our container.
 const DEFAULT_LEGEND_RANK = 1000; // Like Plotly's default legend rank.
@@ -303,6 +302,7 @@ let trackedMargins: IGraphPanelMargins | undefined;
 interface IThemeColors {
   background: string;
   text: string;
+  tickLabel: string;
   grid: string;
   minorGrid: string;
   zeroLine: string;
@@ -317,6 +317,7 @@ const themeColors = vue.computed<IThemeColors>(() => {
   return {
     background: 'var(--p-content-background)',
     text: 'var(--p-text-color)',
+    tickLabel: 'var(--p-text-muted-color)',
     grid: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-700)',
     minorGrid: useLightMode ? 'var(--p-surface-100)' : 'var(--p-surface-800)',
     zeroLine: useLightMode ? 'var(--p-surface-400)' : 'var(--p-surface-500)',
@@ -976,7 +977,7 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
   );
 
   res.push(
-    `<g font-family="${escapeXml(FONT_FAMILY)}" font-size="${TICK_FONT_SIZE}" fill="${colors.cssColor(themeColors.value.text)}">${svgTickLabels.join('')}</g>`
+    `<g font-family="${escapeXml(fontFamily)}" font-size="${TICK_FONT_SIZE}" fill="${colors.cssColor(themeColors.value.tickLabel)}">${svgTickLabels.join('')}</g>`
   );
 
   // Our axis titles and legend, which we render on top of our plot.
@@ -2521,7 +2522,7 @@ const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
       let res = 0;
 
       for (const tick of ticks) {
-        res = Math.max(res, textWidth(formatNumber(tick, format), tickFont));
+        res = Math.max(res, textWidth(formatNumber(tick, format), tickFont()));
       }
 
       return res;
@@ -2663,8 +2664,8 @@ const drawTickLabels = (u: uPlot): void => {
 
   context.save();
 
-  context.font = `${Math.round(TICK_FONT_SIZE * area.pxRatio)}px ${FONT_FAMILY}`;
-  context.fillStyle = colors.cssColor(themeColors.value.text);
+  context.font = `${Math.round(TICK_FONT_SIZE * area.pxRatio)}px ${fontFamily}`;
+  context.fillStyle = colors.cssColor(themeColors.value.tickLabel);
   context.textBaseline = 'alphabetic';
 
   for (const tickLabel of tickLabels(u, area)) {
@@ -2679,7 +2680,14 @@ const drawTickLabels = (u: uPlot): void => {
 // Text measuring, which we use to make sure that our X tick labels don't overlap, to size our Y axis, right margin, and
 // hover label, and to position the text in our exports.
 
-const tickFont = `${TICK_FONT_SIZE}px ${FONT_FAMILY}`;
+let fontFamily = 'sans-serif';
+
+const tickFont = (): string => {
+  // Return the font of our tick labels, i.e. OpenCOR's font (see createPlot()) at TICK_FONT_SIZE pixels.
+
+  return `${TICK_FONT_SIZE}px ${fontFamily}`;
+};
+
 let measureContext: CanvasRenderingContext2D | null | undefined;
 
 const textWidth = (text: string, font: string): number => {
@@ -2731,7 +2739,7 @@ const yAxisSize = (): number => {
   let maxWidth = 0;
 
   for (const value of tickValues.y) {
-    maxWidth = Math.max(maxWidth, textWidth(value, tickFont));
+    maxWidth = Math.max(maxWidth, textWidth(value, tickFont()));
   }
 
   naturalYAxisSize = Math.ceil(maxWidth + Y_AXIS_EXTRA_SIZE);
@@ -2763,7 +2771,7 @@ const rightMargin = (): number => {
 
   const lastXValue = tickValues.x[tickValues.x.length - 1];
   const legendSize = props.margins ? Math.max(legendRightMargin(), props.margins.right) : legendRightMargin();
-  const lastXTickLabelSize = lastXValue ? 0.5 * textWidth(lastXValue, tickFont) + LEGEND_RIGHT_MARGIN : 0;
+  const lastXTickLabelSize = lastXValue ? 0.5 * textWidth(lastXValue, tickFont()) + LEGEND_RIGHT_MARGIN : 0;
 
   return Math.ceil(Math.max(legendSize, lastXTickLabelSize));
 };
@@ -3606,6 +3614,13 @@ const createPlot = (width: number, height: number): void => {
 
   plot?.destroy();
 
+  // Use OpenCOR's font, i.e. the one that we inherit, for what gets drawn on uPlot's canvas (and measured using
+  // textWidth()), so that it is consistent with our axis titles and legend (and the rest of OpenCOR).
+
+  if (mainDivRef.value) {
+    fontFamily = getComputedStyle(mainDivRef.value).fontFamily;
+  }
+
   // Create a series for each trace, using the trace's color for the stroke, our linear path builder, and our markers
   // path builder (for traces with markers).
 
@@ -3634,8 +3649,8 @@ const createPlot = (width: number, height: number): void => {
 
   const axis: uPlot.Axis = {
     stroke: colors.cssColor(themeColors.value.text),
-    font: tickFont,
-    labelFont: `${TITLE_FONT_SIZE}px ${FONT_FAMILY}`,
+    font: tickFont(),
+    labelFont: `${TITLE_FONT_SIZE}px ${fontFamily}`,
     labelGap: 0,
     space: 1,
     ticks: {
