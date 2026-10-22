@@ -108,6 +108,8 @@
         <div v-for="legendItem in legendItems" :key="legendItem.index" class="legend-item" :class="{ 'legend-item-hidden': !legendItem.visible }"
           @click="onLegendClick($event, legendItem.index)"
           @dblclick="onLegendDoubleClick(legendItem.index)"
+          @pointerenter="onLegendPointerEnter($event, legendItem.index)"
+          @pointerleave="highlightTrace(null)"
         >
           <span class="legend-swatch" :style="{ backgroundColor: legendItem.visible ? legendItem.color : themeColors.hiddenTrace }">
             <span v-if="legendItem.markers" class="legend-marker" />
@@ -220,6 +222,7 @@ const MIN_ZOOM = 20; // Like Plotly, the distance below which a drag is consider
 const ZOOM_FACTOR = 0.5; // Factor by which our ranges get scaled when zooming in (or its inverse when zooming out).
 const DRAGGER_SIZE = 20; // Like Plotly, the thickness of our axis (and corner) draggers.
 const AXIS_DRAGGER_OFFSET = 0.5; // Like Plotly, the distance between our plotting area and our axis draggers.
+const HIGHLIGHT_FADED_ALPHA = 0.2; // Opacity of our traces that are not highlighted when one of them is.
 const HOVER_FONT = 'Arial, sans-serif'; // Like Plotly, the font of our hover label.
 const HOVER_FONT_SIZE = 13; // Like Plotly, the font size of our hover label.
 const HOVER_LABEL_HEIGHT = 21; // Like Plotly, the height of our hover label (in CSS pixels).
@@ -345,6 +348,65 @@ const traceVisibilityKey = (trace: IGraphPanelPlotTrace): string | undefined => 
 
 const traceVisibilities = vue.shallowRef<boolean[]>([]);
 
+// Trace highlighting through our legend, i.e. hovering a legend item highlights its trace by fading our other traces.
+// Note #1: we keep track of the trace which legend item is hovered, so that we can highlight it once it becomes visible
+//          (e.g., by clicking on its legend item) and stop highlighting it if it gets hidden or removed (e.g., when
+//          runs get tracked in interactive mode, in which case its legend item may be removed without us being told
+//          that it is no longer hovered).
+// Note #2: this must come before our watcher of our traces since it runs immediately and calls highlightTrace().
+
+let hoveredTrace: number | null = null;
+let highlightedTrace: number | null = null;
+
+const seriesAlpha = (index: number): number => {
+  // Return the opacity of the given trace, depending on whether a trace is highlighted.
+
+  return highlightedTrace === null || highlightedTrace === index ? 1 : HIGHLIGHT_FADED_ALPHA;
+};
+
+const highlightTrace = (index: number | null): void => {
+  // Keep track of the trace which legend item is hovered, if any and if it still exists, and highlight it if it is
+  // visible, or stop highlighting a trace otherwise.
+
+  hoveredTrace = index !== null && index < props.data.traces.length ? index : null;
+
+  const newHighlightedTrace =
+    hoveredTrace !== null && (traceVisibilities.value[hoveredTrace] ?? true) ? hoveredTrace : null;
+
+  if (newHighlightedTrace === highlightedTrace) {
+    return;
+  }
+
+  highlightedTrace = newHighlightedTrace;
+
+  // Update the opacity of our traces and redraw our plot (without rebuilding the paths of our traces).
+
+  const currentPlot = plot;
+
+  if (!currentPlot) {
+    return;
+  }
+
+  for (let i = 1; i < currentPlot.series.length; ++i) {
+    const plotSeries = currentPlot.series[i];
+
+    if (plotSeries) {
+      plotSeries.alpha = seriesAlpha(i - 1);
+    }
+  }
+
+  currentPlot.redraw(false);
+};
+
+const onLegendPointerEnter = (event: PointerEvent, index: number): void => {
+  // Highlight the trace of the given legend item, but only if it is hovered using a mouse or a pen, i.e. not if it is
+  // touched since a touch only "hovers" a legend item while it is being touched, so our traces would only flash.
+
+  if (event.pointerType !== 'touch') {
+    highlightTrace(index);
+  }
+};
+
 vue.watch(
   () => props.data.traces,
   (traces: IGraphPanelPlotTrace[], oldTraces: IGraphPanelPlotTrace[] | undefined) => {
@@ -365,6 +427,11 @@ vue.watch(
 
       return key ? (previousVisibilityByKey.get(key) ?? true) : true;
     });
+
+    // Highlight the trace which legend item is hovered, if any, if it still exists and is visible, or stop highlighting
+    // it otherwise (see highlightTrace()).
+
+    highlightTrace(hoveredTrace);
   },
   { immediate: true }
 );
@@ -471,6 +538,11 @@ const setTraceVisibilities = (visibilities: boolean[]): void => {
   // Note: uPlot autoranges our axes again when the visibility of a trace changes.
 
   traceVisibilities.value = visibilities;
+
+  // Highlight the trace which legend item is hovered, if any, if it is now visible, or stop highlighting it if it is now
+  // hidden (see highlightTrace()).
+
+  highlightTrace(hoveredTrace);
 
   // Update the visibility of our traces in our plot, if needed.
 
@@ -3584,6 +3656,7 @@ const createPlot = (width: number, height: number): void => {
   for (let i = 0; i < Math.max(1, props.data.traces.length); ++i) {
     series.push({
       show: traceVisibilities.value[i] ?? true,
+      alpha: seriesAlpha(i),
       stroke: (_plot: uPlot, seriesIndex: number) => props.data.traces[seriesIndex - 1]?.color ?? 'transparent',
       width: LINE_WIDTH,
       paths: linearPaths,
