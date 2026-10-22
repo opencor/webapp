@@ -6,7 +6,7 @@ productName: OpenCOR
 files:
   - out/**
   - src/main/assets/**
-  - "!src/main/assets/README.md"
+  - '!src/main/assets/README.md'
   - src/renderer/src/assets/logo.svg
   - package.json
 publish:
