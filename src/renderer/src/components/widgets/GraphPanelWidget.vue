@@ -180,8 +180,9 @@ const LEGEND_FONT_SIZE = 12; // Like Plotly, the font size of our legend items.
 const LEGEND_LEFT_MARGIN = 8; // Margin between our plotting area and our legend.
 const LEGEND_RIGHT_MARGIN = 8; // Margin between our legend (or last X tick label) and the right edge of our container.
 const DEFAULT_LEGEND_RANK = 1000; // Like Plotly's default legend rank.
-const X_TICK_LABEL_BASELINE = TICK_FONT_SIZE + 0.5; // Like Plotly, the distance to the baseline of our X tick labels.
-const Y_TICK_LABEL_GAP = 1; // Gap between our plotting area and our Y tick labels.
+const X_TICK_LABEL_BASELINE = TICK_FONT_SIZE + 1; // Like Plotly, the distance to the baseline of our X tick labels.
+const Y_TICK_LABEL_GAP = 1; // Like Plotly, the gap between our plotting area and our Y tick labels.
+const Y_TICK_LABEL_BASELINE = 0.35 * TICK_FONT_SIZE; // Like Plotly, the distance between a tick and its label's baseline.
 const TICK_LABEL_HALF_HEIGHT = 6; // Used to hide a Y tick label that would (partly) be above our container.
 const X_AXIS_SIZE_WITH_TITLE = 18; // Size of our X axis (without its title) if it has a title.
 const X_AXIS_SIZE_WITHOUT_TITLE = 20; // Size of our X axis if it doesn't have a title.
@@ -886,9 +887,6 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
     pxRatio: scale
   };
   const { left, top, width, height } = area;
-  const bottom = top + height;
-  const xFactor = width / (area.xMax - area.xMin);
-  const yFactor = height / (area.yMax - area.yMin);
   const origin = mainDiv.getBoundingClientRect();
   const scaledWidth = Math.round(scale * mainDiv.clientWidth);
   const scaledHeight = Math.round(scale * mainDiv.clientHeight);
@@ -957,38 +955,15 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
 
   res.push(`<g transform="scale(${scale})">`);
 
-  // Our tick labels, which uPlot draws below our plotting area (with their top at xTickLabelGap() pixels from it) for
-  // our X axis and to the left of our plotting area (with their middle at the level of their tick) for our Y axis.
-  // Note: like uPlot, we position our tick labels at whole (scaled) pixels.
+  // Our tick labels (see tickLabels()).
 
-  const xTickLabelOffset = -(fontMetrics(tickFont, 'top')?.alphabeticBaseline ?? 0);
-  const yTickLabelOffset = -(fontMetrics(tickFont, 'middle')?.alphabeticBaseline ?? 0);
-  const scaledXTickLabelGap = Math.round(scale * xTickLabelGap());
-  const scaledYTickLabelGap = Math.round(scale * Y_TICK_LABEL_GAP);
-  const tickLabels: string[] = [];
-
-  xSplits.forEach((split: number, index: number) => {
-    const value = xAxis?._values?.[index];
-
-    if (value) {
-      tickLabels.push(
-        `<text x="${svgNumber(Math.round(left + (split - area.xMin) * xFactor) / scale)}" y="${svgNumber((Math.round(bottom) + scaledXTickLabelGap) / scale + xTickLabelOffset)}" text-anchor="middle">${escapeXml(String(value))}</text>`
-      );
-    }
-  });
-
-  ySplits.forEach((split: number, index: number) => {
-    const value = yAxis?._values?.[index];
-
-    if (value) {
-      tickLabels.push(
-        `<text x="${svgNumber((Math.round(left) - scaledYTickLabelGap) / scale)}" y="${svgNumber(Math.round(bottom - (split - area.yMin) * yFactor) / scale + yTickLabelOffset)}" text-anchor="end">${escapeXml(String(value))}</text>`
-      );
-    }
-  });
+  const svgTickLabels = tickLabels(u, area).map(
+    (tickLabel: ITickLabel) =>
+      `<text x="${svgNumber(tickLabel.x / scale)}" y="${svgNumber(tickLabel.y / scale)}" text-anchor="${tickLabel.align === 'center' ? 'middle' : 'end'}">${escapeXml(tickLabel.text)}</text>`
+  );
 
   res.push(
-    `<g font-family="${escapeXml(FONT_FAMILY)}" font-size="${TICK_FONT_SIZE}" fill="${colors.cssColor(themeColors.value.text)}">${tickLabels.join('')}</g>`
+    `<g font-family="${escapeXml(FONT_FAMILY)}" font-size="${TICK_FONT_SIZE}" fill="${colors.cssColor(themeColors.value.text)}">${svgTickLabels.join('')}</g>`
   );
 
   // Our axis titles and legend, which we render on top of our plot.
@@ -2398,8 +2373,7 @@ const axisValues = (axisKey: AxisKey): uPlot.Axis.Values => {
 
     const format = axisTicks[axisKey]?.format ?? { tickRound: 0, exponent: 0 };
     const plotTop = u.bbox.top / (dependencies._uPlot.pxRatio as number);
-
-    return splits.map((split: number) => {
+    const values = splits.map((split: number) => {
       // Like Plotly, hide a Y tick label that would (partly) be above our container.
 
       if (axisKey === 'y' && plotTop + u.valToPos(split, 'y') < TICK_LABEL_HALF_HEIGHT) {
@@ -2408,7 +2382,104 @@ const axisValues = (axisKey: AxisKey): uPlot.Axis.Values => {
 
       return formatNumber(split, format);
     });
+
+    // Keep track of our tick labels, but give uPlot none to draw since we draw them ourselves (see drawTickLabels()).
+
+    tickValues[axisKey] = values;
+
+    return values.map(() => '');
   };
+};
+
+// Our tick labels, which we draw ourselves since uPlot positions them using their em box (e.g., it vertically centres a
+// Y tick label's em box, rather than its digits, on its tick), which makes them look slightly off compared to Plotly's.
+
+interface IAxisInternals {
+  _splits?: number[];
+}
+
+const tickValues: Record<AxisKey, string[]> = {
+  x: [],
+  y: []
+};
+
+interface ITickLabel {
+  text: string;
+  x: number;
+  y: number;
+  align: 'center' | 'right';
+}
+
+const tickLabels = (u: uPlot, area: IPathArea): ITickLabel[] => {
+  // Return our tick labels and where to draw them (in pixels of the given area), i.e., like Plotly, with their
+  // alphabetic baseline X_TICK_LABEL_BASELINE pixels below our plotting area for our X axis and, for our Y axis,
+  // Y_TICK_LABEL_GAP pixels to the left of our plotting area and with their alphabetic baseline Y_TICK_LABEL_BASELINE
+  // pixels below their tick.
+  // Note: like uPlot, we position our tick labels at whole pixels.
+
+  const { left, top, width, height, xMin, xMax, yMin, yMax, pxRatio } = area;
+  const bottom = top + height;
+  const [xAxis, yAxis] = u.axes as unknown as IAxisInternals[];
+  const xLabelY = Math.round(bottom + X_TICK_LABEL_BASELINE * pxRatio);
+  const yLabelX = Math.round(left) - Math.round(Y_TICK_LABEL_GAP * pxRatio);
+  const res: ITickLabel[] = [];
+
+  xAxis?._splits?.forEach((split: number, index: number) => {
+    const text = tickValues.x[index];
+
+    if (text) {
+      res.push({
+        text,
+        x: Math.round(left + ((split - xMin) * width) / (xMax - xMin)),
+        y: xLabelY,
+        align: 'center'
+      });
+    }
+  });
+
+  yAxis?._splits?.forEach((split: number, index: number) => {
+    const text = tickValues.y[index];
+
+    if (text) {
+      res.push({
+        text,
+        x: yLabelX,
+        y: Math.round(bottom - ((split - yMin) * height) / (yMax - yMin) + Y_TICK_LABEL_BASELINE * pxRatio),
+        align: 'right'
+      });
+    }
+  });
+
+  return res;
+};
+
+const drawTickLabels = (u: uPlot): void => {
+  // Make sure that we have a plotting area and that our axes have ranges, so that we can draw our tick labels.
+
+  const area = pathArea(u);
+
+  if (!area) {
+    return;
+  }
+
+  // Draw our tick labels, using the same font as uPlot would (i.e. with a font size in whole canvas pixels).
+  // Note: uPlot caches the state of its context, so we must restore it once we are done.
+
+  const context = u.ctx;
+
+  context.save();
+
+  context.font = `${Math.round(TICK_FONT_SIZE * area.pxRatio)}px ${FONT_FAMILY}`;
+  context.fillStyle = colors.cssColor(themeColors.value.text);
+  context.textBaseline = 'alphabetic';
+
+  for (const tickLabel of tickLabels(u, area)) {
+    context.textAlign = tickLabel.align;
+
+    context.fillText(tickLabel.text, tickLabel.x, tickLabel.y);
+  }
+
+  context.restore();
 };
 
 // Text measuring, which we use to make sure that our X tick labels don't overlap, to size our Y axis, right margin, and
@@ -2429,14 +2500,6 @@ const textWidth = (text: string, font: string): number => {
   measureContext.font = font;
 
   return measureContext.measureText(text).width;
-};
-
-const xTickLabelGap = (): number => {
-  // Return the gap between our plotting area and our X tick labels, which uPlot draws with a "top" baseline, so that,
-  // like Plotly, their alphabetic baseline is X_TICK_LABEL_BASELINE pixels below our plotting area.
-  // Note: alphabeticBaseline is the (negative) distance between the top and alphabetic baselines.
-
-  return X_TICK_LABEL_BASELINE + (fontMetrics(tickFont, 'top')?.alphabeticBaseline ?? 0);
 };
 
 const fontMetrics = (font: string, baseline: CanvasTextBaseline = 'alphabetic'): TextMetrics | undefined => {
@@ -2475,13 +2538,15 @@ const yAxisTitleSize = (): number => {
   return props.data.yAxisTitle ? Y_AXIS_TITLE_SIZE : 0;
 };
 
-const yAxisSize = (_u: uPlot, values: string[] | null): number => {
+const yAxisSize = (): number => {
   // Size our Y axis (without its title) based on the width of its widest tick label or, if we are given some shared
   // margins, based on the shared left margin (but never less than what we need).
+  // Note: uPlot computes our tick labels (see axisValues()) before the size of our axis, so our Y tick labels are up to
+  //       date.
 
   let maxWidth = 0;
 
-  for (const value of values ?? []) {
+  for (const value of tickValues.y) {
     maxWidth = Math.max(maxWidth, textWidth(value, tickFont));
   }
 
@@ -2492,11 +2557,6 @@ const yAxisSize = (_u: uPlot, values: string[] | null): number => {
 
 // Right margin, which we use to make sure that our legend and last X tick label are not cut off.
 
-interface IAxisInternals {
-  _splits?: number[];
-  _values?: (string | number | null)[];
-}
-
 const legendRightMargin = (): number => {
   // Return the right margin needed by our legend (if any), with a margin on both sides of it (see legendLeft).
   // Note: this is our natural right margin, i.e. the right margin that we share with our sibling panels (see
@@ -2505,7 +2565,7 @@ const legendRightMargin = (): number => {
   return legendWidth ? Math.ceil(LEGEND_LEFT_MARGIN + legendWidth + LEGEND_RIGHT_MARGIN) : 0;
 };
 
-const rightMargin = (u: uPlot): number => {
+const rightMargin = (): number => {
   // Our right margin must leave room for our legend (or, if we are given some shared margins, for the shared right
   // margin) and for half our last X tick label (since it is centred on its tick), with a margin on its right side.
   // Note #1: our legend is to the right of our plotting area and no taller than it while our last X tick label is below
@@ -2517,10 +2577,9 @@ const rightMargin = (u: uPlot): number => {
   // Note #2: uPlot computes our tick labels (see axisValues()) before our padding, so our last X tick label is up to
   //          date.
 
-  const xValues = (u.axes[0] as unknown as IAxisInternals | undefined)?._values;
-  const lastXValue = xValues?.[xValues.length - 1];
+  const lastXValue = tickValues.x[tickValues.x.length - 1];
   const legendSize = props.margins ? Math.max(legendRightMargin(), props.margins.right) : legendRightMargin();
-  const lastXTickLabelSize = lastXValue ? 0.5 * textWidth(String(lastXValue), tickFont) + LEGEND_RIGHT_MARGIN : 0;
+  const lastXTickLabelSize = lastXValue ? 0.5 * textWidth(lastXValue, tickFont) + LEGEND_RIGHT_MARGIN : 0;
 
   return Math.ceil(Math.max(legendSize, lastXTickLabelSize));
 };
@@ -3456,7 +3515,6 @@ const createPlot = (width: number, height: number): void => {
           scale: 'x',
           side: 2,
           size: props.data.xAxisTitle ? X_AXIS_SIZE_WITH_TITLE : X_AXIS_SIZE_WITHOUT_TITLE,
-          gap: xTickLabelGap(),
           label: props.data.xAxisTitle ? '' : undefined,
           labelSize: X_AXIS_TITLE_SIZE,
           splits: axisSplits('x'),
@@ -3467,7 +3525,6 @@ const createPlot = (width: number, height: number): void => {
           scale: 'y',
           side: 3,
           size: yAxisSize,
-          gap: Y_TICK_LABEL_GAP,
           label: props.data.yAxisTitle ? '' : undefined,
           labelSize: Y_AXIS_TITLE_SIZE,
           labelGap: Y_AXIS_TITLE_GAP,
@@ -3491,7 +3548,7 @@ const createPlot = (width: number, height: number): void => {
           }
         ],
         setCursor: [queueHoverUpdate],
-        drawAxes: [drawZeroLines],
+        drawAxes: [drawZeroLines, drawTickLabels],
         drawClear: [drawMinorGrid],
         setSize: [
           (u: uPlot) => {
