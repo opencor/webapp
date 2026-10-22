@@ -38,6 +38,11 @@
   "linter": {
     "includes": ["**", "!**/components.d.ts"]
   },
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  },
   "overrides": [
     {
       "includes": ["**/*.css"],
@@ -78,5 +83,10 @@
     "clientKind": "git",
     "enabled": true,
     "useIgnoreFile": true
+  },
+  "yaml": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
   }
 }

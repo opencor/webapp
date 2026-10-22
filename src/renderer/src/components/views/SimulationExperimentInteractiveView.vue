@@ -538,7 +538,7 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
     }
 
     const runColorIndex = paletteColors.indexOf(run.color);
-    const baseColorIndex = runColorIndex >= 0 ? runColorIndex : 0;
+    const baseColorIndex = Math.max(0, runColorIndex);
     const data = run.isLiveRun ? liveDataVal[plotIndex] : run.data[plotIndex];
     const dataTraces = data?.traces;
 
@@ -560,7 +560,7 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
         traceId: `${run.id}::${dataTrace.traceId ?? `${dataTrace.xValue}::${dataTrace.yValue}::${k}`}`,
         name: dataTrace.name + suffix,
         color: paletteColors[(baseColorIndex + k) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
-        zorder: run.isLiveRun ? 1 : undefined
+        legendRank: run.isLiveRun ? 1 : undefined
       });
     }
   };
@@ -569,9 +569,9 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
     const traces: IGraphPanelPlotTrace[] = [];
 
     // Add the traces for the tracked runs first and then the live run, so that the live run is always drawn on top of
-    // the tracked runs (Plotly draws traces in the order in which they appear in the data array).
-    // Note: the legend order is unaffected since the live run's traces have a zorder of 1 (mapped to Plotly's
-    //       legendrank) while tracked runs use the default of 1000.
+    // the tracked runs (GraphPanelWidget draws traces in the order in which they are given).
+    // Note: the live run is still listed first in the legend since its traces have a legend rank of 1 while those of
+    //       the tracked runs have the default legend rank of 1000.
 
     for (let j = 1; j < runsCount; ++j) {
       addRunTraces(traces, i, j);

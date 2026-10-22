@@ -12,7 +12,7 @@ import { deleteGitHubAccessToken } from '../renderer/src/common/gitHubIntegratio
 */
 
 import icon from './assets/icon.png?asset';
-import { ApplicationWindow } from './ApplicationWindow';
+import { ApplicationWindow, backgroundColor } from './ApplicationWindow';
 import { electronConf, type IElectronConfState, takeElectronConfBackupFileName } from './index';
 import { enableDisableFileCloseAndCloseAllMenuItems, enableDisableMainMenu, updateReopenMenu } from './MainMenu';
 import type { SplashScreenWindow } from './SplashScreenWindow';
@@ -570,9 +570,7 @@ export class MainWindow extends ApplicationWindow {
             autoHideMenuBar: true,
             width: 600,
             height: 700,
-            backgroundColor: electron.nativeTheme.shouldUseDarkColors ? '#18181b' : '#ffffff',
-            // Note: use the same colours as the ones used by --p-content-background in PrimeVue, i.e. what we are using
-            //       as a background for our app (see src/renderer/src/assets/app.css).
+            backgroundColor: backgroundColor(),
             webPreferences: {
               preload: undefined,
               sandbox: true,

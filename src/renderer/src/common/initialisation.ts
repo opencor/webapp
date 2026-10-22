@@ -35,9 +35,14 @@ const externalDependencies: ExternalDependency[] = [
     set: (m) => dependencies.setMathJs(m)
   },
   {
-    name: 'Plotly.js',
-    url: 'https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@4.1.2/+esm',
-    set: (m) => dependencies.setPlotlyJs(m)
+    // Note: the version of uPlot must be the same as the one of our uplot devDependency (which we use for its types)
+    //       in both package.json files, hence we pin the latter (so that bun run dependencies:update doesn't update
+    //       it on its own).
+
+    name: 'uPlot',
+    url: 'https://cdn.jsdelivr.net/npm/uplot@1.6.32/+esm',
+    set: (m) => dependencies.setUPlot(m),
+    cssUrl: 'https://cdn.jsdelivr.net/npm/uplot@1.6.32/dist/uPlot.min.css'
   }
 ];
 
@@ -319,15 +324,26 @@ const createLazyInitialiser = (
 
       if (cssUrl) {
         if (!injectedCss.has(cssUrl)) {
-          const cssText = await withRetries(`${name}'s stylesheet`, async () => {
-            const response = await fetch(/* @vite-ignore */ cssUrl, { mode: 'cors' });
+          // Note: we report a failure to load the CSS as such since, unlike a failure to import a module, its error
+          //       (e.g., "Failed to fetch") doesn't otherwise tell what failed.
 
-            if (!response.ok) {
-              throw new Error(`Failed to load ${name ?? 'stylesheet'} (${response.status}: ${response.statusText}).`);
-            }
+          let cssText: string;
 
-            return response.text();
-          });
+          try {
+            cssText = await withRetries(`${name}'s stylesheet`, async (attempt) => {
+              const response = await fetch(/* @vite-ignore */ attemptUrl(cssUrl, attempt), { mode: 'cors' });
+
+              if (!response.ok) {
+                throw new Error(`${response.status}: ${response.statusText}`);
+              }
+
+              return response.text();
+            });
+          } catch (error: unknown) {
+            throw new Error(`Failed to load ${name}'s stylesheet from ${cssUrl} (${common.formatError(error)}).`, {
+              cause: error
+            });
+          }
 
           const style = document.createElement('style');
 

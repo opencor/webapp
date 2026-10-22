@@ -160,7 +160,7 @@ const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
 // Our live data, i.e. the data that we have retrieved so far while a simulation is running.
 // Note: while a simulation is running, we only retrieve the data that has been computed since our last update (rather
 //       than all of it every time) and store it in some buffers, which we then plot using views of them (so no copy is
-//       involved, while still providing Plotly with new arrays, which it needs to update our plot). Also, libOpenCOR
+//       involved, while only providing GraphPanelWidget with the data that we have retrieved so far). Also, libOpenCOR
 //       counts a step as completed just before storing its results, so the last point that we retrieved may not have
 //       been stored at the time, which is why we always retrieve it again.
 
@@ -230,7 +230,7 @@ const updatePlot = (dataSize: number = 0): void => {
   }
 
   // Specify the range of the X and Y axes if they are the variable of integration. Otherwise, leave the range undefined
-  // so that Plotly can automatically determine the range based on the data.
+  // so that GraphPanelWidget can automatically determine the range based on the data.
 
   const xAxisRange: [number, number] | undefined =
     uniformTimeCourse && xInfo.value.type === locCommon.ESimulationDataInfoType.VOI
@@ -327,7 +327,7 @@ const releaseResources = async (): Promise<void> => {
 // A helper function to scroll our console to the bottom.
 
 const scrollConsoleToBottom = (): void => {
-  vue.nextTick(() => {
+  void vue.nextTick().then(() => {
     editorRef.value?.scrollTo({ top: editorRef.value.scrollHeight });
   });
 };

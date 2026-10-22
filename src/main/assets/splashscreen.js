@@ -1,4 +1,4 @@
 const searchParams = new URLSearchParams(window.location.search);
 
-document.getElementById('copyright').innerText = searchParams.get('copyright') ?? '';
-document.getElementById('version').innerText = searchParams.get('version') ?? '';
+document.getElementById('copyright').textContent = searchParams.get('copyright') ?? '';
+document.getElementById('version').textContent = searchParams.get('version') ?? '';

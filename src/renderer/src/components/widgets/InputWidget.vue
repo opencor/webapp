@@ -152,7 +152,7 @@ const onInteractionEnd = (): void => {
     // Note: we emit our changeEnd event in the next tick so that it gets emitted after any pending change event (see
     //       emitChange()).
 
-    vue.nextTick(() => {
+    void vue.nextTick().then(() => {
       emits('changeEnd', props.name);
     });
   }
@@ -171,7 +171,7 @@ const emitChange = (newValue: number) => {
     changedWhileInteracting = true;
   }
 
-  vue.nextTick(() => {
+  void vue.nextTick().then(() => {
     value.value = newValue;
 
     oldValue = newValue;
