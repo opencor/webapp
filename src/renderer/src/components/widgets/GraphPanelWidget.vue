@@ -202,9 +202,8 @@ const X_AXIS_TITLE_SIZE = 17; // Size of our X axis title.
 const Y_AXIS_TITLE_SIZE = 17; // Size of our Y axis title.
 const Y_AXIS_TITLE_GAP = 1.5; // Gap between our Y axis title and (the left edge of) our Y axis.
 const Y_AXIS_EXTRA_SIZE = 5; // Extra size of our Y axis, on top of the width of its tick labels.
-const MAJOR_TICK_MIN_X_SPACING = 80; // Target spacing between two consecutive major ticks along the X axis.
-const MAJOR_TICK_MIN_Y_SPACING = 40; // Target spacing between two consecutive major ticks along the Y axis.
-const NB_OF_MINOR_TICKS = 5; // Number of minor tick spacings per major tick spacing (like Plotly).
+const TICK_MIN_X_SPACING = 80; // Target spacing between two consecutive ticks along the X axis.
+const TICK_MIN_Y_SPACING = 40; // Target spacing between two consecutive ticks along the Y axis.
 const TICK_LABEL_MIN_SPACING = 10; // Minimum spacing between two consecutive tick labels.
 const MAX_NB_OF_TICKS = 1000; // A safeguard against an axis needing an unreasonable number of ticks.
 const LINE_WIDTH = 2; // Like Plotly, the width of our traces' lines (in CSS pixels).
@@ -304,7 +303,6 @@ interface IThemeColors {
   text: string;
   tickLabel: string;
   grid: string;
-  minorGrid: string;
   zeroLine: string;
   zoomMask: string;
   zoomCornersFill: string;
@@ -318,9 +316,8 @@ const themeColors = vue.computed<IThemeColors>(() => {
     background: 'var(--p-content-background)',
     text: 'var(--p-text-color)',
     tickLabel: 'var(--p-text-muted-color)',
-    grid: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-700)',
-    minorGrid: useLightMode ? 'var(--p-surface-100)' : 'var(--p-surface-800)',
-    zeroLine: useLightMode ? 'var(--p-surface-400)' : 'var(--p-surface-500)',
+    grid: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-800)',
+    zeroLine: useLightMode ? 'var(--p-surface-300)' : 'var(--p-surface-600)',
     zoomMask: `color-mix(in srgb, ${useLightMode ? 'var(--p-surface-400)' : 'var(--p-surface-500)'} 50%, transparent)`,
     zoomCornersFill: useLightMode ? 'var(--p-surface-800)' : 'var(--p-surface-100)',
     zoomCornersStroke: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-700)'
@@ -912,10 +909,9 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
     `<rect width="${scaledWidth}" height="${scaledHeight}" fill="${colors.cssColor(themeColors.value.background)}"/>`
   ];
 
-  // Our minor and major grid lines, and our zero lines, which get drawn in that order on uPlot's canvas (see
-  // drawMinorGrid() and drawZeroLines()).
-  // Note: uPlot draws all our major grid lines, including one that is at the right (or bottom) edge of our plotting
-  //       area, i.e. that is just outside of it once aligned (if our line width is an odd number of pixels).
+  // Our grid lines and zero lines, which get drawn in that order on uPlot's canvas (see drawZeroLines()).
+  // Note: uPlot draws all our grid lines, including one that is at the right (or bottom) edge of our plotting area,
+  //       i.e. that is just outside of it once aligned (if our line width is an odd number of pixels).
 
   const [xAxis, yAxis] = u.axes as unknown as IAxisInternals[];
   const xSplits = xAxis?._splits ?? [];
@@ -929,11 +925,7 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
     return svgPathElement(path, `stroke="${colors.cssColor(color)}" stroke-width="${lineWidth(scale)}" fill="none"`);
   };
 
-  res.push(
-    lines(themeColors.value.minorGrid, axisTicks.x?.minorTicks ?? [], axisTicks.y?.minorTicks ?? []),
-    lines(themeColors.value.grid, xSplits, ySplits, false),
-    lines(themeColors.value.zeroLine, [0], [0])
-  );
+  res.push(lines(themeColors.value.grid, xSplits, ySplits, false), lines(themeColors.value.zeroLine, [0], [0]));
 
   // Our visible traces and their markers, if any, which uPlot draws in that order, trace by trace.
 
@@ -2428,14 +2420,13 @@ const formatNumber = (value: number, format: INumberFormat): string => {
   return isNegative ? MINUS_SIGN + res : res;
 };
 
-// Ticks, like Plotly, i.e. major ticks that are multiples of a "nice" spacing (which depends on the length of our axis)
-// and minor ticks (only used for our minor grid lines) that split a major tick spacing in four or five. Unlike Plotly,
-// though, we use fewer major ticks if their labels would otherwise overlap (Plotly rotates its X tick labels instead
-// and lets its Y tick labels overlap).
+// Ticks, like Plotly, i.e. ticks that are multiples of a "nice" spacing (which depends on the length of our axis).
+// Unlike Plotly, though, we use fewer ticks if their labels would otherwise overlap (Plotly rotates its X tick labels
+// instead and lets its Y tick labels overlap), and we don't have minor ticks (and therefore minor grid lines), so that
+// our grid is lighter.
 
 interface IAxisTicks {
   format: INumberFormat;
-  minorTicks: number[];
 }
 
 const axisTicks: Partial<Record<AxisKey, IAxisTicks>> = {};
@@ -2468,21 +2459,15 @@ const ticksBetween = (min: number, max: number, dtick: number): number[] => {
   return res;
 };
 
-const isMultiple = (bigger: number, smaller: number): boolean => {
-  // Return whether the given bigger number is (almost) a multiple of the given smaller number.
-
-  return Math.abs(((bigger / smaller + 0.5) % 1) - 0.5) < 0.001;
-};
-
 const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
-  // Return a function that computes the splits (i.e. the positions of our major ticks) for the given axis.
+  // Return a function that computes the splits (i.e. the positions of our ticks) for the given axis.
 
   return (u: uPlot, _axisIndex: number, min: number, max: number): number[] => {
-    // Major ticks, like Plotly, i.e. we aim for one tick every 80 (X axis) or 40 (Y axis) pixels with at least four and
-    // at most nine tick spacings.
+    // Like Plotly, we aim for one tick every 80 (X axis) or 40 (Y axis) pixels with at least four and at most nine tick
+    // spacings.
 
     const length = (axisKey === 'x' ? u.bbox.width : u.bbox.height) / (dependencies._uPlot.pxRatio as number);
-    const minSpacing = axisKey === 'x' ? MAJOR_TICK_MIN_X_SPACING : MAJOR_TICK_MIN_Y_SPACING;
+    const minSpacing = axisKey === 'x' ? TICK_MIN_X_SPACING : TICK_MIN_Y_SPACING;
     const nbOfTicks = Math.min(Math.max(length / minSpacing, 4), 9) + 1;
     const range = Math.abs(max - min);
     const maxEnd = Math.max(Math.abs(min), Math.abs(max));
@@ -2497,8 +2482,7 @@ const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
         format: {
           tickRound: 0,
           exponent: 0
-        },
-        minorTicks: []
+        }
       };
 
       return [];
@@ -2534,26 +2518,13 @@ const axisSplits = (axisKey: AxisKey): uPlot.Axis.Splits => {
       format = numberFormat(dtick, maxEnd);
     }
 
-    // Minor ticks, like Plotly, i.e. we aim for five minor tick spacings per major tick spacing, making sure that our
-    // major tick spacing is a multiple of our minor tick spacing.
-
-    let minorDtick = roundDTick((0.99 * dtick) / NB_OF_MINOR_TICKS);
-
-    if (!isMultiple(dtick, minorDtick)) {
-      minorDtick = Math.abs(dtick / minorDtick - 2.5) < 0.001 * 2.5 ? 0.5 * dtick : dtick;
-    }
-
-    // Keep track of the format of our tick labels and of our minor ticks (excluding those that are also major ticks).
+    // Keep track of the format of our tick labels.
 
     axisTicks[axisKey] = {
-      format,
-      minorTicks:
-        minorDtick < dtick
-          ? ticksBetween(min, max, minorDtick).filter((tick: number) => !isMultiple(Math.abs(tick) || dtick, dtick))
-          : []
+      format
     };
 
-    // Return our major ticks.
+    // Return our ticks.
 
     return ticks;
   };
@@ -2953,22 +2924,9 @@ const drawLines = (u: uPlot, color: string, xValues: number[], yValues: number[]
 
 const drawZeroLines = (u: uPlot): void => {
   // Like Plotly, draw our zero lines.
-  // Note: this gets called after uPlot draws our (major) grid lines and before it draws our traces.
+  // Note: this gets called after uPlot draws our grid lines and before it draws our traces.
 
   drawLines(u, colors.cssColor(themeColors.value.zeroLine), [0], [0]);
-};
-
-const drawMinorGrid = (u: uPlot): void => {
-  // Draw our minor grid lines.
-  // Note: this gets called before uPlot draws our (major) grid lines, so that the latter are drawn on top of the
-  //       former.
-
-  drawLines(
-    u,
-    colors.cssColor(themeColors.value.minorGrid),
-    axisTicks.x?.minorTicks ?? [],
-    axisTicks.y?.minorTicks ?? []
-  );
 };
 
 // Traces and markers.
@@ -3749,7 +3707,6 @@ const createPlot = (width: number, height: number): void => {
         ],
         setCursor: [queueHoverUpdate],
         drawAxes: [drawZeroLines, drawTickLabels],
-        drawClear: [drawMinorGrid],
         setSize: [
           (u: uPlot) => {
             // Make sure that our plotting area is at least one pixel wide and high (e.g., if our container is narrower
