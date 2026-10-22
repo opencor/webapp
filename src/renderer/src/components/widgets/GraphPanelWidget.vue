@@ -2138,9 +2138,13 @@ const openRangeEditor = (type: AxisEnd): void => {
 };
 
 const closeRangeEditor = (apply: boolean): void => {
-  // Close our range editor, if it is open, applying its value if requested and valid.
-  // Note: unlike Plotly, which would reverse our axis, we ignore a new value that would result in a reversed (or empty)
-  //       range (e.g., if the new value of the right end of our X axis is to the left of its left end, see zoomTo()).
+  // Close our range editor, if it is open, applying its value if requested, valid, and changed.
+  // Note #1: unlike Plotly, we ignore a value that hasn't been changed since its text is rounded (see rangeEndText()),
+  //          so applying it would slightly change our range (e.g., when clicking elsewhere without having typed
+  //          anything or when double-clicking one end of an axis).
+  // Note #2: unlike Plotly, which would reverse our axis, we ignore a new value that would result in a reversed (or
+  //          empty) range (e.g., if the new value of the right end of our X axis is to the left of its left end, see
+  //          zoomTo()).
 
   // Make sure that our range editor is open.
 
@@ -2150,9 +2154,10 @@ const closeRangeEditor = (apply: boolean): void => {
     return;
   }
 
-  // Determine the value of our range editor, if it is valid.
+  // Determine the text and value of our range editor, if it is valid.
 
-  const value = rangeEndValue(rangeEditorRef.value?.textContent ?? '');
+  const text = rangeEditorRef.value?.textContent ?? '';
+  const value = rangeEndValue(text);
 
   rangeEditor.value = null;
 
@@ -2160,7 +2165,7 @@ const closeRangeEditor = (apply: boolean): void => {
 
   const range = currentRange(editor.axisKey);
 
-  if (!apply || value === undefined || !range) {
+  if (!apply || text === editor.text || value === undefined || !range) {
     return;
   }
 
