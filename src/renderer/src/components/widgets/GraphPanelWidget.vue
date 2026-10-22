@@ -211,6 +211,7 @@ const HOVER_ARROW_SIZE = 6; // Like Plotly, the size of the arrow of our hover l
 const HOVER_TEXT_PADDING = 3; // Like Plotly, the horizontal padding of our hover label's text (in CSS pixels).
 const HOVER_NAME_LENGTH = 15; // Like Plotly, the maximum length of a trace name in our hover label.
 const HOVER_DISTANCE = 20; // Like Plotly, the maximum distance between the mouse pointer and a point to hover it.
+const HOVER_LINE_RADIUS = 0.5; // Like Plotly, the "radius" of a point without a marker when hovering it.
 
 // Resize handling.
 
@@ -2018,8 +2019,9 @@ const onDragMouseDown = (event: MouseEvent): void => {
 const onDoubleClick = (type: DragType): void => {
   // Reset the zoom along the axes that correspond to what was double-clicked unless we are dragging (in which case only
   // our drag should have an effect).
+  // Note: like Plotly, double-clicking one end of an axis does nothing.
 
-  if (drag) {
+  if (drag || type === 'w' || type === 'e' || type === 'n' || type === 's') {
     return;
   }
 
@@ -2041,6 +2043,13 @@ const applyWheelZoom = (): void => {
 };
 
 const onWheel = (event: WheelEvent, type: DragType): void => {
+  // Like Plotly, don't zoom when the mouse wheel is used over a corner, in which case we let the browser scroll the
+  // page.
+
+  if (type === 'sw' || type === 'se') {
+    return;
+  }
+
   // Prevent the default behavior of the mouse wheel, which is to scroll the page.
 
   event.preventDefault();
@@ -3186,10 +3195,14 @@ const updateHover = (): void => {
   }
 
   // Find the point that is closest to the mouse pointer (within HOVER_DISTANCE pixels), if any.
+  // Note: like Plotly (see its scatter hoverPoints() and Fx.getClosest()), the distance between the mouse pointer and a
+  //       point is reduced by the "radius" of the point (i.e. the radius of its marker, if any, or HOVER_LINE_RADIUS
+  //       pixels otherwise), with points within that radius being at a distance of zero. Also, in case of a tie, the
+  //       last point wins, so that a point that is drawn on top of another one gets hovered.
 
   const xFactor = rect.width / (xMax - xMin);
   const yFactor = rect.height / (yMax - yMin);
-  let closestDistance = HOVER_DISTANCE * HOVER_DISTANCE;
+  let closestDistance = HOVER_DISTANCE;
   let closestSeriesIndex = -1;
   let closestIndex = -1;
 
@@ -3203,15 +3216,18 @@ const updateHover = (): void => {
     }
 
     // Determine the points that we need to look at, i.e. all of them unless our X values are sorted, in which case we
-    // only look at the points that are within HOVER_DISTANCE pixels horizontally (using a binary search).
+    // only look at the points that are within HOVER_DISTANCE pixels (plus their radius) horizontally (using a binary
+    // search).
 
+    const radius = seriesHasMarkers(u, seriesIndex) ? 0.5 * MARKER_SIZE : HOVER_LINE_RADIUS;
+    const maxDx = HOVER_DISTANCE + radius;
     const nbOfPoints = Math.min(xValues.length, yValues.length);
     let start = 0;
     let end = nbOfPoints;
 
     if (sortedXValues[seriesIndex - 1]) {
-      start = lowerBound(xValues, xMin + (left - HOVER_DISTANCE) / xFactor, nbOfPoints);
-      end = lowerBound(xValues, xMin + (left + HOVER_DISTANCE) / xFactor, nbOfPoints);
+      start = lowerBound(xValues, xMin + (left - maxDx) / xFactor, nbOfPoints);
+      end = lowerBound(xValues, xMin + (left + maxDx) / xFactor, nbOfPoints);
     }
 
     // Find the point that is closest to the mouse pointer (within HOVER_DISTANCE pixels) among the points that we are
@@ -3223,19 +3239,19 @@ const updateHover = (): void => {
       // Note: we negate our comparison so that a point with a NaN X value gets skipped.
 
       const dx = ((xValues[i] as number) - xMin) * xFactor - left;
-      const dx2 = dx * dx;
 
-      if (!(dx2 < closestDistance)) {
+      if (!(Math.abs(dx) - radius <= closestDistance)) {
         continue;
       }
 
-      // Keep track of our point if it is the closest one to the mouse pointer so far.
+      // Keep track of our point if it is at least as close to the mouse pointer as the closest point so far (so that,
+      // in case of a tie, the last point wins).
       // Note: a point with a NaN Y value gets skipped since its distance is NaN.
 
       const dy = rect.height - ((yValues[i] as number) - yMin) * yFactor - top;
-      const distance = dx2 + dy * dy;
+      const distance = Math.max(Math.sqrt(dx * dx + dy * dy) - radius, 0);
 
-      if (distance < closestDistance) {
+      if (distance <= closestDistance) {
         closestDistance = distance;
         closestSeriesIndex = seriesIndex;
         closestIndex = i;
