@@ -18,7 +18,6 @@
         "@tailwindcss/postcss": "^4.3.3",
         "@tailwindcss/vite": "^4.3.3",
         "@types/node": "^26.6.5",
-        "@types/plotly.js": "^3.0.15",
         "@vitejs/plugin-vue": "^6.0.10",
         "@vue/tsconfig": "^0.9.1",
         "@vueuse/core": "12.8.2",
@@ -317,8 +316,6 @@
     "@types/ms": ["@types/ms@2.1.0", "", {}, "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA=="],
 
     "@types/node": ["@types/node@26.6.5", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="],
-
-    "@types/plotly.js": ["@types/plotly.js@3.0.15", "", {}, "sha512-ftBxk2fB7BxxeMpT0IVEb/3HKpYTXO5nCdR5mGEz6gHpLd6GGRFxvDVoG1gpD/gBAgoN36KIyRflxCnOfWlskQ=="],
 
     "@types/responselike": ["@types/responselike@1.0.3", "", { "dependencies": { "@types/node": "*" } }, "sha512-H/+L+UkTV33uf49PH5pCAUBVPNj2nDBXTN+qS1dOwyyg24l3CcicicCA7ca+HMvJBZcFgl5r8e+RR6elsb4Lyw=="],
 

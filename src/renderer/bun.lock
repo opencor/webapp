@@ -21,7 +21,6 @@
         "@tailwindcss/vite": "^4.3.3",
         "@types/bun": "^1.4.3",
         "@types/node": "^26.6.5",
-        "@types/plotly.js": "^3.0.15",
         "@vitejs/plugin-vue": "^6.0.10",
         "@vue/tsconfig": "^0.9.1",
         "autoprefixer": "^10.6.1",
@@ -229,8 +228,6 @@
     "@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
 
     "@types/node": ["@types/node@26.6.5", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="],
-
-    "@types/plotly.js": ["@types/plotly.js@3.0.15", "", {}, "sha512-ftBxk2fB7BxxeMpT0IVEb/3HKpYTXO5nCdR5mGEz6gHpLd6GGRFxvDVoG1gpD/gBAgoN36KIyRflxCnOfWlskQ=="],
 
     "@types/web-bluetooth": ["@types/web-bluetooth@0.0.21", "", {}, "sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA=="],
 

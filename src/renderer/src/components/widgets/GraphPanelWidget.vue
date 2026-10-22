@@ -136,7 +136,7 @@ export interface IGraphPanelPlotTrace {
   yValue: string;
   y: math.FloatArray;
   color: string;
-  zorder?: number;
+  legendRank?: number;
 }
 
 export interface IGraphPanelData {
@@ -179,7 +179,7 @@ const TITLE_FONT_SIZE = 14; // Like Plotly, the font size of our axis titles.
 const LEGEND_FONT_SIZE = 12; // Like Plotly, the font size of our legend items.
 const LEGEND_LEFT_MARGIN = 8; // Margin between our plotting area and our legend.
 const LEGEND_RIGHT_MARGIN = 8; // Margin between our legend (or last X tick label) and the right edge of our container.
-const DEFAULT_ZORDER = 1000; // Like Plotly's default legend rank.
+const DEFAULT_LEGEND_RANK = 1000; // Like Plotly's default legend rank.
 const TICK_LABEL_GAP = 1; // Gap between our plotting area and our tick labels.
 const TICK_LABEL_HALF_HEIGHT = 6; // Used to hide a Y tick label that would (partly) be above our container.
 const X_AXIS_SIZE_WITH_TITLE = 18; // Size of our X axis (without its title) if it has a title.
@@ -353,8 +353,8 @@ vue.watch(
 
 // Our legend, which, like Plotly's, is to the right of our plotting area and lets the user toggle the visibility of a
 // trace (by clicking on it) or isolate a trace (by double-clicking on it).
-// Note: our legend lists our traces by increasing zorder (and then in the order in which they are given), while our
-//       traces are drawn in the order in which they are given.
+// Note: our legend lists our traces by increasing legend rank (and then in the order in which they are given), while
+//       our traces are drawn in the order in which they are given.
 
 interface ILegendItem {
   index: number;
@@ -362,7 +362,7 @@ interface ILegendItem {
   name: string;
   visible: boolean;
   markers: boolean;
-  zorder: number;
+  legendRank: number;
 }
 
 const legendItems = vue.computed<ILegendItem[]>(() => {
@@ -375,9 +375,9 @@ const legendItems = vue.computed<ILegendItem[]>(() => {
       name: trace.name,
       visible: visibilities[index] ?? true,
       markers: hasMarkers(trace.x, trace.y),
-      zorder: trace.zorder ?? DEFAULT_ZORDER
+      legendRank: trace.legendRank ?? DEFAULT_LEGEND_RANK
     }))
-    .sort((item1: ILegendItem, item2: ILegendItem) => item1.zorder - item2.zorder || item1.index - item2.index);
+    .sort((item1: ILegendItem, item2: ILegendItem) => item1.legendRank - item2.legendRank || item1.index - item2.index);
 });
 
 // Our plotting area, which we use to position our axis titles, axis draggers, zoom box, hover label, and legend.
