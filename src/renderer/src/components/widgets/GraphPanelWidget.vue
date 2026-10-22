@@ -1437,6 +1437,70 @@ let zoomTitles: string | undefined;
 //       along that axis gets reset) or when our axis titles change (i.e. when we are plotting something else, see
 //       updatePlot()).
 
+const naturalRange = (u: uPlot, axisKey: AxisKey, dataMin: number | null, dataMax: number | null): Range => {
+  // Return the natural range of the given axis, i.e. the given range for the axis, if any, or the autorange of the
+  // given data range otherwise (or of our data if no data range is given).
+
+  // If a (finite) range was given for the axis, then we use it.
+
+  const range = axisKey === 'x' ? props.data.xAxisRange : props.data.yAxisRange;
+
+  if (range && Number.isFinite(range[0]) && Number.isFinite(range[1])) {
+    // Make sure that the given range is in increasing order (e.g., if our ending point is before our starting point)
+    // and has a non-zero width (e.g., if our starting and ending points are the same) since uPlot can handle neither.
+    // Note: like Plotly, we widen a zero-width range by 1 or 1ppm, whichever is bigger.
+
+    const min = Math.min(range[0], range[1]);
+    const max = Math.max(range[0], range[1]);
+
+    if (min === max) {
+      const delta = Math.max(1, 1e-6 * Math.abs(min));
+
+      return [min - delta, max + delta];
+    }
+
+    return [min, max];
+  }
+
+  // No range was given, so we use the range of our data.
+  // Note: uPlot's range of our data may not be finite, e.g., if a trace starts with a NaN value (uPlot then never
+  //       moves away from it) or has an infinite value. In that case, we determine the range of our data ourselves,
+  //       ignoring non-finite values.
+
+  let min = dataMin;
+  let max = dataMax;
+
+  if (min === null || max === null || !Number.isFinite(min) || !Number.isFinite(max)) {
+    const finiteRange = finiteDataRange(u, axisKey);
+
+    if (!finiteRange) {
+      // No (finite) data, so if some of our traces are hidden (e.g., the user hid all of them using our legend), then
+      // we keep our last autorange (so that the user sees the same view when showing some traces again). Otherwise,
+      // we use Plotly's default range.
+
+      const lastAutoRange = lastAutoRanges[axisKey];
+
+      if (lastAutoRange && u.series.some((series: uPlot.Series, index: number) => index > 0 && !series.show)) {
+        return [...lastAutoRange];
+      }
+
+      return axisKey === 'x' ? [...DEFAULT_X_RANGE] : [...DEFAULT_Y_RANGE];
+    }
+
+    [min, max] = finiteRange;
+  }
+
+  // Autorange our axis and keep track of it.
+  // Note: we keep track of it here rather than rely on uPlot's scales since our plot may get recreated (e.g., when the
+  //       theme changes) while all our traces are hidden.
+
+  const res = autoRange(u, axisKey, min, max);
+
+  lastAutoRanges[axisKey] = res;
+
+  return [...res];
+};
+
 const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
   return (u: uPlot, dataMin: number | null, dataMax: number | null): Range => {
     // If the user zoomed into a range for the axis, then we use it.
@@ -1447,64 +1511,9 @@ const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
       return [...zoomRange];
     }
 
-    // If a (finite) range was given for the axis, then we use it.
+    // Use the natural range of the axis.
 
-    const range = axisKey === 'x' ? props.data.xAxisRange : props.data.yAxisRange;
-
-    if (range && Number.isFinite(range[0]) && Number.isFinite(range[1])) {
-      // Make sure that the given range is in increasing order (e.g., if our ending point is before our starting point)
-      // and has a non-zero width (e.g., if our starting and ending points are the same) since uPlot can handle neither.
-      // Note: like Plotly, we widen a zero-width range by 1 or 1ppm, whichever is bigger.
-
-      const min = Math.min(range[0], range[1]);
-      const max = Math.max(range[0], range[1]);
-
-      if (min === max) {
-        const delta = Math.max(1, 1e-6 * Math.abs(min));
-
-        return [min - delta, max + delta];
-      }
-
-      return [min, max];
-    }
-
-    // No range was given, so we use the range of our data.
-    // Note: uPlot's range of our data may not be finite, e.g., if a trace starts with a NaN value (uPlot then never
-    //       moves away from it) or has an infinite value. In that case, we determine the range of our data ourselves,
-    //       ignoring non-finite values.
-
-    let min = dataMin;
-    let max = dataMax;
-
-    if (min === null || max === null || !Number.isFinite(min) || !Number.isFinite(max)) {
-      const finiteRange = finiteDataRange(u, axisKey);
-
-      if (!finiteRange) {
-        // No (finite) data, so if some of our traces are hidden (e.g., the user hid all of them using our legend), then
-        // we keep our last autorange (so that the user sees the same view when showing some traces again). Otherwise,
-        // we use Plotly's default range.
-
-        const lastAutoRange = lastAutoRanges[axisKey];
-
-        if (lastAutoRange && u.series.some((series: uPlot.Series, index: number) => index > 0 && !series.show)) {
-          return [...lastAutoRange];
-        }
-
-        return axisKey === 'x' ? [...DEFAULT_X_RANGE] : [...DEFAULT_Y_RANGE];
-      }
-
-      [min, max] = finiteRange;
-    }
-
-    // Autorange our axis and keep track of it.
-    // Note: we keep track of it here rather than rely on uPlot's scales since our plot may get recreated (e.g., when the
-    //       theme changes) while all our traces are hidden.
-
-    const res = autoRange(u, axisKey, min, max);
-
-    lastAutoRanges[axisKey] = res;
-
-    return [...res];
+    return naturalRange(u, axisKey, dataMin, dataMax);
   };
 };
 
