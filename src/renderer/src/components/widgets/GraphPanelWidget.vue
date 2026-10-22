@@ -69,6 +69,20 @@
           v-html="data.yAxisTitle"
         />
       </template>
+      <svg v-if="hover && plotRect" class="absolute z-3 pointer-events-none"
+        :style="{ left: `${plotRect.left}px`, top: `${plotRect.top}px` }"
+        :width="plotRect.width"
+        :height="plotRect.height"
+      >
+        <line :x1="hover.guideX" :x2="hover.guideX" y1="0" :y2="plotRect.height"
+          :style="{ stroke: themeColors.hoverGuide }"
+          :stroke-width="hover.guideWidth"
+        />
+        <circle v-for="point in hover.points" :key="point.seriesIndex" :cx="point.x" :cy="point.y" :r="HOVER_POINT_RADIUS"
+          :style="{ fill: point.color, stroke: themeColors.background }"
+          stroke-width="2"
+        />
+      </svg>
       <div v-if="showLegend && legendItems.length" ref="legendRef" class="legend"
         :style="{
           left: `${legendLeft}px`,
@@ -213,6 +227,7 @@ const AXIS_DRAGGER_OFFSET = 0.5; // Like Plotly, the distance between our plotti
 const HIGHLIGHT_FADED_ALPHA = 0.2; // Opacity of our traces that are not highlighted when one of them is.
 const HOVER_DISTANCE = 20; // Like Plotly, the maximum distance between the mouse pointer and a point to hover it.
 const HOVER_LINE_RADIUS = 0.5; // Like Plotly, the "radius" of a point without a marker when hovering it.
+const HOVER_POINT_RADIUS = 4; // Radius of the highlighted points of our hover tooltip.
 const HOVER_TOOLTIP_OFFSET = 16; // Distance between the mouse pointer and our hover tooltip.
 const HOVER_TOOLTIP_MARGIN = 4; // Minimum distance between our hover tooltip and the edges of the window.
 const HOVER_TOOLTIP_MAX_ROWS = 12; // Maximum number of traces listed in our hover tooltip.
@@ -298,6 +313,7 @@ interface IThemeColors {
   zoomFill: string;
   zoomStroke: string;
   hiddenTrace: string;
+  hoverGuide: string;
 }
 
 const themeColors = vue.computed<IThemeColors>(() => {
@@ -311,7 +327,8 @@ const themeColors = vue.computed<IThemeColors>(() => {
     zeroLine: useLightMode ? 'var(--p-surface-300)' : 'var(--p-surface-600)',
     zoomFill: 'color-mix(in srgb, var(--p-primary-color) 12%, transparent)',
     zoomStroke: 'var(--p-primary-color)',
-    hiddenTrace: useLightMode ? 'var(--p-surface-300)' : 'var(--p-surface-600)'
+    hiddenTrace: useLightMode ? 'var(--p-surface-300)' : 'var(--p-surface-600)',
+    hoverGuide: 'color-mix(in srgb, var(--p-text-muted-color) 60%, transparent)'
   };
 });
 
@@ -451,7 +468,8 @@ const legendItems = vue.computed<ILegendItem[]>(() => {
     .sort((item1: ILegendItem, item2: ILegendItem) => item1.legendRank - item2.legendRank || item1.index - item2.index);
 });
 
-// Our plotting area, which we use to position our axis titles, axis draggers, zoom box, hover tooltip, and legend.
+// Our plotting area, which we use to position our axis titles, axis draggers, zoom box, hover guide line, hover points,
+// hover tooltip, and legend.
 
 interface IPlotRect {
   left: number;
@@ -3277,9 +3295,17 @@ const setPlotSize = (u: uPlot, width: number, height: number): void => {
 };
 
 // Hover functionality, i.e. a tooltip that lists the value of each of our visible traces at the X value that is under
-// the mouse pointer (like Plotly's 'x unified' hover mode).
+// the mouse pointer (like Plotly's 'x unified' hover mode), with a vertical guide line at that X value and the
+// corresponding points of our traces highlighted.
 // Note: a trace which X values are not sorted (e.g., a phase plot) doesn't have one value per X value, so we use its
 //       point that is closest to the mouse pointer instead (like Plotly's 'closest' hover mode).
+
+interface IHoverPoint {
+  seriesIndex: number;
+  x: number;
+  y: number;
+  color: string;
+}
 
 interface IHoverRow {
   seriesIndex: number;
@@ -3291,6 +3317,9 @@ interface IHoverRow {
 interface IHover {
   clientX: number;
   clientY: number;
+  guideX: number;
+  guideWidth: number;
+  points: IHoverPoint[];
   x: string;
   rows: IHoverRow[];
   otherRows: number;
@@ -3436,6 +3465,7 @@ const updateHover = (): void => {
 
   const cssArea: IPathArea = { ...area, ...rect, pxRatio: 1 };
   const xFactor = cssArea.width / (cssArea.xMax - cssArea.xMin);
+  const yFactor = cssArea.height / (cssArea.yMax - cssArea.yMin);
   const hoveredIndices = new Map<number, number>();
   let xValue = Number.NaN;
   let xDistance = Number.POSITIVE_INFINITY;
@@ -3475,17 +3505,26 @@ const updateHover = (): void => {
     return;
   }
 
-  // Build our hover tooltip, listing our traces in the order of our legend.
+  // Build our hover tooltip, listing our traces in the order of our legend, and highlight the hovered points that are
+  // within our plotting area.
 
+  const points: IHoverPoint[] = [];
   const rows: IHoverRow[] = [];
 
   for (const legendItem of legendItems.value) {
     const seriesIndex = legendItem.index + 1;
     const index = hoveredIndices.get(seriesIndex);
-    const yValues = seriesData(u, seriesIndex)?.[1];
+    const [xValues, yValues] = seriesData(u, seriesIndex) ?? [];
 
-    if (index === undefined || !yValues) {
+    if (index === undefined || !xValues || !yValues) {
       continue;
+    }
+
+    const x = ((xValues[index] as number) - cssArea.xMin) * xFactor;
+    const y = cssArea.height - ((yValues[index] as number) - cssArea.yMin) * yFactor;
+
+    if (x >= 0 && x <= cssArea.width && y >= 0 && y <= cssArea.height) {
+      points.push({ seriesIndex, x, y, color: legendItem.color });
     }
 
     rows.push({
@@ -3496,13 +3535,20 @@ const updateHover = (): void => {
     });
   }
 
-  // Show our hover tooltip at the mouse pointer (in CSS pixels).
+  // Show our hover tooltip at the mouse pointer (in CSS pixels) and our guide line at our X value.
+  // Note: like our grid and zero lines (see linesPath()), our guide line is snapped to whole device pixels and is a
+  //       whole number of device pixels wide (see lineWidth()), so that it is crisp whatever our pixel ratio.
 
   const mainDivRect = mainDiv.getBoundingClientRect();
+  const pxRatio = dependencies._uPlot.pxRatio as number;
+  const guideWidth = lineWidth(pxRatio);
 
   hover.value = {
     clientX: mainDivRect.left + rect.left + left,
     clientY: mainDivRect.top + rect.top + top,
+    guideX: (Math.round((xValue - cssArea.xMin) * xFactor * pxRatio) + 0.5 * (guideWidth % 2)) / pxRatio,
+    guideWidth: guideWidth / pxRatio,
+    points,
     x: formatHoverValue(xValue),
     rows: rows.slice(0, HOVER_TOOLTIP_MAX_ROWS),
     otherRows: Math.max(0, rows.length - HOVER_TOOLTIP_MAX_ROWS)
