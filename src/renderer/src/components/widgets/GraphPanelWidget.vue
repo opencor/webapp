@@ -35,6 +35,19 @@
           @dblclick="onDoubleClick(dragger.type)"
           @wheel="onWheel($event, dragger.type)"
         />
+        <div v-if="rangeEditor" ref="rangeEditorRef" class="range-editor"
+          contenteditable="true"
+          spellcheck="false"
+          :style="{
+            left: `${rangeEditor.left}px`,
+            top: `${rangeEditor.top}px`,
+            transform: rangeEditor.transform,
+            color: themeColors.text,
+            backgroundColor: themeColors.background
+          }"
+          @keydown="onRangeEditorKeyDown"
+          @blur="closeRangeEditor(true)"
+        >{{ rangeEditor.text }}</div>
         <div v-if="data.xAxisTitle" ref="xAxisTitleRef" class="axis-title"
           :style="{
             left: `${plotRect.left + 0.5 * plotRect.width}px`,
@@ -206,6 +219,7 @@ const MIN_DRAG = 8; // Like Plotly, the minimum distance that we must drag (alon
 const MIN_ZOOM = 20; // Like Plotly, the distance below which a drag is considered to be along one axis only.
 const ZOOM_FACTOR = 0.5; // Factor by which our ranges get scaled when zooming in (or its inverse when zooming out).
 const DRAGGER_SIZE = 20; // Like Plotly, the thickness of our axis (and corner) draggers.
+const AXIS_DRAGGER_OFFSET = 0.5; // Like Plotly, the distance between our plotting area and our axis draggers.
 const HOVER_FONT = 'Arial, sans-serif'; // Like Plotly, the font of our hover label.
 const HOVER_FONT_SIZE = 13; // Like Plotly, the font size of our hover label.
 const HOVER_LABEL_HEIGHT = 21; // Like Plotly, the height of our hover label (in CSS pixels).
@@ -265,6 +279,7 @@ const plotDivRef = vue.shallowRef<HTMLElement | null>(null);
 const legendRef = vue.shallowRef<HTMLElement | null>(null);
 const xAxisTitleRef = vue.shallowRef<HTMLElement | null>(null);
 const yAxisTitleRef = vue.shallowRef<HTMLElement | null>(null);
+const rangeEditorRef = vue.shallowRef<HTMLElement | null>(null);
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
@@ -1544,14 +1559,16 @@ const draggers = vue.computed<IDragger[]>(() => {
   const { left, top, width, height } = rect;
   const right = left + width;
   const bottom = top + height;
+  const xDraggerTop = bottom + AXIS_DRAGGER_OFFSET;
+  const yDraggerLeft = left - AXIS_DRAGGER_OFFSET - DRAGGER_SIZE;
 
   return [
-    { type: 'ew', left: left + 0.1 * width, top: bottom, width: 0.8 * width, height: DRAGGER_SIZE },
-    { type: 'w', left, top: bottom, width: 0.1 * width, height: DRAGGER_SIZE },
-    { type: 'e', left: left + 0.9 * width, top: bottom, width: 0.1 * width, height: DRAGGER_SIZE },
-    { type: 'ns', left: left - DRAGGER_SIZE, top: top + 0.1 * height, width: DRAGGER_SIZE, height: 0.8 * height },
-    { type: 's', left: left - DRAGGER_SIZE, top: top + 0.9 * height, width: DRAGGER_SIZE, height: 0.1 * height },
-    { type: 'n', left: left - DRAGGER_SIZE, top, width: DRAGGER_SIZE, height: 0.1 * height },
+    { type: 'ew', left: left + 0.1 * width, top: xDraggerTop, width: 0.8 * width, height: DRAGGER_SIZE },
+    { type: 'w', left, top: xDraggerTop, width: 0.1 * width, height: DRAGGER_SIZE },
+    { type: 'e', left: left + 0.9 * width, top: xDraggerTop, width: 0.1 * width, height: DRAGGER_SIZE },
+    { type: 'ns', left: yDraggerLeft, top: top + 0.1 * height, width: DRAGGER_SIZE, height: 0.8 * height },
+    { type: 's', left: yDraggerLeft, top: top + 0.9 * height, width: DRAGGER_SIZE, height: 0.1 * height },
+    { type: 'n', left: yDraggerLeft, top, width: DRAGGER_SIZE, height: 0.1 * height },
     { type: 'sw', left: left - DRAGGER_SIZE, top: bottom, width: DRAGGER_SIZE, height: DRAGGER_SIZE },
     { type: 'se', left: right, top: bottom, width: DRAGGER_SIZE, height: DRAGGER_SIZE }
   ];
@@ -1816,9 +1833,19 @@ const onDragMove = (event: MouseEvent): void => {
     dragCursor.value = currentDrag.type === 'nsew' ? 'crosshair' : `${currentDrag.type}-resize`;
   }
 
-  // If we are dragging an axis (or a corner), then pan/move our axes, coalescing our pans/moves into one per frame.
+  // If we are dragging an axis (or a corner), then pan/move our axes, coalescing our pans/moves into one per frame, but
+  // only once our mouse has moved far enough from where our drag started (like Plotly, which otherwise considers that
+  // we are clicking, see onDragEnd()).
 
   if (currentDrag.type !== 'nsew') {
+    // Make sure that we have moved far enough from where our drag started.
+
+    if (!dragCursor.value) {
+      return;
+    }
+
+    // Keep track of how far we have dragged.
+
     currentDrag.dx = position.x - currentDrag.startX;
     currentDrag.dy = position.y - currentDrag.startY;
 
@@ -1887,9 +1914,11 @@ const onDragEnd = (event: MouseEvent): void => {
   }
 
   // Stop dragging.
-  // Note: we must keep track of our drag before stopping it since stopping it resets it.
+  // Note: we must keep track of our drag (and of whether we actually dragged, see onDragMove()) before stopping it
+  //       since stopping it resets it.
 
   const currentDrag = drag;
+  const dragged = !!dragCursor.value;
 
   stopDrag();
 
@@ -1901,10 +1930,16 @@ const onDragEnd = (event: MouseEvent): void => {
     return;
   }
 
-  // If we were dragging an axis (or a corner), then make sure that our axes reflect where we stopped dragging.
+  // If we were dragging an axis (or a corner), then make sure that our axes reflect where we stopped dragging or, like
+  // Plotly, open our range editor if we clicked one end of an axis (but not if it is the second click of a double-click,
+  // see onDoubleClick()).
 
   if (currentDrag.type !== 'nsew') {
-    applyDrag(currentDrag);
+    if (dragged) {
+      applyDrag(currentDrag);
+    } else if (isAxisEnd(currentDrag.type) && event.detail <= 1) {
+      openRangeEditor(currentDrag.type);
+    }
 
     return;
   }
@@ -1998,11 +2033,164 @@ const onDoubleClick = (type: DragType): void => {
   // our drag should have an effect).
   // Note: like Plotly, double-clicking one end of an axis does nothing.
 
-  if (drag || type === 'w' || type === 'e' || type === 'n' || type === 's') {
+  if (drag || isAxisEnd(type)) {
     return;
   }
 
   resetZoom(draggedAxes(type));
+};
+
+// Range editor, like Plotly's (see its dragbox.js and svgTextUtils.makeEditable()), i.e. a box that opens when one end
+// of an axis is clicked and in which the value of that end can be edited, with Enter (or clicking elsewhere) applying
+// the new value and Escape cancelling it.
+
+type AxisEnd = 'w' | 'e' | 'n' | 's';
+
+interface IRangeEditor {
+  axisKey: AxisKey;
+  end: 0 | 1;
+  text: string;
+  left: number;
+  top: number;
+  transform: string | undefined;
+}
+
+const rangeEditor = vue.shallowRef<IRangeEditor | null>(null);
+
+const isAxisEnd = (type: DragType): type is AxisEnd => {
+  // Return whether the given drag type is one end of an axis.
+
+  return type === 'w' || type === 'e' || type === 'n' || type === 's';
+};
+
+const rangeEndText = (range: Range, end: 0 | 1): string => {
+  // Like Plotly (see its getEndText()), return the given end of the given range with four more significant digits than
+  // needed to tell it apart from the other end of the range.
+  // Note: like Plotly (and d3-format, which it uses), we use toPrecision() with a precision between 1 and 21, and we
+  //       return the value as is if we can't determine a precision (e.g., if it is zero).
+
+  const value = range[end];
+  const precision =
+    Math.floor(Math.log10(Math.abs(value))) - Math.floor(Math.log10(Math.abs(value - range[1 - end]))) + 4;
+
+  return Number.isFinite(precision) ? value.toPrecision(Math.min(Math.max(precision, 1), 21)) : String(value);
+};
+
+const rangeEndValue = (text: string): number | undefined => {
+  // Like Plotly (see its cleanNumber()), return the value of the given text, ignoring some characters (e.g., leading
+  // and trailing spaces, and thousands separators), if it is a valid number.
+
+  const cleanText = text.replace(/^['"%,$#\s]+|[, ]|['"%,$#\s]+$/g, '');
+  const value = Number(cleanText);
+
+  return cleanText && Number.isFinite(value) ? value : undefined;
+};
+
+const openRangeEditor = (type: AxisEnd): void => {
+  // Make sure that we have a dragger for the given axis end and a range for its axis.
+
+  const dragger = draggers.value.find((someDragger: IDragger) => someDragger.type === type);
+  const axisKey: AxisKey = type === 'w' || type === 'e' ? 'x' : 'y';
+  const range = currentRange(axisKey);
+
+  if (!dragger || !range) {
+    return;
+  }
+
+  // Open our range editor, which, like Plotly's, is aligned with the right (left) edge of our X axis end dragger and
+  // vertically centred on it, or with the top (bottom) edge of our Y axis end dragger and aligned with its left edge.
+
+  const end = type === 'w' || type === 's' ? 0 : 1;
+
+  rangeEditor.value = {
+    axisKey,
+    end,
+    text: rangeEndText(range, end),
+    left: type === 'e' ? dragger.left + dragger.width : dragger.left,
+    top:
+      axisKey === 'x' ? dragger.top + 0.5 * dragger.height : type === 's' ? dragger.top + dragger.height : dragger.top,
+    transform:
+      type === 'e'
+        ? 'translate(-100%, -50%)'
+        : type === 'w'
+          ? 'translateY(-50%)'
+          : type === 's'
+            ? 'translateY(-100%)'
+            : undefined
+  };
+
+  // Select the text of our range editor once it has been rendered, and close it (applying its value) if the mouse is
+  // pressed anywhere else.
+  // Note: we listen to mouse presses (in the capture phase) rather than rely on our range editor losing focus since
+  //       some of our mouse presses don't move the focus (e.g., see onDragStart()).
+
+  vue.nextTick().then(() => {
+    const element = rangeEditorRef.value;
+
+    if (element) {
+      window.getSelection()?.selectAllChildren(element);
+
+      element.focus();
+    }
+  });
+
+  window.addEventListener('mousedown', onRangeEditorMouseDown, true);
+};
+
+const closeRangeEditor = (apply: boolean): void => {
+  // Close our range editor, if it is open, applying its value if requested and valid.
+  // Note: unlike Plotly, which would reverse our axis, we ignore a new value that would result in a reversed (or empty)
+  //       range (e.g., if the new value of the right end of our X axis is to the left of its left end, see zoomTo()).
+
+  // Make sure that our range editor is open.
+
+  const editor = rangeEditor.value;
+
+  if (!editor) {
+    return;
+  }
+
+  // Determine the value of our range editor, if it is valid.
+
+  const value = rangeEndValue(rangeEditorRef.value?.textContent ?? '');
+
+  rangeEditor.value = null;
+
+  window.removeEventListener('mousedown', onRangeEditorMouseDown, true);
+
+  const range = currentRange(editor.axisKey);
+
+  if (!apply || value === undefined || !range) {
+    return;
+  }
+
+  // Zoom into the new range, which is the same as the current one except for the end that was edited.
+
+  const newRange: Range = [range[0], range[1]];
+
+  newRange[editor.end] = value;
+
+  zoomTo({ [editor.axisKey]: newRange });
+};
+
+const onRangeEditorKeyDown = (event: KeyboardEvent): void => {
+  // Apply the value of our range editor when Enter is pressed and cancel it when Escape is pressed.
+  // Note: we stop the propagation of those keys so that they don't trigger anything else (e.g., closing a dialog).
+
+  if (event.key === 'Enter' || event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+
+    closeRangeEditor(event.key === 'Enter');
+  }
+};
+
+const onRangeEditorMouseDown = (event: MouseEvent): void => {
+  // Close our range editor (applying its value) if the mouse is pressed outside of it.
+
+  if (!rangeEditorRef.value?.contains(event.target as Node)) {
+    closeRangeEditor(true);
+  }
 };
 
 const applyWheelZoom = (): void => {
@@ -3758,6 +3946,8 @@ vue.onBeforeUnmount(() => {
 
   stopDrag();
 
+  closeRangeEditor(false);
+
   // Destroy our plot, if any.
 
   plot?.destroy();
@@ -3877,6 +4067,25 @@ vue.watch(
     to {
       opacity: 1;
     }
+  }
+
+  /**
+   * Note: we use the font size that Plotly means to use for its range editor, i.e. 12px (Plotly gets its unit wrong, so
+   *       it actually uses the font size of the page, i.e. 16px), with the same line height (relative to its font size)
+   *       as Plotly's range editor.
+   */
+
+  .range-editor {
+    position: absolute;
+    z-index: 4;
+    box-sizing: border-box;
+    margin: -0.5px 0 0 -1px;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: nowrap;
+    outline: none;
   }
 
   .hover-name {
