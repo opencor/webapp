@@ -215,7 +215,7 @@ const MIN_NB_OF_POINTS_WITHOUT_MARKERS = 20; // Like in Plotly, traces with fewe
 const AUTORANGE_PADDING = 0.05; // As a fraction of the length of an axis.
 const DEFAULT_X_RANGE: [number, number] = [-1, 6]; // Like Plotly, the default X range.
 const DEFAULT_Y_RANGE: [number, number] = [-1, 4]; // Like Plotly, the default Y range.
-const MIN_DRAG = 8; // Like Plotly, the minimum distance that we must drag (along an axis) to zoom (along that axis).
+const MIN_DRAG = 8; // Like Plotly, the minimum distance that we must drag for it not to be a click (e.g., to zoom).
 const MIN_ZOOM = 20; // Like Plotly, the distance below which a drag is considered to be along one axis only.
 const ZOOM_FACTOR = 0.5; // Factor by which our ranges get scaled when zooming in (or its inverse when zooming out).
 const DRAGGER_SIZE = 20; // Like Plotly, the thickness of our axis (and corner) draggers.
@@ -294,11 +294,11 @@ let marginsUpdatePending = false;
 let trackedMargins: IGraphPanelMargins | undefined;
 
 // Our theme, which uses PrimeVue's CSS variables, so that it is consistent with the rest of OpenCOR.
-// Note: a canvas doesn't understand CSS variables, so we resolve them (see colors.cssColor()) for what uPlot draws on its
-//       canvas (i.e. our tick labels, grid lines, and zero lines). This is fine since we resolve them whenever our plot
-//       gets created (which it does whenever our theme changes, see updatePlot()) or drawn, and PrimeVue's CSS variables
-//       get updated as soon as our theme changes (see useTheme() in vueCommon.ts). We also resolve them for our exports
-//       (see svgDocument()) since our CSS variables are not available to them.
+// Note: a canvas doesn't understand CSS variables, so we resolve them (see colors.cssColor()) for what gets drawn on
+//       uPlot's canvas (i.e. our grid lines, zero lines, and tick labels). This is fine since we resolve them whenever
+//       our plot gets created (which it does whenever our theme changes, see updatePlot()) or drawn, and PrimeVue's CSS
+//       variables get updated as soon as our theme changes (see useTheme() in vueCommon.ts). We also resolve them for
+//       our exports (see svgDocument()) since our CSS variables are not available to them.
 
 interface IThemeColors {
   background: string;
@@ -785,9 +785,7 @@ const svgHtmlText = (element: HTMLElement | null, origin: DOMRect, vertical: boo
 
     // Add an SVG text element for our text node.
 
-    const ascent =
-      fontMetrics(`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`)
-        ?.fontBoundingBoxAscent ?? 0;
+    const ascent = fontAscent(`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`);
     const x = vertical ? rect.left - origin.left + ascent : rect.left - origin.left;
     const y = vertical ? rect.bottom - origin.top : rect.top - origin.top + ascent;
 
@@ -913,8 +911,8 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
     `<rect width="${scaledWidth}" height="${scaledHeight}" fill="${colors.cssColor(themeColors.value.background)}"/>`
   ];
 
-  // Our minor and major grid lines, and our zero lines, which uPlot draws in that order (see drawMinorGrid() and
-  // drawZeroLines()).
+  // Our minor and major grid lines, and our zero lines, which get drawn in that order on uPlot's canvas (see
+  // drawMinorGrid() and drawZeroLines()).
   // Note: uPlot draws all our major grid lines, including one that is at the right (or bottom) edge of our plotting
   //       area, i.e. that is just outside of it once aligned (if our line width is an odd number of pixels).
 
@@ -1348,8 +1346,9 @@ let zoomRanges: Partial<Record<AxisKey, Range>> = {};
 let zoomTitles: string | undefined;
 // Note: we keep track of the user's zoom ranges, so that they are kept when our data gets updated (e.g., while a
 //       simulation is running). They get reset when the user resets the zoom (using our context menu or by
-//       double-clicking on our plotting area or on an axis, in which case only the zoom along that axis gets reset) or
-//       when our axis titles change (i.e. when we are plotting something else, see updatePlot()).
+//       double-clicking on our plotting area, on a corner, or on the middle of an axis, in which case only the zoom
+//       along that axis gets reset) or when our axis titles change (i.e. when we are plotting something else, see
+//       updatePlot()).
 
 const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
   return (u: uPlot, dataMin: number | null, dataMax: number | null): Range => {
@@ -1527,8 +1526,10 @@ const resetZoom = (axisKeys: AxisKey[] = ['x', 'y']): void => {
 //    of them), use the mouse wheel to zoom around the mouse pointer, and double-click to reset the zoom;
 //  - the middle (80%) of our axes ('ew' and 'ns'): drag to pan along that axis;
 //  - the ends (10%) of our axes ('w', 'e', 'n', and 's') and the bottom corners of our plotting area ('sw' and 'se'):
-//    drag to move the corresponding end(s) of our axes; and
-//  - our axes and corners: use the mouse wheel to zoom and double-click to reset the zoom along the corresponding axes.
+//    drag to move the corresponding end(s) of our axes, and click one end of an axis to edit its value (see
+//    openRangeEditor()); and
+//  - our axes: use the mouse wheel to zoom along that axis, while double-clicking the middle of an axis (or a corner)
+//    resets the zoom along the corresponding axes.
 // Note #1: unlike Plotly, we don't have top corners (i.e. 'nw' and 'ne') since they would be above our plotting area,
 //          i.e. outside of our container since we don't have a top margin (and having one, just for them, would waste
 //          some valuable vertical space, especially when we have several plots stacked on top of each other). So, they
@@ -2695,30 +2696,20 @@ const textWidth = (text: string, font: string): number => {
   return measureContext.measureText(text).width;
 };
 
-const fontMetrics = (font: string, baseline: CanvasTextBaseline = 'alphabetic'): TextMetrics | undefined => {
-  // Make sure that we have a canvas context to measure our text with.
+const fontAscent = (font: string): number => {
+  // Return the ascent (in CSS pixels) of the given font, i.e. the distance between the top of its content area and its
+  // alphabetic baseline.
+  // Note: the ascent of a font doesn't depend on the text that we measure.
 
   measureContext ??= document.createElement('canvas').getContext('2d');
 
   if (!measureContext) {
-    return undefined;
+    return 0;
   }
 
-  // Set the font and text baseline of our context since the metrics that we use (e.g., alphabeticBaseline) are
-  // relative to our text baseline.
-
   measureContext.font = font;
-  measureContext.textBaseline = baseline;
 
-  // Measure some text and restore the default text baseline of our context, which we share with textWidth().
-  // Note: the metrics that we use (i.e. fontBoundingBoxAscent and alphabeticBaseline) depend on our font, not on the
-  //       text that we measure.
-
-  const res = measureContext.measureText('0');
-
-  measureContext.textBaseline = 'alphabetic';
-
-  return res;
+  return measureContext.measureText('0').fontBoundingBoxAscent;
 };
 
 // Our Y axis size.
@@ -3496,8 +3487,9 @@ const updateHover = (): void => {
     // looking at.
 
     for (let i = start; i < end; ++i) {
-      // Skip our point if it is further away horizontally than the closest point so far (or than HOVER_DISTANCE pixels
-      // if we haven't found one yet), in which case it can't be closer to the mouse pointer.
+      // Skip our point if its horizontal distance (less its radius) is greater than the distance of the closest point
+      // so far (or than HOVER_DISTANCE pixels if we haven't found one yet), in which case it can't be as close to the
+      // mouse pointer.
       // Note: we negate our comparison so that a point with a NaN X value gets skipped.
 
       const dx = ((xValues[i] as number) - xMin) * xFactor - left;
