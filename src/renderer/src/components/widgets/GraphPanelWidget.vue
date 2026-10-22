@@ -3415,7 +3415,13 @@ const createPlot = (width: number, height: number): void => {
         drag: {
           x: false,
           y: false,
-          setScale: false
+          setScale: false,
+          // Note: uPlot stops the propagation of a click on our plotting area if it thinks that it ends a drag, which
+          //       it determines using the position of the last mouse press that it handled. However, we handle mouse
+          //       presses ourselves, so uPlot would think that most clicks end a drag and stop their propagation
+          //       (e.g., preventing our context menu from being hidden when clicking on our plotting area), hence we
+          //       let them propagate.
+          click: () => {}
         },
         bind: {
           mousedown: () => null,
