@@ -180,7 +180,8 @@ const LEGEND_FONT_SIZE = 12; // Like Plotly, the font size of our legend items.
 const LEGEND_LEFT_MARGIN = 8; // Margin between our plotting area and our legend.
 const LEGEND_RIGHT_MARGIN = 8; // Margin between our legend (or last X tick label) and the right edge of our container.
 const DEFAULT_LEGEND_RANK = 1000; // Like Plotly's default legend rank.
-const TICK_LABEL_GAP = 1; // Gap between our plotting area and our tick labels.
+const X_TICK_LABEL_BASELINE = TICK_FONT_SIZE + 0.5; // Like Plotly, the distance to the baseline of our X tick labels.
+const Y_TICK_LABEL_GAP = 1; // Gap between our plotting area and our Y tick labels.
 const TICK_LABEL_HALF_HEIGHT = 6; // Used to hide a Y tick label that would (partly) be above our container.
 const X_AXIS_SIZE_WITH_TITLE = 18; // Size of our X axis (without its title) if it has a title.
 const X_AXIS_SIZE_WITHOUT_TITLE = 20; // Size of our X axis if it doesn't have a title.
@@ -956,13 +957,14 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
 
   res.push(`<g transform="scale(${scale})">`);
 
-  // Our tick labels, which uPlot draws below our plotting area (with their top at TICK_LABEL_GAP pixels from it) for
+  // Our tick labels, which uPlot draws below our plotting area (with their top at xTickLabelGap() pixels from it) for
   // our X axis and to the left of our plotting area (with their middle at the level of their tick) for our Y axis.
   // Note: like uPlot, we position our tick labels at whole (scaled) pixels.
 
   const xTickLabelOffset = -(fontMetrics(tickFont, 'top')?.alphabeticBaseline ?? 0);
   const yTickLabelOffset = -(fontMetrics(tickFont, 'middle')?.alphabeticBaseline ?? 0);
-  const tickLabelGap = Math.round(scale * TICK_LABEL_GAP);
+  const scaledXTickLabelGap = Math.round(scale * xTickLabelGap());
+  const scaledYTickLabelGap = Math.round(scale * Y_TICK_LABEL_GAP);
   const tickLabels: string[] = [];
 
   xSplits.forEach((split: number, index: number) => {
@@ -970,7 +972,7 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
 
     if (value) {
       tickLabels.push(
-        `<text x="${svgNumber(Math.round(left + (split - area.xMin) * xFactor) / scale)}" y="${svgNumber((Math.round(bottom) + tickLabelGap) / scale + xTickLabelOffset)}" text-anchor="middle">${escapeXml(String(value))}</text>`
+        `<text x="${svgNumber(Math.round(left + (split - area.xMin) * xFactor) / scale)}" y="${svgNumber((Math.round(bottom) + scaledXTickLabelGap) / scale + xTickLabelOffset)}" text-anchor="middle">${escapeXml(String(value))}</text>`
       );
     }
   });
@@ -980,7 +982,7 @@ const svgDocument = (scale: number = 1): ISvgDocument => {
 
     if (value) {
       tickLabels.push(
-        `<text x="${svgNumber((Math.round(left) - tickLabelGap) / scale)}" y="${svgNumber(Math.round(bottom - (split - area.yMin) * yFactor) / scale + yTickLabelOffset)}" text-anchor="end">${escapeXml(String(value))}</text>`
+        `<text x="${svgNumber((Math.round(left) - scaledYTickLabelGap) / scale)}" y="${svgNumber(Math.round(bottom - (split - area.yMin) * yFactor) / scale + yTickLabelOffset)}" text-anchor="end">${escapeXml(String(value))}</text>`
       );
     }
   });
@@ -2429,6 +2431,14 @@ const textWidth = (text: string, font: string): number => {
   return measureContext.measureText(text).width;
 };
 
+const xTickLabelGap = (): number => {
+  // Return the gap between our plotting area and our X tick labels, which uPlot draws with a "top" baseline, so that,
+  // like Plotly, their alphabetic baseline is X_TICK_LABEL_BASELINE pixels below our plotting area.
+  // Note: alphabeticBaseline is the (negative) distance between the top and alphabetic baselines.
+
+  return X_TICK_LABEL_BASELINE + (fontMetrics(tickFont, 'top')?.alphabeticBaseline ?? 0);
+};
+
 const fontMetrics = (font: string, baseline: CanvasTextBaseline = 'alphabetic'): TextMetrics | undefined => {
   // Make sure that we have a canvas context to measure our text with.
 
@@ -3383,7 +3393,6 @@ const createPlot = (width: number, height: number): void => {
     font: tickFont,
     labelFont: `${TITLE_FONT_SIZE}px ${FONT_FAMILY}`,
     labelGap: 0,
-    gap: TICK_LABEL_GAP,
     space: 1,
     ticks: {
       show: false
@@ -3447,6 +3456,7 @@ const createPlot = (width: number, height: number): void => {
           scale: 'x',
           side: 2,
           size: props.data.xAxisTitle ? X_AXIS_SIZE_WITH_TITLE : X_AXIS_SIZE_WITHOUT_TITLE,
+          gap: xTickLabelGap(),
           label: props.data.xAxisTitle ? '' : undefined,
           labelSize: X_AXIS_TITLE_SIZE,
           splits: axisSplits('x'),
@@ -3457,6 +3467,7 @@ const createPlot = (width: number, height: number): void => {
           scale: 'y',
           side: 3,
           size: yAxisSize,
+          gap: Y_TICK_LABEL_GAP,
           label: props.data.yAxisTitle ? '' : undefined,
           labelSize: Y_AXIS_TITLE_SIZE,
           labelGap: Y_AXIS_TITLE_GAP,
