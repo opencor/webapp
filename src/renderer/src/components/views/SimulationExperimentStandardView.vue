@@ -327,7 +327,7 @@ const releaseResources = async (): Promise<void> => {
 // A helper function to scroll our console to the bottom.
 
 const scrollConsoleToBottom = (): void => {
-  vue.nextTick(() => {
+  void vue.nextTick().then(() => {
     editorRef.value?.scrollTo({ top: editorRef.value.scrollHeight });
   });
 };

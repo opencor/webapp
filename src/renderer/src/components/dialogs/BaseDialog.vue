@@ -95,7 +95,7 @@ const onShow = () => {
 
   incrementDialogs();
 
-  vue.nextTick(() => {
+  void vue.nextTick().then(() => {
     if (!shown) {
       return;
     }
@@ -126,7 +126,7 @@ const onHide = () => {
 
   emit('cancel');
 
-  vue.nextTick(() => {
+  void vue.nextTick().then(() => {
     disconnectMutationObserver();
   });
 };

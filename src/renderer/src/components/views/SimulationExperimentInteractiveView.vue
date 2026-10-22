@@ -538,7 +538,7 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
     }
 
     const runColorIndex = paletteColors.indexOf(run.color);
-    const baseColorIndex = runColorIndex >= 0 ? runColorIndex : 0;
+    const baseColorIndex = Math.max(0, runColorIndex);
     const data = run.isLiveRun ? liveDataVal[plotIndex] : run.data[plotIndex];
     const dataTraces = data?.traces;
 

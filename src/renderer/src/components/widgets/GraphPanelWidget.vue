@@ -2125,7 +2125,7 @@ const openRangeEditor = (type: AxisEnd): void => {
   // Note: we listen to mouse presses (in the capture phase) rather than rely on our range editor losing focus since
   //       some of our mouse presses don't move the focus (e.g., see onDragStart()).
 
-  vue.nextTick().then(() => {
+  void vue.nextTick().then(() => {
     const element = rangeEditorRef.value;
 
     if (element) {
@@ -3967,7 +3967,7 @@ vue.onUnmounted(() => {
 vue.watch(
   () => props.data,
   () => {
-    vue.nextTick(() => {
+    void vue.nextTick().then(() => {
       updatePlot();
     });
   },
@@ -3985,7 +3985,7 @@ vue.watch(
       return;
     }
 
-    vue.nextTick(() => {
+    void vue.nextTick().then(() => {
       plot?.setSize({ width: plot.width, height: plot.height });
 
       // If we are not given shared margins anymore, then emit our margins again (since they may be needed to compute
@@ -4003,7 +4003,7 @@ vue.watch(
 vue.watch(
   () => props.showLegend,
   () => {
-    vue.nextTick(() => {
+    void vue.nextTick().then(() => {
       syncLegendWidth();
     });
   }
@@ -4014,7 +4014,7 @@ vue.watch(
 vue.watch(
   () => theme.useLightMode(),
   () => {
-    vue.nextTick(() => {
+    void vue.nextTick().then(() => {
       updatePlot();
     });
   }

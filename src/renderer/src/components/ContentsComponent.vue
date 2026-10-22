@@ -309,7 +309,7 @@ const closeFile = async (filePath: string): Promise<void> => {
 
   // Release the file once its views have been unmounted (and have therefore released their own resources).
 
-  vue.nextTick(() => {
+  void vue.nextTick().then(() => {
     fileTab.file.release();
   });
 
@@ -621,7 +621,7 @@ vue.watch(activeFile, (newActiveFile: string) => {
   if (!dragState.value) {
     // Make sure that the selected file tab is visible in the file tab bar.
 
-    vue.nextTick(() => {
+    void vue.nextTick().then(() => {
       const fileTabBar = fileTabBarRef.value;
       const activeFileTab = fileTabRefs[newActiveFile];
 

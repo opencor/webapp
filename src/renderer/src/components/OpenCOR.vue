@@ -879,7 +879,7 @@ const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePa
   electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
 
   if (props.omex) {
-    vue.nextTick(() => {
+    void vue.nextTick().then(() => {
       issues.value.push({ type: locApi.EIssueType.ERROR, description: issueMessage });
     });
   } else {
@@ -1426,7 +1426,7 @@ vue.onMounted(() => {
     return;
   }
 
-  void vue.nextTick(() => {
+  void vue.nextTick().then(() => {
     const mainMenuElement = (mainMenuRef.value as unknown as { $el: HTMLElement })?.$el;
     const safeBlockUiElement = (safeBlockUiRef.value as unknown as { $el: HTMLElement })?.$el;
 
