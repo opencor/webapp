@@ -12,11 +12,11 @@ export interface IOpenCORExpose {
   untrackAllSimulationData: () => void;
 }
 
-export interface IOpenCOREmits extends /* @vue-ignore */ Record<string, unknown[]> {
+export type IOpenCOREmits = {
   externalData: [IOpenCORExternalDataEvent];
   file: [IOpenCORFileEvent];
   simulationData: [IOpenCORSimulationDataEvent];
-}
+};
 
 export interface IOpenCORSimulationDataValue {
   data: Float64Array;
