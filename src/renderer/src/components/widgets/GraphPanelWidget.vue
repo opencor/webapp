@@ -109,7 +109,7 @@
           @click="onLegendClick($event, legendItem.index)"
           @dblclick="onLegendDoubleClick(legendItem.index)"
         >
-          <span class="legend-swatch" :style="{ backgroundColor: legendItem.color }">
+          <span class="legend-swatch" :style="{ backgroundColor: legendItem.visible ? legendItem.color : themeColors.hiddenTrace }">
             <span v-if="legendItem.markers" class="legend-marker" />
           </span>
           <span v-html="legendItem.name" />
@@ -308,6 +308,7 @@ interface IThemeColors {
   zeroLine: string;
   zoomFill: string;
   zoomStroke: string;
+  hiddenTrace: string;
 }
 
 const themeColors = vue.computed<IThemeColors>(() => {
@@ -320,7 +321,8 @@ const themeColors = vue.computed<IThemeColors>(() => {
     grid: useLightMode ? 'var(--p-surface-200)' : 'var(--p-surface-800)',
     zeroLine: useLightMode ? 'var(--p-surface-300)' : 'var(--p-surface-600)',
     zoomFill: 'color-mix(in srgb, var(--p-primary-color) 12%, transparent)',
-    zoomStroke: 'var(--p-primary-color)'
+    zoomStroke: 'var(--p-primary-color)',
+    hiddenTrace: useLightMode ? 'var(--p-surface-300)' : 'var(--p-surface-600)'
   };
 });
 
@@ -821,6 +823,11 @@ const svgLegend = (origin: DOMRect, scale: number): string => {
     '<g clip-path="url(#legend)">'
   ];
 
+  // Like the browser, we snap the swatch and marker of our legend items to whole (scaled) pixels, so that they are crisp
+  // and where the browser renders them.
+
+  const snap = (value: number): number => Math.round(scale * value) / scale;
+
   Array.from(legend.children).forEach((legendItemElement: Element, index: number) => {
     // Make sure that we have a legend item to export.
 
@@ -830,31 +837,38 @@ const svgLegend = (origin: DOMRect, scale: number): string => {
       return;
     }
 
-    res.push(legendItem.visible ? '<g>' : '<g opacity="0.5">');
+    const opacity = getComputedStyle(legendItemElement).opacity;
+
+    res.push(opacity === '1' ? '<g>' : `<g opacity="${escapeXml(opacity)}">`);
 
     // Add the swatch of our legend item, if it has one.
 
-    const swatch = legendItemElement.querySelector('.legend-swatch')?.getBoundingClientRect();
+    const swatchElement = legendItemElement.querySelector('.legend-swatch');
+    const swatch = swatchElement?.getBoundingClientRect();
+    const swatchStyle = swatchElement ? getComputedStyle(swatchElement) : undefined;
 
-    if (swatch) {
-      // Note: like the browser, we snap our swatch to whole (scaled) pixels, so that it is crisp.
-
-      const snap = (value: number): number => Math.round(scale * value) / scale;
+    if (swatch && swatchStyle) {
       const swatchLeft = snap(swatch.left - origin.left);
       const swatchTop = snap(swatch.top - origin.top);
 
       res.push(
-        `<rect x="${svgNumber(swatchLeft)}" y="${svgNumber(swatchTop)}" width="${svgNumber(snap(swatch.right - origin.left) - swatchLeft)}" height="${svgNumber(snap(swatch.bottom - origin.top) - swatchTop)}" fill="${escapeXml(legendItem.color)}"/>`
+        `<rect x="${svgNumber(swatchLeft)}" y="${svgNumber(swatchTop)}" width="${svgNumber(snap(swatch.right - origin.left) - swatchLeft)}" height="${svgNumber(snap(swatch.bottom - origin.top) - swatchTop)}" rx="${svgNumber(Number.parseFloat(swatchStyle.borderRadius) || 0)}" fill="${escapeXml(swatchStyle.backgroundColor)}"/>`
       );
     }
 
     // Add the marker of our legend item, if it has one.
 
-    const marker = legendItemElement.querySelector('.legend-marker')?.getBoundingClientRect();
+    const markerElement = legendItemElement.querySelector('.legend-marker');
+    const marker = markerElement?.getBoundingClientRect();
 
-    if (marker) {
+    if (markerElement && marker) {
+      const markerLeft = snap(marker.left - origin.left);
+      const markerTop = snap(marker.top - origin.top);
+      const markerRight = snap(marker.right - origin.left);
+      const markerBottom = snap(marker.bottom - origin.top);
+
       res.push(
-        `<circle cx="${svgNumber(marker.left + 0.5 * marker.width - origin.left)}" cy="${svgNumber(marker.top + 0.5 * marker.height - origin.top)}" r="${svgNumber(0.5 * marker.width)}" fill="${escapeXml(legendItem.color)}"/>`
+        `<circle cx="${svgNumber(0.5 * (markerLeft + markerRight))}" cy="${svgNumber(0.5 * (markerTop + markerBottom))}" r="${svgNumber(0.5 * (markerRight - markerLeft))}" fill="${escapeXml(getComputedStyle(markerElement).backgroundColor)}"/>`
       );
     }
 
@@ -4060,23 +4074,30 @@ vue.watch(
 
   .legend-item {
     position: relative;
-    min-height: 19px;
-    padding: 0 5px 0 40px;
-    line-height: 19px;
+    min-height: 20px;
+    margin: 0 4px;
+    padding: 0 6px 0 30px;
+    border-radius: var(--p-border-radius-sm);
+    line-height: 20px;
     white-space: nowrap;
     cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .legend-item:hover {
+    background-color: var(--p-content-hover-background);
   }
 
   .legend-item-hidden {
-    opacity: 0.5;
+    color: var(--p-text-muted-color);
   }
 
   .legend-marker {
     position: absolute;
     top: -2px;
-    left: 12px;
-    width: 6px;
-    height: 6px;
+    left: 5.5px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background-color: inherit;
   }
@@ -4084,9 +4105,10 @@ vue.watch(
   .legend-swatch {
     position: absolute;
     top: 8.5px;
-    left: 5px;
-    width: 30px;
-    height: 2px;
+    left: 6px;
+    width: 18px;
+    height: 3px;
+    border-radius: 1.5px;
   }
 
   :deep(.u-over) {
