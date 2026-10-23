@@ -4358,25 +4358,6 @@ vue.watch(
   }
 
   /**
-   * Note: we use the font size that Plotly means to use for its range editor, i.e. 12px (Plotly gets its unit wrong, so
-   *       it actually uses the font size of the page, i.e. 16px), with the same line height (relative to its font size)
-   *       as Plotly's range editor.
-   */
-
-  .range-editor {
-    position: absolute;
-    z-index: 4;
-    box-sizing: border-box;
-    margin: -0.5px 0 0 -1px;
-    padding: 0;
-    font-family: Arial, sans-serif;
-    font-size: 12px;
-    line-height: 1.5;
-    white-space: nowrap;
-    outline: none;
-  }
-
-  /**
    * Note: our hover tooltip is shown above our panels (so that it doesn't get clipped by short panels), but below
    *       PrimeVue's overlays (e.g., our context menu), which z-index is at least 1000.
    */
@@ -4405,6 +4386,21 @@ vue.watch(
     color: var(--p-text-muted-color);
   }
 
+  .hover-tooltip-header .hover-tooltip-value {
+    color: var(--p-overlay-popover-color);
+  }
+
+  .hover-tooltip-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hover-tooltip-other-rows {
+    color: var(--p-text-muted-color);
+  }
+
   .hover-tooltip-row {
     display: flex;
     gap: 8px;
@@ -4418,25 +4414,10 @@ vue.watch(
     border-radius: 50%;
   }
 
-  .hover-tooltip-name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   .hover-tooltip-value {
     margin-left: auto;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-  }
-
-  .hover-tooltip-header .hover-tooltip-value {
-    color: var(--p-overlay-popover-color);
-  }
-
-  .hover-tooltip-other-rows {
-    color: var(--p-text-muted-color);
   }
 
   .legend {
@@ -4486,6 +4467,25 @@ vue.watch(
     width: 18px;
     height: 3px;
     border-radius: 1.5px;
+  }
+
+  /**
+   * Note: we use the font size that Plotly means to use for its range editor, i.e. 12px (Plotly gets its unit wrong, so
+   *       it actually uses the font size of the page, i.e. 16px), with the same line height (relative to its font size)
+   *       as Plotly's range editor.
+   */
+
+  .range-editor {
+    position: absolute;
+    z-index: 4;
+    box-sizing: border-box;
+    margin: -0.5px 0 0 -1px;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: nowrap;
+    outline: none;
   }
 
   :deep(.u-over) {
