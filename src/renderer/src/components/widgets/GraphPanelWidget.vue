@@ -541,7 +541,8 @@ const syncLegendWidth = (): void => {
 
 const setTraceVisibilities = (visibilities: boolean[]): void => {
   // Set the visibility of our traces, both in our legend and in our plot.
-  // Note: uPlot autoranges our axes again when the visibility of a trace changes.
+  // Note: uPlot autoranges our axes again when the visibility of a trace changes, in which case we animate our axes
+  //       that are not zoomed from their current range to their new (natural) range (see animateScales()).
 
   traceVisibilities.value = visibilities;
 
@@ -558,17 +559,53 @@ const setTraceVisibilities = (visibilities: boolean[]): void => {
     return;
   }
 
-  currentPlot.batch(() => {
-    visibilities.forEach((visible: boolean, index: number) => {
-      const plotSeries = currentPlot.series[index + 1];
+  // Determine the traces which visibility has changed in our plot, if any, and leave if there are none (so that we don't
+  // animate our axes for nothing).
 
-      if (plotSeries && plotSeries.show !== visible) {
-        currentPlot.setSeries(index + 1, {
-          show: visible
-        });
-      }
-    });
+  const seriesIndices: number[] = [];
+
+  visibilities.forEach((visible: boolean, index: number) => {
+    const plotSeries = currentPlot.series[index + 1];
+
+    if (plotSeries && plotSeries.show !== visible) {
+      seriesIndices.push(index + 1);
+    }
   });
+
+  if (!seriesIndices.length) {
+    return;
+  }
+
+  // Keep our axes that are not zoomed at their current range while updating the visibility of our traces (by making
+  // them use their current range as their animated range, see scaleRange()), so that we can then animate them to their
+  // new range.
+
+  const axisKeys = (['x', 'y'] as AxisKey[]).filter((axisKey: AxisKey) => !zoomRanges[axisKey]);
+
+  for (const axisKey of axisKeys) {
+    const range = currentRange(axisKey);
+
+    if (range) {
+      animatedRanges[axisKey] = range;
+    }
+  }
+
+  currentPlot.batch(() => {
+    for (const seriesIndex of seriesIndices) {
+      currentPlot.setSeries(seriesIndex, {
+        show: visibilities[seriesIndex - 1]
+      });
+    }
+  });
+
+  // Animate our axes that are not zoomed to their new range.
+
+  if (axisKeys.length) {
+    animateScales(
+      Object.fromEntries(axisKeys.map((axisKey: AxisKey) => [axisKey, null])) as Partial<Record<AxisKey, null>>,
+      ZOOM_ANIMATION_DURATION
+    );
+  }
 };
 
 interface ILegendToggle {
