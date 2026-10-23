@@ -4475,9 +4475,9 @@ vue.watch(
   }
 
   /**
-   * Note: we use the font size that Plotly means to use for its range editor, i.e. 12px (Plotly gets its unit wrong, so
-   *       it actually uses the font size of the page, i.e. 16px), with the same line height (relative to its font size)
-   *       as Plotly's range editor.
+   * Note: we use OpenCOR's font (which we inherit, like our axis titles and legend), but with the font size that Plotly
+   *       means to use for its range editor, i.e. 12px (Plotly gets its unit wrong, so it actually uses the font size
+   *       of the page, i.e. 16px), and with the same line height (relative to its font size) as Plotly's range editor.
    */
 
   .range-editor {
@@ -4486,7 +4486,6 @@ vue.watch(
     box-sizing: border-box;
     margin: -0.5px 0 0 -1px;
     padding: 0;
-    font-family: Arial, sans-serif;
     font-size: 12px;
     line-height: 1.5;
     white-space: nowrap;
