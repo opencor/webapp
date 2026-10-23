@@ -214,9 +214,9 @@ const TICK_LABEL_MIN_SPACING = 10; // Minimum spacing between two consecutive ti
 const MAX_NB_OF_TICKS = 1000; // A safeguard against an axis needing an unreasonable number of ticks.
 const LINE_WIDTH = 2; // Like Plotly, the width of our traces' lines (in CSS pixels).
 const MARKER_SIZE = 6; // Like Plotly, the size of our markers (in CSS pixels).
-const MARKER_PADDING = Math.max(MARKER_SIZE / 1.6, 3); // Autorange padding for markers.
-const MIN_NB_OF_POINTS_WITHOUT_MARKERS = 20; // Like in Plotly, traces with fewer than 20 points also have markers.
-const AUTORANGE_PADDING = 0.05; // As a fraction of the length of an axis.
+const MARKER_PADDING = Math.max(MARKER_SIZE / 1.6, 3); // Autorange padding for markers (in CSS pixels).
+const MIN_NB_OF_POINTS_WITHOUT_MARKERS = 20; // Like Plotly, traces with fewer than 20 points also have markers.
+const AUTORANGE_PADDING = 0.05; // Autorange padding (as a fraction of the length of an axis).
 const DEFAULT_X_RANGE: [number, number] = [-1, 6]; // Like Plotly, the default X range.
 const DEFAULT_Y_RANGE: [number, number] = [-1, 4]; // Like Plotly, the default Y range.
 const MIN_DRAG = 8; // Like Plotly, the minimum distance that we must drag for it not to be a click (e.g., to zoom).
@@ -229,7 +229,7 @@ const AXIS_DRAGGER_OFFSET = 0.5; // Like Plotly, the distance between our plotti
 const HIGHLIGHT_FADED_ALPHA = 0.2; // Opacity of our traces that are not highlighted when one of them is.
 const HOVER_DISTANCE = 20; // Like Plotly, the maximum distance between the mouse pointer and a point to hover it.
 const HOVER_LINE_RADIUS = 0.5; // Like Plotly, the "radius" of a point without a marker when hovering it.
-const HOVER_POINT_RADIUS = 4; // Radius of the highlighted points of our hover tooltip.
+const HOVER_POINT_RADIUS = 4; // Radius of the points that we highlight when hovering our traces.
 const HOVER_TOOLTIP_OFFSET = 16; // Distance between the mouse pointer and our hover tooltip.
 const HOVER_TOOLTIP_MARGIN = 4; // Minimum distance between our hover tooltip and the edges of the window.
 const HOVER_TOOLTIP_MAX_ROWS = 12; // Maximum number of traces listed in our hover tooltip.
@@ -358,7 +358,8 @@ const traceVisibilities = vue.shallowRef<boolean[]>([]);
 //          (e.g., by clicking on its legend item) and stop highlighting it if it gets hidden or removed (e.g., when
 //          runs get tracked in interactive mode, in which case its legend item may be removed without us being told
 //          that it is no longer hovered).
-// Note #2: this must come before our watcher of our traces since it runs immediately and calls highlightTrace().
+// Note #2: this must come before the watcher of our traces (below) since that watcher runs immediately and calls
+//          highlightTrace().
 
 let hoveredTrace: number | null = null;
 let highlightedTrace: number | null = null;
@@ -526,7 +527,8 @@ const measureLegendWidth = (): number => {
 };
 
 const syncLegendWidth = (): void => {
-  // Get our plot to recompute its layout if the width of our legend has changed since it is part of our right margin.
+  // Get our plot to recompute its layout if the width of our legend has changed since our legend is part of our right
+  // margin.
 
   const newLegendWidth = measureLegendWidth();
 
@@ -778,7 +780,8 @@ const onContextMenu = (event: MouseEvent): void => {
   contextMenuRef.value?.show(event);
 };
 
-// Copy and export, like Plotly, i.e. an image of our plot and of our legend (but not of our hover tooltip or zoom box).
+// Copy and export, like Plotly, i.e. an image of our plot and of our legend (but not of what we show when hovering or
+// zooming, i.e. our hover tooltip, guide line, and highlighted points, and our zoom box).
 // Note: we build an SVG document from what we currently show, which we either export as is or rasterise. For our axis
 //       titles and legend, we use where the browser renders their text, so that any HTML they contain (e.g.,
 //       subscripts and superscripts) gets rendered as it is in our panel.
@@ -1318,8 +1321,8 @@ const exportToCsv = async (): Promise<void> => {
 
     console.warn('OpenCOR: failed to export to CSV:', common.formatError(error));
   } finally {
-    // Hide the progress message. If the export succeeded then delay briefly so that the user can see that we reached
-    // 100%. Otherwise, hide immediately to avoid blocking the UI unnecessarily.
+    // Hide the progress message. If the export succeeded, then delay briefly so that the user can see that we reached
+    // 100%. Otherwise, hide it immediately to avoid blocking the UI unnecessarily.
 
     if (successfulExport) {
       await common.sleep(LONG_DELAY);
@@ -1418,7 +1421,7 @@ const autoRange = (u: uPlot, axisKey: AxisKey, min: number, max: number): Range 
   // Note: the minimum and maximum extrema of a trace with markers are also within the range of our traces, but they get
   //       padded more, so we consider them separately.
 
-  // Make sure that our range is not zero-width, since uPlot can't handle it.
+  // Make sure that our range is not zero-width since uPlot can't handle it.
 
   if (min === max) {
     return [min - 1, max + 1];
@@ -1580,8 +1583,8 @@ const setScales = (ranges: Partial<Record<AxisKey, Range | null>>): void => {
   // Set the scales of our plot to the given ranges with a null range meaning that the corresponding axis gets
   // autoranged (see scaleRange()).
   // Note #1: uPlot calls our range function when the min/max of a scale is null, hence the cast.
-  // Note #2: in mode 2, uPlot only invalidates the paths of our traces when our Y scale changes, but it also does so
-  //          whenever our X scale is set, so our traces always get redrawn.
+  // Note #2: in mode 2, uPlot invalidates the paths of our traces when our Y scale changes and whenever our X scale is
+  //          set, so our traces always get redrawn.
 
   const currentPlot = plot;
 
@@ -1990,7 +1993,8 @@ const plotPosition = (
 };
 
 const dZoom = (fraction: number): number => {
-  // Like Plotly, the (non-linear) scaling of a range when moving one of its ends by the given fraction of its length.
+  // Like Plotly, return the (non-linear) scaling of a range when moving one of its ends by the given fraction of its
+  // length.
 
   return 1 - (fraction >= 0 ? Math.min(fraction, 0.9) : 1 / (1 / Math.max(fraction, -0.3) + 3.222));
 };
@@ -2542,7 +2546,7 @@ const onWheel = (event: WheelEvent, type: DragType): void => {
     return;
   }
 
-  // Prevent the default behavior of the mouse wheel, which is to scroll the page.
+  // Prevent the default behaviour of the mouse wheel, which is to scroll the page.
 
   event.preventDefault();
 
@@ -2905,7 +2909,7 @@ interface ITickLabel {
 }
 
 const tickLabels = (u: uPlot, area: IPathArea): ITickLabel[] => {
-  // Return our tick labels and where to draw them (in pixels of the given area), i.e., like Plotly, with their
+  // Return our tick labels and where to draw them (in pixels of the given area), i.e. like Plotly, with their
   // alphabetic baseline X_TICK_LABEL_BASELINE pixels below our plotting area for our X axis and, for our Y axis,
   // Y_TICK_LABEL_GAP pixels to the left of our plotting area and with their alphabetic baseline Y_TICK_LABEL_BASELINE
   // pixels below their tick.
@@ -3811,7 +3815,7 @@ const updateHover = (): void => {
 };
 
 const placeHoverTooltip = (): void => {
-  // Make sure that our hover tooltip has been rendered and that we have a mouse pointer.
+  // Make sure that our hover tooltip has been rendered and that we are still hovering.
 
   const tooltip = hoverTooltipRef.value;
   const currentHover = hover.value;
@@ -3866,7 +3870,7 @@ const isSorted = (values: math.FloatArray): boolean => {
 };
 
 const plotData = (): uPlot.AlignedData => {
-  // The data to be plotted.
+  // Return the data to be plotted.
   // Note #1: we also keep track of whether the X values of our traces are sorted (see updateHover()).
   // Note #2: uPlot needs at least one series, hence we use an empty one if we have no traces.
 
@@ -3894,7 +3898,7 @@ const createPlot = (width: number, height: number): void => {
     fontFamily = getComputedStyle(mainDivRef.value).fontFamily;
   }
 
-  // Create a series for each trace, using the trace's color for the stroke, our linear path builder, and our markers
+  // Create a series for each trace, using the trace's colour for the stroke, our linear path builder, and our markers
   // path builder (for traces with markers).
 
   const series: uPlot.Series[] = [{}];
@@ -3910,7 +3914,7 @@ const createPlot = (width: number, height: number): void => {
         show: (u: uPlot, seriesIndex: number) => seriesHasMarkers(u, seriesIndex),
         paths: markerPaths,
         size: MARKER_SIZE,
-        width: 0 // Note: this means that our markers are filled using the trace's color.
+        width: 0 // Note: this means that our markers are filled using the trace's colour.
       },
       facets: [
         { scale: 'x', auto: true },
@@ -4217,7 +4221,8 @@ vue.onBeforeUnmount(() => {
 
   isUnmounted = true;
 
-  // Stop zooming, hovering, and dragging.
+  // Stop zooming (including any zoom animation), hovering, and dragging, and close our range editor (discarding its
+  // value).
 
   if (wheelRafId !== undefined) {
     cancelAnimationFrame(wheelRafId);
