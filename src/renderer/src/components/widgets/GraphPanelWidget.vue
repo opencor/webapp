@@ -222,6 +222,8 @@ const DEFAULT_Y_RANGE: [number, number] = [-1, 4]; // Like Plotly, the default Y
 const MIN_DRAG = 8; // Like Plotly, the minimum distance that we must drag for it not to be a click (e.g., to zoom).
 const MIN_ZOOM = 20; // Like Plotly, the distance below which a drag is considered to be along one axis only.
 const ZOOM_FACTOR = 0.5; // Factor by which our ranges get scaled when zooming in (or its inverse when zooming out).
+const ZOOM_ANIMATION_DURATION = 250; // Duration of our zoom animations (in milliseconds).
+const WHEEL_ZOOM_ANIMATION_DURATION = 100; // Duration of our wheel zoom animations (in milliseconds).
 const DRAGGER_SIZE = 20; // Like Plotly, the thickness of our axis (and corner) draggers.
 const AXIS_DRAGGER_OFFSET = 0.5; // Like Plotly, the distance between our plotting area and our axis draggers.
 const HIGHLIGHT_FADED_ALPHA = 0.2; // Opacity of our traces that are not highlighted when one of them is.
@@ -1503,6 +1505,15 @@ const naturalRange = (u: uPlot, axisKey: AxisKey, dataMin: number | null, dataMa
 
 const scaleRange = (axisKey: AxisKey): uPlot.Range.Function => {
   return (u: uPlot, dataMin: number | null, dataMax: number | null): Range => {
+    // If the axis is being animated, then we use its animated range (e.g., if our data gets updated while we are
+    // animating a zoom, see animateScales()).
+
+    const animatedRange = animatedRanges[axisKey];
+
+    if (animatedRange) {
+      return [...animatedRange];
+    }
+
     // If the user zoomed into a range for the axis, then we use it.
 
     const zoomRange = zoomRanges[axisKey];
@@ -1555,9 +1566,184 @@ const setScales = (ranges: Partial<Record<AxisKey, Range | null>>): void => {
   });
 };
 
-const zoomTo = (ranges: Partial<Record<AxisKey, Range>>): void => {
-  // Zoom into the given ranges, but only if they are all valid (e.g., not if we zoomed in so much that the two ends of
-  // a range are the same number).
+// Zoom animations, i.e. our ranges smoothly go from their current values to their new values (or their natural values
+// if they get reset) rather than jump to them.
+// Note #1: while animating, our range function uses our animated ranges (see scaleRange()), so that an update of our
+//          data (e.g., while a simulation is running) doesn't interfere with our animation.
+// Note #2: an update of our data may, however, change the natural range of an axis that gets reset, so we update its
+//          target whenever our data changes (see stepRangeAnimation()), so that it ends up at its natural range rather
+//          than jump to it once we are done animating.
+// Note #3: we don't animate if the user prefers reduced motion.
+
+interface IRangeAnimation {
+  from: Partial<Record<AxisKey, Range>>;
+  to: Partial<Record<AxisKey, Range>>;
+  final: Partial<Record<AxisKey, Range | null>>;
+  data: uPlot.AlignedData;
+  start: number;
+  duration: number;
+}
+
+let rangeAnimation: IRangeAnimation | undefined;
+let rangeAnimationRafId: number | undefined;
+let animatedRanges: Partial<Record<AxisKey, Range>> = {};
+
+const targetRange = (axisKey: AxisKey): Range | undefined => {
+  // Return the range that the given axis has or will have once we are done animating it.
+
+  return rangeAnimation?.to[axisKey] ?? currentRange(axisKey);
+};
+
+const animateScales = (final: Partial<Record<AxisKey, Range | null>>, duration: number): void => {
+  // Animate the scales of our plot from their current ranges to the given ones (with a null range meaning that the
+  // corresponding axis gets autoranged, see setScales()) over the given duration, carrying on with the axes that we may
+  // already be animating.
+
+  // Make sure that we have a plot to animate.
+
+  const u = plot;
+
+  if (!u) {
+    return;
+  }
+
+  // Merge our final ranges with the final ranges of our current animation, if any, so that we don't lose any axes that
+  // we are already animating.
+
+  const mergedFinal = { ...rangeAnimation?.final, ...final };
+
+  if (duration <= 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    stopRangeAnimation();
+    setScales(mergedFinal);
+
+    return;
+  }
+
+  // Determine the ranges that we are animating from and to, using our current ranges as the starting point for our
+  // animation (which, if we are already animating, are our current animated ranges, so that we carry on smoothly), and
+  // our final ranges as the ending point for our animation (with a null range meaning that the corresponding axis gets
+  // autoranged, see setScales()).
+
+  const from: Partial<Record<AxisKey, Range>> = {};
+  const to: Partial<Record<AxisKey, Range>> = {};
+
+  for (const axisKey of Object.keys(mergedFinal) as AxisKey[]) {
+    const range = currentRange(axisKey);
+
+    if (range) {
+      from[axisKey] = range;
+      to[axisKey] = mergedFinal[axisKey] ?? naturalRange(u, axisKey, null, null);
+    }
+  }
+
+  // Start our animation or, if we are already animating, carry on with it using our new ranges.
+
+  rangeAnimation = {
+    from,
+    to,
+    final: mergedFinal,
+    data: u.data,
+    start: performance.now(),
+    duration
+  };
+
+  rangeAnimationRafId ??= requestAnimationFrame(stepRangeAnimation);
+};
+
+const stepRangeAnimation = (now: number): void => {
+  // Move our ranges one step closer to their target, using an ease-out (cubic) curve, or finish our animation if we are
+  // done.
+
+  rangeAnimationRafId = undefined;
+
+  // Make sure that we are animating.
+
+  const animation = rangeAnimation;
+
+  if (!animation) {
+    return;
+  }
+
+  // Determine how far we are through our animation, clamping to 0% if we are before its start, and finish our animation
+  // if we have reached its end.
+
+  const progress = Math.max(0, (now - animation.start) / animation.duration);
+
+  if (progress >= 1) {
+    finishRangeAnimation();
+
+    return;
+  }
+
+  // Update the target of our axes that get reset if our data has changed since we last determined it (e.g., while a
+  // simulation is running).
+  // Note: uPlot replaces its data whenever it is given new data (see updatePlot()), so we can just compare references.
+
+  const u = plot;
+
+  if (u && u.data !== animation.data) {
+    animation.data = u.data;
+
+    for (const axisKey of Object.keys(animation.to) as AxisKey[]) {
+      if (animation.final[axisKey] === null) {
+        animation.to[axisKey] = naturalRange(u, axisKey, null, null);
+      }
+    }
+  }
+
+  // Move our ranges one step closer to their target.
+
+  const easedProgress = 1 - (1 - progress) ** 3;
+
+  animatedRanges = {};
+
+  for (const axisKey of Object.keys(animation.to) as AxisKey[]) {
+    const from = animation.from[axisKey];
+    const to = animation.to[axisKey];
+
+    if (from && to) {
+      animatedRanges[axisKey] = [
+        from[0] + easedProgress * (to[0] - from[0]),
+        from[1] + easedProgress * (to[1] - from[1])
+      ];
+    }
+  }
+
+  // Update our scales to our new ranges.
+
+  setScales(animatedRanges);
+
+  rangeAnimationRafId = requestAnimationFrame(stepRangeAnimation);
+};
+
+const stopRangeAnimation = (): void => {
+  // Stop our animation, if any, leaving our ranges as they currently are.
+
+  if (rangeAnimationRafId !== undefined) {
+    cancelAnimationFrame(rangeAnimationRafId);
+
+    rangeAnimationRafId = undefined;
+  }
+
+  rangeAnimation = undefined;
+  animatedRanges = {};
+};
+
+const finishRangeAnimation = (): void => {
+  // Finish our animation, if any, i.e. set our ranges to their final values.
+
+  const animation = rangeAnimation;
+
+  stopRangeAnimation();
+
+  if (animation) {
+    setScales(animation.final);
+  }
+};
+
+const zoomTo = (ranges: Partial<Record<AxisKey, Range>>, duration: number = 0): void => {
+  // Zoom into the given ranges, animating our zoom over the given duration, but only if they are all valid (e.g., not
+  // if we zoomed in so much that the two ends of a range are the same number).
 
   for (const range of Object.values(ranges)) {
     if (!Number.isFinite(range[0]) || !Number.isFinite(range[1]) || range[0] >= range[1]) {
@@ -1567,26 +1753,40 @@ const zoomTo = (ranges: Partial<Record<AxisKey, Range>>): void => {
 
   zoomRanges = { ...zoomRanges, ...ranges };
 
-  setScales(ranges);
+  if (duration > 0) {
+    animateScales(ranges, duration);
+  } else {
+    finishRangeAnimation();
+    setScales(ranges);
+  }
 };
 
-const zoomBy = (factor: number, axisKeys: AxisKey[], centerFractions: Partial<Record<AxisKey, number>>): void => {
+const zoomBy = (
+  factor: number,
+  axisKeys: AxisKey[],
+  centerFractions: Partial<Record<AxisKey, number>>,
+  duration: number
+): void => {
   // Scale the range of the given axes by the given factor around the given fractions of their range (or their middle
-  // for an axis without a fraction).
+  // for an axis without a fraction), animating our zoom over the given duration.
+  // Note: we scale the range that an axis will have once we are done animating it (rather than its current range), so
+  //       that zooming several times in a row (e.g., using the mouse wheel) is not affected by our animation. However,
+  //       we zoom around what is currently under the mouse pointer.
 
   const ranges: Partial<Record<AxisKey, Range>> = {};
 
   for (const axisKey of axisKeys) {
     const range = currentRange(axisKey);
+    const target = targetRange(axisKey);
 
-    if (range) {
+    if (range && target) {
       const center = range[0] + (range[1] - range[0]) * (centerFractions[axisKey] ?? 0.5);
 
-      ranges[axisKey] = [center + factor * (range[0] - center), center + factor * (range[1] - center)];
+      ranges[axisKey] = [center + factor * (target[0] - center), center + factor * (target[1] - center)];
     }
   }
 
-  zoomTo(ranges);
+  zoomTo(ranges, duration);
 };
 
 let contextMenuCenterFractions: Partial<Record<AxisKey, number>> = {};
@@ -1594,17 +1794,18 @@ let contextMenuCenterFractions: Partial<Record<AxisKey, number>> = {};
 const zoomIn = (): void => {
   // Zoom in around where our context menu was requested (see onContextMenu()).
 
-  zoomBy(ZOOM_FACTOR, ['x', 'y'], contextMenuCenterFractions);
+  zoomBy(ZOOM_FACTOR, ['x', 'y'], contextMenuCenterFractions, ZOOM_ANIMATION_DURATION);
 };
 
 const zoomOut = (): void => {
   // Zoom out around where our context menu was requested (see onContextMenu()).
 
-  zoomBy(1 / ZOOM_FACTOR, ['x', 'y'], contextMenuCenterFractions);
+  zoomBy(1 / ZOOM_FACTOR, ['x', 'y'], contextMenuCenterFractions, ZOOM_ANIMATION_DURATION);
 };
 
 const resetZoom = (axisKeys: AxisKey[] = ['x', 'y']): void => {
-  // Like Plotly, reset the zoom of the given axes, i.e. go back to the given ranges, if any, or autorange the axes.
+  // Like Plotly, reset the zoom of the given axes, i.e. go back to the given ranges, if any, or autorange the axes, and
+  // animate our reset.
 
   const ranges: Partial<Record<AxisKey, null>> = {};
 
@@ -1614,7 +1815,7 @@ const resetZoom = (axisKeys: AxisKey[] = ['x', 'y']): void => {
     ranges[axisKey] = null;
   }
 
-  setScales(ranges);
+  animateScales(ranges, ZOOM_ANIMATION_DURATION);
 };
 
 // Mouse interaction, like with Plotly:
@@ -1820,6 +2021,10 @@ const onDragStart = (event: MouseEvent, type: DragType): void => {
 
     applyWheelZoom();
   }
+
+  // Finish our zoom animation, if any, so that our drag is based on our final ranges.
+
+  finishRangeAnimation();
 
   // Start dragging, but only with the main mouse button and if our plot has been laid out.
 
@@ -2056,10 +2261,10 @@ const onDragEnd = (event: MouseEvent): void => {
     ];
   }
 
-  // Zoom into the given ranges, but only if they are all valid (e.g., not if we zoomed in so much that the two ends of
-  // a range are the same number).
+  // Zoom into the given ranges (animating our zoom), but only if they are all valid (e.g., not if we zoomed in so much
+  // that the two ends of a range are the same number).
 
-  zoomTo(ranges);
+  zoomTo(ranges, ZOOM_ANIMATION_DURATION);
 };
 
 const onDragKeyDown = (event: KeyboardEvent): void => {
@@ -2255,7 +2460,7 @@ const closeRangeEditor = (apply: boolean): void => {
 
   newRange[editor.end] = value;
 
-  zoomTo({ [editor.axisKey]: newRange });
+  zoomTo({ [editor.axisKey]: newRange }, ZOOM_ANIMATION_DURATION);
 };
 
 const onRangeEditorKeyDown = (event: KeyboardEvent): void => {
@@ -2289,7 +2494,7 @@ const applyWheelZoom = (): void => {
 
   pendingWheelZoom = undefined;
 
-  zoomBy(factor, axisKeys, centerFractions);
+  zoomBy(factor, axisKeys, centerFractions, WHEEL_ZOOM_ANIMATION_DURATION);
 };
 
 const onWheel = (event: WheelEvent, type: DragType): void => {
@@ -3864,6 +4069,8 @@ const updatePlot = (): void => {
   if (titles !== zoomTitles) {
     zoomTitles = titles;
     zoomRanges = {};
+
+    stopRangeAnimation();
   }
 
   // Create or update our plot.
@@ -3988,6 +4195,7 @@ vue.onBeforeUnmount(() => {
   }
 
   stopDrag();
+  stopRangeAnimation();
 
   closeRangeEditor(false);
 
