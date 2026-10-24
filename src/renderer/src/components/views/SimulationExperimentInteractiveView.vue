@@ -48,18 +48,23 @@
               <ScrollPanel class="h-full">
                 <Fieldset :id="inputsFieldsetId" class="inputs-fieldset">
                   <template #legend>
-                    <div class="flex items-center">
+                    <div class="relative flex items-center">
                       <span :id="`${inputsFieldsetId}_header`" class="p-fieldset-legend-label">Simulation inputs</span>
-                      <span class="inputs-fieldset-line grow mx-3"></span>
-                      <Button class="p-0! w-5! h-5! reset-inputs-button"
-                        icon="pi pi-undo"
-                        text severity="secondary"
-                        size="small"
-                        title="Reset all simulation inputs to their default values"
-                        :disabled="allSimulationInputsAtDefaultValues"
-                        @mousedown.prevent
-                        @click="onResetInputs"
-                      />
+                      <span class="inputs-fieldset-line grow ms-3"></span>
+                      <div class="inputs-fieldset-reset"
+                        :class="{ 'inputs-fieldset-reset-hidden': allSimulationInputsAtDefaultValues }"
+                      >
+                        <Button class="p-0! w-5! h-5! reset-inputs-button"
+                          icon="pi pi-undo"
+                          text severity="secondary"
+                          size="small"
+                          title="Reset all simulation inputs to their default values"
+                          :disabled="allSimulationInputsAtDefaultValues"
+                          :aria-hidden="allSimulationInputsAtDefaultValues"
+                          @mousedown.prevent
+                          @click="onResetInputs"
+                        />
+                      </div>
                     </div>
                   </template>
                   <InputWidget ref="inputWidgetsRef"
@@ -2387,12 +2392,44 @@ vue.onMounted(() => {
   font-size: 1.25rem;
 }
 
+/**
+ * Our inputs' reset button is only shown when there is something to reset, in which case it hides the part of our line
+ * where it is (using our legend's background). Our line always goes all the way to the end of our legend (i.e. our
+ * legend has no end padding or border), so that it looks like our fieldset's top border is uninterrupted when our reset
+ * button is hidden.
+ * Note #1: our line is drawn as a whole (rather than, say, using a separate element for the part where our reset button
+ *          is) since Chrome may otherwise render that part one device pixel off our line (e.g., with a device pixel
+ *          ratio of 1.25 or 1.75).
+ * Note #2: the minimum width of our line accounts for our reset button and the space around it (i.e. our legend's end
+ *          padding and border, which are now part of our line), so that our legend (and therefore our fieldset) is as
+ *          wide as it would be if our reset button was part of our legend's layout, i.e. it doesn't change width when
+ *          our reset button gets shown or hidden.
+ */
+
 .inputs-fieldset :deep(.p-fieldset-legend) {
   width: 100%;
+  padding-inline-end: 0;
+  border-inline-end-width: 0;
 }
 
 .inputs-fieldset-line {
+  min-width: calc(0.75rem + 1.25rem + 0.75rem + 1px);
   border-top: 1px solid var(--p-fieldset-border-color);
+}
+
+.inputs-fieldset-reset {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 1px;
+  display: flex;
+  align-items: center;
+  padding-inline: 0.75rem;
+  background: var(--p-fieldset-legend-background);
+  transition: opacity 0.15s;
+}
+
+.inputs-fieldset-reset-hidden {
+  opacity: 0;
 }
 
 .note {
@@ -2410,6 +2447,12 @@ vue.onMounted(() => {
   padding-bottom: 0;
 }
 
+.reset-inputs-button {
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+
 .reset-inputs-button:not(:disabled) {
   opacity: 0.75;
 }
@@ -2417,6 +2460,18 @@ vue.onMounted(() => {
 .reset-inputs-button:not(:disabled):hover {
   opacity: 1;
   transform: scale(1.15);
+}
+
+.reset-inputs-button:disabled {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inputs-fieldset-reset,
+  .reset-inputs-button {
+    transition: none;
+  }
 }
 
 .run-action-button {
