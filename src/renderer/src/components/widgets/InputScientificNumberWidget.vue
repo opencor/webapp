@@ -14,12 +14,25 @@
         @keydown="onInputKeydown"
         @keydown.enter="onKeydownEnter"
         @paste="onPaste"
+        @wheel="onWheel"
       />
+      <button v-if="defaultValue !== undefined" :class="resetButtonClass"
+        type="button"
+        :disabled="disabled || readonly || atDefaultValue"
+        :tabindex="-1"
+        :aria-hidden="atDefaultValue"
+        :title="`Reset to ${defaultValue}`"
+        @mousedown.prevent
+        @click="onResetButtonClick"
+      >
+        <i class="pi pi-undo" aria-hidden="true"></i>
+      </button>
       <span class="p-inputnumber-button-group">
         <button :class="incrementButtonClass"
           type="button"
           :disabled="disabled || readonly || maxBoundary"
           :tabindex="-1"
+          title="Increment (hold Shift for a larger step)"
           @mousedown="onSpinButtonMouseDown($event, 1)"
           @mouseleave="clearSpinTimerAndRemoveEventListeners"
           @mouseup="clearSpinTimerAndRemoveEventListeners"
@@ -35,6 +48,7 @@
           type="button"
           :disabled="disabled || readonly || minBoundary"
           :tabindex="-1"
+          title="Decrement (hold Shift for a larger step)"
           @mousedown="onSpinButtonMouseDown($event, -1)"
           @mouseleave="clearSpinTimerAndRemoveEventListeners"
           @mouseup="clearSpinTimerAndRemoveEventListeners"
@@ -65,6 +79,7 @@ const props = defineProps<{
   modelValue: number | undefined;
   label: string;
   allowEmpty?: boolean;
+  defaultValue?: number;
   min?: number;
   max?: number;
   step?: number;
@@ -72,6 +87,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: number | undefined];
+  atDefaultValueChange: [atDefaultValue: boolean];
 }>();
 
 const attrs = vue.useAttrs();
@@ -127,10 +143,9 @@ const rootClass = vue.computed<Array<string | Record<string, boolean>>>(() => {
     'p-inputnumber',
     'p-component',
     'p-inputwrapper',
-    'p-inputnumber-stacked',
-    'p-inputnumber-fluid',
     'w-full',
     {
+      'p-inputnumber-resettable': props.defaultValue !== undefined,
       'p-invalid': invalid.value,
       'p-inputwrapper-filled': hasValue.value,
       'p-inputwrapper-focus': isFocused.value
@@ -157,6 +172,21 @@ const minBoundary = vue.computed<boolean>(() => {
 });
 const maxBoundary = vue.computed<boolean>(() => {
   return props.max !== undefined && inferredNumericValue.value >= props.max;
+});
+const atDefaultValue = vue.computed<boolean>(() => {
+  return inferredNumericValue.value === props.defaultValue;
+});
+const resetButtonClass = vue.computed<Array<string | Record<string, boolean>>>(() => {
+  const isDisabled = disabled.value || readonly.value || atDefaultValue.value;
+
+  return [
+    isDisabled ? 'cursor-default' : 'cursor-pointer',
+    'p-inputnumber-button',
+    'p-inputnumber-reset-button',
+    {
+      'p-disabled': isDisabled
+    }
+  ];
 });
 const incrementButtonClass = vue.computed<Array<string | Record<string, boolean>>>(() => {
   const isDisabled = disabled.value || readonly.value || maxBoundary.value;
@@ -195,6 +225,17 @@ vue.watch(
     if (!isEditing.value) {
       updateInternalValue(newValue);
     }
+  },
+  { immediate: true }
+);
+
+// Let our owner know whether the value we show is our default value, including while it is being edited, i.e. before it
+// is committed.
+
+vue.watch(
+  atDefaultValue,
+  (newAtDefaultValue) => {
+    emit('atDefaultValueChange', newAtDefaultValue);
   },
   { immediate: true }
 );
@@ -302,14 +343,30 @@ const onKeydownEnter = (event: KeyboardEvent) => {
 const onInputKeydown = (event: KeyboardEvent) => {
   switch (event.key) {
     case 'ArrowUp':
-      if (spin(1)) {
+    case 'ArrowDown':
+      if (spin(event.key === 'ArrowUp' ? 1 : -1, event.shiftKey ? constants.SPIN_LARGE_STEP_FACTOR : 1)) {
         event.preventDefault();
       }
 
       break;
-    case 'ArrowDown':
-      if (spin(-1)) {
+    case 'PageUp':
+    case 'PageDown':
+      if (spin(event.key === 'PageUp' ? 1 : -1, constants.SPIN_LARGE_STEP_FACTOR)) {
         event.preventDefault();
+      }
+
+      break;
+    case 'Escape':
+      // If a value is being edited, then discard it and stop the Escape key from propagating any further. This means
+      // that if we are in a dialog, the first Escape discards the value being edited while a second Escape closes the
+      // dialog (as usual). If no value is being edited, then we let the Escape key propagate, so the dialog closes
+      // straight away.
+
+      if (isEditing.value) {
+        discardEdit();
+
+        event.preventDefault();
+        event.stopPropagation();
       }
 
       break;
@@ -341,6 +398,30 @@ const onInputKeydown = (event: KeyboardEvent) => {
       break;
   }
 };
+
+const onResetButtonClick = () => {
+  if (disabled.value || readonly.value || props.defaultValue === undefined) {
+    return;
+  }
+
+  isEditing.value = false;
+
+  updateInternalValue(props.defaultValue);
+
+  emit('update:modelValue', props.defaultValue);
+};
+
+// Discard the value that is being edited, if any, i.e. show our current value again.
+
+const discardEdit = () => {
+  isEditing.value = false;
+
+  updateInternalValue(props.modelValue);
+};
+
+defineExpose({
+  discardEdit
+});
 
 const validateValue = (value: number) => {
   if (props.min !== undefined && value < props.min) {
@@ -389,8 +470,8 @@ const addWithPrecision = (base: number, increment: number) => {
 
 const spinTimer = vue.ref<number | undefined>(undefined);
 
-const spin = (direction: 1 | -1): boolean => {
-  const step = stepValue.value;
+const spin = (direction: 1 | -1, factor: number): boolean => {
+  const step = factor * stepValue.value;
 
   if (disabled.value || readonly.value || !Number.isFinite(step) || step <= 0) {
     return false;
@@ -422,19 +503,19 @@ const clearSpinTimer = () => {
   }
 };
 
-const repeatSpin = (direction: 1 | -1, interval = constants.SPIN_INITIAL_DELAY) => {
+const repeatSpin = (direction: 1 | -1, factor: number, interval = constants.SPIN_INITIAL_DELAY) => {
   if (disabled.value || readonly.value) {
     return;
   }
 
   clearSpinTimer();
 
-  if (!spin(direction)) {
+  if (!spin(direction, factor)) {
     return;
   }
 
   spinTimer.value = window.setTimeout(() => {
-    repeatSpin(direction, constants.SPIN_REPEAT_DELAY);
+    repeatSpin(direction, factor, constants.SPIN_REPEAT_DELAY);
   }, interval);
 };
 
@@ -461,9 +542,43 @@ const onSpinButtonMouseDown = (event: MouseEvent, direction: 1 | -1) => {
   window.addEventListener('pointerup', clearSpinTimerAndRemoveEventListeners);
   window.addEventListener('blur', clearSpinTimerAndRemoveEventListeners);
 
-  repeatSpin(direction);
+  repeatSpin(direction, event.shiftKey ? constants.SPIN_LARGE_STEP_FACTOR : 1);
 
   event.preventDefault();
+};
+
+// Spin using the mouse wheel, but only if we have the focus so that scrolling past us doesn't change our value.
+// Note #1: like a native number input, we spin once per wheel event.
+// Note #2: holding Shift while using the mouse wheel usually results in a horizontal scroll, i.e. in a horizontal delta
+//          rather than a vertical one, in which case we use the former. Otherwise, we ignore mostly horizontal scrolls
+//          (e.g., a horizontal swipe on a trackpad).
+// Note #3: a positive delta increments our value while a negative delta decrements it, so that moving one's fingers up
+//          on a trackpad (or the mouse wheel away from oneself) increments our value when using natural scrolling (the
+//          default on macOS). Without natural scrolling, it decrements it instead, but there is no way for us to know
+//          whether natural scrolling is used.
+
+const onWheel = (event: WheelEvent) => {
+  // Make sure that we only spin when the wheel event is received while our input has the focus.
+
+  if (document.activeElement !== inputElement.value?.$el) {
+    return;
+  }
+
+  // Determine the delta to use (see Note #2 above) and make sure that we have one, i.e. that it is not zero and that,
+  // unless Shift is held, the scroll is not mostly horizontal.
+
+  const delta = event.deltaY === 0 && event.shiftKey ? event.deltaX : event.deltaY;
+
+  if (delta === 0 || (!event.shiftKey && Math.abs(event.deltaX) > Math.abs(event.deltaY))) {
+    return;
+  }
+
+  // Note: we prevent the default behaviour even if we can't spin (e.g., because we are at our maximum value), so that
+  //       the page doesn't suddenly start scrolling while the user is spinning us.
+
+  event.preventDefault();
+
+  spin(delta > 0 ? 1 : -1, event.shiftKey ? constants.SPIN_LARGE_STEP_FACTOR : 1);
 };
 
 vue.onBeforeUnmount(() => {
@@ -477,17 +592,30 @@ vue.onBeforeUnmount(() => {
   position: relative;
 }
 
+/**
+ * Note: we use some of the class names of PrimeVue's InputNumber component, whose (global) styles get injected as soon
+ *       as it is used somewhere (e.g., in our property editors), so we make sure that the properties that it sets and
+ *       that matter to us are set here too.
+ */
+
 .p-inputnumber-button {
   display: flex;
+  align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  margin: 1px;
-  color: var(--p-button-text-secondary-color);
+  width: auto;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--p-text-muted-color);
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    opacity 0.15s,
+    transform 0.15s;
 }
 
 .p-inputnumber-button:not(.p-disabled):hover {
   background-color: var(--p-button-text-secondary-hover-background);
-  color: var(--p-button-text-secondary-color);
+  color: var(--p-text-color);
 }
 
 .p-inputnumber-button.p-active:not(.p-disabled) {
@@ -495,30 +623,81 @@ vue.onBeforeUnmount(() => {
   color: var(--p-button-text-secondary-active-color);
 }
 
-.p-inputnumber-button-group > button:first-child {
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 0;
+.p-inputnumber .p-inputnumber-button-group .p-inputnumber-button .p-icon {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
-.p-inputnumber-button-group > button:last-child {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 5px;
-}
+/**
+ * Our spin buttons are stacked on top of one another and separated from our input by a divider.
+ */
 
-.p-inputnumber-input {
-  padding-right: 1.5rem;
-}
-
-.p-inputnumber-stacked .p-inputnumber-button-group {
+.p-inputnumber-button-group {
   position: absolute;
+  inset-block: 0;
   inset-inline-end: 0;
-  height: 100%;
   display: flex;
-  flex: 1;
   flex-direction: column;
+  gap: 1px;
+  width: 1.5rem;
+  padding: 3px;
+}
+
+.p-inputnumber-button-group::before {
+  content: '';
+  position: absolute;
+  inset-block: 25%;
+  inset-inline-start: 0;
+  border-inline-start: 1px solid var(--p-form-field-border-color);
 }
 
 .p-inputnumber-button-group > button {
+  flex: 1;
   min-height: 0;
+}
+
+.p-inputnumber-input {
+  flex: none;
+  padding-right: 1.5rem;
+}
+
+/**
+ * Make room for our reset button without making us any wider than when we don't have one, i.e. compensate for its
+ * extra padding with a negative margin so that our intrinsic width remains the same.
+ */
+
+.p-inputnumber-resettable .p-inputnumber-input {
+  padding-right: 3rem;
+  margin-right: -1.5rem;
+}
+
+/**
+ * Our reset button is only shown when it can be used, i.e. when the value we show is not our default value (and we are
+ * neither disabled nor read-only).
+ */
+
+.p-inputnumber-reset-button {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 1.75rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.75rem;
+  transform: translateY(-50%);
+}
+
+.p-inputnumber-reset-button.p-disabled {
+  opacity: 0;
+  transform: translateY(-50%) scale(0.5);
+}
+
+.p-inputnumber-reset-button .pi {
+  font-size: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-inputnumber-button {
+    transition: none;
+  }
 }
 </style>
