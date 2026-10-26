@@ -5,7 +5,20 @@ export interface IOpenCORProps {
   theme?: OpenCORTheme;
 }
 
+export type OpenCORChangelogChangeType = 'added' | 'removed' | 'improved' | 'fixed';
+
+export interface IOpenCORChangelogChange {
+  type: OpenCORChangelogChangeType;
+  description: string;
+}
+
+export interface IOpenCORChangelogEntry {
+  version: string;
+  changes: IOpenCORChangelogChange[];
+}
+
 export interface IOpenCORExpose {
+  changelog: () => IOpenCORChangelogEntry[];
   addExternalData: (csv: string, voiExpression: string | undefined, modelParameters: string[]) => void;
   trackSimulationData: (modelParameters: string[]) => void;
   untrackSimulationData: (modelParameters: string[]) => void;

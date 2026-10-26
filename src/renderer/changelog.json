@@ -1,0 +1,13 @@
+[
+  {
+    "version": "1.20261027.0",
+    "changes": [
+      { "type": "added", "description": "A Changelog dialog, which lists the changes of all the versions of OpenCOR." },
+      { "type": "added", "description": "A `changelog()` method to OpenCOR's component." },
+      {
+        "type": "improved",
+        "description": "The update dialog now lists what has changed in the newer version of OpenCOR."
+      }
+    ]
+  }
+]
