@@ -60,7 +60,6 @@
                           size="small"
                           title="Reset all simulation inputs to their default values"
                           :disabled="allSimulationInputsAtDefaultValues"
-                          :aria-hidden="allSimulationInputsAtDefaultValues"
                           @mousedown.prevent
                           @click="onResetInputs"
                         />

@@ -42,7 +42,7 @@
     },
     "./style.css": "./dist/opencor.css"
   },
-  "version": "1.20261025.2",
+  "version": "1.20261027.0",
   "libopencorVersion": "1.20261020.0",
   "scripts": {
     "build": "vite build && bun scripts/generate.version.ts",
@@ -73,8 +73,8 @@
     "@vitejs/plugin-vue": "^6.0.10",
     "@vue/tsconfig": "^0.9.1",
     "@vueuse/core": "^15.0.0",
-    "autoprefixer": "^10.6.1",
-    "postcss": "^8.5.31",
+    "autoprefixer": "^10.6.2",
+    "postcss": "^8.5.32",
     "primeicons": "7.0.0",
     "primevue": "4.5.5",
     "rollup-plugin-visualizer": "^7.1.1",

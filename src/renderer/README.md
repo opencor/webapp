@@ -154,7 +154,11 @@ import '@opencor/opencor/style.css';
 
 - **Exposed methods:**
 
-  OpenCOR always exposes the following methods, which only have an effect when an `omex` prop is provided:
+  OpenCOR always exposes the following method:
+
+  - `changelog()`: returns the changes for all the versions of OpenCOR up to the current one, as an array of `{ version: string; changes: { type: 'added' | 'removed' | 'improved' | 'fixed'; description: string }[] }` objects (see `IOpenCORChangelogEntry`), from the newest version to the oldest one.
+
+  OpenCOR also always exposes the following methods, which only have an effect when an `omex` prop is provided:
 
   - `trackSimulationData(modelParameters: string[])`: adds the given parameter names to the list of tracked simulation data.
   - `untrackSimulationData(modelParameters: string[])`: removes the given parameter names from the list of tracked simulation data.

@@ -26,11 +26,12 @@ export default vite.defineConfig({
     rolldownOptions: {
       output: {
         // Note: our file names include a hash of their contents, so that they can be cached for a long time (since a
-        //       new version of a file will have a different name, see public/.htaccess). Only index.html and
-        //       assets/version.json have a fixed name, which is why they must never be cached for long (see
-        //       src/common/version.ts and public/.htaccess) and why they must be uploaded last when deploying our Web
-        //       app (see .github/workflows/cd.yml and cddev.yml). This also means that old files are left behind on our
-        //       server, hence we prune them after some time (see scripts/prune.web.ts).
+        //       new version of a file will have a different name, see public/.htaccess). Only index.html,
+        //       assets/version.json, and assets/changelog.json have a fixed name, which is why they must never be cached
+        //       for long (see src/common/version.ts, src/common/changelog.ts, and public/.htaccess) and why index.html
+        //       and assets/version.json must be uploaded last when deploying our Web app (see .github/workflows/cd.yml
+        //       and cddev.yml). This also means that old files are left behind on our server, hence we prune them after
+        //       some time (see scripts/prune.web.ts).
 
         entryFileNames: `assets/[name]-[hash].js`,
         chunkFileNames: `assets/[name]-[hash].js`,

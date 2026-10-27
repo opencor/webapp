@@ -33,6 +33,7 @@
       <MainMenu ref="mainMenuRef" v-if="isFullWebApp"
         :hasFiles="hasFiles"
         @about="onAboutMenu"
+        @changelog="onChangelogMenu"
         @open="onOpenMenu"
         @openRemote="onOpenRemoteMenu"
         @openSampleLorenz="onOpenSampleLorenzMenu"
@@ -70,11 +71,10 @@
         :message="updateErrorIssue"
         @ok="onUpdateErrorDialogClose"
       />
-      <YesNoQuestionDialog v-model:visible="desktopUpdateAvailableVisible"
-        title="Check for Updates..."
-        :question="'Version ' + updateVersion + ' is available. Do you want to download it and install it?'"
-        @yes="onDownloadAndInstall"
-        @no="desktopUpdateAvailableVisible = false"
+      <UpdateAvailableDialog v-model:visible="updateAvailableVisible"
+        :version="updateVersion"
+        @downloadAndInstall="onDownloadAndInstall"
+        @close="updateAvailableVisible = false"
       />
       <UpdateDownloadProgressDialog v-model:visible="updateDownloadProgressVisible"
         :percent="updateDownloadPercent"
@@ -98,11 +98,11 @@
         @yes="onResetAll"
         @no="resetAllVisible = false"
       />
+      <ChangelogDialog v-model:visible="changelogVisible"
+        @close="changelogVisible = false"
+      />
       <AboutDialog v-model:visible="aboutVisible"
         @close="aboutVisible = false"
-      />
-      <UpdateAvailableDialog v-model:visible="webUpdateAvailableVisible"
-        @close="webUpdateAvailableVisible = false"
       />
     </div>
   </SafeBlockUIWidget>
@@ -126,6 +126,7 @@ import type { IOpenCOREmits, IOpenCORExternalDataEvent, IOpenCORProps, IOpenCORS
 
 import '../assets/app.css';
 import '../assets/primeicons-assets';
+import * as changelog from '../common/changelog';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
 import { electronApi } from '../common/electronApi';
@@ -263,6 +264,10 @@ const onFileClosed = (filePath: string): void => {
 // Exposed methods.
 
 defineExpose({
+  // General methods.
+
+  changelog: changelog.changelog,
+
   // Simulation-only methods.
 
   addExternalData,
@@ -695,14 +700,20 @@ const onUpdateErrorDialogClose = (): void => {
   updateDownloadProgressVisible.value = false;
 };
 
-const desktopUpdateAvailableVisible = vue.ref<boolean>(false);
+// Note: our update available dialog is used by both OpenCOR (when our main process lets us know that an update is
+//       available) and OpenCOR's Web app (when the user clicks on our main menu's "New version available!" button, see
+//       onUpdateAvailable() below). We keep track of the version to update to, so that it doesn't change while our
+//       dialog is shown (e.g., if an even newer version of OpenCOR's Web app gets released in the meantime), which
+//       means that it always matches the changes that our dialog lists.
+
+const updateAvailableVisible = vue.ref<boolean>(false);
 const updateDownloadProgressVisible = vue.ref<boolean>(false);
 const updateVersion = vue.ref<string>('');
 const updateDownloadPercent = vue.ref<number>(0);
 
 trackCleanup(
   electronApi?.onUpdateAvailable((version: string) => {
-    desktopUpdateAvailableVisible.value = true;
+    updateAvailableVisible.value = true;
     updateVersion.value = version;
   })
 );
@@ -710,7 +721,7 @@ trackCleanup(
 const onDownloadAndInstall = (): void => {
   updateDownloadPercent.value = 0; // Just to be on the safe side.
   updateDownloadProgressVisible.value = true;
-  desktopUpdateAvailableVisible.value = false;
+  updateAvailableVisible.value = false;
 
   electronApi?.downloadAndInstallUpdate();
 };
@@ -777,6 +788,24 @@ const onError = (message: string): void => {
   });
 };
 
+// Changelog dialog.
+
+const changelogVisible = vue.ref<boolean>(false);
+
+trackCleanup(
+  electronApi?.onChangelog(() => {
+    onChangelogMenu();
+  })
+);
+
+const onChangelogMenu = (): void => {
+  if (props.omex) {
+    return;
+  }
+
+  changelogVisible.value = true;
+};
+
 // About dialog.
 
 const aboutVisible = vue.ref<boolean>(false);
@@ -813,12 +842,11 @@ const onSettingsMenu = (): void => {
   settingsVisible.value = true;
 };
 
-// Update available dialog.
-
-const webUpdateAvailableVisible = vue.ref(false);
+// Update available dialog (for OpenCOR's Web app).
 
 const onUpdateAvailable = () => {
-  webUpdateAvailableVisible.value = true;
+  updateVersion.value = version.latestVersion.value;
+  updateAvailableVisible.value = true;
 };
 
 // Open a file.

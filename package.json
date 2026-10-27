@@ -23,7 +23,7 @@
     "url": "git+https://github.com/opencor/webapp.git"
   },
   "type": "module",
-  "version": "1.20261025.2",
+  "version": "1.20261027.0",
   "engines": {
     "bun": ">=1.2.0"
   },
@@ -41,8 +41,8 @@
     "lint": "bunx --bun biome lint --fix --error-on-warnings --max-diagnostics=none && bunx stylelint '**/*.css' --fix",
     "postinstall": "bun src/renderer/scripts/ensure.electron.ts",
     "prune:web": "bun src/renderer/scripts/prune.web.ts",
-    "release": "bun src/renderer/scripts/libopencor.ts && electron-builder",
-    "release:local": "bun src/renderer/scripts/libopencor.ts && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.notarize=false --publish=never",
+    "release": "electron-builder",
+    "release:local": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config.mac.identity=- --config.mac.hardenedRuntime=false --config.mac.notarize=false --publish=never",
     "start": "bun src/renderer/scripts/libopencor.ts && electron-vite preview",
     "start:web": "bun --cwd src/renderer start",
     "typecheck": "bun --bun src/renderer/scripts/type.check.ts --noEmit -p tsconfig.app.json",
@@ -67,7 +67,7 @@
     "@vue/tsconfig": "^0.9.1",
     "@vueuse/core": "^15.0.0",
     "@wasm-fmt/clang-format": "^23.1.1",
-    "autoprefixer": "^10.6.1",
+    "autoprefixer": "^10.6.2",
     "cmake-js": "^8.0.0",
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0",
@@ -75,7 +75,7 @@
     "electron-updater": "^6.8.11",
     "electron-vite": "^6.0.0",
     "node-addon-api": "^8.9.2",
-    "postcss": "^8.5.31",
+    "postcss": "^8.5.32",
     "primeicons": "7.0.0",
     "primevue": "4.5.5",
     "rollup-plugin-visualizer": "^7.1.1",

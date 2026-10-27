@@ -17,12 +17,11 @@
         type="button"
         :disabled="atDefaultValue"
         :tabindex="-1"
-        :aria-hidden="atDefaultValue"
         :title="`Reset to ${defaultPossibleValue.name}`"
         @mousedown.prevent
         @click="selectReset"
       >
-        <i class="pi pi-undo" aria-hidden="true"></i>
+        <i class="pi pi-undo"></i>
       </button>
     </FloatLabel>
   </div>
