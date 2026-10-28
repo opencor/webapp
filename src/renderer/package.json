@@ -63,6 +63,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",
+    "@celldl/editor": "^0.20261007.0",
+    "@celldl/editor-python-tools": "^0.20260925.1",
+    "@celldl/rdf": "^1.20260822.0",
     "@opencor/libopencor-types": "^1.20261020.0",
     "@primeuix/themes": "2.0.3",
     "@primevue/auto-import-resolver": "4.5.5",

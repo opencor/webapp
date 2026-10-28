@@ -54,6 +54,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",
+    "@celldl/editor": "^0.20261007.0",
+    "@celldl/editor-python-tools": "^0.20260925.1",
+    "@celldl/rdf": "^1.20260822.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron-toolkit/utils": "^4.0.0",
     "@opencor/libopencor-types": "^1.20261020.0",
