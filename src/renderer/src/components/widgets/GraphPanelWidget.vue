@@ -142,7 +142,7 @@ import * as dependencies from '../../common/dependencies';
 import * as math from '../../common/math';
 import * as vueCommon from '../../common/vueCommon';
 
-import { useOpenCORProgressMessage } from '../OpenCORProgressMessage';
+import { useOpenCORMessage } from '../OpenCORMessage';
 
 const CONTEXT_MENU_EVENT: string = 'graph-panel-context-menu-open';
 
@@ -289,7 +289,7 @@ const hoverTooltipRef = vue.shallowRef<HTMLElement | null>(null);
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
-const progressMessage = useOpenCORProgressMessage();
+const opencorMessage = useOpenCORMessage();
 let plot: uPlot | undefined;
 let plotSignature: string | undefined;
 let isPlotOutdated = false;
@@ -1228,7 +1228,7 @@ const exportToCsv = async (): Promise<void> => {
 
   // Show the progress message.
 
-  progressMessage.show('Exporting data to CSV...');
+  opencorMessage.show('Exporting data to CSV...');
 
   let successfulExport: boolean = true;
 
@@ -1303,7 +1303,7 @@ const exportToCsv = async (): Promise<void> => {
       ++processedRows;
 
       if (processedRows % chunkSize === 0 || processedRows === sortedXValues.length) {
-        progressMessage.update(Math.floor(percentPerRow * processedRows));
+        opencorMessage.update(Math.floor(percentPerRow * processedRows));
 
         await common.sleep(NO_DELAY);
       }
@@ -1311,7 +1311,7 @@ const exportToCsv = async (): Promise<void> => {
 
     // Make sure that we show 100% before finishing.
 
-    progressMessage.update(100);
+    opencorMessage.update(100);
 
     // Create and download the CSV file.
 
@@ -1328,7 +1328,7 @@ const exportToCsv = async (): Promise<void> => {
       await common.sleep(LONG_DELAY);
     }
 
-    progressMessage.hide();
+    opencorMessage.hide();
   }
 };
 
