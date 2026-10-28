@@ -89,10 +89,13 @@ const setViewButtonRef = (viewId: string, element: unknown): void => {
 
 // Switch views with the mouse wheel.
 // Note: we don't wrap around, i.e. we don't go from the last view to the first view, or vice versa. Also, we damp the
-//       wheel delta to avoid switching views too quickly when the user scrolls fast.
+//       wheel delta to avoid switching views too quickly when the user scrolls fast. The wheel delta is reset after a
+//       pause or a change of direction, so that some leftover wheel delta doesn't result in a premature view switch.
 
 const wheelDelta = vue.ref(0);
 const wheelThreshold = 321;
+const wheelResetDelay = 250;
+let lastWheelTime = 0;
 
 const selectViewByOffset = (offset: number): void => {
   const activeViewIndex = viewIds.value.indexOf(props.activeViewId);
@@ -109,10 +112,15 @@ const selectViewByOffset = (offset: number): void => {
 };
 
 const onWheel = (event: WheelEvent): void => {
-  if (!viewIds.value.length) {
+  if (!viewIds.value.length || !event.deltaY) {
     return;
   }
 
+  if (event.timeStamp - lastWheelTime > wheelResetDelay || Math.sign(event.deltaY) !== Math.sign(wheelDelta.value)) {
+    wheelDelta.value = 0;
+  }
+
+  lastWheelTime = event.timeStamp;
   wheelDelta.value += event.deltaY;
 
   while (wheelDelta.value >= wheelThreshold) {
