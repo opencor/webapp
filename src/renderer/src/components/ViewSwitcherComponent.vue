@@ -88,14 +88,14 @@ const setViewButtonRef = (viewId: string, element: unknown): void => {
 };
 
 // Switch views with the mouse wheel.
-// Note: we don't wrap around, i.e. we don't go from the last view to the first view, or vice versa. Also, we damp the
-//       wheel delta to avoid switching views too quickly when the user scrolls fast. The wheel delta is reset after a
-//       pause or a change of direction, so that some leftover wheel delta doesn't result in a premature view switch.
+// Note: we don't wrap around, i.e. we don't go from the last view to the first view, or vice versa. Also, we switch
+//       views only once per wheel gesture, i.e. a series of wheel events in the same direction with no pause between
+//       them, so that we don't switch views too quickly when the user scrolls fast (or when a trackpad keeps sending
+//       wheel events after a swipe).
 
-const wheelDelta = vue.ref(0);
-const wheelThreshold = 321;
-const wheelResetDelay = 250;
+const wheelGestureDelay = 250;
 let lastWheelTime = 0;
+let lastWheelDirection = 0;
 
 const selectViewByOffset = (offset: number): void => {
   const activeViewIndex = viewIds.value.indexOf(props.activeViewId);
@@ -116,23 +116,14 @@ const onWheel = (event: WheelEvent): void => {
     return;
   }
 
-  if (event.timeStamp - lastWheelTime > wheelResetDelay || Math.sign(event.deltaY) !== Math.sign(wheelDelta.value)) {
-    wheelDelta.value = 0;
-  }
+  const wheelDirection = Math.sign(event.deltaY);
+  const newWheelGesture = event.timeStamp - lastWheelTime > wheelGestureDelay || wheelDirection !== lastWheelDirection;
 
   lastWheelTime = event.timeStamp;
-  wheelDelta.value += event.deltaY;
+  lastWheelDirection = wheelDirection;
 
-  while (wheelDelta.value >= wheelThreshold) {
-    wheelDelta.value -= wheelThreshold;
-
-    selectViewByOffset(1);
-  }
-
-  while (wheelDelta.value <= -wheelThreshold) {
-    wheelDelta.value += wheelThreshold;
-
-    selectViewByOffset(-1);
+  if (newWheelGesture) {
+    selectViewByOffset(wheelDirection);
   }
 };
 
