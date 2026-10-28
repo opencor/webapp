@@ -1,5 +1,6 @@
 /// <reference types="node" />
 
+import { pyodidePlugin } from '@celldl/editor-python-tools/vite';
 import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
 import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
@@ -44,6 +45,12 @@ export default electronVite.defineConfig({
       __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
     },
     envDir: path.join(import.meta.dirname, 'src/renderer'),
+    optimizeDeps: {
+      // Note: CellDL Editor is only loaded when needed, so Vite would only discover (and optimise) it and its
+      //       dependencies at that point, before reloading our renderer, hence we ask Vite to optimise them upfront.
+
+      include: ['@celldl/editor', '@celldl/rdf']
+    },
     plugins: [
       // Note: this must be in sync with src/renderer/vite.config.ts, except for the download-libopencor-js plugin.
 
@@ -61,6 +68,7 @@ export default electronVite.defineConfig({
           );
         }
       },
+      pyodidePlugin(),
       tailwindcssPlugin(),
       stripPrimeIconsFontFacePlugin(),
       scopeCellDLEditorCssPlugin(),
@@ -78,6 +86,12 @@ export default electronVite.defineConfig({
       })
     ],
     publicDir: rendererPublicDir,
+    resolve: {
+      // Note: CellDL Editor depends on a specific version of Vue, which may therefore get installed alongside ours, yet
+      //       there must only be one copy of Vue in our bundle.
+
+      dedupe: ['vue']
+    },
     server: {
       fs: {
         allow: [path.join(import.meta.dirname, '..')]

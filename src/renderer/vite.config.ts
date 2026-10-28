@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 
+import { pyodidePlugin } from '@celldl/editor-python-tools/vite';
 import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
 import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
@@ -41,6 +42,12 @@ export default vite.defineConfig({
     },
     target: 'esnext'
   },
+  optimizeDeps: {
+    // Note: CellDL Editor is only loaded when needed, so Vite would only discover (and optimise) it and its
+    //       dependencies at that point, before reloading our Web app, hence we ask Vite to optimise them upfront.
+
+    include: ['@celldl/editor', '@celldl/rdf']
+  },
   publicDir: path.join(import.meta.dirname, 'public'),
   define: {
     __CELLDL_EDITOR__: JSON.stringify(true),
@@ -50,6 +57,7 @@ export default vite.defineConfig({
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
 
+    pyodidePlugin(),
     tailwindcssPlugin(),
     stripPrimeIconsFontFacePlugin(),
     scopeCellDLEditorCssPlugin(),
@@ -74,6 +82,12 @@ export default vite.defineConfig({
         ]
       : [])
   ],
+  resolve: {
+    // Note: CellDL Editor depends on a specific version of Vue, which may therefore get installed alongside ours, yet
+    //       there must only be one copy of Vue in our bundle.
+
+    dedupe: ['vue']
+  },
   server: {
     fs: {
       allow: [fileURLToPath(new URL('../..', import.meta.url))]
