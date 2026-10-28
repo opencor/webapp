@@ -9,6 +9,7 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import vitePlugin from 'unplugin-vue-components/vite';
 
+import { scopeCellDLEditorCssPlugin } from './src/renderer/scripts/celldl.plugin.ts';
 import { downloadLibopencorJsIfNeeded } from './src/renderer/scripts/download.libopencor.js.ts';
 import { libopencorVersion, opencorVersion } from './src/renderer/scripts/libopencor.version.ts';
 import { stripPrimeIconsFontFacePlugin } from './src/renderer/scripts/primeicons.plugin.ts';
@@ -62,6 +63,7 @@ export default electronVite.defineConfig({
       },
       tailwindcssPlugin(),
       stripPrimeIconsFontFacePlugin(),
+      scopeCellDLEditorCssPlugin(),
       vuePlugin({
         script: {
           fs: {

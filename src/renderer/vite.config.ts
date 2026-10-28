@@ -11,6 +11,7 @@ import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
+import { scopeCellDLEditorCssPlugin } from './scripts/celldl.plugin.ts';
 import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js.ts';
 import { libopencorVersion, opencorVersion } from './scripts/libopencor.version.ts';
 import { stripPrimeIconsFontFacePlugin } from './scripts/primeicons.plugin.ts';
@@ -51,6 +52,7 @@ export default vite.defineConfig({
 
     tailwindcssPlugin(),
     stripPrimeIconsFontFacePlugin(),
+    scopeCellDLEditorCssPlugin(),
     vuePlugin({
       script: {
         fs: {
