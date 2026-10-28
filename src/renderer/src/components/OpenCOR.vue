@@ -125,6 +125,7 @@ import * as vue from 'vue';
 import type { IOpenCOREmits, IOpenCORExternalDataEvent, IOpenCORProps, IOpenCORSimulationDataEvent } from '../../index';
 
 import '../assets/app.css';
+import celldlIcon from '../assets/celldl.svg?inline';
 import '../assets/primeicons-assets';
 import * as changelog from '../common/changelog';
 import * as common from '../common/common';
@@ -1425,6 +1426,20 @@ vue.onMounted(() => {
   // Note: this must be done in onMounted so that all components are available.
 
   const viewRegistry = useViewRegistry();
+
+  if (__CELLDL_EDITOR__) {
+    // Note: the CellDL Editor is big, so we only load it when needed.
+
+    viewRegistry.register({
+      id: 'celldl-editor',
+      category: ViewCategory.Editing,
+      label: 'CellDL Editor',
+      icon: { url: celldlIcon },
+      component: vue.defineAsyncComponent(() => import('./views/CellDLEditorView.vue')),
+      fileTypes: [locApi.EFileType.UNKNOWN_FILE],
+      supportsFile: locCommon.isCellDLFile
+    });
+  }
 
   viewRegistry.register({
     id: 'simulation-experiment-standard',
