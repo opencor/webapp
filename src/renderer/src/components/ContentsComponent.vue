@@ -56,6 +56,9 @@
           </div>
         </div>
       </template>
+      <component v-if="CellDLEditorHostComponent && celldlEditorHost?.needed.value" :is="CellDLEditorHostComponent"
+        class="absolute inset-0 invisible pointer-events-none"
+      />
     </div>
   </div>
 </template>
@@ -65,6 +68,7 @@ import * as vue from 'vue';
 
 import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../index';
 
+import { useCellDLEditorHost } from '../common/celldlEditorHost';
 import * as common from '../common/common';
 import { electronApi } from '../common/electronApi';
 import { useViewRegistry } from '../common/viewRegistry';
@@ -90,6 +94,14 @@ const emit = defineEmits<{
 const { simulationOnly } = useOpenCORContext();
 
 const viewRegistry = useViewRegistry();
+
+// Our CellDL Editor views share a CellDL Editor (see common/celldlEditorHost.ts), which is big, so we only load it when
+// needed.
+
+const celldlEditorHost = __CELLDL_EDITOR__ ? useCellDLEditorHost() : null;
+const CellDLEditorHostComponent = __CELLDL_EDITOR__
+  ? vue.defineAsyncComponent(() => import('./CellDLEditorHostComponent.vue'))
+  : null;
 const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof SimulationExperimentInteractiveView> | null>(
   null
 );
