@@ -1,0 +1,48 @@
+diff --git a/dist/WrappedEditor-lh-9wPZe.js b/dist/WrappedEditor-lh-9wPZe.js
+index ed813ea04447c72bc1b6c21ba9719140b8b02bb8..1f0f46e666c4ab9e4a90dead38d12d068bc54858 100644
+--- a/dist/WrappedEditor-lh-9wPZe.js
++++ b/dist/WrappedEditor-lh-9wPZe.js
+@@ -24593,8 +24593,8 @@ var Xy = class e extends Gy {
+ 	static celldlTypeName = "Connector";
+ 	#e = /* @__PURE__ */ new Map();
+ 	#t;
+-	constructor(e, t, n) {
+-		super(e, t, n), this.#t = vm.getMaxConnections(this);
++	constructor(e, t, n, updateStore = !0) {
++		super(e, t, n, updateStore), this.#t = vm.getMaxConnections(this);
+ 	}
+ 	toString() {
+ 		return `${super.toString()}  Connections: ${[...this.#e.keys()].join(", ")}`;
+@@ -24634,8 +24634,8 @@ var Xy = class e extends Gy {
+ 	static celldlStyleClass = "celldl-Component";
+ 	static celldlTypeName = "Component";
+ 	#e = [];
+-	constructor(e, t, n) {
+-		super(e, t, n), this.#e = t.metadataProperties.getPropertyAsArray(fp.uri("hasInterface")).map((e) => n.getConnector(e)).filter((e) => e != null);
++	constructor(e, t, n, updateStore = !0) {
++		super(e, t, n, updateStore), this.#e = t.metadataProperties.getPropertyAsArray(fp.uri("hasInterface")).map((e) => n.getConnector(e)).filter((e) => e != null);
+ 	}
+ 	toString() {
+ 		let e = super.toString();
+@@ -24661,8 +24661,8 @@ var Xy = class e extends Gy {
+ }, cb = class extends ab {
+ 	static celldlStyleClass = "celldl-Compartment";
+ 	static celldlTypeName = "Compartment";
+-	constructor(e, t, n) {
+-		super(e, t, n);
++	constructor(e, t, n, updateStore = !0) {
++		super(e, t, n, updateStore);
+ 	}
+ 	#e = [];
+ 	#t;
+@@ -24698,8 +24698,8 @@ var Xy = class e extends Gy {
+ 	static celldlTypeName = "Connection";
+ 	#e = [];
+ 	#t;
+-	constructor(e, t, n) {
+-		super(e, t, n);
++	constructor(e, t, n, updateStore = !0) {
++		super(e, t, n, updateStore);
+ 		let r = t.metadataProperties, i = n.getConnector(r.getProperty(fp.uri("hasSource"))), a = n.getConnector(r.getProperty(fp.uri("hasTarget"))), o = r.getPropertyAsArray(fp.uri("hasIntermediate")).map((e) => n.getConnector(e)).filter((e) => e != null);
+ 		if (i && a) {
+ 			this.#e = [

@@ -94,5 +94,8 @@
     "vue": "^3.5.44",
     "vue-tsc": "^3.3.13",
     "xxhash-wasm": "^1.1.0"
+  },
+  "patchedDependencies": {
+    "@celldl/editor@0.20261007.0": "patches/@celldl%2Feditor@0.20261007.0.patch"
   }
 }
