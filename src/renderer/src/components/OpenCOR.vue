@@ -60,6 +60,7 @@
         @error="onError"
         @fileClosed="onFileClosed"
         @fileOpened="onFileOpened"
+        @openFile="openFile"
         @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />

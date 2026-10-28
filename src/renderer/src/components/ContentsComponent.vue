@@ -51,6 +51,7 @@
                 :is="view(fileTab).component"
                 v-bind="view(fileTab).props"
                 @error="$emit('error', $event)"
+                @openFile="$emit('openFile', $event)"
               />
             </KeepAlive>
           </div>
@@ -89,6 +90,7 @@ const emit = defineEmits<{
   error: [message: string];
   fileClosed: [filePath: string];
   fileOpened: [filePath: string];
+  openFile: [fileFilePathOrFileContents: string];
   simulationData: [];
 }>();
 
