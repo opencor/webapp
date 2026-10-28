@@ -42,17 +42,16 @@ export default vite.defineConfig({
     },
     target: 'esnext'
   },
+  define: {
+    __CELLDL_EDITOR__: JSON.stringify(true),
+    __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
+    __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
+  },
   optimizeDeps: {
     // Note: CellDL Editor is only loaded when needed, so Vite would only discover (and optimise) it and its
     //       dependencies at that point, before reloading our Web app, hence we ask Vite to optimise them upfront.
 
     include: ['@celldl/editor', '@celldl/rdf']
-  },
-  publicDir: path.join(import.meta.dirname, 'public'),
-  define: {
-    __CELLDL_EDITOR__: JSON.stringify(true),
-    __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
-    __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
@@ -82,6 +81,13 @@ export default vite.defineConfig({
         ]
       : [])
   ],
+  preview: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp'
+    }
+  },
+  publicDir: path.join(import.meta.dirname, 'public'),
   resolve: {
     // Note: CellDL Editor depends on a specific version of Vue, which may therefore get installed alongside ours, yet
     //       there must only be one copy of Vue in our bundle.
@@ -92,12 +98,6 @@ export default vite.defineConfig({
     fs: {
       allow: [fileURLToPath(new URL('../..', import.meta.url))]
     },
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp'
-    }
-  },
-  preview: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp'
