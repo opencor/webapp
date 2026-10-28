@@ -1,6 +1,7 @@
 // TypeScript shims for Vite-style imports.
 // Note: `vue-tsc` needs to know how to treat `.vue` files and Vite-style asset imports.
 
+declare const __CELLDL_EDITOR__: boolean;
 declare const __LIBOPENCOR_VERSION__: string;
 declare const __OPENCOR_VERSION__: string;
 

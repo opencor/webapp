@@ -38,6 +38,7 @@ export default electronVite.defineConfig({
       //       initialiseLocApi(), and isn't served by Apache), so there is no need to ship them.
     },
     define: {
+      __CELLDL_EDITOR__: JSON.stringify(true),
       __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
       __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
     },

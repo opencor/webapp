@@ -42,6 +42,7 @@ export default vite.defineConfig({
   },
   publicDir: path.join(import.meta.dirname, 'public'),
   define: {
+    __CELLDL_EDITOR__: JSON.stringify(true),
     __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
     __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
   },
