@@ -32,6 +32,7 @@ export interface IViewDescriptor {
   icon: string;
   component: vue.Component;
   fileTypes: readonly EFileType[];
+  supportsFile?: (file: File) => boolean;
 }
 
 // View registry composable.
@@ -57,9 +58,11 @@ export const useViewRegistry = vueusecore.createGlobalState(() => {
   }
 
   // Determine whether a view descriptor is applicable to a given file.
+  // Note: a view may further restrict the files it supports (e.g., our CellDL Editor view only supports unknown files
+  //       that are CellDL files).
 
   const isApplicable = (descriptor: IViewDescriptor, file: File): boolean => {
-    return descriptor.fileTypes.includes(file.type());
+    return descriptor.fileTypes.includes(file.type()) && (descriptor.supportsFile?.(file) ?? true);
   };
 
   // Resolve the view to show for a file.
