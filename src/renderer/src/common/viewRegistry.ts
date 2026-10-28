@@ -24,12 +24,14 @@ export const ViewCategory = {
 export type ViewCategory = (typeof ViewCategory)[keyof typeof ViewCategory];
 
 // View descriptor.
+// Note: a view's icon is either the CSS class of a font icon (e.g., 'pi pi-chart-line') or the URL of a monochrome
+//       image (e.g., an inlined SVG file), which is used as a mask so that it gets coloured like a font icon.
 
 export interface IViewDescriptor {
   id: string;
   category: ViewCategory;
   label: string;
-  icon: string;
+  icon: string | { url: string };
   component: vue.Component;
   fileTypes: readonly EFileType[];
   supportsFile?: (file: File) => boolean;
