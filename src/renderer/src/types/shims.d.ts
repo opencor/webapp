@@ -30,3 +30,11 @@ declare module '*.woff2?inline' {
 
   export default source;
 }
+
+// Note: libcellml.js doesn't come with any type declarations, so we use those that @physiomelinks/bg2cellml expects.
+
+declare module 'libcellml.js' {
+  const createLibCellML: () => Promise<import('@physiomelinks/bg2cellml').Runtime['libcellml']>;
+
+  export default createLibCellML;
+}

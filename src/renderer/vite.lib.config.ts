@@ -49,8 +49,8 @@ export default vite.defineConfig({
   },
   publicDir: path.join(import.meta.dirname, 'public'),
   define: {
-    // Note: we don't include our CellDL Editor view in our library since the CellDL Editor (and the Python tools needed
-    //       to generate CellML from a CellDL file) would considerably increase the size of our package.
+    // Note: we don't include our CellDL Editor view in our library since CellDL Editor (and the converter needed to
+    //       generate CellML from a CellDL file) would considerably increase the size of our package.
 
     __CELLDL_EDITOR__: JSON.stringify(false),
     __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),

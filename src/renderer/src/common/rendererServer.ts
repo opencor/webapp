@@ -48,7 +48,6 @@ export const startRendererServer = async (preferredPort: number = 0): Promise<st
     '.svg': 'image/svg+xml',
     '.ttf': 'font/ttf',
     '.wasm': 'application/wasm',
-    '.whl': 'application/zip',
     '.woff': 'font/woff',
     '.woff2': 'font/woff2',
     '.zip': 'application/zip'

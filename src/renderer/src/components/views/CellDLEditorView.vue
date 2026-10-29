@@ -108,12 +108,12 @@ const onExportCombineArchive = async (kind: string): Promise<void> => {
 
     const celldlData = await host.clientData(client);
 
-    // Initialise Python, if needed, and then delay briefly so that the user can see that we reached 100%.
+    // Initialise our CellML converter, if needed, and then delay briefly so that the user can see that we reached 100%.
 
-    if (!celldl.isPythonInitialised()) {
-      opencorMessage.show('Initialising Python...');
+    if (!celldl.isConverterInitialised()) {
+      opencorMessage.show('Initialising the CellML converter...');
 
-      await celldl.initialisePython(opencorMessage.update);
+      await celldl.initialiseConverter(opencorMessage.update);
       await common.sleep(LONG_DELAY);
     }
 

@@ -1,6 +1,5 @@
 /// <reference types="vite/client" />
 
-import { pyodidePlugin } from '@celldl/editor-python-tools/vite';
 import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
 import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
@@ -51,12 +50,15 @@ export default vite.defineConfig({
     // Note: CellDL Editor is only loaded when needed, so Vite would only discover (and optimise) it and its
     //       dependencies at that point, before reloading our Web app, hence we ask Vite to optimise them upfront.
 
-    include: ['@celldl/editor', '@celldl/rdf']
+    include: ['@celldl/editor', '@celldl/rdf', '@physiomelinks/bg2cellml'],
+
+    // Note: libCellML and Oxigraph locate their WASM file relative to their own URL, so they must not be optimised.
+
+    exclude: ['libcellml.js', 'oxigraph']
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
 
-    pyodidePlugin(),
     tailwindcssPlugin(),
     stripPrimeIconsFontFacePlugin(),
     scopeCellDLEditorCssPlugin(),
