@@ -4,7 +4,7 @@
     "changes": [
       {
         "type": "added",
-        "description": "A CellDL Editor view to edit CellDL files (not available in OpenCOR's component)."
+        "description": "A CellDL Editor view to edit CellDL files."
       },
       {
         "type": "added",

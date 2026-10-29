@@ -1,7 +1,8 @@
 // TypeScript shims for Vite-style imports.
 // Note: `vue-tsc` needs to know how to treat `.vue` files and Vite-style asset imports.
 
-declare const __CELLDL_EDITOR__: boolean;
+declare const __CELLDL_RUNTIME_BUNDLED__: boolean;
+declare const __CELLDL_RUNTIME_PATH__: string;
 declare const __LIBOPENCOR_VERSION__: string;
 declare const __OPENCOR_VERSION__: string;
 
@@ -12,6 +13,12 @@ declare module '*.vue' {
 }
 
 declare module '*.css';
+
+declare module '*.css?inline' {
+  const source: string;
+
+  export default source;
+}
 
 declare module '*?asset' {
   const source: string;

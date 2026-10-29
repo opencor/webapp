@@ -1428,19 +1428,17 @@ vue.onMounted(() => {
 
   const viewRegistry = useViewRegistry();
 
-  if (__CELLDL_EDITOR__) {
-    // Note: the CellDL Editor is big, so we only load it when needed.
+  // Note: the CellDL Editor is big, so we only load it when needed (see common/celldlRuntime.ts).
 
-    viewRegistry.register({
-      id: 'celldl-editor',
-      category: ViewCategory.Editing,
-      label: 'CellDL Editor',
-      icon: { url: celldlIcon },
-      component: vue.defineAsyncComponent(() => import('./views/CellDLEditorView.vue')),
-      fileTypes: [locApi.EFileType.UNKNOWN_FILE],
-      supportsFile: locCommon.isCellDLFile
-    });
-  }
+  viewRegistry.register({
+    id: 'celldl-editor',
+    category: ViewCategory.Editing,
+    label: 'CellDL Editor',
+    icon: { url: celldlIcon },
+    component: vue.defineAsyncComponent(() => import('./views/CellDLEditorView.vue')),
+    fileTypes: [locApi.EFileType.UNKNOWN_FILE],
+    supportsFile: locCommon.isCellDLFile
+  });
 
   viewRegistry.register({
     id: 'simulation-experiment-standard',

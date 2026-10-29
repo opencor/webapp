@@ -39,10 +39,12 @@ import * as vue from 'vue';
 
 import * as celldl from '../../common/celldl';
 import { type ICellDLEditorClient, useCellDLEditorHost } from '../../common/celldlEditorHost';
+import { loadCellDLRuntime } from '../../common/celldlRuntime';
 import * as common from '../../common/common';
 import { LONG_DELAY } from '../../common/constants';
 import * as locApi from '../../libopencor/locApi';
 
+import { useOpenCORContext } from '../OpenCORContext';
 import { useOpenCORMessage } from '../OpenCORMessage';
 
 import './toolbar-based-view.css';
@@ -86,17 +88,57 @@ const client = vue.reactive({
   container: null,
   data: new TextDecoder().decode(props.file.contents()),
   active: vue.computed<boolean>(() => props.isActiveFile && isActiveView.value),
+  activation: 0,
   loaded: false,
   issues: []
 }) as ICellDLEditorClient;
 
-vue.onMounted(() => {
+// Let our shared CellDL Editor know whenever we become visible or our OpenCOR instance becomes active while we are
+// visible, so that it shows our diagram if another OpenCOR instance also has a visible CellDL Editor view.
+
+const { isActiveApp } = useOpenCORContext();
+
+vue.watch(
+  [() => client.active, isActiveApp],
+  ([active, activeApp], [prevActive, prevActiveApp]) => {
+    if (active && (!prevActive || (activeApp && !prevActiveApp))) {
+      host.activate(client);
+    }
+  },
+  { immediate: true }
+);
+
+// Load our CellDL runtime (see common/celldlRuntime.ts) and then register ourselves with our shared CellDL Editor,
+// unless our CellDL runtime couldn't be loaded, in which case we report the issue.
+// Note: we may get unmounted while our CellDL runtime is being loaded, in which case we must not register ourselves.
+
+let unmounted = false;
+const appContext = vue.getCurrentInstance()?.appContext ?? null;
+
+vue.onMounted(async () => {
+  try {
+    await loadCellDLRuntime();
+  } catch (error: unknown) {
+    client.issues.push({
+      type: locApi.EIssueType.ERROR,
+      description: common.formatError(error)
+    });
+
+    return;
+  }
+
+  if (unmounted) {
+    return;
+  }
+
   client.container = containerRef.value;
 
-  host.register(client);
+  host.register(client, appContext);
 });
 
 vue.onBeforeUnmount(() => {
+  unmounted = true;
+
   host.unregister(client);
 });
 

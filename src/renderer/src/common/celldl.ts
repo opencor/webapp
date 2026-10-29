@@ -1,8 +1,8 @@
-import * as celldlEditor from '@celldl/editor';
 import type * as bg2cellml from '@physiomelinks/bg2cellml';
 
 import * as locApi from '../libopencor/locApi';
 
+import { loadCellDLRuntime } from './celldlRuntime';
 import * as common from './common';
 import * as dependencies from './dependencies';
 
@@ -11,7 +11,8 @@ import * as dependencies from './dependencies';
 // Note #2: this relies on the BG-RDF framework, which CellDL Editor only makes available once it has been initialised
 //          (otherwise, bgRdfStatements() returns no statement), hence it must only be called once CellDL Editor has
 //          been loaded.
-// Note #3: @celldl/rdf comes with its own copy of Oxigraph, but it doesn't expose it, hence we need our own copy.
+// Note #3: CellDL Editor comes with its own copy of Oxigraph (bundled from @celldl/rdf), but it doesn't expose it, hence
+//          we need our own copy (which @physiomelinks/bg2cellml expects as a peer dependency).
 
 let converterInitialisation: Promise<bg2cellml.Converter> | null = null;
 let converterInitialised = false;
@@ -22,7 +23,9 @@ export const isConverterInitialised = (): boolean => {
 
 const initialisedConverter = (progress: (percent: number) => void = () => {}): Promise<bg2cellml.Converter> => {
   converterInitialisation ??= (async () => {
-    if (!celldlEditor.editorInitialised()) {
+    const runtime = await loadCellDLRuntime();
+
+    if (!runtime.editorInitialised()) {
       throw new Error('CellDL Editor has not been initialised.');
     }
 
@@ -35,15 +38,15 @@ const initialisedConverter = (progress: (percent: number) => void = () => {}): P
     };
 
     const [bg2cellmlModule, libcellml, oxigraph] = await Promise.all([
-      import('@physiomelinks/bg2cellml'),
-      import('libcellml.js').then(async (module) => {
+      runtime.bg2cellml(),
+      runtime.libcellml().then(async (module) => {
         const libcellml = await module.default();
 
         step();
 
         return libcellml;
       }),
-      import('oxigraph/web.js').then(async (module) => {
+      runtime.oxigraph().then(async (module) => {
         await module.default();
 
         step();
@@ -52,7 +55,7 @@ const initialisedConverter = (progress: (percent: number) => void = () => {}): P
       })
     ]);
     const res = new bg2cellmlModule.Converter({ libcellml, oxigraph });
-    const issues = res.loadFramework({ quads: celldlEditor.bgRdfStatements() });
+    const issues = res.loadFramework({ quads: runtime.bgRdfStatements() });
 
     if (issues.length) {
       throw new Error(`The BG-RDF framework could not be loaded (${issues.join(' ')}).`);

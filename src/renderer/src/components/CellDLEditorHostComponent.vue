@@ -1,5 +1,5 @@
 <template>
-  <div class="celldl-editor">
+  <div class="celldl-editor h-full">
     <Teleport :to="container" :disabled="!container">
       <div ref="editorRef" class="h-full" :class="{ invisible: switching }">
         <CellDLEditor
@@ -14,20 +14,26 @@
 </template>
 
 <script setup lang="ts">
-import CellDLEditor from '@celldl/editor';
-import '@celldl/editor/style.css';
 import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
 
 import { useCellDLEditorHost } from '../common/celldlEditorHost';
+import { loadCellDLRuntime } from '../common/celldlRuntime';
 import * as common from '../common/common';
 import { useTheme } from '../common/vueCommon';
 
-// Our shared CellDL Editor (see common/celldlEditorHost.ts).
-// Note: when no CellDL Editor view is visible, our CellDL Editor is "parked" in our (invisible) root element.
+// CellDL Editor, which is part of our CellDL runtime (see common/celldlRuntime.ts).
+// Note: we are only mounted once a CellDL Editor view has loaded our CellDL runtime (see CellDLEditorView.vue), so this
+//       doesn't actually load it.
 
-const { container, editorCommand, onEditorData, onEditorState, setReady, switching } = useCellDLEditorHost();
+const CellDLEditor = vue.defineAsyncComponent(async () => (await loadCellDLRuntime()).CellDLEditor);
+
+// Our shared CellDL Editor (see common/celldlEditorHost.ts).
+// Note: when no CellDL Editor view is visible, our CellDL Editor is "parked" in our root element, which is rendered in
+//       an invisible element (see mount() in common/celldlEditorHost.ts).
+
+const { container, editorCommand, onEditorData, onEditorState, setFailed, setReady, switching } = useCellDLEditorHost();
 const { theme } = useTheme();
 const editorRef = vue.shallowRef<HTMLElement | null>(null);
 
@@ -52,4 +58,14 @@ const { stop: stopObservingEditor } = vueusecore.useMutationObserver(
     subtree: true
   }
 );
+
+// Let our host know if our CellDL Editor fails to get ready.
+// Note: CellDL Editor initialises itself before loading its actual component (e.g., it instantiates Oxigraph from a
+//       data URL, which a host application's Content Security Policy may not allow), and if that fails then it will
+//       never be ready. We only consider errors that occur before our CellDL Editor is ready (see setFailed()), and we
+//       let them propagate, so that they still get logged.
+
+vue.onErrorCaptured((error: unknown) => {
+  setFailed(error);
+});
 </script>

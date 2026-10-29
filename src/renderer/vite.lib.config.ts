@@ -8,6 +8,7 @@ import * as postcss from 'postcss';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
+import { buildCellDLRuntime } from './scripts/celldl.runtime.ts';
 import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js.ts';
 import { libopencorVersion, opencorVersion } from './scripts/libopencor.version.ts';
 import { stripPrimeIconsFontFacePlugin } from './scripts/primeicons.plugin.ts';
@@ -42,17 +43,18 @@ export default vite.defineConfig({
     },
     target: 'esnext',
     copyPublicDir: false
-    // Note: our public folder only contains libOpenCOR's glue (see downloadLibopencorJsIfNeeded()), which host
-    //       applications don't serve from our package anyway (we fall back on importing it from https://opencor.ws in
-    //       that case, see src/common/initialisation.ts), and our Web app's .htaccess file, which is only relevant to
-    //       our Web app, so there is no need to ship them.
+    // Note: our public folder only contains libOpenCOR's glue (see downloadLibopencorJsIfNeeded()) and our CellDL
+    //       runtime (see buildCellDLRuntime()), which host applications don't serve from our package anyway (we fall
+    //       back on importing them from https://opencor.ws in that case, see src/common/initialisation.ts and
+    //       src/common/celldlRuntime.ts), and our Web app's .htaccess file, which is only relevant to our Web app, so
+    //       there is no need to ship them.
   },
   publicDir: path.join(import.meta.dirname, 'public'),
   define: {
-    // Note: we don't include our CellDL Editor view in our library since CellDL Editor (and the converter needed to
-    //       generate CellML from a CellDL file) would considerably increase the size of our package.
-
-    __CELLDL_EDITOR__: JSON.stringify(false),
+    __CELLDL_RUNTIME_BUNDLED__: JSON.stringify(false),
+    // Note: our library doesn't include our CellDL runtime, but we still need to build it to know from where to load it
+    //       at runtime (see src/common/celldlRuntime.ts).
+    __CELLDL_RUNTIME_PATH__: JSON.stringify(await buildCellDLRuntime(path.join(import.meta.dirname, 'public'))),
     __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
     __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
   },

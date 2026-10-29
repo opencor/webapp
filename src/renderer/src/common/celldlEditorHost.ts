@@ -7,7 +7,7 @@ import * as locApi from '../libopencor/locApi';
 
 import * as common from './common';
 
-// CellDL Editor is shared by all our CellDL Editor views.
+// CellDL Editor is shared by all our CellDL Editor views, including those of different OpenCOR instances.
 // Note: CellDL Editor listens to keyboard and pointer events on the window and the document, never stops listening to
 //       them, and relies on some global state (e.g., its undo/redo history). This means that if we had one CellDL
 //       Editor per CellDL Editor view, then pressing Backspace in one file tab could, for instance, delete the selected
@@ -21,16 +21,13 @@ export interface ICellDLEditorClient {
   container: HTMLElement | null;
   data: string;
   active: boolean;
+  activation: number;
   loaded: boolean;
   issues: locApi.IIssue[];
 }
 
-// Note: we flag our call to createGlobalState() as pure, so that our library (which doesn't include our CellDL Editor
-//       view) doesn't include this code.
-
-export const useCellDLEditorHost = /* @__PURE__ */ vueusecore.createGlobalState(() => {
+export const useCellDLEditorHost = vueusecore.createGlobalState(() => {
   const clients = vue.shallowReactive(new Set<ICellDLEditorClient>());
-  const needed = vue.ref<boolean>(false);
   const ready = vue.ref<boolean>(false);
   const switching = vue.ref<boolean>(false);
   const editorCommand = vue.shallowRef<CellDLEditorCommand>();
@@ -38,16 +35,28 @@ export const useCellDLEditorHost = /* @__PURE__ */ vueusecore.createGlobalState(
   let openedClient: ICellDLEditorClient | null = null;
 
   // The client which diagram should be shown, if any.
+  // Note: several clients may be active at the same time (e.g., if several OpenCOR instances each show a CellDL file),
+  //       in which case we show the diagram of the client that was activated last (see activate()).
 
   const targetClient = vue.computed<ICellDLEditorClient | null>(() => {
+    let res: ICellDLEditorClient | null = null;
+
     for (const client of clients) {
-      if (client.active && client.container && !client.issues.length) {
-        return client;
+      if (client.active && client.container && !client.issues.length && client.activation > (res?.activation ?? -1)) {
+        res = client;
       }
     }
 
-    return null;
+    return res;
   });
+
+  // Mark the given client as the one that was activated last.
+
+  let activationNumber = 0;
+
+  const activate = (client: ICellDLEditorClient): void => {
+    client.activation = ++activationNumber;
+  };
 
   // The container in which the CellDL Editor should be mounted, if any.
   // Note: when a CellDL Editor view gets deactivated, KeepAlive moves the view (and therefore our CellDL Editor) out of
@@ -59,13 +68,60 @@ export const useCellDLEditorHost = /* @__PURE__ */ vueusecore.createGlobalState(
     return targetClient.value?.container ?? null;
   });
 
-  // Register/unregister a client.
-  // Note: once needed, our CellDL Editor is never destroyed since it never stops listening to events (see above).
+  // Mount our CellDL Editor, if needed.
+  // Note: our CellDL Editor must never be destroyed since it never stops listening to events (see above), yet an
+  //       OpenCOR instance may get unmounted (e.g., when OpenCOR is used as a library). So, rather than mounting our
+  //       CellDL Editor within an OpenCOR instance, we render it in its own element, which we append to the document's
+  //       body and in which our CellDL Editor is "parked" when no CellDL Editor view is visible. We render it using the
+  //       app context of our first client, so that it has access to PrimeVue, among other things. Our element has the
+  //       "opencor" class, so that our Tailwind CSS classes also apply to our CellDL Editor while it is parked (see
+  //       tailwind.config.ts).
 
-  const register = (client: ICellDLEditorClient): void => {
+  let mounted = false;
+
+  const mount = (appContext: vue.AppContext | null): void => {
+    if (mounted) {
+      return;
+    }
+
+    mounted = true;
+
+    const element = document.createElement('div');
+
+    element.className = 'opencor';
+    element.style.cssText = 'position: fixed; inset: 0; visibility: hidden; pointer-events: none;';
+
+    document.body.appendChild(element);
+
+    const vnode = vue.createVNode(
+      vue.defineAsyncComponent(() => import('../components/CellDLEditorHostComponent.vue'))
+    );
+
+    vnode.appContext = appContext;
+
+    vue.render(vnode, element);
+  };
+
+  // Report the failure of our CellDL Editor, if any, to the given client.
+
+  let failure: string | null = null;
+
+  const reportFailure = (client: ICellDLEditorClient): void => {
+    if (failure !== null) {
+      client.issues.push({
+        type: locApi.EIssueType.ERROR,
+        description: failure
+      });
+    }
+  };
+
+  // Register/unregister a client, mounting our CellDL Editor when registering our first client.
+
+  const register = (client: ICellDLEditorClient, appContext: vue.AppContext | null): void => {
     clients.add(client);
 
-    needed.value = true;
+    reportFailure(client);
+    mount(appContext);
   };
 
   const unregister = (client: ICellDLEditorClient): void => {
@@ -96,13 +152,15 @@ export const useCellDLEditorHost = /* @__PURE__ */ vueusecore.createGlobalState(
   };
 
   // Retrieve the diagram from CellDL Editor.
-  // Note: we give up if CellDL Editor doesn't provide the diagram in time since, otherwise, our queue of operations
-  //       would be blocked forever.
+  // Note #1: we give up if CellDL Editor doesn't provide the diagram in time since, otherwise, our queue of operations
+  //          would be blocked forever.
+  // Note #2: we also give up if CellDL Editor provides no diagram (e.g., if it failed to serialise it) since,
+  //          otherwise, we would replace the last version we have of the diagram with nothing.
 
   const DATA_REQUEST_TIMEOUT = 3 * 1000; // 3 seconds.
 
   let dataRequestNumber = 0;
-  const dataRequests = new Map<string, (data: string) => void>();
+  const dataRequests = new Map<string, (data: string | undefined) => void>();
 
   const diagramData = (): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -113,10 +171,14 @@ export const useCellDLEditorHost = /* @__PURE__ */ vueusecore.createGlobalState(
         reject(new Error('CellDL Editor did not provide the diagram in time.'));
       }, DATA_REQUEST_TIMEOUT);
 
-      dataRequests.set(kind, (data: string) => {
+      dataRequests.set(kind, (data: string | undefined) => {
         window.clearTimeout(timeoutId);
 
-        resolve(data);
+        if (data) {
+          resolve(data);
+        } else {
+          reject(new Error('CellDL Editor did not provide the diagram.'));
+        }
       });
 
       editorCommand.value = {
@@ -130,12 +192,12 @@ export const useCellDLEditorHost = /* @__PURE__ */ vueusecore.createGlobalState(
   };
 
   const onEditorData = (data: EditorData): void => {
-    const resolve = dataRequests.get(data.kind ?? '');
+    const settle = dataRequests.get(data.kind ?? '');
 
-    if (resolve) {
+    if (settle) {
       dataRequests.delete(data.kind ?? '');
 
-      resolve(data.data ?? '');
+      settle(data.data);
     }
   };
 
@@ -240,6 +302,21 @@ export const useCellDLEditorHost = /* @__PURE__ */ vueusecore.createGlobalState(
     ready.value = true;
   };
 
+  // Mark our CellDL Editor as having failed to get ready (e.g., if CellDL Editor failed to initialise itself), and let
+  // our clients know about it since, otherwise, they would wait for it forever.
+
+  const setFailed = (error: unknown): void => {
+    if (ready.value || failure !== null) {
+      return;
+    }
+
+    failure = `CellDL Editor could not be loaded (${common.formatError(error)}).`;
+
+    for (const client of clients) {
+      reportFailure(client);
+    }
+  };
+
   // Return the (possibly edited) diagram of the given client.
 
   const clientData = (client: ICellDLEditorClient): Promise<string> => {
@@ -253,13 +330,14 @@ export const useCellDLEditorHost = /* @__PURE__ */ vueusecore.createGlobalState(
   };
 
   return {
+    activate,
     clientData,
     container,
     editorCommand,
-    needed,
     onEditorData,
     onEditorState,
     register,
+    setFailed,
     setReady,
     switching,
     unregister

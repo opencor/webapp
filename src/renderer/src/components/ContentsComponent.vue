@@ -57,11 +57,6 @@
           </div>
         </div>
       </template>
-      <component
-        v-if="CellDLEditorHostComponent && celldlEditorHost?.needed.value"
-        :is="CellDLEditorHostComponent"
-        class="absolute inset-0 invisible pointer-events-none"
-      />
     </div>
   </div>
 </template>
@@ -71,7 +66,6 @@ import * as vue from 'vue';
 
 import type { IOpenCORExternalDataEvent, IOpenCORSimulationDataEvent } from '../../index';
 
-import { useCellDLEditorHost } from '../common/celldlEditorHost';
 import * as common from '../common/common';
 import { electronApi } from '../common/electronApi';
 import * as locCommon from '../common/locCommon';
@@ -99,14 +93,6 @@ const emit = defineEmits<{
 const { simulationOnly } = useOpenCORContext();
 
 const viewRegistry = useViewRegistry();
-
-// Our CellDL Editor views share a CellDL Editor (see common/celldlEditorHost.ts), which is big, so we only load it when
-// needed.
-
-const celldlEditorHost = __CELLDL_EDITOR__ ? useCellDLEditorHost() : null;
-const CellDLEditorHostComponent = __CELLDL_EDITOR__
-  ? vue.defineAsyncComponent(() => import('./CellDLEditorHostComponent.vue'))
-  : null;
 const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof SimulationExperimentInteractiveView> | null>(
   null
 );
@@ -297,12 +283,11 @@ const openFile = async (file: locApi.File, wait: boolean = false): Promise<void>
   fileTabs.value.splice(fileTabs.value.findIndex((fileTab) => fileTab.file.path() === prevActiveFile) + 1, 0, {
     file: file,
     uiJson: uiJson,
-    activeViewId:
-      __CELLDL_EDITOR__ && locCommon.isCellDLFile(file)
-        ? 'celldl-editor'
-        : uiJson
-          ? 'simulation-experiment-interactive'
-          : 'simulation-experiment-standard'
+    activeViewId: locCommon.isCellDLFile(file)
+      ? 'celldl-editor'
+      : uiJson
+        ? 'simulation-experiment-interactive'
+        : 'simulation-experiment-standard'
   });
 
   // Select the file and let people know that it has been opened.

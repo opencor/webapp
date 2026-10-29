@@ -32,14 +32,25 @@ export default electronVite.defineConfig({
   preload: {},
   renderer: {
     build: {
+      rolldownOptions: {
+        // Note: libCellML is built for both the Web and Node.js, and it only imports node:module when running in
+        //       Node.js (which our renderer never is, see ENVIRONMENT_IS_NODE in libcellml.js), so there is no need for
+        //       Vite to replace it with an empty module (and to warn us about it).
+
+        external: ['node:module']
+      },
       target: 'esnext',
       copyPublicDir: false
-      // Note: our renderer's public folder only contains libOpenCOR's glue (see downloadLibopencorJsIfNeeded()) and our
-      //       Web app's .htaccess file, which are only needed by our Web app (OpenCOR uses our C++ API, see
-      //       initialiseLocApi(), and isn't served by Apache), so there is no need to ship them.
+      // Note: our renderer's public folder only contains libOpenCOR's glue (see downloadLibopencorJsIfNeeded()), our
+      //       CellDL runtime (see buildCellDLRuntime()), and our Web app's .htaccess file, which are only needed by our
+      //       Web app (OpenCOR uses our C++ API, see initialiseLocApi(), includes our CellDL runtime, and isn't served
+      //       by Apache), so there is no need to ship them.
     },
     define: {
-      __CELLDL_EDITOR__: JSON.stringify(true),
+      // Note: unlike OpenCOR's Web app, OpenCOR includes our CellDL runtime (see src/common/celldlRuntime.ts).
+
+      __CELLDL_RUNTIME_BUNDLED__: JSON.stringify(true),
+      __CELLDL_RUNTIME_PATH__: JSON.stringify(''),
       __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
       __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
     },
@@ -55,7 +66,8 @@ export default electronVite.defineConfig({
       exclude: ['libcellml.js', 'oxigraph']
     },
     plugins: [
-      // Note: this must be in sync with src/renderer/vite.config.ts, except for the download-libopencor-js plugin.
+      // Note: this must be in sync with src/renderer/vite.config.ts, except for the download-libopencor-js plugin and
+      //       the scope-celldl-editor-css plugin (OpenCOR's Web app doesn't include our CellDL runtime).
 
       {
         // Plugin to download libOpenCOR's glue, so that our renderer can also be used as our Web app (e.g., at

@@ -11,7 +11,7 @@ import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
-import { scopeCellDLEditorCssPlugin } from './scripts/celldl.plugin.ts';
+import { buildCellDLRuntime } from './scripts/celldl.runtime.ts';
 import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js.ts';
 import { libopencorVersion, opencorVersion } from './scripts/libopencor.version.ts';
 import { stripPrimeIconsFontFacePlugin } from './scripts/primeicons.plugin.ts';
@@ -42,26 +42,16 @@ export default vite.defineConfig({
     target: 'esnext'
   },
   define: {
-    __CELLDL_EDITOR__: JSON.stringify(true),
+    __CELLDL_RUNTIME_BUNDLED__: JSON.stringify(false),
+    __CELLDL_RUNTIME_PATH__: JSON.stringify(await buildCellDLRuntime(path.join(import.meta.dirname, 'public'))),
     __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
     __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
-  },
-  optimizeDeps: {
-    // Note: CellDL Editor is only loaded when needed, so Vite would only discover (and optimise) it and its
-    //       dependencies at that point, before reloading our Web app, hence we ask Vite to optimise them upfront.
-
-    include: ['@celldl/editor', '@celldl/rdf', '@physiomelinks/bg2cellml'],
-
-    // Note: libCellML and Oxigraph locate their WASM file relative to their own URL, so they must not be optimised.
-
-    exclude: ['libcellml.js', 'oxigraph']
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.
 
     tailwindcssPlugin(),
     stripPrimeIconsFontFacePlugin(),
-    scopeCellDLEditorCssPlugin(),
     vuePlugin({
       script: {
         fs: {
@@ -90,12 +80,6 @@ export default vite.defineConfig({
     }
   },
   publicDir: path.join(import.meta.dirname, 'public'),
-  resolve: {
-    // Note: CellDL Editor depends on a specific version of Vue, which may therefore get installed alongside ours, yet
-    //       there must only be one copy of Vue in our bundle.
-
-    dedupe: ['vue']
-  },
   server: {
     fs: {
       allow: [fileURLToPath(new URL('../..', import.meta.url))]
