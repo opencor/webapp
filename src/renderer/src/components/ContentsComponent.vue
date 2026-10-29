@@ -57,7 +57,9 @@
           </div>
         </div>
       </template>
-      <component v-if="CellDLEditorHostComponent && celldlEditorHost?.needed.value" :is="CellDLEditorHostComponent"
+      <component
+        v-if="CellDLEditorHostComponent && celldlEditorHost?.needed.value"
+        :is="CellDLEditorHostComponent"
         class="absolute inset-0 invisible pointer-events-none"
       />
     </div>
