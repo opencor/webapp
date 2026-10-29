@@ -298,7 +298,7 @@ export const downloadFile = (filename: string, content: string | Blob, type: str
 
 export const baseFileName = (fileName: string): string => {
   return fileName.replace(/\.[^/.]+$/, '');
-}
+};
 
 // A method to get the file name from a file path.
 // Note: the file path should be a canonical path (see locApi.File.canonicalPath()), i.e. a path that libOpenCOR has
