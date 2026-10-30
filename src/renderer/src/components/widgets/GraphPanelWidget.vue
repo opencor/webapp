@@ -3277,7 +3277,7 @@ const linearPath = (
   // Note #1: for each set of consecutive points that are in the same pixel column (of our path), we only draw its
   //          first, minimum, maximum, and last points, in their original order and at their exact position (skipping
   //          any of them that is at the same position as the point drawn before it). This means that a smooth trace is
-  //          drawn as-is while the number of segments that we draw (and therefore the time it takes to draw them) is
+  //          drawn as is while the number of segments that we draw (and therefore the time it takes to draw them) is
   //          limited to four per set of consecutive points in a pixel column (e.g., with noisy data).
   // Note #2: we only ever look at consecutive points, so this works whether or not our X values are sorted.
   // Note #3: we break our path at non-finite values, so that a gap in the data is drawn as a gap in the trace.

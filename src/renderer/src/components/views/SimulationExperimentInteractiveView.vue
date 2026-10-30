@@ -1147,7 +1147,7 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
     return res;
   }
 
-  // Determine whether we can use the input data as-is (i.e. strictly increasing X values) for interpolation or whether
+  // Determine whether we can use the input data as is (i.e. strictly increasing X values) for interpolation or whether
   // we need to normalise it first (i.e. sort and deduplicate the input data before interpolation).
 
   let useInputAsIs = true;
