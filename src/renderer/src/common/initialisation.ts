@@ -68,7 +68,7 @@ const libOpenCORWasmBaseUrl = `https://opencor.ws/libopencor/downloads/wasm/${__
 const NB_OF_ATTEMPTS = 3;
 const RETRY_DELAY = 1000;
 
-const withRetries = async <T>(name: string, operation: (attempt: number) => Promise<T>): Promise<T> => {
+export const withRetries = async <T>(name: string, operation: (attempt: number) => Promise<T>): Promise<T> => {
   for (let attempt = 1; ; ++attempt) {
     try {
       return await operation(attempt);
@@ -103,7 +103,7 @@ const JSDELIVR_HOST = 'cdn.jsdelivr.net';
 const JSDELIVR_ALTERNATIVE_HOSTS = ['fastly.jsdelivr.net', 'gcore.jsdelivr.net'];
 // Note: these hosts must be allowed by our Content Security Policy (see index.html).
 
-const attemptUrl = (url: string, attempt: number): string => {
+export const attemptUrl = (url: string, attempt: number): string => {
   if (attempt === 1 || url.startsWith('blob:')) {
     return url;
   }

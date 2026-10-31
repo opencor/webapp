@@ -1,5 +1,5 @@
 <template>
-  <div ref="rootRef" class="simulation-experiment-view h-full flex flex-col">
+  <div ref="rootRef" class="simulation-experiment-view toolbar-based-view h-full flex flex-col">
     <IssuesView v-if="issues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="issues" />
     <template v-else>
       <Toolbar class="p-1! shrink-0">

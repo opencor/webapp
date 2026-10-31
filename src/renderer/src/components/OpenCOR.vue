@@ -60,12 +60,13 @@
         @error="onError"
         @fileClosed="onFileClosed"
         @fileOpened="onFileOpened"
+        @openFile="openFile"
         @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
       <BlockingMessageComponent v-if="loadingModelMessageVisible" message="Loading model..." />
       <BlockingMessageComponent v-show="loadingExternalDataVisible" message="Loading external data..." />
-      <BlockingMessageComponent v-show="progressMessageVisible" :message="progressMessageMessage" :progress="progressMessageProgress" />
+      <BlockingMessageComponent v-show="opencorMessageVisible" :message="opencorMessageMessage" :progress="opencorMessageProgress" />
       <OkMessageDialog v-model:visible="updateErrorVisible"
         :title="updateErrorTitle"
         :message="updateErrorIssue"
@@ -125,6 +126,7 @@ import * as vue from 'vue';
 import type { IOpenCOREmits, IOpenCORExternalDataEvent, IOpenCORProps, IOpenCORSimulationDataEvent } from '../../index';
 
 import '../assets/app.css';
+import celldlIcon from '../assets/celldl.svg?inline';
 import '../assets/primeicons-assets';
 import * as changelog from '../common/changelog';
 import * as common from '../common/common';
@@ -141,7 +143,7 @@ import { useViewRegistry, ViewCategory } from '../common/viewRegistry';
 import * as vueCommon from '../common/vueCommon';
 import ContentsComponent from '../components/ContentsComponent.vue';
 import { provideOpenCORContext } from '../components/OpenCORContext';
-import { provideOpenCORProgressMessage } from '../components/OpenCORProgressMessage';
+import { provideOpenCORMessage } from '../components/OpenCORMessage';
 import { provideOpenCORToast } from '../components/OpenCORToast';
 import * as locApi from '../libopencor/locApi';
 
@@ -352,14 +354,14 @@ trackCleanup(
   })
 );
 
-// Provide access to our progress message features.
-// Note: this must be done before compBlockUiEnabled is computed below since it relies on progressMessageVisible.
+// Provide access to our message features.
+// Note: this must be done before compBlockUiEnabled is computed below since it relies on opencorMessageVisible.
 
 const {
-  visible: progressMessageVisible,
-  message: progressMessageMessage,
-  progress: progressMessageProgress
-} = provideOpenCORProgressMessage();
+  visible: opencorMessageVisible,
+  message: opencorMessageMessage,
+  progress: opencorMessageProgress
+} = provideOpenCORMessage();
 
 // Determine whether the component UI should be blocked/enabled.
 // Note: compBlockUiEnabled is used to determine whether PrimeVue's BlockUI component should be enabled, whereas
@@ -375,7 +377,7 @@ const compBlockUiEnabled = vue.computed<boolean>(() => {
     initialisingOpencorMessageVisible.value ||
     loadingModelMessageVisible.value ||
     loadingExternalDataVisible.value ||
-    progressMessageVisible.value ||
+    opencorMessageVisible.value ||
     connectingToGitHub.value
   );
 });
@@ -1425,6 +1427,18 @@ vue.onMounted(() => {
   // Note: this must be done in onMounted so that all components are available.
 
   const viewRegistry = useViewRegistry();
+
+  // Note: the CellDL Editor is big, so we only load it when needed (see common/celldlRuntime.ts).
+
+  viewRegistry.register({
+    id: 'celldl-editor',
+    category: ViewCategory.Editing,
+    label: 'CellDL Editor',
+    icon: { url: celldlIcon },
+    component: vue.defineAsyncComponent(() => import('./views/CellDLEditorView.vue')),
+    fileTypes: [locApi.EFileType.UNKNOWN_FILE],
+    supportsFile: locCommon.isCellDLFile
+  });
 
   viewRegistry.register({
     id: 'simulation-experiment-standard',

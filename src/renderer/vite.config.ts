@@ -11,6 +11,7 @@ import { visualizer as visualizerPlugin } from 'rollup-plugin-visualizer';
 import vitePlugin from 'unplugin-vue-components/vite';
 import * as vite from 'vite';
 
+import { buildCellDLRuntime } from './scripts/celldl.runtime.ts';
 import { downloadLibopencorJsIfNeeded } from './scripts/download.libopencor.js.ts';
 import { libopencorVersion, opencorVersion } from './scripts/libopencor.version.ts';
 import { stripPrimeIconsFontFacePlugin } from './scripts/primeicons.plugin.ts';
@@ -40,8 +41,9 @@ export default vite.defineConfig({
     },
     target: 'esnext'
   },
-  publicDir: path.join(import.meta.dirname, 'public'),
   define: {
+    __CELLDL_RUNTIME_BUNDLED__: JSON.stringify(false),
+    __CELLDL_RUNTIME_PATH__: JSON.stringify(await buildCellDLRuntime(path.join(import.meta.dirname, 'public'))),
     __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
     __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
   },
@@ -71,16 +73,17 @@ export default vite.defineConfig({
         ]
       : [])
   ],
-  server: {
-    fs: {
-      allow: [fileURLToPath(new URL('../..', import.meta.url))]
-    },
+  preview: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp'
     }
   },
-  preview: {
+  publicDir: path.join(import.meta.dirname, 'public'),
+  server: {
+    fs: {
+      allow: [fileURLToPath(new URL('../..', import.meta.url))]
+    },
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp'

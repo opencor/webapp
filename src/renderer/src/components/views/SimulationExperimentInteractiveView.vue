@@ -1,5 +1,5 @@
 <template>
-  <div ref="rootRef" class="simulation-experiment-view h-full flex flex-col">
+  <div ref="rootRef" class="simulation-experiment-view toolbar-based-view h-full flex flex-col">
     <IssuesView v-if="issues.length" class="m-4 mb-0" style="height: calc(100% - 2rem);" :issues="issues" />
     <template v-else>
       <Toolbar v-if="!simulationOnly" class="p-1! shrink-0">
@@ -1147,7 +1147,7 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
     return res;
   }
 
-  // Determine whether we can use the input data as-is (i.e. strictly increasing X values) for interpolation or whether
+  // Determine whether we can use the input data as is (i.e. strictly increasing X values) for interpolation or whether
   // we need to normalise it first (i.e. sort and deduplicate the input data before interpolation).
 
   let useInputAsIs = true;
@@ -2055,7 +2055,7 @@ const onToggleRunColorPopover = (index: number, event: MouseEvent): void => {
 
 const onDownloadCombineArchive = (): void => {
   const jsZip = new dependencies._jsZip();
-  const baseFileName = common.fileName(props.file.canonicalPath()).replace(/\.[^/.]+$/, '');
+  const baseFileName = common.baseFileName(common.fileName(props.file.canonicalPath()));
   const modelFile = model?.file();
 
   if (!modelFile) {

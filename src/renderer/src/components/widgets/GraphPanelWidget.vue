@@ -142,7 +142,7 @@ import * as dependencies from '../../common/dependencies';
 import * as math from '../../common/math';
 import * as vueCommon from '../../common/vueCommon';
 
-import { useOpenCORProgressMessage } from '../OpenCORProgressMessage';
+import { useOpenCORMessage } from '../OpenCORMessage';
 
 const CONTEXT_MENU_EVENT: string = 'graph-panel-context-menu-open';
 
@@ -289,7 +289,7 @@ const hoverTooltipRef = vue.shallowRef<HTMLElement | null>(null);
 const theme = vueCommon.useTheme();
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
-const progressMessage = useOpenCORProgressMessage();
+const opencorMessage = useOpenCORMessage();
 let plot: uPlot | undefined;
 let plotSignature: string | undefined;
 let isPlotOutdated = false;
@@ -1228,7 +1228,7 @@ const exportToCsv = async (): Promise<void> => {
 
   // Show the progress message.
 
-  progressMessage.show('Exporting data to CSV...');
+  opencorMessage.show('Exporting data to CSV...');
 
   let successfulExport: boolean = true;
 
@@ -1303,7 +1303,7 @@ const exportToCsv = async (): Promise<void> => {
       ++processedRows;
 
       if (processedRows % chunkSize === 0 || processedRows === sortedXValues.length) {
-        progressMessage.update(Math.floor(percentPerRow * processedRows));
+        opencorMessage.update(Math.floor(percentPerRow * processedRows));
 
         await common.sleep(NO_DELAY);
       }
@@ -1311,7 +1311,7 @@ const exportToCsv = async (): Promise<void> => {
 
     // Make sure that we show 100% before finishing.
 
-    progressMessage.update(100);
+    opencorMessage.update(100);
 
     // Create and download the CSV file.
 
@@ -1328,7 +1328,7 @@ const exportToCsv = async (): Promise<void> => {
       await common.sleep(LONG_DELAY);
     }
 
-    progressMessage.hide();
+    opencorMessage.hide();
   }
 };
 
@@ -3277,7 +3277,7 @@ const linearPath = (
   // Note #1: for each set of consecutive points that are in the same pixel column (of our path), we only draw its
   //          first, minimum, maximum, and last points, in their original order and at their exact position (skipping
   //          any of them that is at the same position as the point drawn before it). This means that a smooth trace is
-  //          drawn as-is while the number of segments that we draw (and therefore the time it takes to draw them) is
+  //          drawn as is while the number of segments that we draw (and therefore the time it takes to draw them) is
   //          limited to four per set of consecutive points in a pixel column (e.g., with noisy data).
   // Note #2: we only ever look at consecutive points, so this works whether or not our X values are sorted.
   // Note #3: we break our path at non-finite values, so that a gap in the data is drawn as a gap in the trace.
