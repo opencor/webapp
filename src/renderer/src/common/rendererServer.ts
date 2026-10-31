@@ -44,13 +44,11 @@ export const startRendererServer = async (preferredPort: number = 0): Promise<st
     '.eot': 'application/vnd.ms-fontobject',
     '.html': 'text/html; charset=UTF-8',
     '.js': 'text/javascript',
-    '.json': 'application/json',
     '.svg': 'image/svg+xml',
     '.ttf': 'font/ttf',
     '.wasm': 'application/wasm',
     '.woff': 'font/woff',
-    '.woff2': 'font/woff2',
-    '.zip': 'application/zip'
+    '.woff2': 'font/woff2'
   };
 
   const notFound = (response: http.ServerResponse): void => {
