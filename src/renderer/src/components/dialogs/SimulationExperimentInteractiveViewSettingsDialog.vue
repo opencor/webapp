@@ -1830,10 +1830,15 @@ const toggleIssues = (event: Event) => {
   gap: 0.75rem;
 }
 
+/**
+ * Note: a card doesn't clip its contents since some of them may extend beyond it (e.g., the reason why the value of a
+ *       number field in the last row of a card was corrected or rejected, see InputScientificNumberWidget.vue), so its
+ *       header has rounded top corners of its own (so that its background doesn't go beyond the card's rounded border).
+ */
+
 .card-item {
   border: 1px solid var(--p-content-border-color);
   border-radius: 0.5rem;
-  overflow: hidden;
 }
 
 .card-header {
@@ -1843,6 +1848,7 @@ const toggleIssues = (event: Event) => {
   gap: 0.75rem;
   padding: 0.375rem 0.5rem 0.375rem 0.75rem;
   border-bottom: 1px solid var(--p-content-border-color);
+  border-radius: calc(0.5rem - 1px) calc(0.5rem - 1px) 0 0;
   background-color: color-mix(in srgb, var(--p-text-color) 3%, transparent);
 }
 
