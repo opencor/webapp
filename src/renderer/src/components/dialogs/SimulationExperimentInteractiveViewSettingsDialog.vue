@@ -1402,7 +1402,7 @@ const importExternalDataFromUrl = async (): Promise<void> => {
   try {
     // Note: common.fetchThroughCorsProxy() only returns an OK response, i.e. it throws otherwise.
 
-    const response = await common.fetchThroughCorsProxy(url);
+    const response = await common.fetchThroughCorsProxy(url, 'csv');
 
     createExternalDataFromCsv(url, externalData.parseExternalCsvData(await response.text()));
 

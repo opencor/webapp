@@ -129,8 +129,8 @@ export const zipCellmlDataUrl = async (dataUrl: string | Uint8Array | File): Pro
   };
 };
 
-export const combineArchiveDataUrl = (dataUrl: string | Uint8Array | File): DataUriInfo => {
-  // Try to retrieve a COMBINE archive from the given data URL.
+export const omexDataUrl = (dataUrl: string | Uint8Array | File): DataUriInfo => {
+  // Try to retrieve an OMEX file from the given data URL.
 
   const mimeType = 'application/zip';
   const zipDataUrl = zipDataFromDataUrl(dataUrl, mimeType);
@@ -146,7 +146,7 @@ export const combineArchiveDataUrl = (dataUrl: string | Uint8Array | File): Data
     };
   }
 
-  // Not a data URL for a COMBINE archive.
+  // Not a data URL for an OMEX file.
 
   return {
     res: false
@@ -209,7 +209,7 @@ export const file = (
         // up straightaway.
 
         common
-          .fetchThroughCorsProxy(fileFilePathOrFileContents, signal)
+          .fetchThroughCorsProxy(fileFilePathOrFileContents, 'file', signal)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer();

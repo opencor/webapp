@@ -969,8 +969,8 @@ const fileContents = async (
 };
 
 // Determine the name under which to suggest saving the given file.
-// Note: a remote file is named after the last part of its URL, which may include a query and/or a fragment, while a
-//       COMBINE archive opened using a data URL is named "OMEX #<n>" (see common.OMEX_PREFIX), i.e. without extension.
+// Note: a remote file is named after the last part of its URL, which may include a query and/or a fragment, while an
+//       OMEX file opened using a data URL is named "OMEX #<n>" (see common.OMEX_PREFIX), i.e. without extension.
 
 const suggestedFileName = (fileTab: FileTab): string => {
   const filePath = fileTab.file.canonicalPath();

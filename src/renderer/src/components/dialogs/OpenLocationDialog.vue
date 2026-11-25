@@ -1,7 +1,7 @@
 <template>
   <BaseDialog header="Open Location" size="md" @hidden="reset">
     <div class="flex flex-col gap-2 mt-1 mb-2">
-      <p class="description">Enter the {{ inputDescription }} of a CellML file, SED-ML file, COMBINE archive, or CellDL file.</p>
+      <p class="description">Enter the {{ inputDescription }} of a CellML file, SED-ML file, OMEX file, or CellDL file.</p>
       <IconField>
         <InputIcon class="pi pi-link" />
         <InputText ref="inputRef" v-model="url" autofocus fluid
@@ -87,7 +87,7 @@ const checked = vue.ref<boolean>(false);
 //          "192.168.010.001", which the URL parser would normalise to "192.168.8.1" since "010" is an octal number) is
 //          not considered as a valid URL. A URL with a scheme can have any host (e.g., an intranet host, such as
 //          "http://modelserver/model.omex").
-// Note #3: a data URL is also valid if it is a Base64-encoded COMBINE archive (i.e. "data:application/zip;base64,...")
+// Note #3: a data URL is also valid if it is a Base64-encoded OMEX file (i.e. "data:application/zip;base64,...")
 //          or zipped CellML file (i.e. "data:application/x.vnd.zip-cellml+zip;base64,..."), since it can then be opened
 //          like any other file (see OpenCOR.openFile() and locCommon.zipDataFromDataUrl()). It is used as is, apart
 //          from its scheme, media type, and ";base64" which are lowercased (since locCommon.zipDataFromDataUrl()

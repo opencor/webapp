@@ -784,7 +784,7 @@ vue.watch(
       initialisingOpencorMessageVisible.value = false;
 
       // We are all done, so let's start checking for a newer version of OpenCOR, but only if we are running the Web app
-      // and not in isolation mode (i.e. with a COMBINE archive) since in those cases we don't want to let the user know
+      // and not in isolation mode (i.e. with an OMEX file) since in those cases we don't want to let the user know
       // about a newer version of OpenCOR.
 
       if (isFullWebApp.value) {
@@ -1534,19 +1534,19 @@ const processFile = async (
     dataUrlFileName = `${common.CELLML_PREFIX}${common.nextCellmlDataUrlNumber()}/${common.fileName(zipCellmlFileName) || zipCellmlFileName}`;
     fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
   } else {
-    // Check whether we were passed a COMBINE archive data URL.
+    // Check whether we were passed an OMEX file data URL.
 
-    const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
+    const omexDataUriInfo = locCommon.omexDataUrl(fileFilePathOrFileContents);
 
-    if (combineArchiveDataUriInfo.res) {
-      if (combineArchiveDataUriInfo.error) {
-        reportFileIssue(fileDescription(fileFilePathOrFileContents), combineArchiveDataUriInfo.error);
+    if (omexDataUriInfo.res) {
+      if (omexDataUriInfo.error) {
+        reportFileIssue(fileDescription(fileFilePathOrFileContents), omexDataUriInfo.error);
 
         return null;
       }
 
       omexDataUrlCounter = common.nextOmexDataUrlNumber();
-      fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
+      fileFilePathOrFileContents = omexDataUriInfo.data as Uint8Array;
     }
   }
 
@@ -1634,7 +1634,7 @@ const processFile = async (
         filePath,
         fileType === locApi.FileType.IRRETRIEVABLE_FILE
           ? 'The file could not be retrieved.'
-          : 'Only COMBINE archives are supported.',
+          : 'Only OMEX files are supported.',
         canonicalFilePath
       );
 
@@ -2499,7 +2499,7 @@ vue.onBeforeUnmount(() => {
   }
 });
 
-// If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
+// If an OMEX file is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry on as normal (i.e. the whole OpenCOR UI will be shown).
 
 if (props.omex) {

@@ -142,7 +142,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
 // is such a name.
 // Note #1: a file opened using a data URL only exists in memory, so it can only be reopened during the current session
 //          (see OpenCOR.addRecentFile()), i.e. not, say, the next time OpenCOR is started.
-// Note #2: a COMBINE archive is named "OMEX #<n>" while a CellML file (from a ZIP-CellML data URL) is named
+// Note #2: an OMEX file is named "OMEX #<n>" while a CellML file (from a ZIP-CellML data URL) is named
 //          "CellML #<n>/<file name>" where <file name> is the name of the CellML file, so that it is still shown under
 //          its own name (see common.fileName()).
 
@@ -182,14 +182,19 @@ export const isUrl = (filePath: string): boolean => {
   return filePath.startsWith('http://') || filePath.startsWith('https://');
 };
 
-// A method to get the CORS proxy URL for a URL.
+// A method to get the CORS proxy URL for a URL, which content is expected to be of the given kind, i.e. a file that we
+// can open (i.e. a CellML file, a SED-ML file, an OMEX file, or a CellDL file) or a CSV file (i.e. some external
+// data), so that our CORS proxy only returns that kind of content and, if it gets something else, tells us what it
+// expected (see src/extern/corsProxy.js).
 // Note: the URL must be encoded since it is passed as a query parameter, which our CORS proxy decodes. Otherwise, the
 //       URL would get truncated at its first "&" (e.g., https://example.com/export?format=csv&gid=123 would become
 //       https://example.com/export?format=csv), lose its fragment, and have its "+" and percent-encoded characters
 //       decoded (e.g., "%2F" would become "/").
 
-export const corsProxyUrl = (url: string): string => {
-  return `https://cors-proxy.opencor.workers.dev/?url=${encodeURIComponent(url)}`;
+export type CorsProxyContentKind = 'file' | 'csv';
+
+export const corsProxyUrl = (url: string, contentKind: CorsProxyContentKind): string => {
+  return `https://cors-proxy.opencor.workers.dev/?url=${encodeURIComponent(url)}&kind=${contentKind}`;
 };
 
 // A method to fetch a URL, giving up if its server doesn't respond (i.e. if we don't get the headers of its response)
@@ -230,11 +235,15 @@ const fetchWithTimeout = async (url: string, signal?: AbortSignal): Promise<Resp
 // Note #4: if the given signal gets aborted, then we give up straightaway (i.e. we don't fetch the URL directly) and
 //          reject with the reason of the signal.
 
-export const fetchThroughCorsProxy = async (url: string, signal?: AbortSignal): Promise<Response> => {
+export const fetchThroughCorsProxy = async (
+  url: string,
+  contentKind: CorsProxyContentKind,
+  signal?: AbortSignal
+): Promise<Response> => {
   let corsProxyIssue: string;
 
   try {
-    const response = await fetchWithTimeout(corsProxyUrl(url), signal);
+    const response = await fetchWithTimeout(corsProxyUrl(url, contentKind), signal);
 
     if (response.ok) {
       const body = await response.arrayBuffer();

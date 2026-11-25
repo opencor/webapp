@@ -26,8 +26,8 @@
           <div class="flex gap-1">
             <ToolbarButtonWidget
               icon="pi pi-download"
-              label="Export COMBINE archive"
-              @click="onDownloadCombineArchive"
+              label="Export OMEX file"
+              @click="onDownloadOmexFile"
             />
             <ToolbarButtonWidget
               icon="pi pi-cog"
@@ -651,7 +651,7 @@ const uiJsonIssues = vue.ref<locApi.Issue[]>(
 // Remove the model changes resulting from our default input values if our UI JSON is invalid.
 // Note: we applied them before validating our UI JSON (see above), but we don't run any simulation with an invalid UI
 //       JSON, so they would otherwise be left in our document and, therefore, be exported with it (see
-//       onDownloadCombineArchive()). Our instance was, however, built with them, so it must not be reused by our next
+//       onDownloadOmexFile()). Our instance was, however, built with them, so it must not be reused by our next
 //       simulation run (e.g., if our UI JSON gets fixed through our settings dialog).
 
 if (uiJsonIssues.value.length && instanceModelChangesKey !== NO_MODEL_CHANGES_KEY) {
@@ -953,7 +953,7 @@ const addExternalData = async (
 
   if (common.isUrl(csv)) {
     try {
-      const response = await common.fetchThroughCorsProxy(csv);
+      const response = await common.fetchThroughCorsProxy(csv, 'csv');
 
       if (!response.ok) {
         return Promise.resolve(
@@ -2488,11 +2488,11 @@ const onColorSwatchesKeyDown = (event: KeyboardEvent): void => {
   swatches[newIndex]?.focus();
 };
 
-// Return the given SED-ML, but with its model referring to the model file in our COMBINE archive.
+// Return the given SED-ML, but with its model referring to the model file in our OMEX file.
 // Note #1: libOpenCOR uses the file name or URL of our model as its source, e.g., "file:///some/path/model.cellml" for
 //          a local file (and with some characters percent-encoded), so we cannot simply replace the file name of our
-//          model with the name of the model file in our COMBINE archive (we would, for instance, get
-//          "file://model.cellml", which is an absolute URL rather than a reference to a file in our COMBINE archive).
+//          model with the name of the model file in our OMEX file (we would, for instance, get
+//          "file://model.cellml", which is an absolute URL rather than a reference to a file in our OMEX file).
 // Note #2: a model which source starts with "#" is derived from another model in the SED-ML, so we leave its source
 //          as is.
 
@@ -2521,32 +2521,32 @@ const archiveSedml = (sedml: string): string => {
   return `<?xml version="1.0" encoding="UTF-8"?>\n${root}\n`;
 };
 
-// Download COMBINE archive.
-// Note: creating our COMBINE archive may fail (e.g., if libOpenCOR throws an exception while retrieving the contents of
-//       our model file or serialising our document, or if our COMBINE archive cannot be generated), in which case we
+// Download OMEX file.
+// Note: creating our OMEX file may fail (e.g., if libOpenCOR throws an exception while retrieving the contents of
+//       our model file or serialising our document, or if our OMEX file cannot be generated), in which case we
 //       let people know about it (as in the CellDL Editor view) rather than silently not download anything.
 
-const reportCombineArchiveExportIssue = (issue: unknown): void => {
+const reportOmexFileExportIssue = (issue: unknown): void => {
   addToast({
     severity: 'error',
-    summary: 'Cannot Export COMBINE Archive',
+    summary: 'Cannot Export OMEX File',
     detail: toastIssueDetail(props.file.canonicalPath(), common.formatMessage(common.formatError(issue)))
   });
 };
 
-const onDownloadCombineArchive = async (): Promise<void> => {
+const onDownloadOmexFile = async (): Promise<void> => {
   let modelFile: locApi.File | null | undefined;
 
   try {
     modelFile = model?.file();
   } catch (error: unknown) {
-    reportCombineArchiveExportIssue(error);
+    reportOmexFileExportIssue(error);
 
     return;
   }
 
   if (!modelFile) {
-    reportCombineArchiveExportIssue('No model file is available.');
+    reportOmexFileExportIssue('No model file is available.');
 
     return;
   }
@@ -2588,7 +2588,7 @@ const onDownloadCombineArchive = async (): Promise<void> => {
       'application/zip'
     );
   } catch (error: unknown) {
-    reportCombineArchiveExportIssue(error);
+    reportOmexFileExportIssue(error);
   }
 };
 
@@ -2623,7 +2623,7 @@ const onSettingsOk = (updatedSettings: SimulationExperimentInteractiveViewSettin
 
   // Update our settings and hide the dialog.
   // Note: our settings may have been confirmed even though they have some issues (so that they can, for instance, be
-  //       saved as a COMBINE archive and fixed later), in which case we must not silently run our simulation with some
+  //       saved as an OMEX file and fixed later), in which case we must not silently run our simulation with some
   //       other settings, but let libOpenCOR report those issues. So, our number of steps is such that our point
   //       interval can be retrieved from it (e.g., a negative point interval gives a negative number of steps), unless
   //       our point interval is zero, not finite, or so small that our number of steps cannot be handled by libOpenCOR,
@@ -2671,7 +2671,7 @@ const onSettingsOk = (updatedSettings: SimulationExperimentInteractiveViewSettin
 
   // Remove the model changes from our previous simulation run if our new UI JSON is invalid.
   // Note: we don't run any simulation with an invalid UI JSON, so those model changes would otherwise be left in our
-  //       document and, therefore, be exported with it (see onDownloadCombineArchive()) even though they don't match
+  //       document and, therefore, be exported with it (see onDownloadOmexFile()) even though they don't match
   //       our new UI JSON.
 
   if (uiJsonIssues.value.length > 0) {

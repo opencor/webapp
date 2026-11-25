@@ -113,7 +113,7 @@
       },
       {
         "type": "added",
-        "description": "The ability to export a CellDL file to a COMBINE archive and to simulate it."
+        "description": "The ability to export a CellDL file to an OMEX file and to simulate it."
       },
       {
         "type": "improved",

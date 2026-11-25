@@ -1,8 +1,13 @@
 // A simple CORS proxy handler for Cloudflare Workers (see https://workers.cloudflare.com/).
-// Note: the proxy accepts any target URL, but it only returns content that is a file that the app can open (i.e. a
-//       CellML file, a SED-ML file, an OMEX file, or a CellDL file, see isCelldlFile()) or a CSV file (which the app
-//       can use as external data in its Interactive view, see isCsvFile()), and that is not too large (see MAX_SIZE).
-//       Such content is returned as an opaque, sandboxed download, so that a browser never renders or executes it.
+// Note #1: the proxy accepts any target URL, but it only returns content that is a file that the app can open (i.e. a
+//          CellML file, a SED-ML file, an OMEX file, or a CellDL file, see isCelldlFile()) or a CSV file (which the
+//          app can use as external data in its Interactive view, see isCsvFile()), and that is not too large (see
+//          MAX_SIZE). Such content is returned as an opaque, sandboxed download, so that a browser never renders or
+//          executes it.
+// Note #2: the app tells us which kind of content it expects (see CONTENT_KINDS), so that we only return that kind of
+//          content and, if we get something else, tell it what we expected (e.g., not mention CSV files when a file is
+//          to be opened). The kind of content may not be given (e.g., by an older version of the app), in which case we
+//          accept any of them.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +22,12 @@ const CONTENT_HEADERS = {
   'Content-Security-Policy': "sandbox; default-src 'none'",
   'X-Content-Type-Options': 'nosniff'
 };
+
+const CONTENT_KINDS = {
+  file: 'a CellML file, SED-ML file, OMEX file, or CellDL file',
+  csv: 'a CSV file'
+};
+const ANY_CONTENT = 'a CellML file, SED-ML file, OMEX file, CellDL file, or CSV file';
 
 const SNIFF_SIZE = 64 * 1024; // 64 KB.
 const MAX_XML_PROLOG_SIZE = 1024 * 1024; // 1 MB.
@@ -37,6 +48,10 @@ const ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR_SIGNATURE = 0x07064b50;
 
 const extractTargetUrl = (url) => {
   return url.searchParams.get('url');
+};
+
+const extractContentKind = (url) => {
+  return url.searchParams.get('kind');
 };
 
 const isValidTargetUrl = (targetUrl) => {
@@ -448,7 +463,10 @@ const hasKnownSize = (response) => {
   );
 };
 
-const forwardRequest = async (targetUrl, request) => {
+const forwardRequest = async (targetUrl, contentKind, request) => {
+  const filesAccepted = contentKind !== 'csv';
+  const csvFilesAccepted = contentKind !== 'file';
+
   const forwardHeaders = new Headers(request.headers);
 
   for (const header of [
@@ -495,9 +513,9 @@ const forwardRequest = async (targetUrl, request) => {
   }
 
   // A CellML, SED-ML, CellDL, or CSV file only needs its start to be checked, after which it can be streamed, but only
-  // if we know that it isn't too large (see above). Otherwise, we need to fully read it first, so that we can reject it if it
-  // is too large. Indeed, once we have started streaming it, all we could do is abort it, which the app would see as a
-  // network error rather than as a rejection, so it wouldn't try to fetch the target URL directly instead (see
+  // if we know that it isn't too large (see above). Otherwise, we need to fully read it first, so that we can reject it
+  // if it is too large. Indeed, once we have started streaming it, all we could do is abort it, which the app would see
+  // as a network error rather than as a rejection, so it wouldn't try to fetch the target URL directly instead (see
   // fetchThroughCorsProxy() in src/renderer/src/common/common.ts).
   // Note: when streaming, we still check the size of the content as we read it, in case the content length is wrong
   //       (see replayStream()).
@@ -519,7 +537,10 @@ const forwardRequest = async (targetUrl, request) => {
   //       URL redirects to the actual file). We only check its extension, not that of the target URL, since the latter
   //       could otherwise be used to proxy any text (e.g., https://example.com/file.csv redirecting to any Web page).
 
-  if (isCellmlOrSedmlFile(head) || isCelldlFile(head) || isCsvFile(head, done, hasCsvExtension(response.url))) {
+  if (
+    (filesAccepted && (isCellmlOrSedmlFile(head) || isCelldlFile(head))) ||
+    (csvFilesAccepted && isCsvFile(head, done, hasCsvExtension(response.url)))
+  ) {
     if (done || hasKnownSize(response)) {
       return new Response(done ? head : replayStream(head, reader), {
         status: response.status,
@@ -539,10 +560,10 @@ const forwardRequest = async (targetUrl, request) => {
     });
   }
 
-  // An SVG file which CellDL metadata, if any, is not at its start needs to be fully read to know whether it is a CellDL
-  // file (see isCelldlFile()).
+  // An SVG file which CellDL metadata, if any, is not at its start needs to be fully read to know whether it is a
+  // CellDL file (see isCelldlFile()).
 
-  if (isSvgFile(head)) {
+  if (filesAccepted && isSvgFile(head)) {
     const bytes = done ? head : await readRest(reader, head);
 
     if (!bytes) {
@@ -561,10 +582,10 @@ const forwardRequest = async (targetUrl, request) => {
 
   // An OMEX file needs to be fully read since we need its central directory, which is at the end of the file.
 
-  if (!isZipFile(head)) {
+  if (!filesAccepted || !isZipFile(head)) {
     await reader.cancel();
 
-    return rejectedResponse('not a CellML, SED-ML, OMEX, CellDL, or CSV file');
+    return rejectedResponse(`not ${CONTENT_KINDS[contentKind] ?? ANY_CONTENT}`);
   }
 
   const bytes = done ? head : await readRest(reader, head);
@@ -574,7 +595,7 @@ const forwardRequest = async (targetUrl, request) => {
   }
 
   if (!isOmexFile(bytes)) {
-    return rejectedResponse('OMEX file without a manifest.xml file');
+    return rejectedResponse('ZIP file without a manifest.xml file');
   }
 
   return new Response(bytes, {
@@ -605,6 +626,12 @@ export default {
         return errorResponse('Target URL is not allowed.', 403);
       }
 
+      const contentKind = extractContentKind(url);
+
+      if (contentKind !== null && !Object.hasOwn(CONTENT_KINDS, contentKind)) {
+        return errorResponse('Invalid "kind" query parameter.', 400);
+      }
+
       if (request.method !== 'GET') {
         return errorResponse('Method not allowed.', 405);
       }
@@ -613,7 +640,7 @@ export default {
       //       case the app may still be able to fetch it directly, so we let it know using an HTTP 502 error.
 
       try {
-        return await forwardRequest(targetUrl, request);
+        return await forwardRequest(targetUrl, contentKind, request);
       } catch (error) {
         return errorResponse(`Target URL could not be fetched (${errorMessage(error)}).`, 502);
       }

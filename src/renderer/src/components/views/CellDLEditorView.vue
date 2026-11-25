@@ -14,13 +14,13 @@
             icon="pi pi-chart-line"
             label="Standard simulation"
             :disabled="!client.loaded"
-            @click="onExportCombineArchive(EXPORT_KIND_SIMULATE)"
+            @click="onExportOmexFile(EXPORT_KIND_SIMULATE)"
           />
           <ToolbarButtonWidget
             icon="pi pi-download"
-            label="Export COMBINE archive"
+            label="Export OMEX file"
             :disabled="!client.loaded"
-            @click="onExportCombineArchive(EXPORT_KIND_DOWNLOAD)"
+            @click="onExportOmexFile(EXPORT_KIND_DOWNLOAD)"
           />
         </div>
       </template>
@@ -97,7 +97,7 @@ const editCount = vue.ref<number>(0);
 const exportIssues = vue.ref<locApi.Issue[]>([]);
 const exportIssuesKind = vue.ref<string>(EXPORT_KIND_DOWNLOAD);
 const exportIssuesTitle = vue.computed<string>(() => {
-  return exportIssuesKind.value === EXPORT_KIND_SIMULATE ? 'Standard Simulation' : 'Export COMBINE Archive';
+  return exportIssuesKind.value === EXPORT_KIND_SIMULATE ? 'Standard Simulation' : 'Export OMEX File';
 });
 const exportIssuesVisible = vue.ref<boolean>(false);
 const limitationsVisible = vue.ref<boolean>(false);
@@ -282,9 +282,9 @@ vue.onBeforeUnmount(() => {
   viewRegistry.unregisterFileEditor(props.file, fileEditor);
 });
 
-// Export our (possibly edited) diagram to a COMBINE archive, which we can then either simulate or download.
+// Export our (possibly edited) diagram to an OMEX file, which we can then either simulate or download.
 
-const onExportCombineArchive = async (kind: string): Promise<void> => {
+const onExportOmexFile = async (kind: string): Promise<void> => {
   try {
     // Get the CellDL data from the editor, which may have been edited by the user.
 
@@ -318,23 +318,23 @@ const onExportCombineArchive = async (kind: string): Promise<void> => {
       return;
     }
 
-    // Generate the COMBINE archive from the CellML and the CellDL, and then either simulate it or download it.
+    // Generate the OMEX file from the CellML and the CellDL, and then either simulate it or download it.
 
-    const combineArchive = celldl.combineArchive(res.cellml, celldlData);
+    const omexFile = celldl.omexFile(res.cellml, celldlData);
 
     if (kind === EXPORT_KIND_SIMULATE) {
-      emit('openFile', `data:application/zip;base64,${await combineArchive.generateAsync({ type: 'base64' })}`);
+      emit('openFile', `data:application/zip;base64,${await omexFile.generateAsync({ type: 'base64' })}`);
     } else {
       common.downloadFile(
         `${common.baseFileName(celldlFileName)}.omex`,
-        await combineArchive.generateAsync({ type: 'blob', compression: 'DEFLATE' }),
+        await omexFile.generateAsync({ type: 'blob', compression: 'DEFLATE' }),
         'application/zip'
       );
     }
   } catch (error: unknown) {
     addToast({
       severity: 'error',
-      summary: kind === EXPORT_KIND_SIMULATE ? 'Cannot Simulate Diagram' : 'Cannot Export COMBINE Archive',
+      summary: kind === EXPORT_KIND_SIMULATE ? 'Cannot Simulate Diagram' : 'Cannot Export OMEX File',
       detail: toastIssueDetail(props.file.canonicalPath(), common.formatMessage(common.formatError(error)))
     });
   } finally {
