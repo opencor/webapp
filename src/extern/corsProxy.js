@@ -1,7 +1,8 @@
 // A simple CORS proxy handler for Cloudflare Workers (see https://workers.cloudflare.com/).
-// Note: the proxy accepts any target URL, but it only returns content that is a CellML file, a SED-ML file, an OMEX
-//       file, or a CSV file (see isCsvFile()), and that is not too large (see MAX_SIZE). Such content is returned as an
-//       opaque, sandboxed download, so that a browser never renders or executes it.
+// Note: the proxy accepts any target URL, but it only returns content that is a file that the app can open (i.e. a
+//       CellML file, a SED-ML file, an OMEX file, or a CellDL file, see isCelldlFile()) or a CSV file (which the app
+//       can use as external data in its Interactive view, see isCsvFile()), and that is not too large (see MAX_SIZE).
+//       Such content is returned as an opaque, sandboxed download, so that a browser never renders or executes it.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -338,6 +339,24 @@ const isCellmlOrSedmlFile = (bytes) => {
   );
 };
 
+const isSvgFile = (bytes) => {
+  return xmlRootElement(xmlText(bytes))?.name === 'svg';
+};
+
+const hasCelldlMetadata = (bytes) => {
+  return /\bid\s*=\s*["']celldl-rdf-metadata["']/.test(xmlText(bytes));
+};
+
+const isCelldlFile = (bytes) => {
+  // Check that the given bytes are a CellDL file, i.e. an SVG file with some CellDL metadata, as the app does (see
+  // isCellDLFile() in src/renderer/src/common/locCommon.ts).
+  // Note: the CellDL metadata is normally at the start of a CellDL file (i.e. it is the first child of its root
+  //       element), but it may not be, in which case we may only find it once we have read the whole file (see
+  //       forwardRequest()).
+
+  return isSvgFile(bytes) && hasCelldlMetadata(bytes);
+};
+
 const hasCsvExtension = (url) => {
   try {
     return new URL(url).pathname.toLowerCase().endsWith('.csv');
@@ -475,8 +494,8 @@ const forwardRequest = async (targetUrl, request) => {
     return rejectedResponse('too large');
   }
 
-  // A CellML, SED-ML, or CSV file only needs its start to be checked, after which it can be streamed, but only if we
-  // know that it isn't too large (see above). Otherwise, we need to fully read it first, so that we can reject it if it
+  // A CellML, SED-ML, CellDL, or CSV file only needs its start to be checked, after which it can be streamed, but only
+  // if we know that it isn't too large (see above). Otherwise, we need to fully read it first, so that we can reject it if it
   // is too large. Indeed, once we have started streaming it, all we could do is abort it, which the app would see as a
   // network error rather than as a rejection, so it wouldn't try to fetch the target URL directly instead (see
   // fetchThroughCorsProxy() in src/renderer/src/common/common.ts).
@@ -500,7 +519,7 @@ const forwardRequest = async (targetUrl, request) => {
   //       URL redirects to the actual file). We only check its extension, not that of the target URL, since the latter
   //       could otherwise be used to proxy any text (e.g., https://example.com/file.csv redirecting to any Web page).
 
-  if (isCellmlOrSedmlFile(head) || isCsvFile(head, done, hasCsvExtension(response.url))) {
+  if (isCellmlOrSedmlFile(head) || isCelldlFile(head) || isCsvFile(head, done, hasCsvExtension(response.url))) {
     if (done || hasKnownSize(response)) {
       return new Response(done ? head : replayStream(head, reader), {
         status: response.status,
@@ -520,12 +539,32 @@ const forwardRequest = async (targetUrl, request) => {
     });
   }
 
+  // An SVG file which CellDL metadata, if any, is not at its start needs to be fully read to know whether it is a CellDL
+  // file (see isCelldlFile()).
+
+  if (isSvgFile(head)) {
+    const bytes = done ? head : await readRest(reader, head);
+
+    if (!bytes) {
+      return rejectedResponse('too large');
+    }
+
+    if (!hasCelldlMetadata(bytes)) {
+      return rejectedResponse('SVG file without CellDL metadata');
+    }
+
+    return new Response(bytes, {
+      status: response.status,
+      headers: CONTENT_HEADERS
+    });
+  }
+
   // An OMEX file needs to be fully read since we need its central directory, which is at the end of the file.
 
   if (!isZipFile(head)) {
     await reader.cancel();
 
-    return rejectedResponse('not a CellML, SED-ML, OMEX, or CSV file');
+    return rejectedResponse('not a CellML, SED-ML, OMEX, CellDL, or CSV file');
   }
 
   const bytes = done ? head : await readRest(reader, head);

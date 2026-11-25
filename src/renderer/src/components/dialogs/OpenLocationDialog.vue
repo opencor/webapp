@@ -1,7 +1,7 @@
 <template>
   <BaseDialog header="Open Location" size="md" @hidden="reset">
     <div class="flex flex-col gap-2 mt-1 mb-2">
-      <p class="description">Enter the {{ inputDescription }} of a CellML file, SED-ML file, or COMBINE archive.</p>
+      <p class="description">Enter the {{ inputDescription }} of a CellML file, SED-ML file, COMBINE archive, or CellDL file.</p>
       <IconField>
         <InputIcon class="pi pi-link" />
         <InputText ref="inputRef" v-model="url" autofocus fluid
