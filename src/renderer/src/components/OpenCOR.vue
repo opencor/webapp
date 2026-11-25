@@ -73,7 +73,7 @@
         @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent class="app-blocking-message initialising-opencor-message" v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
-      <BlockingMessageComponent class="app-blocking-message" v-if="loadingModelMessageVisible" message="Loading model..." cancellable @cancel="cancelRemoteModelLoads" />
+      <BlockingMessageComponent class="app-blocking-message" v-if="loadingModelMessageVisible" message="Loading model..." cancellable :cancelFocused="!omex" @cancel="cancelRemoteModelLoads" />
       <BlockingMessageComponent class="app-blocking-message" v-show="loadingExternalDataVisible" message="Loading external data..." />
       <BlockingMessageComponent class="app-blocking-message" v-show="opencorMessageVisible" :message="opencorMessageMessage" :progress="opencorMessageProgress" />
       <OkMessageDialog v-model:visible="updateErrorVisible"
@@ -503,7 +503,8 @@ const compUiEnabled = vue.computed<boolean>(() => {
 // Note #4: an element that gets inert loses the keyboard focus, so we give it back to the element that had it before
 //          our UI got blocked (if that element is still there and visible, and the keyboard focus hasn't gone somewhere
 //          else in the meantime) once our UI is unblocked, unless a dialog is shown (since it then has the keyboard
-//          focus).
+//          focus). The keyboard focus may also have gone to a blocking message (i.e. to its Cancel button, see
+//          BlockingMessageComponent.vue), which may not have been removed yet, so we take the keyboard focus from it.
 
 let elementFocusedBeforeUiBlocked: HTMLElement | null = null;
 
@@ -519,7 +520,7 @@ const restoreFocusAfterUiUnblocked = async (element: HTMLElement): Promise<void>
   const activeElement = document.activeElement;
 
   if (
-    (!activeElement || activeElement === document.body) &&
+    (!activeElement || activeElement === document.body || activeElement.closest('.blocking-message')) &&
     element.isConnected &&
     element.getClientRects().length > 0 &&
     !element.matches(':disabled')

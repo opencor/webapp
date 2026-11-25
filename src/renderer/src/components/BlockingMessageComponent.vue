@@ -15,12 +15,14 @@
       }"
     />
     <div v-if="cancellable" class="blocking-message-actions">
-      <Button label="Cancel" size="small" severity="secondary" text @click="emit('cancel')" />
+      <Button ref="cancelButtonRef" label="Cancel" size="small" severity="secondary" @click="emit('cancel')" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import * as vue from 'vue';
+
 // A message that is shown while OpenCOR (or part of it) is blocked, e.g., while it is being initialised or while a
 // model is being loaded, with the progress made, if known.
 // Note #1: we are a live region, so that a change to our message gets announced by assistive technologies (whether the
@@ -30,16 +32,29 @@
 // Note #2: we may be cancellable (e.g., while a remote file is being loaded), in which case we have a Cancel button,
 //          which can be reached using the keyboard since the rest of OpenCOR is inert while we are shown (see
 //          OpenCOR.vue).
+// Note #3: our Cancel button gets the keyboard focus when we are shown (as in UpdateDownloadProgressDialog.vue), unless
+//          we are told otherwise (e.g., when OpenCOR is embedded in a page, from which we wouldn't want to take the
+//          keyboard focus). The autofocus attribute is only honoured when a page gets loaded (or by a dialog), hence we
+//          give the keyboard focus to our Cancel button ourselves.
 
-defineProps<{
+const props = defineProps<{
   message: string;
   progress?: number;
   cancellable?: boolean;
+  cancelFocused?: boolean;
 }>();
 
 const emit = defineEmits<{
   cancel: [];
 }>();
+
+const cancelButtonRef = vue.useTemplateRef<{ $el: HTMLElement }>('cancelButtonRef');
+
+vue.onMounted(() => {
+  if (props.cancelFocused) {
+    cancelButtonRef.value?.$el.focus({ preventScroll: true });
+  }
+});
 </script>
 
 <style scoped>
@@ -99,6 +114,5 @@ const emit = defineEmits<{
 .blocking-message-actions {
   display: flex;
   justify-content: flex-end;
-  margin: -0.25rem -0.5rem -0.375rem 0;
 }
 </style>
