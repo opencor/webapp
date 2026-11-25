@@ -56,7 +56,8 @@ const fieldRefs: (InputScientificNumberWidgetInstance | null)[] = [];
 
 const onValueUpdated = (index: number, newValue: number | undefined): void => {
   // Ignore an invalid new value for the property, i.e. keep its current value. A new value is invalid if it is not a
-  // finite number or if it is deemed invalid by our owner.
+  // finite number or if it is deemed invalid by our owner. A valid new value is emitted, and it is then up to our owner
+  // to update its property (and therefore ours).
 
   const property = props.properties[index];
 
@@ -73,8 +74,6 @@ const onValueUpdated = (index: number, newValue: number | undefined): void => {
 
     return;
   }
-
-  property.value = newValue;
 
   emit('propertyUpdated', index, newValue);
 };

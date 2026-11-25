@@ -107,7 +107,7 @@ const ACTIONS: { label: string; icon: string; shortcut?: string; command: () => 
   {
     label: 'Open...',
     icon: 'pi pi-folder-open',
-    shortcut: electronApi ? shortcut('Ctrl+O', '⌘O') : shortcut('Ctrl+Alt+O', '⌘⌥O'),
+    shortcut: electronApi ? shortcut('Ctrl+O', '⌘O') : shortcut('Ctrl+Alt+O', '⌥⌘O'),
     command: () => {
       emit('open');
     }
@@ -115,13 +115,13 @@ const ACTIONS: { label: string; icon: string; shortcut?: string; command: () => 
   {
     label: 'Open Location...',
     icon: 'pi pi-link',
-    shortcut: electronApi ? shortcut('Ctrl+Shift+O', '⇧⌘O') : shortcut('Ctrl+Shift+Alt+O', '⇧⌘⌥O'),
+    shortcut: electronApi ? shortcut('Ctrl+Shift+O', '⇧⌘O') : shortcut('Ctrl+Shift+Alt+O', '⌥⇧⌘O'),
     command: () => {
       emit('openLocation');
     }
   },
   {
-    label: 'Open the Lorenz Sample',
+    label: 'Open Lorenz Sample',
     icon: 'pi pi-book',
     command: () => {
       emit('openSampleLorenz');

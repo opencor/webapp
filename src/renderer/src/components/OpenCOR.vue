@@ -843,7 +843,7 @@ const handleAction = (action: string): void => {
     } else {
       addToast({
         severity: 'error',
-        summary: 'Handling an action',
+        summary: 'Cannot Handle Action',
         detail: `${action}\n\nThe action could not be handled.`
       });
     }
@@ -1384,7 +1384,7 @@ const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePa
 
     addToast({
       severity: 'error',
-      summary: 'Opening a file',
+      summary: 'Cannot Open File',
       detail:
         filePath.startsWith('data:') || filePath.startsWith('#data:') ? issueMessage : `${filePath}\n\n${issueMessage}`
     });
@@ -2412,7 +2412,7 @@ if (props.omex) {
               } else {
                 addToast({
                   severity: 'error',
-                  summary: 'Handling an action',
+                  summary: 'Cannot Handle Action',
                   detail: `${action}\n\nThe action could not be handled.`
                 });
               }
@@ -2443,7 +2443,7 @@ const deleteGitHubAccessToken = async (silent: boolean = false): Promise<void> =
       toast.add({
         severity: 'warn',
         group: toastId.value,
-        summary: 'Removing GitHub access token',
+        summary: 'Cannot Remove GitHub Access Token',
         detail: common.formatMessage(common.formatError(error))
       });
     }
@@ -2493,14 +2493,14 @@ const saveGitHubAccessToken = async (accessToken: string): Promise<void> => {
     if (!stored) {
       addToast({
         severity: 'warn',
-        summary: 'Remembering GitHub access token',
+        summary: 'Cannot Remember GitHub Access Token',
         detail: 'The token could not be stored securely, so you will need to sign in again next time.'
       });
     }
   } catch (error: unknown) {
     addToast({
       severity: 'warn',
-      summary: 'Remembering GitHub access token',
+      summary: 'Cannot Remember GitHub Access Token',
       detail: common.formatMessage(common.formatError(error))
     });
   }
@@ -2543,7 +2543,7 @@ const onDisconnectFromGitHub = async (): Promise<void> => {
   } catch (error: unknown) {
     addToast({
       severity: 'error',
-      summary: 'GitHub sign-out',
+      summary: 'Cannot Sign Out of GitHub',
       detail: common.formatMessage(common.formatError(error))
     });
   } finally {
@@ -2584,7 +2584,7 @@ const onGitHubButtonClick = async (): Promise<void> => {
   } catch (error: unknown) {
     addToast({
       severity: 'error',
-      summary: 'GitHub sign-in',
+      summary: 'Cannot Sign In to GitHub',
       detail: common.formatMessage(common.formatError(error))
     });
   } finally {
@@ -2595,6 +2595,7 @@ const onGitHubButtonClick = async (): Promise<void> => {
 </script>
 
 <style scoped>
+/* TODO: enable once our GitHub integration is fully ready (see the GitHub button in our template).
 .connected-to-github,
 :deep(.connected-to-github .pi-github) {
   background-color: var(--p-green-100);
@@ -2650,6 +2651,7 @@ const onGitHubButtonClick = async (): Promise<void> => {
   border-color: var(--p-red-700) !important;
   color: var(--p-red-200);
 }
+*/
 
 .opencor {
   height: 100%;

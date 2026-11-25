@@ -18,7 +18,7 @@
             />
             <ToolbarButtonWidget
               icon="pi pi-cog"
-              label="Settings"
+              label="Simulation Settings"
               @click="settingsVisible = true"
             />
           </div>
@@ -127,7 +127,7 @@
                       >
                         <ToolbarButtonWidget class="run-color-button"
                           icon="pi pi-circle-fill"
-                          :label="`Change ${runName(run, index)} colour`"
+                          :label="`Change ${runName(run)} colour`"
                           small
                           :style="{ '--toolbar-button-color': run.color, '--toolbar-button-hover-color': run.color }"
                           @click="onToggleRunColorPopover(index, $event)"
@@ -136,19 +136,19 @@
                           class="run-name grow min-w-0"
                           :class="{ 'cursor-help': !run.isLiveRun }"
                         >
-                          {{ runName(run, index, true) }}
+                          {{ runName(run, true) }}
                         </div>
                         <div class="run-actions">
                           <ToolbarButtonWidget class="run-visibility-button"
                             :icon="run.isVisible ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                            :label="`${run.isVisible ? 'Hide' : 'Show'} ${runName(run, index)}`"
+                            :label="`${run.isVisible ? 'Hide' : 'Show'} ${runName(run)}`"
                             small
                             tooltipAlign="end"
                             @click="onToggleRun(index)"
                           />
                           <ToolbarButtonWidget v-if="!run.isLiveRun" class="run-remove-button"
                             icon="pi pi-times"
-                            :label="`Remove ${runName(run, index)}`"
+                            :label="`Remove ${runName(run)}`"
                             small
                             tooltipAlign="end"
                             @click="onRemoveRun(index)"
@@ -259,6 +259,7 @@ interface SimulationRun {
   color: string;
   tooltip: string;
   isLiveRun: boolean;
+  number?: number;
 }
 
 interface ExternalDataValues {
@@ -662,6 +663,9 @@ const runs = vue.ref<SimulationRun[]>([
   }
 ]);
 
+// The number of our last tracked run, which a tracked run keeps (rather than being numbered after its position), so that
+// removing a run doesn't renumber the other ones. Our numbering starts again once there are no tracked runs anymore.
+
 let trackedRunId = 0;
 let simulationGeneration = 0;
 const runColorPopoverIndex = vue.ref<number>(-1);
@@ -701,7 +705,7 @@ const compData = vue.computed<PlotData[]>(() => {
       return;
     }
 
-    const runLabel = runsCount === 1 ? undefined : run.isLiveRun ? 'Live' : `#${runIndex}`;
+    const runLabel = runsCount === 1 ? undefined : run.isLiveRun ? 'Live' : `#${run.number}`;
     const suffix = runLabel ? ` [${runLabel}]` : '';
 
     for (let k = 0; k < dataTraces.length; ++k) {
@@ -2168,8 +2172,15 @@ const onTrackRun = (): void => {
 
   // Add the new run.
 
+  if (runs.value.length === 1) {
+    trackedRunId = 0;
+  }
+
+  ++trackedRunId;
+
   runs.value.push({
-    id: `run_${++trackedRunId}`,
+    id: `run_${trackedRunId}`,
+    number: trackedRunId,
     inputParameters,
     isVisible: true,
     data: liveData.value,
@@ -2183,8 +2194,8 @@ const onTrackRun = (): void => {
 // that they say which run they are for (e.g., when read by a screen reader), and, capitalised, as the name of the run
 // itself.
 
-const runName = (run: SimulationRun, index: number, capitalised = false): string => {
-  const res = run.isLiveRun ? 'live run' : `run #${index}`;
+const runName = (run: SimulationRun, capitalised = false): string => {
+  const res = run.isLiveRun ? 'live run' : `run #${run.number}`;
 
   return capitalised ? res.charAt(0).toUpperCase() + res.slice(1) : res;
 };

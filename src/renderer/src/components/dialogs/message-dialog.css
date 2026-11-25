@@ -24,11 +24,13 @@
   }
 
   /**
-   * Note: our text is vertically centred with our icon when it fits on one line, hence its top padding.
+   * Note #1: our text is vertically centred with our icon when it fits on one line, hence its top padding.
+   * Note #2: our text can be selected (e.g., to copy an error), unlike most of OpenCOR's text (see app.css).
    */
 
   .message-dialog-text {
     min-width: 0;
+    user-select: text;
     padding-top: 0.4375rem;
     color: var(--p-text-color);
     font-size: 0.875rem;

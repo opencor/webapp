@@ -97,6 +97,14 @@ const onPropertyUpdated = (index: number, newValue: number): void => {
   //       point that is greater than our starting point is, like a starting point that is greater than our ending
   //       point, reported by libOpenCOR when running the simulation.
 
+  const property = properties.value[index];
+
+  if (!property) {
+    return;
+  }
+
+  property.value = newValue;
+
   if (index === INITIAL_POINT) {
     props.uniformTimeCourse.setInitialTime(newValue);
   } else if (index === STARTING_POINT) {

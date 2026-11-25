@@ -3,7 +3,7 @@
   Note: our menubar is never turned into a hamburger menu (which PrimeVue does below its breakpoint), hence our breakpoint
         of 0px.
   -->
-  <Menubar ref="menuBarRef" :id="props.id" :model="items" breakpoint="0px">
+  <Menubar ref="menuBarRef" :id="props.id" :model="items" breakpoint="0px" :pt="MENUBAR_PT">
     <template #item="{ item, props, root }">
       <a v-bind="props.action">
         <i v-if="!root" :class="item.icon" class="menu-item-icon shrink-0" />
@@ -153,6 +153,41 @@ const recentFileLabel = (filePath: string): string => {
   return `${filePath.slice(0, startLength)}…${filePath.slice(-endLength)}`;
 };
 
+// Let assistive technologies know about the keyboard shortcut of a menu item (using the ARIA key names, e.g.,
+// "Control+Alt+O" or "Alt+Meta+O" rather than "Ctrl+Alt+O" or "⌥⌘O"), and about the full path of a recent file whose
+// label has been shortened (see recentFileLabel()).
+
+const ARIA_KEY_NAMES: Record<string, string> = {
+  Ctrl: 'Control',
+  '⌃': 'Control',
+  '⌥': 'Alt',
+  '⇧': 'Shift',
+  '⌘': 'Meta'
+};
+
+const ariaKeyShortcuts = (shortcut: string): string => {
+  const keys = shortcut.includes('+') ? shortcut.split('+') : Array.from(shortcut);
+
+  return keys.map((key: string) => ARIA_KEY_NAMES[key] ?? key).join('+');
+};
+
+interface MenubarItemPtOptions {
+  context: {
+    item?: MenuItem;
+  };
+}
+
+const MENUBAR_PT = {
+  item: ({ context }: MenubarItemPtOptions) => {
+    const item = context.item;
+
+    return {
+      ...(item?.shortcut ? { 'aria-keyshortcuts': ariaKeyShortcuts(item.shortcut) } : {}),
+      ...(item?.hint ? { 'aria-label': item.hint } : {})
+    };
+  }
+};
+
 // Menu items, which are computed so that they can be reactive to changes in our props, and which return the keyboard
 // focus to where it was when selected using the pointing device (see returnFocusOnPointerCommand() above).
 
@@ -163,7 +198,7 @@ const menuItems = vue.computed(() => [
       {
         label: 'Open...',
         icon: 'pi pi-folder-open',
-        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+O' : isMacOs ? '⌘⌥O' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+O' : isMacOs ? '⌥⌘O' : undefined,
         command: () => {
           emit('open');
         }
@@ -171,7 +206,7 @@ const menuItems = vue.computed(() => [
       {
         label: 'Open Location...',
         icon: 'pi pi-link',
-        shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+O' : isMacOs ? '⇧⌘⌥O' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+O' : isMacOs ? '⌥⇧⌘O' : undefined,
         command: () => {
           emit('openLocation');
         }
@@ -197,7 +232,7 @@ const menuItems = vue.computed(() => [
           {
             label: 'Most Recent',
             icon: 'pi pi-clock',
-            shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+T' : isMacOs ? '⇧⌘⌥T' : undefined,
+            shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+T' : isMacOs ? '⌥⇧⌘T' : undefined,
             command: reopenMostRecentFile,
             disabled: () => !props.recentFilePaths.length
           },
@@ -236,7 +271,7 @@ const menuItems = vue.computed(() => [
             {
               label: 'Save',
               icon: 'pi pi-save',
-              shortcut: isWindowsOrLinux ? 'Ctrl+Alt+S' : isMacOs ? '⌘⌥S' : undefined,
+              shortcut: isWindowsOrLinux ? 'Ctrl+Alt+S' : isMacOs ? '⌥⌘S' : undefined,
               command: () => {
                 emit('save');
               },
@@ -245,7 +280,7 @@ const menuItems = vue.computed(() => [
             {
               label: 'Save As...',
               icon: 'pi pi-file-export',
-              shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+S' : isMacOs ? '⇧⌘⌥S' : undefined,
+              shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+S' : isMacOs ? '⌥⇧⌘S' : undefined,
               command: () => {
                 emit('saveAs');
               },
@@ -256,7 +291,7 @@ const menuItems = vue.computed(() => [
             {
               label: 'Download',
               icon: 'pi pi-download',
-              shortcut: isWindowsOrLinux ? 'Ctrl+Alt+S' : isMacOs ? '⌘⌥S' : undefined,
+              shortcut: isWindowsOrLinux ? 'Ctrl+Alt+S' : isMacOs ? '⌥⌘S' : undefined,
               command: () => {
                 emit('download');
               },
@@ -267,7 +302,7 @@ const menuItems = vue.computed(() => [
       {
         label: 'Close',
         icon: 'pi pi-times',
-        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+W' : isMacOs ? '⌘⌥W' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+W' : isMacOs ? '⌥⌘W' : undefined,
         command: () => {
           emit('close');
         },
@@ -290,7 +325,7 @@ const menuItems = vue.computed(() => [
       {
         label: 'Settings...',
         icon: 'pi pi-cog',
-        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+,' : isMacOs ? '⌘⌥,' : undefined,
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+,' : isMacOs ? '⌥⌘,' : undefined,
         command: () => {
           emit('settings');
         }

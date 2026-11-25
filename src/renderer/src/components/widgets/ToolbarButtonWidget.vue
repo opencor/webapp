@@ -199,8 +199,14 @@ const updateTooltipPosition = (event: Event): void => {
   background-color: color-mix(in srgb, var(--toolbar-button-color) 12%, transparent);
 }
 
-.toolbar-button:not(:disabled):active {
-  transform: scale(0.92);
+/**
+ * Note: a pressed button is scaled down a bit, unless people prefer reduced motion.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .toolbar-button:not(:disabled):active {
+    transform: scale(0.92);
+  }
 }
 
 .toolbar-button:focus-visible {

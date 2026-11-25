@@ -1,6 +1,6 @@
 <template>
   <div ref="rootRef" class="settings-dialog-root">
-    <BaseDialog v-bind="$attrs" header="Settings" class="settings-dialog h-210"
+    <BaseDialog v-bind="$attrs" header="Simulation Settings" class="settings-dialog h-210"
       size="lg"
       :centreOn="centreOn"
       @keydown.enter="onKeydownEnter"
@@ -132,7 +132,7 @@
 
                 <!-- Simulation input cards -->
 
-                <div v-for="(input, inputIndex) in localSettings.interactive.uiJson.input" :key="`input_${inputIndex}`" class="card-item">
+                <div v-for="(input, inputIndex) in localSettings.interactive.uiJson.input" :key="itemKey(input)" class="card-item">
                   <div class="card-header">
                     <div class="card-title">
                       <span class="item-index">{{ Number(inputIndex) + 1 }}</span>
@@ -142,7 +142,7 @@
                     <ToolbarButtonWidget class="remove-button"
                       icon="pi pi-trash"
                       small
-                      label="Remove simulation input"
+                      :label="`Remove simulation input ${Number(inputIndex) + 1}`"
                       tooltipAlign="end"
                       @click="removeInput(inputIndex)"
                     />
@@ -219,7 +219,7 @@
                         <p>No possible values are configured.</p>
                       </div>
                       <div v-else class="entries-list">
-                        <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possible_value_${possibleValueIndex}`" class="entry-row">
+                        <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="itemKey(possibleValue)" class="entry-row">
                           <span class="item-index">{{ Number(possibleValueIndex) + 1 }}</span>
                           <FloatLabel variant="on" class="flex-1">
                             <InputText v-model="possibleValue.name" aria-label="Name" class="w-full" size="small" />
@@ -232,7 +232,7 @@
                           <ToolbarButtonWidget class="remove-button"
                             icon="pi pi-times"
                             small
-                            label="Remove possible value"
+                            :label="`Remove possible value ${Number(possibleValueIndex) + 1}`"
                             tooltipAlign="end"
                             @click="removePossibleValue(inputIndex, possibleValueIndex)"
                           />
@@ -272,7 +272,7 @@
               <!-- Model parameter entries -->
 
               <div v-else class="entries-list">
-                <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
+                <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="itemKey(parameter)" class="entry-row">
                   <span class="item-index">{{ Number(parameterIndex) + 1 }}</span>
                   <FloatLabel variant="on" class="flex-1">
                     <Select v-model="parameter.name" ariaLabel="Model parameter"
@@ -291,7 +291,7 @@
                   <ToolbarButtonWidget class="remove-button"
                     icon="pi pi-times"
                     small
-                    label="Remove model parameter"
+                    :label="`Remove model parameter ${Number(parameterIndex) + 1}`"
                     tooltipAlign="end"
                     @click="removeParameter(parameterIndex)"
                   />
@@ -327,7 +327,7 @@
               <!-- Simulation data entries -->
 
               <div v-else class="entries-list">
-                <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="`data_${dataIndex}`" class="entry-row">
+                <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="itemKey(data)" class="entry-row">
                   <span class="item-index">{{ Number(dataIndex) + 1 }}</span>
                   <FloatLabel variant="on" class="flex-1">
                     <InputText v-model="data.id" aria-label="ID" class="w-full" size="small" />
@@ -346,7 +346,7 @@
                   <ToolbarButtonWidget class="remove-button"
                     icon="pi pi-times"
                     small
-                    label="Remove simulation data"
+                    :label="`Remove simulation data ${Number(dataIndex) + 1}`"
                     tooltipAlign="end"
                     @click="removeSimulationData(dataIndex)"
                   />
@@ -368,7 +368,8 @@
             <!-- Import bar, which accepts CSV files that are dropped on it -->
 
             <div class="external-data-import" :class="{ 'external-data-import-active': externalDataFileDragging }"
-              @dragover.prevent="onExternalDataFileDragOver"
+              @dragenter.prevent="onExternalDataFileDragEnter"
+              @dragover.prevent
               @drop.prevent="onExternalDataFileDrop"
               @dragleave="onExternalDataFileDragLeave"
             >
@@ -415,7 +416,7 @@
 
                 <!-- External data files -->
 
-                <div v-for="(externalDataFile, externalDataFileIndex) in (localSettings.interactive.uiJson.output.externalData ?? [])" :key="`external_data_file_${externalDataFileIndex}`" class="card-item">
+                <div v-for="(externalDataFile, externalDataFileIndex) in (localSettings.interactive.uiJson.output.externalData ?? [])" :key="itemKey(externalDataFile)" class="card-item">
                   <div class="card-header">
                     <div class="card-title">
                       <span class="item-index">{{ Number(externalDataFileIndex) + 1 }}</span>
@@ -433,7 +434,7 @@
                       <ToolbarButtonWidget class="remove-button"
                         icon="pi pi-trash"
                         small
-                        label="Remove external data file"
+                        :label="`Remove external data file ${Number(externalDataFileIndex) + 1}`"
                         tooltipAlign="end"
                         @click="removeExternalDataFile(externalDataFileIndex)"
                       />
@@ -459,7 +460,7 @@
                       <p>No external data is configured for this CSV file.</p>
                     </div>
                     <div v-else class="entries-list">
-                      <div v-for="(externalData, externalDataIndex) in externalDataEntries(externalDataFile)" :key="`external_data_${externalDataFileIndex}_${externalDataIndex}`" class="entry-row">
+                      <div v-for="(externalData, externalDataIndex) in externalDataEntries(externalDataFile)" :key="itemKey(externalData)" class="entry-row">
                         <span class="item-index">{{ Number(externalDataIndex) + 1 }}</span>
                         <FloatLabel variant="on" class="flex-1">
                           <InputText v-model="externalData.id" aria-label="ID" class="w-full" size="small" />
@@ -478,7 +479,7 @@
                         <ToolbarButtonWidget class="remove-button"
                           icon="pi pi-times"
                           small
-                          label="Remove external data"
+                          :label="`Remove external data ${Number(externalDataIndex) + 1}`"
                           tooltipAlign="end"
                           @click="removeExternalData(externalDataFileIndex, externalDataIndex)"
                         />
@@ -517,7 +518,7 @@
 
                 <!-- Plot cards -->
 
-                <div v-for="(plot, plotIndex) in localSettings.interactive.uiJson.output.plots" :key="`plot_${plotIndex}`" class="card-item">
+                <div v-for="(plot, plotIndex) in localSettings.interactive.uiJson.output.plots" :key="itemKey(plot)" class="card-item">
                   <div class="card-header">
                     <div class="card-title">
                       <span class="item-index">{{ Number(plotIndex) + 1 }}</span>
@@ -535,7 +536,7 @@
                       <ToolbarButtonWidget class="remove-button"
                         icon="pi pi-trash"
                         small
-                        label="Remove plot"
+                        :label="`Remove plot ${Number(plotIndex) + 1}`"
                         tooltipAlign="end"
                         @click="removePlot(plotIndex)"
                       />
@@ -559,14 +560,14 @@
 
                     <div class="sub-list">
                       <span class="opencor-section-title opencor-section-title-small">Traces</span>
-                      <div v-for="(trace, traceIndex) in plotTraces(plot)" :key="`trace_${plotIndex}_${traceIndex}`" class="trace-item">
+                      <div v-for="(trace, traceIndex) in plotTraces(plot)" :key="itemKey(trace)" class="trace-item">
                         <div class="trace-header">
                           <span class="item-index">{{ Number(traceIndex) + 1 }}</span>
                           <span class="trace-name truncate" v-html="common.sanitiseHtml(traceName(plot, traceIndex - 1))" />
                           <ToolbarButtonWidget class="remove-button ml-auto"
                             icon="pi pi-times"
                             small
-                            label="Remove trace"
+                            :label="`Remove trace ${Number(traceIndex) + 1}`"
                             tooltipAlign="end"
                             @click="removeTrace(plotIndex, traceIndex - 1)"
                           />
@@ -638,7 +639,6 @@ import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
 import * as common from '../../common/common';
-import { TOAST_LIFE } from '../../common/constants';
 import * as externalData from '../../common/externalData';
 import { vHint } from '../../common/hint';
 import * as vueCommon from '../../common/vueCommon';
@@ -749,6 +749,25 @@ const externalDataSeries = (externalData: locApi.UiJsonOutputExternalData): stri
   return externalData.dataSeries.map((dataSerie) => {
     return dataSerie.name;
   });
+};
+
+// A stable key for an item of one of our lists (rather than its index), so that removing an item doesn't result in Vue
+// reusing the elements (and their state, e.g., a value being edited) of the items that follow it for other items.
+
+const itemKeys = new WeakMap<object, number>();
+let nextItemKey = 0;
+
+const itemKey = (item: object): number => {
+  const rawItem = vue.toRaw(item);
+  let res = itemKeys.get(rawItem);
+
+  if (res === undefined) {
+    res = nextItemKey++;
+
+    itemKeys.set(rawItem, res);
+  }
+
+  return res;
 };
 
 const externalDataEntries = (externalData: locApi.UiJsonOutputExternalData): locApi.UiJsonOutputData[] => {
@@ -1098,10 +1117,32 @@ const traceName = (plot: locApi.UiJsonOutputPlot, traceIndex: number): string =>
   return vueCommon.traceName(trace?.name, trace?.xValue, trace?.yValue);
 };
 
+// A unique id for a new simulation input or simulation data, i.e. the given prefix followed by the first number (from
+// the number of items that there will be) that isn't already used by an id of our UI JSON, so that adding an item (e.g.,
+// after having removed another one) doesn't result in a duplicate id.
+
+const uniqueIdNumber = (prefix: string, itemCount: number): number => {
+  const uiJson = localSettings.value.interactive.uiJson;
+  const ids = new Set<string>([
+    ...uiJson.input.map((input) => input.id),
+    ...uiJson.output.data.map((data) => data.id),
+    ...(uiJson.output.externalData ?? []).flatMap((externalData) => externalData.data.map((data) => data.id))
+  ]);
+  let res = itemCount + 1;
+
+  while (ids.has(`${prefix}_${res}`)) {
+    ++res;
+  }
+
+  return res;
+};
+
 const addInput = () => {
+  const inputNumber = uniqueIdNumber('model_input', localSettings.value.interactive.uiJson.input.length);
+
   localSettings.value.interactive.uiJson.input.push({
-    id: `model_input_${localSettings.value.interactive.uiJson.input.length + 1}`,
-    name: `Model input #${localSettings.value.interactive.uiJson.input.length + 1}`,
+    id: `model_input_${inputNumber}`,
+    name: `Model input #${inputNumber}`,
     defaultValue: 0,
     minimumValue: 0,
     maximumValue: 10
@@ -1169,8 +1210,10 @@ const removePossibleValue = (inputIndex: number, possibleValueIndex: number) => 
 };
 
 const addSimulationData = () => {
+  const dataNumber = uniqueIdNumber('simulation_data', localSettings.value.interactive.uiJson.output.data.length);
+
   localSettings.value.interactive.uiJson.output.data.push({
-    id: `simulation_data`,
+    id: `simulation_data_${dataNumber}`,
     name: 'component/variable'
   });
 };
@@ -1229,9 +1272,8 @@ const importExternalDataFromFiles = async (files: File[]): Promise<void> => {
   } catch (error: unknown) {
     addToast({
       severity: 'error',
-      summary: 'External data',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      summary: 'Cannot Import External Data',
+      detail: common.formatMessage(common.formatError(error))
     });
   }
 };
@@ -1248,18 +1290,32 @@ const onExternalDataFileInputChange = async (event: Event): Promise<void> => {
   input.value = '';
 };
 
-const onExternalDataFileDragOver = (): void => {
+// Note: a dragleave event is also fired when the pointer moves from our drop zone to one of its children (or vice versa),
+//       so we count the elements of our drop zone that the pointer has entered (a dragenter event being fired on the
+//       element that the pointer enters before the dragleave event on the element that it leaves), so that our drop
+//       zone doesn't flicker.
+
+let externalDataFileDragDepth = 0;
+
+const onExternalDataFileDragEnter = (): void => {
+  ++externalDataFileDragDepth;
+
   externalDataFileDragging.value = true;
 };
 
 const onExternalDataFileDrop = async (event: DragEvent): Promise<void> => {
+  externalDataFileDragDepth = 0;
   externalDataFileDragging.value = false;
 
   await importExternalDataFromFiles(event.dataTransfer?.files ? Array.from(event.dataTransfer.files) : []);
 };
 
 const onExternalDataFileDragLeave = (): void => {
-  externalDataFileDragging.value = false;
+  externalDataFileDragDepth = Math.max(externalDataFileDragDepth - 1, 0);
+
+  if (!externalDataFileDragDepth) {
+    externalDataFileDragging.value = false;
+  }
 };
 
 // Import some external data from our URL when Enter is pressed (rather than accept our settings, see onKeydownEnter()),
@@ -1307,9 +1363,8 @@ const importExternalDataFromUrl = async (): Promise<void> => {
   } catch (error: unknown) {
     addToast({
       severity: 'error',
-      summary: 'External data',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      summary: 'Cannot Import External Data',
+      detail: common.formatMessage(common.formatError(error))
     });
   } finally {
     importingExternalDataFromUrl = false;
