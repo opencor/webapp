@@ -74,7 +74,7 @@
         @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent class="app-blocking-message initialising-opencor-message" v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
-      <BlockingMessageComponent class="app-blocking-message" v-if="loadingModelMessageVisible" message="Loading model..." />
+      <BlockingMessageComponent class="app-blocking-message" v-if="loadingModelMessageVisible" message="Loading model..." cancellable @cancel="cancelRemoteModelLoads" />
       <BlockingMessageComponent class="app-blocking-message" v-show="loadingExternalDataVisible" message="Loading external data..." />
       <BlockingMessageComponent class="app-blocking-message" v-show="opencorMessageVisible" :message="opencorMessageMessage" :progress="opencorMessageProgress" />
       <OkMessageDialog v-model:visible="updateErrorVisible"
@@ -330,6 +330,7 @@ const octokit = vue.ref<Octokit | null>(null);
 const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
 const loadingModelMessageVisible = vue.ref<boolean>(false);
 const remoteModelLoadsCount = vue.ref<number>(0);
+let remoteModelLoadsAbortController = new AbortController();
 const loadingExternalDataVisible = vue.ref<boolean>(false);
 const externalDataLoadsCount = vue.ref<number>(0);
 
@@ -363,7 +364,19 @@ const setTrackedTimeout = (callback: () => void, delay: number): void => {
   });
 };
 
+// Cancel the loading of the remote models that are being loaded, if any (e.g., if their server is not responding).
+// Note: we use a new abort controller for the remote models that will be loaded next, so that they don't get cancelled
+//       straightaway.
+
+const cancelRemoteModelLoads = (): void => {
+  remoteModelLoadsAbortController.abort();
+
+  remoteModelLoadsAbortController = new AbortController();
+};
+
 vue.onUnmounted(() => {
+  remoteModelLoadsAbortController.abort();
+
   for (const cleanup of cleanups) {
     cleanup();
   }
@@ -1012,6 +1025,27 @@ const focusRingHidden = vue.ref<boolean>(false);
 const MODIFIER_KEYS = ['Alt', 'AltGraph', 'Control', 'Meta', 'Shift'];
 
 const onEscapeKeyDown = (event: KeyboardEvent): void => {
+  // Cancel the loading of remote models, if any, as if our Cancel button had been pressed (see our template).
+  // Note: no dialog can normally be shown while remote models are being loaded, but we make sure of it since Escape
+  //       would then be for the dialog.
+
+  if (
+    loadingModelMessageVisible.value &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey &&
+    !event.isComposing &&
+    compIsActiveApp.value &&
+    !isDialogActive.value
+  ) {
+    event.preventDefault();
+
+    cancelRemoteModelLoads();
+
+    return;
+  }
+
   if (
     event.altKey ||
     event.ctrlKey ||
@@ -1389,12 +1423,20 @@ const fileDescription = (fileFilePathOrFileContents: string | Uint8Array | File)
 
 // A helper function to report an issue with a file that couldn't be opened.
 
-const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePath: string = ''): void => {
+const reportFileIssue = (
+  filePath: string,
+  issueMessage: string,
+  canonicalFilePath: string = '',
+  toastShown: boolean = true
+): void => {
   // Let our main process know about the issue first since it may be waiting for the file (e.g., if the file is being
   // reopened at startup, see MainWindow.fileOpenedOrNot()), so that it doesn't wait forever should reporting the issue
   // to the user fail.
-  // Note: the canonical path of the file may not be known (e.g., if libOpenCOR couldn't determine it), in which case we
-  //       use the path that was used to (try to) open the file.
+  // Note #1: the canonical path of the file may not be known (e.g., if libOpenCOR couldn't determine it), in which case
+  //          we use the path that was used to (try to) open the file.
+  // Note #2: we don't show a toast if the issue is the result of something that people did (e.g., they cancelled the
+  //          loading of a remote file), unless we are in simulation-only mode since our issues are then all that is
+  //          shown.
 
   electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
 
@@ -1402,7 +1444,7 @@ const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePa
     void vue.nextTick().then(() => {
       issues.value.push({ type: locApi.IssueType.ERROR, description: issueMessage });
     });
-  } else {
+  } else if (toastShown) {
     // Note: a data URL can be very long, so we don't show it (the issue message says that it is a data URL anyway).
 
     addToast({
@@ -1420,6 +1462,13 @@ const processFile = async (
   fileFilePathOrFileContents: string | Uint8Array | File,
   dataUrlFileName: string = ''
 ): Promise<FileInfo | null> => {
+  // Keep track of the signal that tells us whether the loading of remote models, including ours if we are one, has been
+  // cancelled (see cancelRemoteModelLoads()).
+  // Note: we do this before anything else since it is the remote models that were being loaded when the loading got
+  //       cancelled that are to be cancelled, i.e. including us even if we haven't started loading our model yet.
+
+  const remoteModelLoadsSignal = remoteModelLoadsAbortController.signal;
+
   // Check whether we were passed a ZIP-CellML data URL.
   // Note: we may also have been passed the contents of a file that was opened using a data URL and then closed, along
   //       with its name, so that it can be reopened under that name (see onReopenMenu() and electronApi.onOpenFile()).
@@ -1518,7 +1567,20 @@ const processFile = async (
   let fileToBeOpened = false;
 
   try {
-    file = await locCommon.file(fileFilePathOrFileContents, dataUrlFileName, omexDataUrlCounter);
+    file = await locCommon.file(
+      fileFilePathOrFileContents,
+      dataUrlFileName,
+      omexDataUrlCounter,
+      isRemoteFilePath ? remoteModelLoadsSignal : undefined
+    );
+
+    // Make sure that the loading of our model hasn't been cancelled while it was being loaded (in which case, our file
+    // gets released below).
+
+    if (isRemoteFilePath) {
+      remoteModelLoadsSignal.throwIfAborted();
+    }
+
     // Note: to retrieve the type of the file may fail (e.g., if libOpenCOR throws an exception), in which case we must
     //       release the file since nothing else would (see the catch block below).
 
@@ -1560,7 +1622,17 @@ const processFile = async (
       console.warn(`OpenCOR: failed to release file (${filePath}):`, common.formatError(error));
     }
 
-    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
+    // Note: if the loading of our model was cancelled, then people know about it, so we don't show a toast (see
+    //       reportFileIssue()).
+
+    const loadingCancelled = isRemoteFilePath && remoteModelLoadsSignal.aborted;
+
+    reportFileIssue(
+      filePath,
+      loadingCancelled ? 'The loading of the file was cancelled.' : common.formatMessage(common.formatError(error)),
+      canonicalFilePath,
+      !loadingCancelled
+    );
 
     return null;
   } finally {

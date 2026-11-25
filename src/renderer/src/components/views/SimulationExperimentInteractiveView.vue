@@ -4,10 +4,23 @@
     <template v-else>
       <Toolbar v-if="!simulationOnly" class="shrink-0">
         <template #start>
-          <span v-if="runStatus" class="run-status" :class="`run-status-${runStatus.type}`" aria-hidden="true">
-            <i :class="runStatus.icon"></i>
-            <span>{{ runStatus.label }}</span>
-          </span>
+          <div class="flex items-center gap-1">
+            <!--
+            Note: our Stop button is only shown while a slow simulation is running (see slowSimulation), i.e. while our
+                  run status is shown as running.
+            -->
+            <ToolbarButtonWidget v-if="slowSimulation" ref="stopButtonRef"
+              icon="pi pi-stop-circle"
+              accent="danger"
+              label="Stop simulation"
+              @focus="onStopButtonFocus"
+              @click="onStopSimulation"
+            />
+            <span v-if="runStatus" class="run-status" :class="`run-status-${runStatus.type}`" aria-hidden="true">
+              <i :class="runStatus.icon"></i>
+              <span>{{ runStatus.label }}</span>
+            </span>
+          </div>
         </template>
         <template #end>
           <div class="flex gap-1">
@@ -116,7 +129,7 @@
                       label="Track run"
                       outlined
                       size="small"
-                      :disabled="isSimulating || simulationIssues.length > 0"
+                      :disabled="!liveRunTrackable"
                       @click="onTrackRun"
                     />
                     <div ref="runsListRef" class="runs-list">
@@ -496,7 +509,7 @@ const liveData = vue.ref<PlotData[]>([]);
 //          progress bar already exposes it).
 
 interface LastRun {
-  outcome: 'completed' | 'failed';
+  outcome: 'completed' | 'stopped' | 'failed';
   time?: number;
 }
 
@@ -510,6 +523,10 @@ let progressResetTimer: ReturnType<typeof setTimeout> | undefined;
 let progressReset = 0;
 let runStatusTimer: ReturnType<typeof setTimeout> | undefined;
 
+// Why our last simulation run was cancelled, if it was (see cancelSimulation()).
+
+let simulationCancellation: 'stopped' | 'cancelled' | null = null;
+
 const runStatus = vue.computed<{ type: string; icon: string; label: string } | null>(() => {
   if (slowSimulation.value) {
     return { type: 'running', icon: 'pi pi-hourglass', label: `Running... ${Math.round(progress.value)}%` };
@@ -522,6 +539,8 @@ const runStatus = vue.computed<{ type: string; icon: string; label: string } | n
         icon: 'pi pi-check-circle',
         label: lastRun.value.time !== undefined ? `Completed in ${common.formatTime(lastRun.value.time)}` : 'Completed'
       };
+    case 'stopped':
+      return { type: 'stopped', icon: 'pi pi-stop-circle', label: 'Stopped' };
     case 'failed':
       return { type: 'failed', icon: 'pi pi-times-circle', label: 'Failed' };
     default:
@@ -564,20 +583,28 @@ const onIsSimulatingChanged = (simulating: boolean): void => {
     return;
   }
 
-  // We have stopped simulating, so report whether our simulation failed or, if it was slow, completed. If our progress
-  // bar is shown, then we show it at 100% (now that our results have been plotted) before resetting it after a short
-  // delay (as in the Standard view). A completed status only confirms what can be seen, so we hide it after a while.
+  // We have stopped simulating, so report whether our simulation failed, was stopped or, if it was slow, completed. If
+  // our progress bar is shown, then we show it at 100% (now that our results have been plotted), unless our simulation
+  // was stopped or cancelled, before resetting it after a short delay (as in the Standard view). A completed status
+  // only confirms what can be seen, so we hide it after a while, unlike a stopped status since our plots then don't
+  // reflect our simulation inputs anymore.
+  // Note: a cancelled simulation (e.g., because our settings have changed) is neither completed nor stopped, so we
+  //       don't report anything for it (see cancelSimulation()).
 
   const wasSlow = slowSimulation.value;
+  const cancellation = simulationCancellation;
 
   slowSimulation.value = false;
+  simulationCancellation = null;
 
   // Note: we only start the delay once our UI has been painted since plotting our results may take longer than it.
 
   if (progressShown.value) {
     const currentProgressReset = ++progressReset;
 
-    progress.value = 100;
+    if (!cancellation) {
+      progress.value = 100;
+    }
 
     void common.waitForNextPaint().then(() => {
       if (currentProgressReset === progressReset) {
@@ -590,7 +617,11 @@ const onIsSimulatingChanged = (simulating: boolean): void => {
     });
   }
 
-  if (simulationIssues.value.length) {
+  if (cancellation === 'stopped') {
+    lastRun.value = { outcome: 'stopped' };
+  } else if (cancellation) {
+    lastRun.value = null;
+  } else if (simulationIssues.value.length) {
     lastRun.value = { outcome: 'failed' };
   } else if (wasSlow) {
     lastRun.value = { outcome: 'completed', time: lastSimulationTime };
@@ -1987,7 +2018,11 @@ const updateSimulation = async (): Promise<void> => {
   //          an older one has been superseded and the latest one is still in charge.
   // Note #2: if an input has changed while we were running (see onInputChange()), then another simulation run is about
   //          to start (see startInputSimulationUpdate()), so we are still simulating.
+  // Note #3: a previous run may have just been cancelled (see cancelSimulation()), in which case we may still be
+  //          considered as simulating by onIsSimulatingChanged() (since it is only called once our state has settled),
+  //          so we make sure that our run doesn't get reported as having been cancelled.
 
+  simulationCancellation = null;
   isSimulating.value = true;
 
   try {
@@ -2010,12 +2045,20 @@ const updateSimulation = async (): Promise<void> => {
   }
 };
 
-// Cancel any simulation run that is in progress, as well as any pending input simulation update.
-// Note: the cancelled simulation run will see that it has been superseded (see runSimulation()), so it won't report its
-//       results nor say that we are no longer simulating (see updateSimulation()), hence we do the latter here.
+// Cancel any simulation run that is in progress, as well as any pending input simulation update, either because it has
+// been stopped by the user (see onStopSimulation()) or because its results would be stale anyway (e.g., because our
+// settings have changed).
+// Note #1: the cancelled simulation run will see that it has been superseded (see runSimulation()), so it won't report
+//          its results nor say that we are no longer simulating (see updateSimulation()), hence we do the latter here.
+// Note #2: we let onIsSimulatingChanged() know why we are no longer simulating, so that it doesn't report our
+//          simulation as having completed (or failed), see simulationCancellation.
 
-const cancelSimulation = (): void => {
+const cancelSimulation = (reason: 'stopped' | 'cancelled' = 'cancelled'): void => {
   ++simulationGeneration;
+
+  if (isSimulating.value) {
+    simulationCancellation = reason;
+  }
 
   inputSimulationUpdatePending = false;
   isSimulating.value = false;
@@ -2024,6 +2067,53 @@ const cancelSimulation = (): void => {
     instance.stopRun();
   }
 };
+
+// Stop our simulation, giving the keyboard focus back to the element that had it before our Stop button got it (or, if
+// that element is not available anymore, to our first simulation input), should our Stop button have it when it gets
+// removed (i.e. once our simulation is not slow anymore, whether it has been stopped or has completed).
+
+const stopButtonRef = vue.useTemplateRef<{ $el: HTMLElement }>('stopButtonRef');
+let elementFocusedBeforeStopButton: HTMLElement | null = null;
+
+const onStopButtonFocus = (event: FocusEvent): void => {
+  const relatedTarget = event.relatedTarget;
+
+  if (relatedTarget instanceof HTMLElement && rootRef.value?.contains(relatedTarget)) {
+    elementFocusedBeforeStopButton = relatedTarget;
+  }
+};
+
+const onStopSimulation = (): void => {
+  cancelSimulation('stopped');
+};
+
+vue.watch(
+  slowSimulation,
+  (slow: boolean) => {
+    if (slow || stopButtonRef.value?.$el !== window.document.activeElement) {
+      return;
+    }
+
+    const element = elementFocusedBeforeStopButton;
+
+    elementFocusedBeforeStopButton = null;
+
+    void vue.nextTick().then(() => {
+      const activeElement = window.document.activeElement;
+
+      if (activeElement && activeElement !== window.document.body) {
+        return;
+      }
+
+      if (element?.isConnected && element.getClientRects().length && !element.matches(':disabled')) {
+        element.focus();
+      } else {
+        simulationInputsRef.value?.querySelector<HTMLElement>('input, [tabindex="0"]')?.focus();
+      }
+    });
+  },
+  { flush: 'sync' }
+);
 
 // Margins-related event handlers.
 
@@ -2081,12 +2171,20 @@ const onResetMargins = (): void => {
 
 // Runs-related event handlers
 
+// Whether our live run can be tracked, i.e. whether its data matches our simulation inputs, which is not the case while
+// our simulation is running, if it has issues, or if it was stopped (in which case our plots show the data of our
+// previous run, see onIsSimulatingChanged()).
+
+const liveRunTrackable = vue.computed<boolean>(() => {
+  return !isSimulating.value && !simulationIssues.value.length && lastRun.value?.outcome !== 'stopped';
+});
+
 const onTrackRun = (): void => {
   // Make sure that there is no simulation in progress or any issue with the current simulation data. Indeed, if we were
   // to track the current run while a simulation is still running, then we would end up tracking the data of the
   // previous run while using the input values of the new run, which would result in a mismatch between the two.
 
-  if (isSimulating.value || simulationIssues.value.length) {
+  if (!liveRunTrackable.value) {
     return;
   }
 
@@ -2423,21 +2521,34 @@ const archiveSedml = (sedml: string): string => {
 };
 
 // Download COMBINE archive.
+// Note: creating our COMBINE archive may fail (e.g., if libOpenCOR throws an exception while retrieving the contents of
+//       our model file or serialising our document, or if our COMBINE archive cannot be generated), in which case we
+//       let people know about it (as in the CellDL Editor view) rather than silently not download anything.
 
-const onDownloadCombineArchive = (): void => {
-  const jsZip = new dependencies._jsZip();
-  const baseFileName = common.baseFileName(common.fileName(props.file.canonicalPath()));
-  const modelFile = model?.file();
+const onDownloadCombineArchive = async (): Promise<void> => {
+  let modelFile: locApi.File | null | undefined;
 
-  if (!modelFile) {
-    emit('error', 'Cannot create COMBINE archive: no model file available.');
+  try {
+    modelFile = model?.file();
+  } catch (error: unknown) {
+    emit('error', `Failed to export the simulation to a COMBINE archive: ${common.formatError(error)}`);
 
     return;
   }
 
-  jsZip.file(
-    'manifest.xml',
-    `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+  if (!modelFile) {
+    emit('error', 'Failed to export the simulation to a COMBINE archive: no model file is available.');
+
+    return;
+  }
+
+  try {
+    const jsZip = new dependencies._jsZip();
+    const baseFileName = common.baseFileName(common.fileName(props.file.canonicalPath()));
+
+    jsZip.file(
+      'manifest.xml',
+      `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
 <omexManifest xmlns="http://identifiers.org/combine.specifications/omex-manifest">
   <content location="." format="http://identifiers.org/combine.specifications/omex"/>
   <content location="document.sedml" format="http://identifiers.org/combine.specifications/sed-ml" master="true"/>
@@ -2445,31 +2556,31 @@ const onDownloadCombineArchive = (): void => {
   <content location="simulation.json" format="http://purl.org/NET/mediatypes/application/json"/>
 </omexManifest>
 `
-  );
+    );
 
-  try {
     // Note: we release our model file even if something goes wrong while retrieving its contents or serialising our
     //       document.
 
-    jsZip.file('model.cellml', modelFile.contents());
-    jsZip.file('document.sedml', archiveSedml(document.serialise()));
-  } finally {
-    modelFile.release();
+    try {
+      jsZip.file('model.cellml', modelFile.contents());
+      jsZip.file('document.sedml', archiveSedml(document.serialise()));
+    } finally {
+      modelFile.release();
+    }
+
+    jsZip.file('simulation.json', JSON.stringify(actualUiJson.value, locApi.uiJsonReplacer, 2));
+
+    common.downloadFile(
+      `${baseFileName}.omex`,
+      await jsZip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE'
+      }),
+      'application/zip'
+    );
+  } catch (error: unknown) {
+    emit('error', `Failed to export the simulation to a COMBINE archive: ${common.formatError(error)}`);
   }
-
-  jsZip.file('simulation.json', JSON.stringify(actualUiJson.value, locApi.uiJsonReplacer, 2));
-
-  jsZip
-    .generateAsync({
-      type: 'blob',
-      compression: 'DEFLATE'
-    })
-    .then((content: Blob) => {
-      common.downloadFile(`${baseFileName}.omex`, content, 'application/zip');
-    })
-    .catch((error: unknown) => {
-      console.warn('OpenCOR: failed to generate COMBINE archive:', common.formatError(error));
-    });
 };
 
 // Settings dialog event handler.

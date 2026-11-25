@@ -127,13 +127,20 @@
                   </div>
                 </ScrollPanel>
               </SplitterPanel>
-              <SplitterPanel :size="narrowLayout ? 60 : 83">
+              <SplitterPanel class="relative" :size="narrowLayout ? 60 : 83">
                 <GraphPanelWidget
                   :key="'standard-graph-panel'"
+                  :class="{ 'invisible pointer-events-none': runIssuesShown }"
                   :data="data"
                   :showLegend="false"
                   :live="runStatus?.type === 'running' || runStatus?.type === 'paused'"
                 />
+                <!--
+                Note: our console is not shown in simulation-only mode, so the issues of a failed run are shown instead
+                      of our plot (as in the Interactive view), until our next run or until our simulation data gets
+                      cleared (see runIssuesShown).
+                -->
+                <IssuesView v-if="runIssuesShown" class="absolute inset-0 m-4" :issues="runIssues" />
               </SplitterPanel>
             </Splitter>
           </SplitterPanel>
@@ -872,12 +879,24 @@ const scrollConsoleToBottom = (): void => {
   });
 };
 
+// The issues of our current (or last) run, i.e. the errors and issues that we report in our console (see
+// addConsoleError() and addConsoleIssues()), which we show instead of our plot if our run failed while we are in
+// simulation-only mode, i.e. while our console is not shown (see our template).
+
+const runIssues = vue.shallowRef<locApi.Issue[]>([]);
+
+const runIssuesShown = vue.computed<boolean>(() => {
+  return simulationOnly.value && lastRun.value?.outcome === 'failed' && runIssues.value.length > 0;
+});
+
 // A helper function to report an error in our console.
 
 const addConsoleError = (error: unknown): void => {
-  addConsoleEntry(
-    `<span style="color: ${colors.REVERTED_PALETTE.Red};"><strong>Error:</strong> ${common.escapeHtml(common.formatMessage(common.formatError(error)))}</span>`
-  );
+  const description = common.escapeHtml(common.formatMessage(common.formatError(error)));
+
+  addConsoleEntry(`<span style="color: ${colors.REVERTED_PALETTE.Red};"><strong>Error:</strong> ${description}</span>`);
+
+  runIssues.value = [...runIssues.value, { type: locApi.IssueType.ERROR, description }];
 
   scrollConsoleToBottom();
 };
@@ -898,6 +917,13 @@ const addConsoleIssues = (issues: locApi.Issue[]): void => {
 
     addConsoleEntry(`<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`);
   });
+
+  runIssues.value = [
+    ...runIssues.value,
+    ...issues.map((issue: locApi.Issue) => {
+      return { type: issue.type, description: issue.description.replace('Task | ', '') };
+    })
+  ];
 
   scrollConsoleToBottom();
 };
@@ -1027,14 +1053,15 @@ const onRunPause = async (): Promise<void> => {
         activeElement.blur();
       }
 
-      // Reset our abort flag, our live data, the outcome of our last run, and whether our Stop button had the keyboard
-      // focus.
+      // Reset our abort flag, our live data, the outcome (and issues) of our last run, and whether our Stop button had
+      // the keyboard focus.
       // Note: our live data is normally reset at the end of a simulation run (see updatePlot()), but not if the run was
       //       aborted or failed, in which case we would otherwise end up plotting (some of) the data of that run.
 
       runAborted.value = false;
       liveData = null;
       lastRun.value = null;
+      runIssues.value = [];
       stopButtonHadFocus = false;
 
       // Cancel the reset of our progress bar by our previous run, if any, so that it doesn't reset the progress bar of

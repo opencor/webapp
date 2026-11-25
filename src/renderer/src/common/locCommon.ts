@@ -198,15 +198,18 @@ export const filePath = (
 export const file = (
   fileFilePathOrFileContents: string | Uint8Array | File,
   dataUrlFileName: string,
-  dataUrlCounter: number
+  dataUrlCounter: number,
+  signal?: AbortSignal
 ): Promise<locApi.File> => {
   if (typeof fileFilePathOrFileContents === 'string') {
     if (common.isUrl(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
-        // Fetch the URL through OpenCOR's CORS proxy or, if that fails, directly (see common.fetchThroughCorsProxy()).
+        // Fetch the URL through OpenCOR's CORS proxy or, if that fails, directly (see common.fetchThroughCorsProxy()),
+        // unless the given signal gets aborted (e.g., if people cancel the loading of the file), in which case we give
+        // up straightaway.
 
         common
-          .fetchThroughCorsProxy(fileFilePathOrFileContents)
+          .fetchThroughCorsProxy(fileFilePathOrFileContents, signal)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer();

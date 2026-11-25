@@ -192,24 +192,49 @@ export const corsProxyUrl = (url: string): string => {
   return `https://cors-proxy.opencor.workers.dev/?url=${encodeURIComponent(url)}`;
 };
 
+// A method to fetch a URL, giving up if its server doesn't respond (i.e. if we don't get the headers of its response)
+// within FETCH_RESPONSE_TIMEOUT or if the given signal gets aborted (e.g., if people cancel the loading of a file).
+// Note: our timeout only applies to the response itself, not to its body, which may take a while to be read (e.g., for
+//       a large file over a slow connection), hence we don't use AbortSignal.timeout(), but the given signal (if any)
+//       applies to both.
+
+const FETCH_RESPONSE_TIMEOUT = 30 * 1000; // 30 seconds.
+
+const fetchWithTimeout = async (url: string, signal?: AbortSignal): Promise<Response> => {
+  const timeoutAbortController = new AbortController();
+  const timeoutTimer = setTimeout(() => {
+    timeoutAbortController.abort(new Error('The server took too long to respond.'));
+  }, FETCH_RESPONSE_TIMEOUT);
+
+  try {
+    return await fetch(url, {
+      signal: signal ? AbortSignal.any([signal, timeoutAbortController.signal]) : timeoutAbortController.signal
+    });
+  } finally {
+    clearTimeout(timeoutTimer);
+  }
+};
+
 // A method to fetch a URL through our CORS proxy or, if that fails, directly.
 // Note #1: our CORS proxy may not be reachable, not allow the content of the URL (HTTP 403 error), not find the URL
 //          (HTTP 404 error), not be able to fetch the URL (HTTP 502 error; e.g., the URL is only reachable from the
-//          user's network), be rate limited (HTTP 429 error), be unavailable (HTTP 5xx error), or get some other error
-//          from the server of the URL (e.g., because it blocks requests from our CORS proxy), in which case fetching
-//          the URL directly may still work. So, we fetch the URL directly whenever our CORS proxy doesn't give us an OK
-//          response.
+//          user's network), be rate limited (HTTP 429 error), be unavailable (HTTP 5xx error), be too slow to respond,
+//          or get some other error from the server of the URL (e.g., because it blocks requests from our CORS proxy),
+//          in which case fetching the URL directly may still work. So, we fetch the URL directly whenever our CORS proxy
+//          doesn't give us an OK response.
 // Note #2: if fetching the URL directly also fails, then it is most likely because of CORS, about which a browser tells
 //          us next to nothing (e.g., "Failed to fetch"), so we report why our CORS proxy failed instead.
 // Note #3: we read the body of our CORS proxy's response before returning it, so that we can also fetch the URL
 //          directly if reading it fails (e.g., if our CORS proxy aborts it because the content turns out to be too
 //          large). This doesn't cost anything since our callers need the whole body anyway.
+// Note #4: if the given signal gets aborted, then we give up straightaway (i.e. we don't fetch the URL directly) and
+//          reject with the reason of the signal.
 
-export const fetchThroughCorsProxy = async (url: string): Promise<Response> => {
+export const fetchThroughCorsProxy = async (url: string, signal?: AbortSignal): Promise<Response> => {
   let corsProxyIssue: string;
 
   try {
-    const response = await fetch(corsProxyUrl(url));
+    const response = await fetchWithTimeout(corsProxyUrl(url), signal);
 
     if (response.ok) {
       const body = await response.arrayBuffer();
@@ -226,17 +251,22 @@ export const fetchThroughCorsProxy = async (url: string): Promise<Response> => {
     corsProxyIssue =
       (await response.text().catch(() => '')) || `The server responded with a status of ${response.status}.`;
   } catch (error: unknown) {
+    signal?.throwIfAborted();
+
     corsProxyIssue = formatError(error);
   }
 
   try {
-    const response = await fetch(url);
+    const response = await fetchWithTimeout(url, signal);
 
     if (response.ok) {
       return response;
     }
   } catch {
-    // Fetching the URL directly failed, so we report why our CORS proxy failed (see Note #2).
+    // Fetching the URL directly failed, so we report why our CORS proxy failed (see Note #2), unless the given signal
+    // got aborted (see Note #4).
+
+    signal?.throwIfAborted();
   }
 
   throw new Error(corsProxyIssue);
