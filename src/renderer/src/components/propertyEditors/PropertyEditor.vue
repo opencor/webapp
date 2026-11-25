@@ -31,7 +31,7 @@ const props = withDefaults(
       value: number;
       unit?: string;
     }[];
-    isValid?: (index: number, newValue: number) => boolean;
+    validate?: (index: number, newValue: number) => string | undefined;
   }>(),
   {
     hasUnits: true
@@ -49,15 +49,16 @@ const emit = defineEmits<{
 //       that, for instance, the user can keep spinning its value).
 
 interface InputScientificNumberWidgetInstance {
-  discardEdit: () => void;
+  discardEdit: (reason?: string) => void;
 }
 
 const fieldRefs: (InputScientificNumberWidgetInstance | null)[] = [];
 
 const onValueUpdated = (index: number, newValue: number | undefined): void => {
-  // Ignore an invalid new value for the property, i.e. keep its current value. A new value is invalid if it is not a
-  // finite number or if it is deemed invalid by our owner. A valid new value is emitted, and it is then up to our owner
-  // to update its property (and therefore ours).
+  // Ignore an invalid new value for the property, i.e. keep its current value, and let the user know why (see
+  // discardEdit() in InputScientificNumberWidget.vue). A new value is invalid if it is not a finite number or if our
+  // owner says why it is invalid. A valid new value is emitted, and it is then up to our owner to update its property
+  // (and therefore ours).
 
   const property = props.properties[index];
 
@@ -65,12 +66,16 @@ const onValueUpdated = (index: number, newValue: number | undefined): void => {
     return;
   }
 
-  if (
-    typeof newValue !== 'number' ||
-    !Number.isFinite(newValue) ||
-    (props.isValid && !props.isValid(index, newValue))
-  ) {
-    fieldRefs[index]?.discardEdit();
+  if (typeof newValue !== 'number' || !Number.isFinite(newValue)) {
+    fieldRefs[index]?.discardEdit('This is not a valid number.');
+
+    return;
+  }
+
+  const invalidReason = props.validate?.(index, newValue);
+
+  if (invalidReason) {
+    fieldRefs[index]?.discardEdit(invalidReason);
 
     return;
   }

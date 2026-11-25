@@ -102,6 +102,7 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
 
   applyTheme: (theme: OpenCORTheme) => electron.ipcRenderer.invoke('apply-theme', theme),
   canSaveFile: (filePath: string): Promise<boolean> => electron.ipcRenderer.invoke('can-save-file', filePath),
+  cancelUpdateDownload: () => electron.ipcRenderer.invoke('cancel-update-download'),
   checkForUpdates: (atStartup: boolean) => electron.ipcRenderer.invoke('check-for-updates', atStartup),
   closeConfirmed: () => electron.ipcRenderer.invoke('close-confirmed'),
   closeRequestReceived: () => electron.ipcRenderer.invoke('close-request-received'),

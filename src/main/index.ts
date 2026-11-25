@@ -29,6 +29,7 @@ import {
 import {
   allowSavingFile,
   applyTheme,
+  cancelUpdateDownload,
   canSaveFile,
   checkForUpdates,
   closeConfirmed,
@@ -497,6 +498,9 @@ electron.app
 */
         electron.ipcMain.handle('disallow-saving-file', (_event, filePath: string) => {
           disallowSavingFile(filePath);
+        });
+        electron.ipcMain.handle('cancel-update-download', () => {
+          cancelUpdateDownload();
         });
         electron.ipcMain.handle('download-and-install-update', () => {
           downloadAndInstallUpdate();

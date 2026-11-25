@@ -13,6 +13,7 @@ interface ElectronApi {
   // Renderer process asking the main process to do something for it.
 
   applyTheme: (theme: OpenCORTheme) => void;
+  cancelUpdateDownload: () => void;
   canSaveFile: (filePath: string) => Promise<boolean>;
   checkForUpdates: (atStartup: boolean) => void;
   closeConfirmed: () => void;

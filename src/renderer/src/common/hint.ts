@@ -36,7 +36,10 @@ import * as focusRing from './focusRing';
 // Note #8: our hint is hidden from assistive technologies (since it is a visual aid that isn't linked to our element),
 //          so a plain hint is also used as the accessible name of our element if our element has no accessible name of
 //          its own (e.g., an icon-only button), i.e. no text, no aria-label, aria-labelledby, title, or alt attribute,
-//          and no label (e.g., an input field with a <label for="...">).
+//          and no label (e.g., an input field with a <label for="...">). Otherwise, our hint (as plain text, if it is a
+//          rich hint) is used as the accessible description of our element or, if our element can't get the keyboard
+//          focus, of the first element within it that can (e.g., the input field of a float label), so that assistive
+//          technologies read it when that element gets the keyboard focus.
 // Note #9: our element may get hidden (or removed from the DOM) while our hint is shown, without being left or blurred
 //          (e.g., if the user switches to another file tab using the keyboard while our element is hovered or focused,
 //          or if our element is activated using the keyboard and gets hidden once what it does has been done, like
@@ -63,6 +66,7 @@ interface HintState {
   html: boolean;
   timer: number | undefined;
   ariaLabel: string | null;
+  ariaDescription: { element: HTMLElement; source: string; text: string } | null;
   onPointerEnter: () => void;
   onPointerLeave: (event: PointerEvent) => void;
   onFocusIn: (event: FocusEvent) => void;
@@ -302,6 +306,75 @@ const updateAriaLabel = (element: HTMLElement, state: HintState): void => {
   }
 };
 
+// Use our hint as the accessible description of our element, or of the first element within it that can get the
+// keyboard focus, if it isn't used as the accessible name of our element (see Note #8 above).
+// Note: we only convert a rich hint to plain text when it (or the element that it describes) changes, since we are called
+//       whenever the component that contains our element gets updated (e.g., every time the user types something in an
+//       input field), and we only remove the accessible description that we have set, i.e. if it hasn't been changed
+//       since.
+
+const FOCUSABLE_ELEMENTS =
+  ':is(a[href], button, input, select, textarea, [tabindex], [role="combobox"]):not([tabindex="-1"], [disabled])';
+
+const describedElement = (element: HTMLElement): HTMLElement => {
+  return element.matches(FOCUSABLE_ELEMENTS)
+    ? element
+    : (element.querySelector<HTMLElement>(FOCUSABLE_ELEMENTS) ?? element);
+};
+
+// Note: a rich hint may contain a table (e.g., the details of a tracked run), whose cells and rows would otherwise run
+//       into each other (e.g., "beta:10rho:28"), so we separate cells with a space and rows (as well as other blocks)
+//       with a comma (or just a space if the previous row or block ends with some punctuation).
+
+const plainText = (text: string, html: boolean): string => {
+  const res = html
+    ? (new DOMParser().parseFromString(
+        text.replace(/<\/t[dh]>/gi, ' $&').replace(/<\/(tr|p|div|li|h[1-6])>|<br\s*\/?>/gi, '\n$&'),
+        'text/html'
+      ).body.textContent ?? '')
+    : text;
+
+  return res
+    .split('\n')
+    .map((line: string) => line.replace(/\s+/g, ' ').trim())
+    .filter((line: string) => line)
+    .reduce((plainRes: string, line: string) => {
+      return plainRes ? `${plainRes}${/[.:;!?]$/.test(plainRes) ? ' ' : ', '}${line}` : line;
+    }, '');
+};
+
+const removeOurAriaDescription = (state: HintState): void => {
+  const ariaDescription = state.ariaDescription;
+
+  if (ariaDescription && ariaDescription.element.getAttribute('aria-description') === ariaDescription.text) {
+    ariaDescription.element.removeAttribute('aria-description');
+  }
+
+  state.ariaDescription = null;
+};
+
+const updateAriaDescription = (element: HTMLElement, state: HintState): void => {
+  const source = state.ariaLabel === null ? state.text : '';
+  const target = source ? describedElement(element) : null;
+
+  if (
+    (!target && !state.ariaDescription) ||
+    (state.ariaDescription?.element === target && state.ariaDescription?.source === source)
+  ) {
+    return;
+  }
+
+  removeOurAriaDescription(state);
+
+  const text = target ? plainText(source, state.html) : '';
+
+  if (target && text) {
+    target.setAttribute('aria-description', text);
+
+    state.ariaDescription = { element: target, source, text };
+  }
+};
+
 // Position our hint below its owner (or above it if there is not enough room below it, but there is above it or there
 // is more room above it than below it), within the window (see Note #2 above).
 // Note #1: if there is not enough room for our hint either below or above its owner, then it overlaps its owner (as
@@ -388,6 +461,7 @@ export const vHint: vue.Directive<HTMLElement, string | undefined> = {
       html: !!binding.modifiers.html,
       timer: undefined,
       ariaLabel: null,
+      ariaDescription: null,
       onPointerEnter: () => {
         // Hide the hint of our hinted ancestors, if any, since ours is to replace it (see Note #6 above), and cancel
         // the hint that is about to be shown, if any (e.g., the hint of one of our hinted ancestors).
@@ -469,6 +543,7 @@ export const vHint: vue.Directive<HTMLElement, string | undefined> = {
     states.set(element, state);
 
     updateAriaLabel(element, state);
+    updateAriaDescription(element, state);
 
     element.addEventListener('pointerenter', state.onPointerEnter);
     element.addEventListener('pointerleave', state.onPointerLeave);
@@ -487,6 +562,7 @@ export const vHint: vue.Directive<HTMLElement, string | undefined> = {
       state.text = binding.value ?? '';
 
       updateAriaLabel(element, state);
+      updateAriaDescription(element, state);
 
       // Update our hint, if it is shown and its text has changed, and reposition it since its size may have changed.
       // Note #1: we are called whenever the component that contains our element gets updated, not only when our hint
@@ -523,6 +599,7 @@ export const vHint: vue.Directive<HTMLElement, string | undefined> = {
       element.removeEventListener('focusout', state.onFocusOut);
 
       removeOurAriaLabel(element, state);
+      removeOurAriaDescription(state);
 
       states.delete(element);
     }

@@ -45,6 +45,7 @@
             <div class="settings-form">
               <div class="form-row">
                 <InputScientificNumberWidget v-model="localSettings.simulation.initialPoint" class="form-field"
+                  :invalid="simulationFieldIssues.initialPoint.length > 0"
                   :label="common.labelWithUnit('Initial point', voiUnit)"
                   size="small"
                 />
@@ -57,16 +58,19 @@
               </div>
               <div class="form-row">
                 <InputScientificNumberWidget v-model="localSettings.simulation.startingPoint" class="form-field"
+                  :invalid="simulationFieldIssues.startingPoint.length > 0"
                   :label="common.labelWithUnit('Starting point', voiUnit)"
                   size="small"
                 />
                 <InputScientificNumberWidget v-model="localSettings.simulation.endingPoint" class="form-field"
+                  :invalid="simulationFieldIssues.endingPoint.length > 0"
                   :label="common.labelWithUnit('Ending point', voiUnit)"
                   size="small"
                 />
               </div>
               <div class="form-row">
                 <InputScientificNumberWidget v-model="localSettings.simulation.pointInterval" class="form-field"
+                  :invalid="simulationFieldIssues.pointInterval.length > 0"
                   :label="common.labelWithUnit('Point interval', voiUnit)"
                   size="small"
                 />
@@ -799,97 +803,76 @@ const numberOfDataPoints = vue.computed<string>(() => {
 
   return res;
 });
-const simulationSettingsIssues = vue.computed<locApi.Issue[]>(() => {
-  // Validate our simulation settings and return any issues.
+// The issues with our simulation settings, by field, so that a field with issues can be shown as invalid.
 
-  const res: locApi.Issue[] = [];
+type SimulationField = 'initialPoint' | 'startingPoint' | 'endingPoint' | 'pointInterval';
 
-  if (localSettings.value.simulation.initialPoint == null) {
-    res.push({
-      type: IssueType.WARNING,
-      description: 'The initial point must be specified.'
-    });
+const simulationFieldIssues = vue.computed<Record<SimulationField, string[]>>(() => {
+  const res: Record<SimulationField, string[]> = {
+    initialPoint: [],
+    startingPoint: [],
+    endingPoint: [],
+    pointInterval: []
+  };
+  const { initialPoint, startingPoint, endingPoint, pointInterval } = localSettings.value.simulation;
+
+  if (initialPoint == null) {
+    res.initialPoint.push('The initial point must be specified.');
   }
 
-  if (localSettings.value.simulation.startingPoint == null) {
-    res.push({
-      type: IssueType.WARNING,
-      description: 'The starting point must be specified.'
-    });
+  if (startingPoint == null) {
+    res.startingPoint.push('The starting point must be specified.');
   }
 
-  if (localSettings.value.simulation.endingPoint == null) {
-    res.push({
-      type: IssueType.WARNING,
-      description: 'The ending point must be specified.'
-    });
+  if (endingPoint == null) {
+    res.endingPoint.push('The ending point must be specified.');
   }
 
-  if (
-    localSettings.value.simulation.initialPoint !== null &&
-    localSettings.value.simulation.startingPoint !== null &&
-    localSettings.value.simulation.startingPoint < localSettings.value.simulation.initialPoint
-  ) {
-    res.push({
-      type: IssueType.WARNING,
-      description: 'The starting point must be greater or equal to the initial point.'
-    });
+  if (initialPoint !== null && startingPoint !== null && startingPoint < initialPoint) {
+    res.startingPoint.push('The starting point must be greater or equal to the initial point.');
   }
 
-  if (
-    localSettings.value.simulation.startingPoint !== null &&
-    localSettings.value.simulation.endingPoint !== null &&
-    localSettings.value.simulation.endingPoint <= localSettings.value.simulation.startingPoint
-  ) {
-    res.push({
-      type: IssueType.WARNING,
-      description: 'The ending point must be greater than the starting point.'
-    });
+  if (startingPoint !== null && endingPoint !== null && endingPoint <= startingPoint) {
+    res.endingPoint.push('The ending point must be greater than the starting point.');
   }
 
-  if (localSettings.value.simulation.pointInterval == null) {
-    res.push({
-      type: IssueType.WARNING,
-      description: 'The point interval must be specified.'
-    });
+  if (pointInterval == null) {
+    res.pointInterval.push('The point interval must be specified.');
   }
 
   // Note: a point interval that cannot be saved as a number of steps (e.g., if it is too small) gets saved as zero
   //       steps (see onSettingsOk() in SimulationExperimentInteractiveView.vue), which gives an infinite (or NaN) point
   //       interval when reopened.
 
-  if (
-    localSettings.value.simulation.pointInterval !== null &&
-    !Number.isFinite(localSettings.value.simulation.pointInterval)
-  ) {
-    res.push({
-      type: IssueType.WARNING,
-      description: 'The point interval must be a finite number.'
-    });
+  if (pointInterval !== null && !Number.isFinite(pointInterval)) {
+    res.pointInterval.push('The point interval must be a finite number.');
   }
 
-  if (localSettings.value.simulation.pointInterval !== null && localSettings.value.simulation.pointInterval <= 0) {
-    res.push({
-      type: IssueType.WARNING,
-      description: 'The point interval must be a positive number.'
-    });
+  if (pointInterval !== null && pointInterval <= 0) {
+    res.pointInterval.push('The point interval must be a positive number.');
   }
 
   // Make sure that our number of steps can be handled by libOpenCOR, i.e. that our point interval is not too small.
   // Note: we only check this if our other simulation settings are valid.
 
-  if (res.length === 0) {
-    const { startingPoint, endingPoint, pointInterval } = localSettings.value.simulation;
-
+  if (Object.values(res).every((issues: string[]) => !issues.length)) {
     if (!(Math.round((endingPoint - startingPoint) / pointInterval) <= locApi.MAXIMUM_NUMBER_OF_STEPS)) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `The point interval is too small (the number of steps must not exceed ${common.formatCount(locApi.MAXIMUM_NUMBER_OF_STEPS)}).`
-      });
+      res.pointInterval.push(
+        `The point interval is too small (the number of steps must not exceed ${common.formatCount(locApi.MAXIMUM_NUMBER_OF_STEPS)}).`
+      );
     }
   }
 
   return res;
+});
+
+const simulationSettingsIssues = vue.computed<locApi.Issue[]>(() => {
+  // Our simulation settings issues, in the order in which our fields are shown.
+
+  return (['initialPoint', 'startingPoint', 'endingPoint', 'pointInterval'] as SimulationField[]).flatMap(
+    (field: SimulationField) =>
+      simulationFieldIssues.value[field].map((description: string) => ({ type: IssueType.WARNING, description }))
+  );
 });
 const solversSettingsIssues = vue.computed<locApi.Issue[]>(() => {
   // Validate our solvers settings and return any issues.

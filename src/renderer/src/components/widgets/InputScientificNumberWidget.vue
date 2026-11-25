@@ -8,6 +8,7 @@
         :aria-valuemin="min"
         :aria-valuemax="max"
         v-bind="inputAttrs"
+        :invalid="invalid || !!correction"
         v-keyfilter="{ pattern: /^[+-]?(\d*(\.\d*)?|\.\d*)([eE][+-]?\d*)?$/ }"
         @update:model-value="onUpdateModelValue"
         @focus="onFocus"
@@ -61,6 +62,7 @@
           </svg>
         </button>
       </span>
+      <span class="input-correction" role="status">{{ correction }}</span>
     </span>
     <label>{{ label }}</label>
   </FloatLabel>
@@ -151,7 +153,7 @@ const rootClass = vue.computed<Array<string | Record<string, boolean>>>(() => {
     'w-full',
     {
       'p-inputnumber-resettable': props.defaultValue !== undefined,
-      'p-invalid': invalid.value,
+      'p-invalid': invalid.value || !!correction.value,
       'p-inputwrapper-filled': hasValue.value,
       'p-inputwrapper-focus': isFocused.value
     }
@@ -239,7 +241,32 @@ vue.watch(
   { immediate: true }
 );
 
+// Let the user know when a value that they have entered gets corrected (e.g., clamped to our minimum or maximum value)
+// or rejected (e.g., by our owner, see discardEdit()), rather than doing it silently. Our input field is then shown as
+// invalid, and the reason is shown below it (for a short while or until the user enters something else), as well as
+// announced by assistive technologies (since it is in a status element, which is always rendered so that its changes
+// are announced).
+
+const correction = vue.ref<string>('');
+let correctionTimeout: number | undefined;
+
+const clearCorrection = (): void => {
+  window.clearTimeout(correctionTimeout);
+
+  correctionTimeout = undefined;
+  correction.value = '';
+};
+
+const showCorrection = (reason: string): void => {
+  clearCorrection();
+
+  correction.value = reason;
+  correctionTimeout = window.setTimeout(clearCorrection, constants.TOAST_LIFE);
+};
+
 const onUpdateModelValue = (value: string | undefined) => {
+  clearCorrection();
+
   isEditing.value = true;
   internalValue.value = value ?? '';
 };
@@ -311,6 +338,8 @@ const onBlur = () => {
 
     if (props.allowEmpty) {
       emit('update:modelValue', undefined);
+    } else if (props.modelValue !== undefined) {
+      showCorrection('A value is required.');
     }
 
     return;
@@ -320,11 +349,20 @@ const onBlur = () => {
 
   if (Number.isNaN(parsedValue)) {
     updateInternalValue(props.modelValue);
+    showCorrection('This is not a valid number.');
 
     return;
   }
 
   const clampedValue = validateValue(parsedValue);
+
+  if (clampedValue !== parsedValue) {
+    showCorrection(
+      props.min !== undefined && parsedValue < props.min
+        ? `The minimum value is ${props.min}.`
+        : `The maximum value is ${props.max}.`
+    );
+  }
 
   updateInternalValue(clampedValue);
 
@@ -388,10 +426,14 @@ const onResetButtonClick = () => {
 
 // Discard the value that is being edited, if any, i.e. show our current value again.
 
-const discardEdit = () => {
+const discardEdit = (reason?: string) => {
   isEditing.value = false;
 
   updateInternalValue(props.modelValue);
+
+  if (reason) {
+    showCorrection(reason);
+  }
 };
 
 defineExpose({
@@ -523,10 +565,41 @@ const onWheel = (event: WheelEvent) => {
 
 vue.onBeforeUnmount(() => {
   clearSpinTimerAndRemoveEventListeners();
+  clearCorrection();
 });
 </script>
 
 <style scoped>
+/**
+ * The reason why a value has been corrected or rejected (see showCorrection()), which is shown below our input field
+ * (without affecting the layout), like a hint, but in our error colour.
+ * Note: our status element is always rendered (so that its changes are announced by assistive technologies), but it
+ *       takes no room when it is empty.
+ */
+
+.input-correction {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 10;
+  max-width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--opencor-error-border-color);
+  border-radius: var(--p-border-radius-sm);
+  background-color: var(--opencor-hint-background);
+  box-shadow: var(--opencor-overlay-shadow);
+  color: var(--opencor-error-color);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  pointer-events: none;
+}
+
+.input-correction:empty {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
 .p-inputnumber {
   display: inline-flex;
   position: relative;

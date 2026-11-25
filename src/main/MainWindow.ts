@@ -1,5 +1,5 @@
 import electron from 'electron';
-import { autoUpdater, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
+import { autoUpdater, CancellationToken, type ProgressInfo, type UpdateCheckResult } from 'electron-updater';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -127,26 +127,54 @@ autoUpdater.on('error', (error: Error) => {
   }
 });
 
+// Download an update, which can be cancelled (see cancelUpdateDownload()).
+// Note: an update may have been fully downloaded by the time its download gets cancelled, in which case we don't let our
+//       renderer know that it has been downloaded (since the user doesn't want to install it now), but it may still
+//       get installed when OpenCOR gets quit (see autoInstallOnAppQuit in electron-updater). Similarly, we don't let
+//       our renderer know about the error that electron-updater reports when a download gets cancelled.
+
+let updateDownloadCancellationToken: CancellationToken | null = null;
+
 export const downloadAndInstallUpdate = (): void => {
+  const cancellationToken = new CancellationToken();
+
   updateState = 'downloading';
   updateDownloadPercent = 0;
   updateDownloadTransferred = 0;
   updateDownloadTotal = 0;
+  updateDownloadCancellationToken = cancellationToken;
 
   autoUpdater
-    .downloadUpdate()
+    .downloadUpdate(cancellationToken)
     .then(() => {
       updateState = 'downloaded';
       updateDownloadPercent = 100;
       updateDownloadTransferred = updateDownloadTotal;
 
-      MainWindow.instance?.send('update-downloaded');
+      if (!cancellationToken.cancelled) {
+        MainWindow.instance?.send('update-downloaded');
+      }
     })
     .catch((error: unknown) => {
       updateState = 'idle';
 
-      MainWindow.instance?.send('update-download-error', formatError(error));
+      if (!cancellationToken.cancelled) {
+        MainWindow.instance?.send('update-download-error', formatError(error));
+      }
+    })
+    .finally(() => {
+      if (updateDownloadCancellationToken === cancellationToken) {
+        updateDownloadCancellationToken = null;
+      }
     });
+};
+
+export const cancelUpdateDownload = (): void => {
+  if (updateState === 'downloading') {
+    updateState = 'idle';
+
+    updateDownloadCancellationToken?.cancel();
+  }
 };
 
 export const installUpdateAndRestart = (): boolean => {

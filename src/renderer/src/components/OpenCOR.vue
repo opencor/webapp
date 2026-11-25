@@ -96,6 +96,7 @@
         :transferred="updateDownloadTransferred"
         :total="updateDownloadTotal"
         :installing="updateInstalling"
+        @cancel="onCancelUpdateDownload"
       />
       <OkMessageDialog v-model:visible="updateNotAvailableVisible"
         title="Check for Updates"
@@ -1102,6 +1103,17 @@ const onDownloadAndInstall = (): void => {
   updateAvailableVisible.value = false;
 
   electronApi?.downloadAndInstallUpdate();
+};
+
+// Cancel the download of an update.
+// Note: our main process doesn't let us know about the cancellation (or about the update if it got fully downloaded in
+//       the meantime, see cancelUpdateDownload() in MainWindow.ts), so we close our update download progress dialog
+//       ourselves.
+
+const onCancelUpdateDownload = (): void => {
+  electronApi?.cancelUpdateDownload();
+
+  updateDownloadProgressVisible.value = false;
 };
 
 trackCleanup(

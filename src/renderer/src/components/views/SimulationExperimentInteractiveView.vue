@@ -132,9 +132,14 @@
                           :style="{ '--toolbar-button-color': run.color, '--toolbar-button-hover-color': run.color }"
                           @click="onToggleRunColorPopover(index, $event)"
                         />
+                        <!--
+                        Note: the name of a tracked run can get the keyboard focus, so that its details (i.e. its hint)
+                              can also be seen using the keyboard and are read by assistive technologies (see hint.ts).
+                        -->
                         <div v-hint.html="run.isLiveRun ? '' : run.tooltip"
                           class="run-name grow min-w-0"
                           :class="{ 'cursor-help': !run.isLiveRun }"
+                          :tabindex="run.isLiveRun ? undefined : 0"
                         >
                           {{ runName(run, true) }}
                         </div>

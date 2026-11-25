@@ -7,6 +7,7 @@
         <span v-if="!installing" class="download-percent">{{ Math.floor(percent) }}%</span>
       </div>
       <ProgressBar class="download-progress-bar"
+        :aria-label="installing ? 'Installation progress' : 'Download progress'"
         :showValue="false"
         :value="installing ? 100 : percent"
         :pt="{
@@ -17,16 +18,24 @@
       />
       <div class="download-details">{{ details }}</div>
     </div>
+    <template v-if="!installing" #footer>
+      <Button autofocus label="Cancel" severity="secondary" @click="$emit('cancel')" />
+    </template>
   </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import * as vue from 'vue';
 
-// The progress of the download of an update and then of its installation.
+// The progress of the download of an update and then of its installation, with the download (but not the installation)
+// being cancellable (in which case our Cancel button has the keyboard focus, so that our dialog has the keyboard focus).
 // Note: the version of the update is not known if OpenCOR has been reloaded while the update was being downloaded (see
 //       onUpdateDownloadProgress() in OpenCOR.vue), and the size of the update is not known until we get the first
 //       progress report. We only mention them once they are known.
+
+defineEmits<{
+  cancel: [];
+}>();
 
 const props = defineProps<{
   version: string;

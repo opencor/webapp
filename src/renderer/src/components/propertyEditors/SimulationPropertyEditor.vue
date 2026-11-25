@@ -1,10 +1,11 @@
 <template>
-  <PropertyEditor name="Simulation" :properties="properties" :disabled="disabled" :isValid="isValid" @propertyUpdated="onPropertyUpdated" />
+  <PropertyEditor name="Simulation" :properties="properties" :disabled="disabled" :validate="validate" @propertyUpdated="onPropertyUpdated" />
 </template>
 
 <script setup lang="ts">
 import * as vue from 'vue';
 
+import * as common from '../../common/common';
 import * as locApi from '../../libopencor/locApi';
 
 const props = defineProps<{
@@ -70,9 +71,10 @@ const numberOfSteps = (startingPoint: number, endingPoint: number, pointInterval
   return Math.max(1, Math.round((endingPoint - startingPoint) / pointInterval));
 };
 
-const isValid = (index: number, newValue: number): boolean => {
+const validate = (index: number, newValue: number): string | undefined => {
   // Make sure that a new value would give a valid point interval and a number of steps that libOpenCOR can handle (it
-  // would otherwise get silently wrapped).
+  // would otherwise get silently wrapped), and say why it doesn't otherwise (using the same wording as the settings
+  // dialog of the Interactive Simulation Experiment view).
   // Note: if our point interval is not valid, then we still allow our starting and ending points to be updated (see
   //       onPropertyUpdated()).
 
@@ -83,10 +85,21 @@ const isValid = (index: number, newValue: number): boolean => {
   const [, startingPoint, endingPoint, pointInterval] = values as [number, number, number, number];
 
   if (!isValidPointInterval(pointInterval)) {
-    return index !== POINT_INTERVAL;
+    return index === POINT_INTERVAL ? 'The point interval must be a positive number.' : undefined;
   }
 
-  return numberOfSteps(startingPoint, endingPoint, pointInterval) <= locApi.MAXIMUM_NUMBER_OF_STEPS;
+  if (numberOfSteps(startingPoint, endingPoint, pointInterval) <= locApi.MAXIMUM_NUMBER_OF_STEPS) {
+    return undefined;
+  }
+
+  // Our number of steps would be too big, which is either because our point interval would be too small (if it is what
+  // is being updated) or because our simulation range would be too big for our point interval.
+
+  const maximumNumberOfSteps = common.formatCount(locApi.MAXIMUM_NUMBER_OF_STEPS);
+
+  return index === POINT_INTERVAL
+    ? `The point interval is too small (the number of steps must not exceed ${maximumNumberOfSteps}).`
+    : `The simulation range is too big for the point interval (the number of steps must not exceed ${maximumNumberOfSteps}).`;
 };
 
 const onPropertyUpdated = (index: number, newValue: number): void => {
