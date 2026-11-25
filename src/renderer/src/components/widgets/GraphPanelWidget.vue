@@ -10,6 +10,7 @@
       customContextMenu
       @contextMenu="onContextMenu"
       @csvExport="onCsvExport"
+      @imageExport="onImageExport"
       @marginsUpdated="(newMargins: PlotMargins) => emit('marginsUpdated', newMargins)"
     />
     <ContextMenuWidget ref="contextMenuRef" :model="contextMenuItems" :appendTo="appendTarget" @hide="onContextMenuHide" />
@@ -22,6 +23,8 @@
 //    our overlay container (see useAppendTarget()), like our other overlays.
 //  - Its context menu is ours (see ContextMenuWidget.vue), so that it looks and behaves like our other context menus.
 //  - The progress of an export to CSV is shown using our message (see OpenCORMessage.ts).
+//  - The failure of an export to CSV, as well as the outcome of copying our plot to the clipboard or of exporting it to
+//    an image, is shown using a toast (see OpenCORToast.ts).
 // Note: @opencor/plot is imported at runtime, like our other external dependencies (see the OpenCOR Plot external
 //       dependency in src/common/initialisation.ts), so we only import its types here.
 
@@ -31,6 +34,7 @@ import type {
   PlotContextMenuEvent,
   PlotCsvExportEvent,
   PlotData,
+  PlotImageExportEvent,
   PlotMargins
 } from '@opencor/plot';
 import type { MenuItem } from 'primevue/menuitem';
@@ -42,6 +46,8 @@ import * as dependencies from '../../common/dependencies';
 import * as vueCommon from '../../common/vueCommon';
 
 import { useOpenCORMessage } from '../OpenCORMessage';
+import { useOpenCORToast } from '../OpenCORToast';
+
 import ContextMenuWidget from './ContextMenuWidget.vue';
 
 withDefaults(
@@ -68,6 +74,7 @@ const contextMenuRef = vue.ref<InstanceType<typeof ContextMenuWidget> | null>(nu
 const theme = vueCommon.useTheme();
 const appendTarget = vueCommon.useAppendTarget(rootRef);
 const opencorMessage = useOpenCORMessage();
+const addToast = useOpenCORToast();
 
 const resetMargins = (): void => {
   // Have our plot emit its current margins again (e.g., when the shared margins we are given are reset, see
@@ -142,9 +149,11 @@ const onContextMenuHide = (): void => {
   plotRef.value?.contextMenuHidden();
 };
 
-// Export to CSV, the progress of which we show using our message.
+// Export to CSV, the progress of which we show using our message, and the failure of which we show using a toast.
 // Note: once our export has succeeded, we wait a bit before hiding our message, so that people can see that it reached
-//       100%. Otherwise, we hide it straightaway, so that it doesn't block our UI for nothing.
+//       100%. Otherwise, we hide it straightaway, so that it doesn't block our UI for nothing, and let people know that
+//       our export failed (rather than leave them wondering why no file was downloaded). Like for an export to an
+//       image, we don't confirm that our export has succeeded since the file is downloaded (see onImageExport()).
 
 const onCsvExport = async (event: PlotCsvExportEvent): Promise<void> => {
   if (event.type === 'started') {
@@ -157,6 +166,42 @@ const onCsvExport = async (event: PlotCsvExportEvent): Promise<void> => {
     }
 
     opencorMessage.hide();
+
+    if (!event.success) {
+      addToast({
+        severity: 'error',
+        summary: 'Cannot Export Data',
+        detail: 'The data could not be exported to CSV.'
+      });
+    }
+  }
+};
+
+// Copy to the clipboard and export to an image, the outcome of which we show using a toast.
+// Note: we don't confirm that an export to an image has succeeded since the image is downloaded, which is something
+//       that the browser (or Electron, using a save dialog) already makes visible, unlike copying to the clipboard.
+
+const onImageExport = (event: PlotImageExportEvent): void => {
+  if (event.action === 'copy') {
+    addToast(
+      event.success
+        ? {
+            severity: 'success',
+            summary: 'Plot Copied',
+            detail: 'The plot has been copied to the clipboard.'
+          }
+        : {
+            severity: 'error',
+            summary: 'Cannot Copy Plot',
+            detail: 'The plot could not be copied to the clipboard.'
+          }
+    );
+  } else if (!event.success) {
+    addToast({
+      severity: 'error',
+      summary: 'Cannot Export Plot',
+      detail: `The plot could not be exported to ${event.format.toUpperCase()}.`
+    });
   }
 };
 </script>
