@@ -444,8 +444,118 @@ interface SchemaValidationError {
   path: UiJsonPath;
   name: string;
   argument: unknown;
+  message: string;
   toString: () => string;
 }
+
+// The names of the values of a UI JSON, as used in our issues, indexed by the key of their path with their indices
+// replaced with '*' (e.g., 'input/*/name' for the name of an input).
+
+const UI_JSON_VALUE_NAMES: Record<string, string> = {
+  '': 'the UI JSON',
+  input: 'the inputs',
+  'input/*': 'an input',
+  'input/*/id': 'an input id',
+  'input/*/name': 'an input name',
+  'input/*/defaultValue': 'an input default value',
+  'input/*/visible': 'an input visible',
+  'input/*/minimumValue': 'an input minimum value',
+  'input/*/maximumValue': 'an input maximum value',
+  'input/*/stepValue': 'an input step value',
+  'input/*/possibleValues': 'an input possible values',
+  'input/*/possibleValues/*': 'an input possible value',
+  'input/*/possibleValues/*/name': 'an input possible value name',
+  'input/*/possibleValues/*/value': 'an input possible value value',
+  output: 'the output',
+  'output/data': 'the output data',
+  'output/data/*': 'an output data',
+  'output/data/*/id': 'an output data id',
+  'output/data/*/name': 'an output data name',
+  'output/externalData': 'the output external data',
+  'output/externalData/*': 'an output external data',
+  'output/externalData/*/description': 'an output external data description',
+  'output/externalData/*/voiExpression': 'an output external data VOI expression',
+  'output/externalData/*/voiValues': 'an output external data VOI values',
+  'output/externalData/*/voiValues/*': 'an output external data VOI value',
+  'output/externalData/*/dataSeries': 'an output external data series entries',
+  'output/externalData/*/dataSeries/*': 'an output external data series',
+  'output/externalData/*/dataSeries/*/name': 'an output external data series name',
+  'output/externalData/*/dataSeries/*/values': 'an output external data series values',
+  'output/externalData/*/dataSeries/*/values/*': 'an output external data series value',
+  'output/externalData/*/data': 'an output external data entries',
+  'output/externalData/*/data/*': 'an output external data entry',
+  'output/externalData/*/data/*/id': 'an output external data id',
+  'output/externalData/*/data/*/name': 'an output external data name',
+  'output/plots': 'the output plots',
+  'output/plots/*': 'an output plot',
+  'output/plots/*/xAxisTitle': 'an output plot X axis title',
+  'output/plots/*/yAxisTitle': 'an output plot Y axis title',
+  'output/plots/*/xValue': 'an output plot X value',
+  'output/plots/*/yValue': 'an output plot Y value',
+  'output/plots/*/name': 'an output plot name',
+  'output/plots/*/additionalTraces': 'an output plot additional traces',
+  'output/plots/*/additionalTraces/*': 'an output plot additional trace',
+  'output/plots/*/additionalTraces/*/xValue': 'an output plot additional trace X value',
+  'output/plots/*/additionalTraces/*/yValue': 'an output plot additional trace Y value',
+  'output/plots/*/additionalTraces/*/name': 'an output plot additional trace name',
+  parameters: 'the parameters',
+  'parameters/*': 'a parameter',
+  'parameters/*/name': 'a parameter name',
+  'parameters/*/value': 'a parameter value'
+};
+
+const TYPE_NAMES: Record<string, string> = {
+  array: 'an array',
+  number: 'a number',
+  object: 'an object',
+  string: 'a string'
+};
+
+const uiJsonValueAt = (value: unknown, path: UiJsonPath): unknown => {
+  // Return the value at the given path in the given value, if any.
+
+  for (const key of path) {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    value = (value as Record<string | number, unknown>)[key];
+  }
+
+  return value;
+};
+
+const schemaErrorDescription = (error: SchemaValidationError, path: UiJsonPath, originalUiJson: UiJson): string => {
+  // Return a description of the given schema error, which is about the value at the given path, using the same terms as
+  // our other issues (e.g., "an input name must not be empty.").
+  // Note: a value that is required may be missing (e.g., in a UI JSON file) or empty (e.g., if it was cleared in our
+  //       settings dialog, in which case it got removed when our UI JSON was cleaned, see cleanUiJson()), hence we check
+  //       the original UI JSON to tell which.
+
+  const name = UI_JSON_VALUE_NAMES[uiJsonPathKey(path.map((key) => (typeof key === 'number' ? '*' : key)))];
+
+  if (!name) {
+    return common.formatMessage(error.toString(), false);
+  }
+
+  switch (error.name) {
+    case 'required':
+      return `${name} must ${uiJsonValueAt(originalUiJson, path) === undefined ? 'be provided' : 'not be empty'}.`;
+    case 'minItems':
+      return `${name} must not be empty.`;
+    case 'type': {
+      const types = (Array.isArray(error.argument) ? error.argument : [error.argument]).map(
+        (type: unknown) => TYPE_NAMES[String(type)] ?? String(type)
+      );
+
+      return `${name} must be ${types.join(' or ')}.`;
+    }
+    case 'additionalProperties':
+      return `${name} must not have a '${String(error.argument)}' property.`;
+    default:
+      return `${name} ${common.formatMessage(error.message, false)}.`;
+  }
+};
 
 interface ValidateUiJsonOptions {
   allModelParameters?: string[];
@@ -479,90 +589,100 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
 
   // Clean our UI JSON (in case there were optional values that were not provided and are now empty).
 
+  const originalUiJson = uiJson;
+
   uiJson = cleanUiJson(uiJson);
 
   // Check the UI JSON against our schema.
 
   const validator = new dependencies._jsonSchema.Validator();
+
+  // Note: an input can be either a discrete input or a scalar input, depending on whether it has possible values, so we
+  //       check each input against the schema of its kind (rather than against either of them, which would result in
+  //       errors for both kinds of inputs whenever an input has an issue).
+
+  const discreteInputSchema: Record<string, unknown> = {
+    additionalProperties: false,
+    properties: {
+      defaultValue: {
+        required: true,
+        type: 'number'
+      },
+      id: {
+        required: true,
+        type: 'string'
+      },
+      name: {
+        required: true,
+        type: 'string'
+      },
+      possibleValues: {
+        items: {
+          additionalProperties: false,
+          properties: {
+            name: {
+              required: true,
+              type: 'string'
+            },
+            value: {
+              required: true,
+              type: 'number'
+            }
+          },
+          type: 'object'
+        },
+        minItems: 1,
+        required: true,
+        type: 'array'
+      },
+      visible: {
+        type: 'string'
+      }
+    },
+    type: 'object'
+  };
+
+  const scalarInputSchema: Record<string, unknown> = {
+    additionalProperties: false,
+    properties: {
+      defaultValue: {
+        required: true,
+        type: 'number'
+      },
+      id: {
+        required: true,
+        type: 'string'
+      },
+      maximumValue: {
+        required: true,
+        type: 'number'
+      },
+      minimumValue: {
+        required: true,
+        type: 'number'
+      },
+      name: {
+        required: true,
+        type: 'string'
+      },
+      stepValue: {
+        type: 'number'
+      },
+      visible: {
+        type: 'string'
+      }
+    },
+    type: 'object'
+  };
+
+  const inputSchemas: Record<string, unknown>[] = (Array.isArray(uiJson.input) ? uiJson.input : []).map(
+    (input: unknown) => (common.isObject(input) && 'possibleValues' in input ? discreteInputSchema : scalarInputSchema)
+  );
   const schema: Record<string, unknown> = {
     additionalProperties: false,
     properties: {
       input: {
-        items: {
-          oneOf: [
-            {
-              additionalProperties: false,
-              properties: {
-                defaultValue: {
-                  required: true,
-                  type: 'number'
-                },
-                id: {
-                  required: true,
-                  type: 'string'
-                },
-                name: {
-                  required: true,
-                  type: 'string'
-                },
-                possibleValues: {
-                  items: {
-                    additionalProperties: false,
-                    properties: {
-                      name: {
-                        required: true,
-                        type: 'string'
-                      },
-                      value: {
-                        required: true,
-                        type: 'number'
-                      }
-                    },
-                    type: 'object'
-                  },
-                  minItems: 1,
-                  required: true,
-                  type: 'array'
-                },
-                visible: {
-                  type: 'string'
-                }
-              }
-            },
-            {
-              additionalProperties: false,
-              properties: {
-                defaultValue: {
-                  required: true,
-                  type: 'number'
-                },
-                id: {
-                  required: true,
-                  type: 'string'
-                },
-                maximumValue: {
-                  required: true,
-                  type: 'number'
-                },
-                minimumValue: {
-                  required: true,
-                  type: 'number'
-                },
-                name: {
-                  required: true,
-                  type: 'string'
-                },
-                stepValue: {
-                  type: 'number'
-                },
-                visible: {
-                  type: 'string'
-                }
-              }
-            }
-          ],
-          type: 'object'
-        },
+        items: inputSchemas,
         minItems: 1,
         required: true,
         type: 'array'
@@ -743,25 +863,20 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
   if (!validatorRes.valid || nonNumericIssues.length) {
     const res: UiJsonIssue[] = [];
 
-    // Note #1: an error is about the value at its path, except if it is about a required property of that value that
-    //          is missing, in which case it is about that property.
-    // Note #2: an error about an additional property (i.e. a property that is not allowed) is about the value that has
-    //          that property rather than about that property. Indeed, such a property is not part of a valid UI JSON,
-    //          except for an input, which can be either a discrete input or a scalar input (see our schema), in which
-    //          case we get errors for both kinds of inputs, e.g., a scalar input with an issue (e.g., a missing name)
-    //          also has errors about its minimum and maximum values not being allowed in a discrete input, but they
-    //          are not what is wrong with it.
-    // Note #3: we number our errors, like jsonschema does when converting its result to a string.
+    // Note: an error is about the value at its path, except if it is about a required property of that value that is
+    //       missing, in which case it is about that property. An error about an additional property (i.e. a property
+    //       that is not allowed) is about the value that has that property since such a property has no place in a
+    //       UI JSON (and therefore no field in our settings dialog).
 
-    validatorRes.errors.forEach((error: SchemaValidationError, index: number) => {
+    for (const error of validatorRes.errors as SchemaValidationError[]) {
       const path: UiJsonPath = [...error.path];
 
       if (error.name === 'required' && typeof error.argument === 'string') {
         path.push(error.argument);
       }
 
-      res.push(uiJsonIssue(common.formatMessage(`${index}: ${error.toString()}`), path));
-    });
+      res.push(uiJsonIssue(schemaErrorDescription(error, path, originalUiJson), path));
+    }
 
     res.push(...nonNumericIssues);
 
