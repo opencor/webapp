@@ -150,13 +150,31 @@ const onContextMenuHide = (): void => {
 };
 
 // Export to CSV, the progress of which we show using our message, and the failure of which we show using a toast.
-// Note: once our export has succeeded, we wait a bit before hiding our message, so that people can see that it reached
-//       100%. Otherwise, we hide it straightaway, so that it doesn't block our UI for nothing, and let people know that
-//       our export failed (rather than leave them wondering why no file was downloaded). Like for an export to an
-//       image, we don't confirm that our export has succeeded since the file is downloaded (see onImageExport()).
+// Note #1: once our export has succeeded, we wait a bit before hiding our message, so that people can see that it
+//          reached 100%. Otherwise, we hide it straightaway, so that it doesn't block our UI for nothing, and let
+//          people know that our export failed (rather than leave them wondering why no file was downloaded). Like for
+//          an export to an image, we don't confirm that our export has succeeded since the file is downloaded (see
+//          onImageExport()).
+// Note #2: if we get unmounted while exporting (e.g., if our file gets closed), then our plot stops exporting, but we
+//          don't get told that it has finished (since Vue doesn't emit events from an unmounted component), so we hide
+//          our message ourselves. Otherwise, it would remain shown and keep blocking our UI.
+
+let csvExportInProgress = false;
+
+const hideCsvExportMessage = (): void => {
+  if (csvExportInProgress) {
+    csvExportInProgress = false;
+
+    opencorMessage.hide();
+  }
+};
+
+vue.onUnmounted(hideCsvExportMessage);
 
 const onCsvExport = async (event: PlotCsvExportEvent): Promise<void> => {
   if (event.type === 'started') {
+    csvExportInProgress = true;
+
     opencorMessage.show('Exporting data to CSV...');
   } else if (event.type === 'progress') {
     opencorMessage.update(event.percent);
@@ -165,7 +183,7 @@ const onCsvExport = async (event: PlotCsvExportEvent): Promise<void> => {
       await common.sleep(LONG_DELAY);
     }
 
-    opencorMessage.hide();
+    hideCsvExportMessage();
 
     if (!event.success) {
       addToast({
