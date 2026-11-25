@@ -156,7 +156,10 @@
                 />
               </div>
             </div>
-            <div ref="editorRef" class="grow min-h-0 console overflow-y-auto px-3 pb-1.5 leading-[1.42] text-[13px] select-text" v-html="consoleContents"></div>
+            <div ref="editorRef" class="grow min-h-0 console overflow-y-auto px-3 pb-1.5 leading-[1.42] text-[13px] select-text">
+              <div v-html="consoleHeader"></div>
+              <div v-for="consoleEntry in consoleEntries" :key="consoleEntry.id" v-html="consoleEntry.html"></div>
+            </div>
           </SplitterPanel>
         </Splitter>
       </div>
@@ -214,8 +217,32 @@ const data = vue.ref<PlotData>({
   traces: []
 });
 
-const initialConsoleContents = `<b>${common.escapeHtml(props.file.path())}</b>`;
-const consoleContents = vue.ref<string>(initialConsoleContents);
+// Our console, i.e. a header (the path of our file) followed by some entries (e.g., the issues of a simulation run or
+// its simulation time), each of which is some HTML (indented using non-breaking spaces, so that it is also indented
+// when copied as plain text, see copyConsole()).
+// Note: each entry is rendered on its own (rather than as part of a single HTML string), so that adding an entry doesn't
+//       re-render our whole console, and we only keep our most recent entries, so that our console doesn't keep
+//       growing (e.g., when running many simulations).
+
+interface ConsoleEntry {
+  id: number;
+  html: string;
+}
+
+const MAX_CONSOLE_ENTRIES = 1000;
+
+const consoleHeader = `<b>${common.escapeHtml(props.file.path())}</b>`;
+const consoleEntries = vue.shallowReactive<ConsoleEntry[]>([]);
+let nextConsoleEntryId = 0;
+
+const addConsoleEntry = (html: string): void => {
+  consoleEntries.push({ id: nextConsoleEntryId++, html: `&nbsp;&nbsp;${html}` });
+
+  if (consoleEntries.length > MAX_CONSOLE_ENTRIES) {
+    consoleEntries.splice(0, consoleEntries.length - MAX_CONSOLE_ENTRIES);
+  }
+};
+
 const progress = vue.ref<number>(0);
 const simulationStatus = vue.ref<locSedApi.SedInstanceStatus>(instance?.status() ?? locSedApi.SedInstanceStatus.IDLE);
 
@@ -796,16 +823,16 @@ const copyConsole = (): void => {
   void copyToClipboard.copy((editorRef.value?.innerText ?? '').replace(/\u00a0/g, ' '));
 };
 
-vue.watch(consoleContents, () => {
+vue.watch(consoleEntries, () => {
   copyToClipboard.reset();
 });
 
-// Clear our console, i.e. only keep its initial contents (i.e. the path of our file).
+// Clear our console, i.e. only keep its header (i.e. the path of our file).
 // Note: the status of our last run may refer to our console (i.e. if our simulation has issues or has failed), in which
 //       case we also hide it since our console doesn't contain the details of our last run anymore.
 
 const clearConsole = (): void => {
-  consoleContents.value = initialConsoleContents;
+  consoleEntries.splice(0);
 
   if (lastRun.value?.outcome === 'issues' || lastRun.value?.outcome === 'failed') {
     lastRun.value = null;
@@ -823,7 +850,9 @@ const scrollConsoleToBottom = (): void => {
 // A helper function to report an error in our console.
 
 const addConsoleError = (error: unknown): void => {
-  consoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${colors.REVERTED_PALETTE.Red};"><strong>Error:</strong> ${common.escapeHtml(common.formatMessage(common.formatError(error)))}</span>`;
+  addConsoleEntry(
+    `<span style="color: ${colors.REVERTED_PALETTE.Red};"><strong>Error:</strong> ${common.escapeHtml(common.formatMessage(common.formatError(error)))}</span>`
+  );
 
   scrollConsoleToBottom();
 };
@@ -842,7 +871,7 @@ const addConsoleIssues = (issues: locApi.Issue[]): void => {
       issue.type === locApi.IssueType.ERROR ? 'Error' : issue.type === locApi.IssueType.WARNING ? 'Warning' : 'Info';
     const issueDescription = common.sanitiseHtml(issue.description.replace('Task | ', ''));
 
-    consoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`;
+    addConsoleEntry(`<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`);
   });
 
   scrollConsoleToBottom();
@@ -1237,11 +1266,9 @@ const onRunPause = async (): Promise<void> => {
             ? { outcome: 'stopped' }
             : { outcome: 'completed', time: simulationTime, delayed: runDelayed };
 
-          consoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>`;
-
-          if (runDelayed) {
-            consoleContents.value += ' (with a delay, which slows down the simulation even when excluded)';
-          }
+          addConsoleEntry(
+            `<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>${runDelayed ? ' (with a delay, which slows down the simulation even when excluded)' : ''}`
+          );
         }
 
         if (runAborted.value) {

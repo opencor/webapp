@@ -92,7 +92,7 @@
     <div class="grow min-h-0 relative">
       <template v-for="(fileTab, fileTabIndex) in fileTabs" :key="`panel_${fileTab.file.path()}`">
         <div :id="fileTabPanelId(fileTabIndex)" class="absolute inset-0 flex h-full"
-          :class="{ 'invisible pointer-events-none': fileTab.file.path() !== activeFile }"
+          :class="{ 'file-tab-panel-hidden': fileTab.file.path() !== activeFile }"
           role="tabpanel"
           :aria-labelledby="fileTabId(fileTabIndex)"
         >
@@ -217,16 +217,32 @@ const fileTabBarRef = vue.shallowRef<HTMLElement | null>(null);
 const dropIndicatorLeft = vue.ref<number | null>(null);
 
 // Icon of a file tab, based on the type of its file.
+// Note: getting the type of a file means calling libOpenCOR (synchronously), so we only do it once per file (its type
+//       can't change), rather than every time our file tab bar gets rendered.
+
+const fileTabIcons = new WeakMap<locApi.File, string>();
 
 const fileTabIcon = (fileTab: FileTab): string => {
-  switch (fileTab.file.type()) {
-    case locApi.FileType.COMBINE_ARCHIVE:
-      return 'pi pi-box';
-    case locApi.FileType.SEDML_FILE:
-      return 'pi pi-list';
-    default:
-      return 'pi pi-file';
+  let icon = fileTabIcons.get(fileTab.file);
+
+  if (icon === undefined) {
+    switch (fileTab.file.type()) {
+      case locApi.FileType.COMBINE_ARCHIVE:
+        icon = 'pi pi-box';
+
+        break;
+      case locApi.FileType.SEDML_FILE:
+        icon = 'pi pi-list';
+
+        break;
+      default:
+        icon = 'pi pi-file';
+    }
+
+    fileTabIcons.set(fileTab.file, icon);
   }
+
+  return icon;
 };
 
 const captureSimulationExperimentInteractiveViewRef = (element: unknown): void => {
@@ -1886,6 +1902,18 @@ if (common.isDocumentTitleOwned() && !simulationOnly.value) {
 
 .opencor-dark-mode .file-tab-bar-container {
   --file-tab-bar-background: var(--p-surface-950);
+}
+
+/**
+ * The panel of a file tab that isn't active, which is hidden (but kept laid out, rather than using display: none, so
+ * that its contents, e.g., a plot, keep their size), and which our Web browser doesn't need to lay out or paint (thanks
+ * to content-visibility: hidden), e.g., when our window gets resized.
+ */
+
+.file-tab-panel-hidden {
+  visibility: hidden;
+  pointer-events: none;
+  content-visibility: hidden;
 }
 
 .file-tab-bar {
