@@ -165,6 +165,7 @@
 </template>
 
 <script setup lang="ts">
+import type { PlotData } from '@opencor/plot';
 import * as vueusecore from '@vueuse/core';
 
 import * as vue from 'vue';
@@ -178,7 +179,6 @@ import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
 
 import { useOpenCORContext, useOpenCORKeyStroke } from '../OpenCORContext';
-import type { GraphPanelData } from '../widgets/GraphPanelWidget.vue';
 
 import './simulation-experiment-view.css';
 
@@ -208,7 +208,7 @@ const parameters = vue.ref<string[]>([]);
 const xParameter = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const yParameter = vue.ref(instanceTask ? instanceTask.stateName(0) : '');
 
-const data = vue.ref<GraphPanelData>({
+const data = vue.ref<PlotData>({
   xAxisTitle: instanceTask ? common.escapeHtml(xParameter.value) : undefined,
   yAxisTitle: instanceTask ? common.escapeHtml(yParameter.value) : undefined,
   traces: []

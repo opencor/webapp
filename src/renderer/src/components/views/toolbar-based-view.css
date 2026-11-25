@@ -7,7 +7,7 @@
  *          element). Our toolbar buttons are styled by ToolbarButtonWidget.vue.
  * Note #3: our toolbar is stacked above the rest of the view so that the tooltip of a toolbar button can be shown on
  *          top of the view's contents, including the layers of a graph panel (e.g., its legend), which have a z-index
- *          of up to 4 (see GraphPanelWidget.vue).
+ *          of up to 5 (see @opencor/plot).
  */
 
 .toolbar-based-view {

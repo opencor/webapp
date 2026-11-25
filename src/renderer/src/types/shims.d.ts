@@ -4,7 +4,9 @@
 declare const __CELLDL_RUNTIME_BUNDLED__: boolean;
 declare const __CELLDL_RUNTIME_PATH__: string;
 declare const __LIBOPENCOR_VERSION__: string;
+declare const __OPENCOR_PLOT_VERSION__: string;
 declare const __OPENCOR_VERSION__: string;
+declare const __UPLOT_VERSION__: string;
 
 declare module '*.vue' {
   const component: import('vue').DefineComponent<Record<string, unknown>, Record<string, unknown>, unknown>;

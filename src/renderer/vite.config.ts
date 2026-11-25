@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 
+import opencorPlotPackageJson from '@opencor/plot/package.json' with { type: 'json' };
 import * as primeVueAutoImportResolver from '@primevue/auto-import-resolver';
 import tailwindcssPlugin from '@tailwindcss/vite';
 import vuePlugin from '@vitejs/plugin-vue';
@@ -45,7 +46,9 @@ export default vite.defineConfig({
     __CELLDL_RUNTIME_BUNDLED__: JSON.stringify(false),
     __CELLDL_RUNTIME_PATH__: JSON.stringify(await buildCellDLRuntime(path.join(import.meta.dirname, 'public'))),
     __LIBOPENCOR_VERSION__: JSON.stringify(libopencorVersion),
-    __OPENCOR_VERSION__: JSON.stringify(opencorVersion)
+    __OPENCOR_PLOT_VERSION__: JSON.stringify(opencorPlotPackageJson.version),
+    __OPENCOR_VERSION__: JSON.stringify(opencorVersion),
+    __UPLOT_VERSION__: JSON.stringify(opencorPlotPackageJson.dependencies.uplot)
   },
   plugins: [
     // Note: this must be in sync with electron.vite.config.ts.

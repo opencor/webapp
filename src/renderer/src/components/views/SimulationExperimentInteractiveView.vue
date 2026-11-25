@@ -180,7 +180,7 @@
                   class="w-full min-h-0"
                   :margins="compMargins"
                   :data="compData[index] || { traces: [] }"
-                  @marginsUpdated="(newMargins: GraphPanelMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
+                  @marginsUpdated="(newMargins: PlotMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
                 />
               </div>
               <IssuesView v-show="simulationIssues.length" class="absolute inset-0 m-4" :issues="simulationIssues" />
@@ -224,6 +224,7 @@
 </template>
 
 <script setup lang="ts">
+import type { PlotData, PlotMargins, PlotTrace } from '@opencor/plot';
 import * as vueusecore from '@vueuse/core';
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
@@ -247,7 +248,6 @@ import type { SimulationExperimentInteractiveViewSettings } from '../dialogs/Sim
 import { useOpenCORContext } from '../OpenCORContext';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
 import InputWidget from '../widgets/InputWidget.vue';
-import type { GraphPanelData, GraphPanelMargins, GraphPanelPlotTrace } from '../widgets/GraphPanelWidget.vue';
 
 import './simulation-experiment-view.css';
 
@@ -255,7 +255,7 @@ interface SimulationRun {
   id: string;
   inputParameters: Record<string, number>;
   isVisible: boolean;
-  data: GraphPanelData[];
+  data: PlotData[];
   color: string;
   tooltip: string;
   isLiveRun: boolean;
@@ -479,7 +479,7 @@ const isSimulating = vue.ref<boolean>(false);
 // Note: whether a simulation is running, including in between the simulation runs of an input simulation update (see
 //       updateSimulation()). It is used, among other things, to prevent the current run from being tracked while a
 //       simulation is running (see onTrackRun()).
-const liveData = vue.ref<GraphPanelData[]>([]);
+const liveData = vue.ref<PlotData[]>([]);
 
 // The progress and status of our simulation, which we show in our toolbar, as in the Standard view.
 // Note #1: a simulation run is usually quick, in which case its plots get updated straightaway and showing its progress
@@ -600,8 +600,8 @@ const onIsSimulatingChanged = (simulating: boolean): void => {
 };
 
 vue.watch(isSimulating, onIsSimulatingChanged);
-let margins: Record<string, GraphPanelMargins> = {};
-const compMargins = vue.ref<GraphPanelMargins>();
+let margins: Record<string, PlotMargins> = {};
+const compMargins = vue.ref<PlotMargins>();
 
 const uiJsonIssues = vue.ref<locApi.Issue[]>(
   locApi.validateUiJson(uiJsonStructureRepaired.value ? props.uiJson : actualUiJson.value, {
@@ -671,17 +671,17 @@ const runColorPopoverRef = vue.ref<InstanceType<typeof Popover> | undefined>();
 const graphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
 const appendTarget = vueCommon.useAppendTarget(rootRef as unknown as vue.Ref<HTMLElement | null>);
 
-const compData = vue.computed<GraphPanelData[]>(() => {
+const compData = vue.computed<PlotData[]>(() => {
   // Combine the live data with the data from the tracked runs.
 
   const liveDataVal = liveData.value;
   const runsVal = runs.value;
   const runsCount = runsVal.length;
-  const res: GraphPanelData[] = [];
+  const res: PlotData[] = [];
   const paletteColors = colors.PALETTE_COLORS;
   const paletteColorsLength = paletteColors.length;
 
-  const addRunTraces = (traces: GraphPanelPlotTrace[], plotIndex: number, runIndex: number): void => {
+  const addRunTraces = (traces: PlotTrace[], plotIndex: number, runIndex: number): void => {
     const run = runsVal[runIndex];
 
     if (!run) {
@@ -723,7 +723,7 @@ const compData = vue.computed<GraphPanelData[]>(() => {
   };
 
   for (let i = 0; i < liveDataVal.length; ++i) {
-    const traces: GraphPanelPlotTrace[] = [];
+    const traces: PlotTrace[] = [];
 
     // Add the traces for the tracked runs first and then the live run, so that the live run is always drawn on top of
     // the tracked runs (GraphPanelWidget draws traces in the order in which they are given).
@@ -1830,7 +1830,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     };
   };
 
-  const newLiveData: GraphPanelData[] = [];
+  const newLiveData: PlotData[] = [];
 
   for (let i = 0; i < actualUiJson.value.output.plots.length; ++i) {
     const plot = actualUiJson.value.output.plots[i];
@@ -1869,7 +1869,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 
     const normalisedMain = normaliseFloat64Arrays(xMain, yMain);
 
-    const traces: GraphPanelPlotTrace[] = [
+    const traces: PlotTrace[] = [
       {
         traceId: `plot_${i}::trace_0`,
         name: vueCommon.traceName(plot.name, plot.xValue, plot.yValue),
@@ -2018,7 +2018,7 @@ const cancelSimulation = (): void => {
 
 // Margins-related event handlers.
 
-const onMarginsUpdated = (plotId: string, newMargins: GraphPanelMargins): void => {
+const onMarginsUpdated = (plotId: string, newMargins: PlotMargins): void => {
   margins[plotId] = newMargins;
 
   let marginCount = 0;
