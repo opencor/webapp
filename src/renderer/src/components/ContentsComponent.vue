@@ -35,7 +35,7 @@
         role="tablist"
         aria-label="Open files"
         @keydown="onFileTabBarKeyDown"
-        @wheel.prevent="onWheel"
+        @wheel="onWheel"
         @scroll="updateFileTabBarOverflow"
       >
         <div v-show="dropIndicatorLeft !== null" class="file-tab-drop-indicator"
@@ -1649,14 +1649,32 @@ const onDragEnd = (): void => {
   dropIndicatorLeft.value = null;
 };
 
+// Scroll our file tab bar horizontally when the user scrolls vertically over it (e.g., using a mouse wheel), but let our
+// Web browser handle a horizontal scroll (e.g., using a trackpad or Shift and a mouse wheel) and a pinch-to-zoom (which
+// is a wheel event with the Ctrl key), and don't do anything if our file tab bar can't be scrolled.
+
+const WHEEL_LINE_HEIGHT = 16;
+
 const onWheel = (event: WheelEvent): void => {
   const fileTabBar = fileTabBarRef.value;
 
-  if (!fileTabBar) {
+  if (
+    !fileTabBar ||
+    event.ctrlKey ||
+    Math.abs(event.deltaX) >= Math.abs(event.deltaY) ||
+    fileTabBar.scrollWidth <= fileTabBar.clientWidth
+  ) {
     return;
   }
 
-  fileTabBar.scrollLeft += event.deltaY;
+  event.preventDefault();
+
+  fileTabBar.scrollLeft +=
+    event.deltaMode === WheelEvent.DOM_DELTA_LINE
+      ? event.deltaY * WHEEL_LINE_HEIGHT
+      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+        ? event.deltaY * fileTabBar.clientWidth
+        : event.deltaY;
 };
 
 // Add some external data to the current simulation experiment view.

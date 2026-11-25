@@ -1,9 +1,13 @@
 <template>
-  <Menubar ref="menuBarRef" :id="props.id" :model="items">
+  <!--
+  Note: our menubar is never turned into a hamburger menu (which PrimeVue does below its breakpoint), hence our breakpoint
+        of 0px.
+  -->
+  <Menubar ref="menuBarRef" :id="props.id" :model="items" breakpoint="0px">
     <template #item="{ item, props, root }">
       <a v-bind="props.action">
         <i v-if="!root" :class="item.icon" class="menu-item-icon shrink-0" />
-        <div class="p-menubar-item-label">{{ item.label }}</div>
+        <div v-hint="item.hint" class="p-menubar-item-label">{{ item.label }}</div>
         <i v-if="item.external" class="menu-item-external ml-auto pl-6 pi pi-external-link" />
         <div v-if="item.shortcut" class="shortcut ml-auto pl-6 whitespace-nowrap">
           {{ item.shortcut }}
@@ -12,7 +16,7 @@
       </a>
     </template>
     <template #end>
-      <button v-if="updateAvailable" class="update-link absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 whitespace-nowrap px-2.5 py-0.5 text-xs cursor-pointer rounded-full transition-colors duration-150"
+      <button v-if="updateAvailable" class="update-link flex items-center gap-1.5 whitespace-nowrap px-2.5 py-0.5 text-xs cursor-pointer rounded-full transition-colors duration-150"
         type="button"
         @click="emit('updateAvailable')"
       >
@@ -32,6 +36,7 @@ import * as vue from 'vue';
 import type { OpenCORTheme } from '../../index';
 
 import * as common from '../common/common';
+import { vHint } from '../common/hint';
 import { settings } from '../common/settings';
 import * as version from '../common/version';
 import * as vueCommon from '../common/vueCommon';
@@ -128,6 +133,26 @@ const returnFocusOnPointerCommand = (menuItems: MenuItem[]): MenuItem[] => {
   });
 };
 
+// The label of a recent file, i.e. its path, unless it is too long (which would make our Reopen submenu too wide), in
+// which case it is shortened in its middle, so that both the start of its path and its file name remain visible, with
+// its full path then being shown as a hint.
+
+const MAX_RECENT_FILE_LABEL_LENGTH = 64;
+const MIN_RECENT_FILE_LABEL_START_LENGTH = 16;
+
+const recentFileLabel = (filePath: string): string => {
+  if (filePath.length <= MAX_RECENT_FILE_LABEL_LENGTH) {
+    return filePath;
+  }
+
+  const fileNameIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  const maxEndLength = MAX_RECENT_FILE_LABEL_LENGTH - MIN_RECENT_FILE_LABEL_START_LENGTH - 1;
+  const endLength = fileNameIndex >= 0 ? Math.min(filePath.length - fileNameIndex, maxEndLength) : maxEndLength;
+  const startLength = MAX_RECENT_FILE_LABEL_LENGTH - endLength - 1;
+
+  return `${filePath.slice(0, startLength)}…${filePath.slice(-endLength)}`;
+};
+
 // Menu items, which are computed so that they can be reactive to changes in our props, and which return the keyboard
 // focus to where it was when selected using the pointing device (see returnFocusOnPointerCommand() above).
 
@@ -180,8 +205,11 @@ const menuItems = vue.computed(() => [
             ? [
                 { separator: true },
                 ...props.recentFilePaths.map((filePath: string) => {
+                  const label = recentFileLabel(filePath);
+
                   return {
-                    label: filePath,
+                    label,
+                    hint: label === filePath ? undefined : filePath,
                     icon: 'pi pi-file',
                     command: () => {
                       emit('reopen', filePath);
@@ -332,16 +360,7 @@ const menuBarRef = vue.shallowRef<(InstanceType<typeof Menubar> & { hide: () => 
 
 vue.onMounted(() => {
   if (menuBarRef.value) {
-    // Ensure that the menubar never gets the 'p-menubar-mobile' class, which would turn it into a hamburger menu.
-
     const menuBarElement = menuBarRef.value.$el;
-    const mutationObserver = new MutationObserver(() => {
-      if (menuBarElement.classList.contains('p-menubar-mobile')) {
-        menuBarElement.classList.remove('p-menubar-mobile');
-      }
-    });
-
-    mutationObserver.observe(menuBarElement, { attributes: true, attributeFilter: ['class'] });
 
     // Close the menu when clicking on the menubar but outside of the main menu items.
 
@@ -451,11 +470,9 @@ vue.onMounted(() => {
     rootListElement?.addEventListener('focusout', onRootListFocusOut);
     rootListElement?.addEventListener('pointerdown', onRootListPointerDown, { capture: true });
 
-    // Clean up the mutation observer and event listeners when the component is unmounted.
+    // Clean up our event listeners when the component is unmounted.
 
     vue.onBeforeUnmount(() => {
-      mutationObserver.disconnect();
-
       document.removeEventListener('click', onClick);
 
       rootListElement?.removeEventListener('keydown', onRootListKeyDown, { capture: true });
@@ -593,6 +610,12 @@ useOpenCORKeyStroke((event: KeyboardEvent) => {
   border-radius: 0;
   border-bottom: 1px solid var(--border-color);
   font-size: 0.875rem;
+  container: main-menu / inline-size;
+}
+
+:deep(.p-menubar-end) {
+  display: flex;
+  align-items: center;
 }
 
 :deep(.p-menubar-root-list) {
@@ -689,7 +712,16 @@ useOpenCORKeyStroke((event: KeyboardEvent) => {
   color: var(--p-text-color);
 }
 
+/**
+ * Our "New version available" link, which is centred in our menubar, unless our menubar is too narrow for it not to
+ * overlap our root items, in which case it is shown at the end of our menubar (before our theme widget, if any).
+ */
+
 .update-link {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
   background-color: color-mix(in srgb, var(--p-primary-color) 10%, transparent);
   color: var(--p-primary-color);
   font-weight: 500;
@@ -698,5 +730,13 @@ useOpenCORKeyStroke((event: KeyboardEvent) => {
 
 .update-link:hover {
   background-color: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
+}
+
+@container main-menu (width < 26rem) {
+  .update-link {
+    position: static;
+    translate: none;
+    margin-right: 0.5rem;
+  }
 }
 </style>
