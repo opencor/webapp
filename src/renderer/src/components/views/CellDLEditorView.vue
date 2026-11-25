@@ -66,6 +66,7 @@ import * as locApi from '../../libopencor/locApi';
 
 import { useOpenCORContext } from '../OpenCORContext';
 import { useOpenCORMessage } from '../OpenCORMessage';
+import { useOpenCORToast } from '../OpenCORToast';
 
 import './toolbar-based-view.css';
 
@@ -78,7 +79,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  error: [message: string];
   openFile: [fileFilePathOrFileContents: string];
 }>();
 
@@ -90,6 +90,7 @@ const LIMITATIONS = [
 ];
 
 const opencorMessage = useOpenCORMessage();
+const addToast = useOpenCORToast();
 const containerRef = vue.shallowRef<HTMLElement | null>(null);
 const issues = vue.ref<locApi.Issue[]>([]);
 const editCount = vue.ref<number>(0);
@@ -331,7 +332,11 @@ const onExportCombineArchive = async (kind: string): Promise<void> => {
       );
     }
   } catch (error: unknown) {
-    emit('error', `Failed to export the CellDL file to a COMBINE archive: ${common.formatError(error)}`);
+    addToast({
+      severity: 'error',
+      summary: kind === EXPORT_KIND_SIMULATE ? 'Cannot Simulate Diagram' : 'Cannot Export COMBINE Archive',
+      detail: common.formatMessage(common.formatError(error))
+    });
   } finally {
     opencorMessage.hide();
   }

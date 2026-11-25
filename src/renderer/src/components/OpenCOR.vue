@@ -62,7 +62,6 @@
       </div>
       -->
       <ContentsComponent ref="contentsRef" class="grow min-h-0"
-        @error="onError"
         @fileClosed="onFileClosed"
         @fileOpened="onFileOpened"
         :recentFilePaths="startScreenRecentFilePaths"
@@ -1253,16 +1252,6 @@ trackCleanup(
     updateErrorVisible.value = true;
   })
 );
-
-// Handle errors.
-
-const onError = (message: string): void => {
-  addToast({
-    severity: 'error',
-    summary: 'Error',
-    detail: message
-  });
-};
 
 // Changelog dialog.
 

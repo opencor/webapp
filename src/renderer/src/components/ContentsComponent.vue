@@ -105,7 +105,6 @@
               <component
                 :is="view(fileTab).component"
                 v-bind="view(fileTab).props"
-                @error="$emit('error', $event)"
                 @openFile="$emit('openFile', $event)"
               />
             </KeepAlive>
@@ -157,6 +156,7 @@ import SimulationExperimentInteractiveView from './views/SimulationExperimentInt
 import UnsupportedFileTypeView from './views/UnsupportedFileTypeView.vue';
 import ContextMenuWidget from './widgets/ContextMenuWidget.vue';
 import { useOpenCORContext, useOpenCORKeyStroke } from './OpenCORContext';
+import { useOpenCORToast } from './OpenCORToast';
 
 interface FileTab {
   file: locApi.File;
@@ -175,7 +175,6 @@ withDefaults(
 );
 
 const emit = defineEmits<{
-  error: [message: string];
   fileClosed: [filePath: string, fileHandle?: FileSystemFileHandle];
   fileOpened: [filePath: string];
   open: [];
@@ -187,6 +186,7 @@ const emit = defineEmits<{
 }>();
 
 const { simulationOnly, uiEnabled } = useOpenCORContext();
+const addToast = useOpenCORToast();
 
 const viewRegistry = useViewRegistry();
 const simulationExperimentInteractiveViewRef = vue.ref<InstanceType<typeof SimulationExperimentInteractiveView> | null>(
@@ -708,19 +708,31 @@ const fileTabContextMenuItems = vue.computed<MenuItem[]>(() => {
       command: () => {
         const canonicalPath = findFileTab(filePath)?.file.canonicalPath();
 
-        // Note: navigator.clipboard is undefined in an insecure context (e.g., if we are embedded in a page served over
-        //       HTTP), in which case calling navigator.clipboard.writeText() would throw synchronously, hence we call
-        //       it from an async function.
+        // Note #1: navigator.clipboard is undefined in an insecure context (e.g., if we are embedded in a page served
+        //          over HTTP), in which case calling navigator.clipboard.writeText() would throw synchronously, hence we
+        //          call it from an async function.
+        // Note #2: we confirm that the path has been copied since, unlike with a download, nothing else would show
+        //          it (as when a plot gets copied, see GraphPanelWidget.vue).
 
         if (canonicalPath) {
           (async () => {
             await navigator.clipboard.writeText(canonicalPath);
-          })().catch((error: unknown) => {
-            emit(
-              'error',
-              `The path of the file could not be copied (${common.formatMessage(common.formatError(error), false)}).`
-            );
-          });
+          })().then(
+            () => {
+              addToast({
+                severity: 'success',
+                summary: 'Path Copied',
+                detail: 'The path of the file has been copied to the clipboard.'
+              });
+            },
+            (error: unknown) => {
+              addToast({
+                severity: 'error',
+                summary: 'Cannot Copy Path',
+                detail: `The path of the file could not be copied to the clipboard (${common.formatMessage(common.formatError(error), false)}).`
+              });
+            }
+          );
         }
       }
     }
@@ -1052,17 +1064,19 @@ const writeFile = async (
 };
 
 const reportSaveIssue = (fileTab: FileTab, error: unknown): void => {
-  emit(
-    'error',
-    `${common.fileName(fileTab.file.canonicalPath())} could not be saved (${common.formatMessage(common.formatError(error), false)}).`
-  );
+  addToast({
+    severity: 'error',
+    summary: 'Cannot Save File',
+    detail: `${common.fileName(fileTab.file.canonicalPath())} could not be saved (${common.formatMessage(common.formatError(error), false)}).`
+  });
 };
 
 const reportRenameIssue = (fileTab: FileTab, newFilePath: string, error: unknown): void => {
-  emit(
-    'error',
-    `${common.fileName(fileTab.file.canonicalPath())} was saved as ${common.fileName(newFilePath)}, but its file tab could not be renamed (${common.formatMessage(common.formatError(error), false)}).`
-  );
+  addToast({
+    severity: 'error',
+    summary: 'Cannot Rename File Tab',
+    detail: `${common.fileName(fileTab.file.canonicalPath())} was saved as ${common.fileName(newFilePath)}, but its file tab could not be renamed (${common.formatMessage(common.formatError(error), false)}).`
+  });
 };
 
 // Outcome of saving a file, i.e. whether it was saved, downloaded (in which case we cannot know whether it was actually

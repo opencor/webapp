@@ -264,6 +264,7 @@ import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 
 import type { SimulationExperimentInteractiveViewSettings } from '../dialogs/SimulationExperimentInteractiveViewSettingsDialog.vue';
 import { useOpenCORContext } from '../OpenCORContext';
+import { useOpenCORToast } from '../OpenCORToast';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
 import InputWidget from '../widgets/InputWidget.vue';
 
@@ -291,11 +292,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  error: [message: string];
   simulationData: [];
 }>();
 
 const { simulationOnly } = useOpenCORContext();
+const addToast = useOpenCORToast();
 
 const opencorElement = vue.shallowRef<HTMLElement | null>(null);
 const fileTabElement = vue.shallowRef<HTMLElement | null>(null);
@@ -2525,19 +2526,27 @@ const archiveSedml = (sedml: string): string => {
 //       our model file or serialising our document, or if our COMBINE archive cannot be generated), in which case we
 //       let people know about it (as in the CellDL Editor view) rather than silently not download anything.
 
+const reportCombineArchiveExportIssue = (issue: unknown): void => {
+  addToast({
+    severity: 'error',
+    summary: 'Cannot Export COMBINE Archive',
+    detail: common.formatMessage(common.formatError(issue))
+  });
+};
+
 const onDownloadCombineArchive = async (): Promise<void> => {
   let modelFile: locApi.File | null | undefined;
 
   try {
     modelFile = model?.file();
   } catch (error: unknown) {
-    emit('error', `Failed to export the simulation to a COMBINE archive: ${common.formatError(error)}`);
+    reportCombineArchiveExportIssue(error);
 
     return;
   }
 
   if (!modelFile) {
-    emit('error', 'Failed to export the simulation to a COMBINE archive: no model file is available.');
+    reportCombineArchiveExportIssue('No model file is available.');
 
     return;
   }
@@ -2579,7 +2588,7 @@ const onDownloadCombineArchive = async (): Promise<void> => {
       'application/zip'
     );
   } catch (error: unknown) {
-    emit('error', `Failed to export the simulation to a COMBINE archive: ${common.formatError(error)}`);
+    reportCombineArchiveExportIssue(error);
   }
 };
 
