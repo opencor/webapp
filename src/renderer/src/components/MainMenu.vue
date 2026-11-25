@@ -99,26 +99,31 @@ const onThemeSwitch = (newTheme: OpenCORTheme) => {
   settings.save();
 };
 
-// When a menu item is selected using the pointing device, return the keyboard focus to where it was before our main
-// menu got it (or remove it from our main menu), as a native menu does, and only then handle the menu item. Otherwise,
-// our main menu would keep the keyboard focus (PrimeVue gives it to our root list once a menu item has been selected),
-// and would, for instance, get it back (with its first root item highlighted) when closing a dialog that was opened
-// using a menu item.
-// Note #1: a menu item selected using the keyboard is "clicked" by PrimeVue, but with no click count.
+// When a menu item is selected, return the keyboard focus to where it was before our main menu got it (or, if it was
+// selected using the pointing device, remove it from our main menu), as a native menu does, and only then handle the
+// menu item. Otherwise, our main menu would keep the keyboard focus (PrimeVue gives it to our root list once a menu
+// item has been selected), and would, for instance, get it back (with its first root item highlighted) when closing a
+// dialog that was opened using a menu item.
+// Note #1: a menu item selected using the keyboard is "clicked" by PrimeVue, but with no click count. If our main menu
+//          got the keyboard focus using the keyboard, but not using our keyboard shortcut (e.g., using Tab), then there
+//          is nowhere to return the keyboard focus to, so our main menu keeps it.
 // Note #2: PrimeVue gives the keyboard focus to our root list after having called the command of the selected menu
 //          item, hence we call it in a microtask, i.e. once PrimeVue is done.
 
-const returnFocusOnPointerCommand = (menuItems: MenuItem[]): MenuItem[] => {
+const returnFocusOnCommand = (menuItems: MenuItem[]): MenuItem[] => {
   return menuItems.map((menuItem: MenuItem): MenuItem => {
     const command = menuItem.command;
 
     return {
       ...menuItem,
-      ...(menuItem.items ? { items: returnFocusOnPointerCommand(menuItem.items as MenuItem[]) } : {}),
+      ...(menuItem.items ? { items: returnFocusOnCommand(menuItem.items as MenuItem[]) } : {}),
       ...(command
         ? {
             command: (event: MenuItemCommandEvent) => {
-              if (event.originalEvent instanceof MouseEvent && event.originalEvent.detail > 0) {
+              if (
+                (event.originalEvent instanceof MouseEvent && event.originalEvent.detail > 0) ||
+                previouslyFocusedElement?.isConnected
+              ) {
                 queueMicrotask(() => {
                   blurMainMenu();
                   command(event);
@@ -189,7 +194,7 @@ const MENUBAR_PT = {
 };
 
 // Menu items, which are computed so that they can be reactive to changes in our props, and which return the keyboard
-// focus to where it was when selected using the pointing device (see returnFocusOnPointerCommand() above).
+// focus to where it was when selected (see returnFocusOnCommand() above).
 
 const menuItems = vue.computed(() => [
   {
@@ -373,7 +378,7 @@ const menuItems = vue.computed(() => [
   }
 ]);
 
-const items = vue.computed(() => returnFocusOnPointerCommand(menuItems.value));
+const items = vue.computed(() => returnFocusOnCommand(menuItems.value));
 
 // Some of the internal state of PrimeVue's Menubar component, which we need to handle some keys ourselves (see
 // onRootListKeyDown() below).
@@ -484,7 +489,7 @@ vue.onMounted(() => {
     };
 
     // Remember where the keyboard focus was before our main menu gets it using the pointing device, so that it can be
-    // returned there once a menu item has been selected (see returnFocusOnPointerCommand() above).
+    // returned there once a menu item has been selected (see returnFocusOnCommand() above).
 
     const onRootListPointerDown = () => {
       const focusedElement = document.activeElement;

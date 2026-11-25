@@ -86,7 +86,7 @@
             <Splitter :key="narrowLayout ? 'narrow' : 'wide'" :layout="narrowLayout ? 'vertical' : 'horizontal'">
               <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="narrowLayout ? 40 : 17">
                 <ScrollPanel class="h-full">
-                  <div class="side-panel">
+                  <div ref="sidePanelRef" class="side-panel">
                     <SimulationPropertyEditor v-if="instanceTask && uniformTimeCourse" :key="simulationSettingsKey" :uniformTimeCourse="uniformTimeCourse" :instanceTask="instanceTask" :disabled="simulationSettingsDisabled" @updated="onSimulationSettingsUpdated" />
                     <!-- <SolversPropertyEditor />
                     <GraphsPropertyEditor />
@@ -476,10 +476,19 @@ const onSimulationSettingsUpdated = (): void => {
   );
 };
 
-const onResetSimulationSettings = (): void => {
+// Note: our reset button gets disabled once our simulation settings have been reset, so if it had the keyboard focus
+//       (i.e. it was used with the keyboard, since a toolbar button doesn't get the keyboard focus when clicked, see
+//       ToolbarButtonWidget.vue), then we give it to our first simulation setting, which would otherwise be lost.
+
+const sidePanelRef = vue.useTemplateRef<HTMLElement>('sidePanelRef');
+
+const onResetSimulationSettings = (event: MouseEvent): void => {
   if (!uniformTimeCourse || !initialSimulationSettings || simulationSettingsDisabled.value) {
     return;
   }
+
+  const resetButtonHadFocus =
+    event.currentTarget instanceof HTMLElement && event.currentTarget === window.document.activeElement;
 
   uniformTimeCourse.setInitialTime(initialSimulationSettings.initialTime);
   uniformTimeCourse.setOutputStartTime(initialSimulationSettings.outputStartTime);
@@ -489,6 +498,12 @@ const onResetSimulationSettings = (): void => {
   simulationSettingsChanged.value = false;
 
   ++simulationSettingsKey.value;
+
+  if (resetButtonHadFocus) {
+    void vue.nextTick().then(() => {
+      sidePanelRef.value?.querySelector<HTMLElement>('.property-editor input')?.focus();
+    });
+  }
 };
 
 // The delay between two output points of a run, which can be used to slow down a run (e.g., to watch its results being
@@ -563,15 +578,25 @@ vueusecore.useResizeObserver(toolbarStartRef, () => {
 
 const hasSimulationData = vue.ref<boolean>(false);
 
-const onClearSimulationData = (): void => {
+// Note: our clear button gets disabled once our simulation data has been cleared, so if it had the keyboard focus (see
+//       onResetSimulationSettings()), then we give it to our run button, which would otherwise be lost.
+
+const onClearSimulationData = (event: MouseEvent): void => {
   if (isFinishing.value || simulationStatus.value !== locSedApi.SedInstanceStatus.IDLE) {
     return;
   }
+
+  const clearButtonHadFocus =
+    event.currentTarget instanceof HTMLElement && event.currentTarget === window.document.activeElement;
 
   hasSimulationData.value = false;
   lastRun.value = null;
 
   updatePlot();
+
+  if (clearButtonHadFocus) {
+    runPauseButtonRef.value?.$el?.focus();
+  }
 };
 
 const runAborted = vue.ref(false);

@@ -16,7 +16,7 @@
     @dragover.prevent="onDragOver"
     @drop="onDrop"
   >
-    <BackgroundComponent v-show="!fileTabs.length" actions
+    <BackgroundComponent ref="backgroundRef" v-show="!fileTabs.length" actions
       :recentFilePaths="recentFilePaths"
       @open="$emit('open')"
       @openRecentFile="$emit('openRecentFile', $event)"
@@ -88,7 +88,7 @@
       <div v-show="fileTabBarOverflow.left" class="file-tab-bar-fade file-tab-bar-fade-left" />
       <div v-show="fileTabBarOverflow.right" class="file-tab-bar-fade file-tab-bar-fade-right" />
     </div>
-    <ContextMenuWidget ref="fileTabContextMenuRef" :model="fileTabContextMenuItems" :appendTo="appendTarget" />
+    <ContextMenuWidget ref="fileTabContextMenuRef" :model="fileTabContextMenuItems" :appendTo="appendTarget" @hide="onFileTabContextMenuHide" />
     <div class="grow min-h-0 relative">
       <template v-for="(fileTab, fileTabIndex) in fileTabs" :key="`panel_${fileTab.file.path()}`">
         <div :id="fileTabPanelId(fileTabIndex)" class="absolute inset-0 flex h-full"
@@ -152,6 +152,7 @@ import { type FileEditor, useViewRegistry, ViewCategory } from '../common/viewRe
 import * as vueCommon from '../common/vueCommon';
 import * as locApi from '../libopencor/locApi';
 
+import BackgroundComponent from './BackgroundComponent.vue';
 import SimulationExperimentInteractiveView from './views/SimulationExperimentInteractiveView.vue';
 import UnsupportedFileTypeView from './views/UnsupportedFileTypeView.vue';
 import ContextMenuWidget from './widgets/ContextMenuWidget.vue';
@@ -427,18 +428,42 @@ const fileTabPanelId = (fileTabIndex: number): string => {
 };
 
 // Handle the keyboard for our file tab bar, i.e. select (and give the keyboard focus to) the next/previous file tab
-// using the right/left arrow keys (wrapping around), the first/last file tab using Home/End, and close the file of the
-// focused file tab using Delete (or Backspace, since there is no Delete key on some keyboards, e.g., on a MacBook).
-// Note: the keyboard focus follows the active file tab (see the watcher on activeFile).
+// using the right/left arrow keys (wrapping around), the first/last file tab using Home/End, close the file of the
+// focused file tab using Delete (or Backspace, since there is no Delete key on some keyboards, e.g., on a MacBook), and
+// show the context menu of the focused file tab using Shift+F10 (or the context menu key).
+// Note #1: the keyboard focus follows the active file tab (see the watcher on activeFile).
+// Note #2: we show our context menu ourselves rather than rely on the Web browser to turn Shift+F10 into a contextmenu
+//          event, since not all of them do (e.g., Chrome on macOS), and we prevent the default behaviour of Shift+F10
+//          so that the Web browsers that do don't then show our context menu again.
 
 const onFileTabBarKeyDown = (event: KeyboardEvent): void => {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
-    return;
-  }
-
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTabRefs[fileTab.file.path()] === event.target);
 
   if (fileTabIndex === -1) {
+    return;
+  }
+
+  if (
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    ((event.key === 'F10' && event.shiftKey) || (event.key === 'ContextMenu' && !event.shiftKey))
+  ) {
+    event.preventDefault();
+
+    const fileTabElement = event.target as HTMLElement;
+    const fileTabRect = fileTabElement.getBoundingClientRect();
+
+    showFileTabContextMenu(
+      new MouseEvent('contextmenu', { clientX: fileTabRect.left, clientY: fileTabRect.bottom }),
+      fileTabs.value[fileTabIndex]?.file.path() ?? '',
+      true
+    );
+
+    return;
+  }
+
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
     return;
   }
 
@@ -553,6 +578,11 @@ const closeFile = async (
 
   locApi.fileManager.unmanage(filePath);
 
+  // Keep track of whether our file (i.e. its file tab or contents) has the keyboard focus, since it would otherwise be
+  // lost once our file is closed (see below).
+
+  const fileHadFocus = fileHasFocus(filePath);
+
   fileTabs.value.splice(fileTabIndex, 1);
 
   // Release the file once its views have been unmounted (and have therefore released their own resources).
@@ -566,6 +596,21 @@ const closeFile = async (
 
     if (nextFileTab) {
       await selectFile(nextFileTab.file.path());
+    }
+  }
+
+  // Give the keyboard focus to the file tab of the selected file or, if no file is left, to the first action of our
+  // background, if our file had it (e.g., when closing it using our keyboard shortcut while one of its plots has the
+  // keyboard focus, or using Delete or the context menu of its file tab).
+  // Note: we wait for the next tick, so that our file is gone and our background is shown, if needed.
+
+  if (fileHadFocus) {
+    await vue.nextTick();
+
+    if (fileTabs.value.length) {
+      fileTabRefs[activeFile.value]?.focus({ preventScroll: true });
+    } else {
+      backgroundRef.value?.focusFirstAction();
     }
   }
 
@@ -691,21 +736,51 @@ const onCloseButtonClick = (filePath: string): void => {
   }
 };
 
-// Show the context menu of the given file tab, unless our UI is not enabled.
-// Note: the context menu may also be shown using the keyboard (e.g., using Shift+F10 when a file tab has the keyboard
-//       focus), hence we check that our UI is enabled (see onSelectView()).
+// Show the context menu of the given file tab, unless our UI is not enabled, and give the keyboard focus back to where
+// it was once our context menu is hidden (PrimeVue gives the keyboard focus to our context menu, but doesn't give it
+// back), as a native context menu does.
+// Note #1: the context menu may also be shown using the keyboard (e.g., using Shift+F10 when a file tab has the
+//          keyboard focus, see onFileTabBarKeyDown()), hence we check that our UI is enabled (see onSelectView()).
+// Note #2: our context menu may be requested while it is shown (e.g., if a Web browser turns Shift+F10 into a
+//          contextmenu event even though we prevented its default behaviour), in which case the keyboard focus is in our
+//          context menu, so we keep track of where it was before.
+// Note #3: the file tab from which our context menu was requested may get removed (e.g., using our Close menu item), in
+//          which case closing its file takes care of the keyboard focus (see closeFile()).
 
-const onFileTabContextMenu = (event: MouseEvent, filePath: string): void => {
+let fileTabContextMenuFocusTarget: HTMLElement | null = null;
+
+const showFileTabContextMenu = (event: MouseEvent, filePath: string, usingKeyboard: boolean): void => {
   if (!uiEnabled.value) {
     return;
   }
 
+  const focusedElement = document.activeElement;
+
+  if (!(focusedElement instanceof HTMLElement && focusedElement.closest('.opencor-context-menu'))) {
+    fileTabContextMenuFocusTarget =
+      focusedElement instanceof HTMLElement && focusedElement !== document.body ? focusedElement : null;
+  }
+
   fileTabContextMenuFilePath.value = filePath;
 
+  fileTabContextMenuRef.value?.show(event, usingKeyboard);
+};
+
+const onFileTabContextMenu = (event: MouseEvent, filePath: string): void => {
   // Note: our file tab has a focus ring if our context menu is shown using the keyboard, but not if it is shown using
   //       the mouse (since pressing a mouse button hides our focus ring, see OpenCOR.vue).
 
-  fileTabContextMenuRef.value?.show(event, event.currentTarget instanceof Element && hasFocusRing(event.currentTarget));
+  showFileTabContextMenu(event, filePath, event.currentTarget instanceof Element && hasFocusRing(event.currentTarget));
+};
+
+const onFileTabContextMenuHide = (): void => {
+  const focusTarget = fileTabContextMenuFocusTarget;
+
+  fileTabContextMenuFocusTarget = null;
+
+  if (focusTarget?.isConnected) {
+    focusTarget.focus({ preventScroll: true });
+  }
 };
 
 // Hide the context menu of our file tabs, if shown, when our UI gets disabled (e.g., when a file is opened from outside
@@ -1803,12 +1878,38 @@ vue.watch(filePaths, () => {
 // Note: OpenCOR may be used within a shadow DOM, hence we check the active element of our root node rather than of our
 //       document.
 
-const fileTabHasFocus = (): boolean => {
+const activeElement = (): Element | null => {
   const rootNode = fileTabBarRef.value?.getRootNode() as Document | ShadowRoot | undefined;
-  const activeElement = rootNode?.activeElement;
 
-  return !!activeElement && Object.values(fileTabRefs).includes(activeElement as HTMLElement);
+  return rootNode?.activeElement ?? null;
 };
+
+const fileTabHasFocus = (): boolean => {
+  const element = activeElement();
+
+  return !!element && Object.values(fileTabRefs).includes(element as HTMLElement);
+};
+
+// Determine whether the given file (i.e. its file tab or contents) has the keyboard focus.
+// Note: if the context menu of our file tabs has the keyboard focus, then we consider where the keyboard focus was before
+//       it got shown (see showFileTabContextMenu()), since it is about to be given back there (e.g., when closing a
+//       file using our Close menu item, our context menu only gets hidden once the file has been closed).
+
+const fileHasFocus = (filePath: string): boolean => {
+  const fileTab = fileTabRefs[filePath];
+  const fileTabPanelId = fileTab?.getAttribute('aria-controls');
+  const rootNode = fileTabBarRef.value?.getRootNode() as Document | ShadowRoot | undefined;
+  const fileTabPanel = fileTabPanelId ? rootNode?.getElementById(fileTabPanelId) : null;
+  let element = activeElement();
+
+  if (element?.closest('.opencor-context-menu')) {
+    element = fileTabContextMenuFocusTarget;
+  }
+
+  return !!element && (element === fileTab || !!fileTabPanel?.contains(element));
+};
+
+const backgroundRef = vue.useTemplateRef<InstanceType<typeof BackgroundComponent>>('backgroundRef');
 
 vue.watch(activeFile, (newActiveFile: string) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let

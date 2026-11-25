@@ -5,7 +5,7 @@
       <div class="background-contents" :style="{ '--recent-file-count': recentFiles.length }">
         <img class="logo" src="../assets/logo.svg" alt="OpenCOR" />
         <template v-if="actions">
-          <div class="actions opencor-panel">
+          <div ref="actionsRef" class="actions opencor-panel">
             <button v-for="action in ACTIONS" :key="action.label" class="action"
               type="button"
               @mousedown.prevent
@@ -73,6 +73,17 @@ const emit = defineEmits<{
   openLocation: [];
   openSampleLorenz: [];
 }>();
+
+// Give the keyboard focus to our first action, if any (e.g., when the last file gets closed while it had the keyboard
+// focus, see ContentsComponent.vue).
+
+const actionsRef = vue.useTemplateRef<HTMLElement>('actionsRef');
+
+const focusFirstAction = (): void => {
+  actionsRef.value?.querySelector<HTMLElement>('.action')?.focus({ preventScroll: true });
+};
+
+defineExpose({ focusFirstAction });
 
 // Our most recent files, i.e. their path, as well as their name and location (i.e. the path of their folder), which we
 // show separately.
