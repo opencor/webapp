@@ -659,7 +659,7 @@ import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 import { validateUiJson } from '../../libopencor/locUiJsonApi';
 import { IssueType } from '../../libopencor/locLoggerApi';
 
-import { useOpenCORToast } from '../OpenCORToast';
+import { toastIssueDetail, useOpenCORToast } from '../OpenCORToast';
 
 export interface SimulationExperimentInteractiveViewSettings {
   simulation: {
@@ -1312,16 +1312,18 @@ const importExternalDataFromFiles = async (files: File[]): Promise<void> => {
     return;
   }
 
-  try {
-    for (const file of files) {
+  // Note: a file that cannot be imported doesn't prevent the other files from being imported.
+
+  for (const file of files) {
+    try {
       createExternalDataFromCsv(file.name, externalData.parseExternalCsvData(await file.text()));
+    } catch (error: unknown) {
+      addToast({
+        severity: 'error',
+        summary: 'Cannot Import External Data',
+        detail: toastIssueDetail(file.name, common.formatMessage(common.formatError(error)))
+      });
     }
-  } catch (error: unknown) {
-    addToast({
-      severity: 'error',
-      summary: 'Cannot Import External Data',
-      detail: common.formatMessage(common.formatError(error))
-    });
   }
 };
 
@@ -1398,11 +1400,9 @@ const importExternalDataFromUrl = async (): Promise<void> => {
   const url = externalDataUrl.value.trim();
 
   try {
-    const response = await common.fetchThroughCorsProxy(url);
+    // Note: common.fetchThroughCorsProxy() only returns an OK response, i.e. it throws otherwise.
 
-    if (!response.ok) {
-      throw new Error(`Could not retrieve CSV file from URL (${response.status}: ${response.statusText}).`);
-    }
+    const response = await common.fetchThroughCorsProxy(url);
 
     createExternalDataFromCsv(url, externalData.parseExternalCsvData(await response.text()));
 
@@ -1411,7 +1411,7 @@ const importExternalDataFromUrl = async (): Promise<void> => {
     addToast({
       severity: 'error',
       summary: 'Cannot Import External Data',
-      detail: common.formatMessage(common.formatError(error))
+      detail: toastIssueDetail(url, common.formatMessage(common.formatError(error)))
     });
   } finally {
     importingExternalDataFromUrl = false;

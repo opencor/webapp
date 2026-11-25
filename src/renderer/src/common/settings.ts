@@ -1,4 +1,4 @@
-import { formatError, type Settings, type SettingsGeneral, isObject } from './common';
+import { formatError, formatMessage, type Settings, type SettingsGeneral, isObject } from './common';
 import { electronApi } from './electronApi';
 
 // Our default settings.
@@ -48,6 +48,7 @@ class SettingsManager {
   private _oldRawSettings: string | null = null;
   private _isInitialised = false;
   private _initialisationListeners: (() => void)[] = [];
+  private _saveIssueListeners = new Set<(issue: string) => void>();
 
   private constructor() {
     // Start with some default settings and then load them.
@@ -121,6 +122,19 @@ class SettingsManager {
     }
   }
 
+  // Let the given callback know whether our settings could not be saved, and return a function to stop doing so.
+
+  onSaveIssue(callback: (issue: string) => void): () => void {
+    this._saveIssueListeners.add(callback);
+
+    return () => {
+      this._saveIssueListeners.delete(callback);
+    };
+  }
+
+  // Save our settings, letting our save issue listeners know if they could not be saved (e.g., if the local storage is
+  // not available), so that people can be told about it (see OpenCOR.vue).
+
   save(): void {
     const rawSettings = JSON.stringify(this._settings);
 
@@ -139,6 +153,12 @@ class SettingsManager {
         this._oldRawSettings = rawSettings;
       } catch (error: unknown) {
         console.warn('OpenCOR: failed to save the settings to the local storage:', formatError(error));
+
+        const issue = formatMessage(formatError(error));
+
+        this._saveIssueListeners.forEach((callback) => {
+          callback(issue);
+        });
       }
     }
   }

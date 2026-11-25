@@ -264,7 +264,7 @@ import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 
 import type { SimulationExperimentInteractiveViewSettings } from '../dialogs/SimulationExperimentInteractiveViewSettingsDialog.vue';
 import { useOpenCORContext } from '../OpenCORContext';
-import { useOpenCORToast } from '../OpenCORToast';
+import { toastIssueDetail, useOpenCORToast } from '../OpenCORToast';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
 import InputWidget from '../widgets/InputWidget.vue';
 
@@ -2530,7 +2530,7 @@ const reportCombineArchiveExportIssue = (issue: unknown): void => {
   addToast({
     severity: 'error',
     summary: 'Cannot Export COMBINE Archive',
-    detail: common.formatMessage(common.formatError(issue))
+    detail: toastIssueDetail(props.file.canonicalPath(), common.formatMessage(common.formatError(issue)))
   });
 };
 

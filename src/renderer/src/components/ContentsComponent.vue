@@ -156,7 +156,7 @@ import SimulationExperimentInteractiveView from './views/SimulationExperimentInt
 import UnsupportedFileTypeView from './views/UnsupportedFileTypeView.vue';
 import ContextMenuWidget from './widgets/ContextMenuWidget.vue';
 import { useOpenCORContext, useOpenCORKeyStroke } from './OpenCORContext';
-import { useOpenCORToast } from './OpenCORToast';
+import { toastIssueDetail, useOpenCORToast } from './OpenCORToast';
 
 interface FileTab {
   file: locApi.File;
@@ -729,7 +729,7 @@ const fileTabContextMenuItems = vue.computed<MenuItem[]>(() => {
               addToast({
                 severity: 'error',
                 summary: 'Cannot Copy Path',
-                detail: `The path of the file could not be copied to the clipboard (${common.formatMessage(common.formatError(error), false)}).`
+                detail: toastIssueDetail(canonicalPath, common.formatMessage(common.formatError(error)))
               });
             }
           );
@@ -1067,7 +1067,7 @@ const reportSaveIssue = (fileTab: FileTab, error: unknown): void => {
   addToast({
     severity: 'error',
     summary: 'Cannot Save File',
-    detail: `${common.fileName(fileTab.file.canonicalPath())} could not be saved (${common.formatMessage(common.formatError(error), false)}).`
+    detail: toastIssueDetail(fileTab.file.canonicalPath(), common.formatMessage(common.formatError(error)))
   });
 };
 
@@ -1075,7 +1075,10 @@ const reportRenameIssue = (fileTab: FileTab, newFilePath: string, error: unknown
   addToast({
     severity: 'error',
     summary: 'Cannot Rename File Tab',
-    detail: `${common.fileName(fileTab.file.canonicalPath())} was saved as ${common.fileName(newFilePath)}, but its file tab could not be renamed (${common.formatMessage(common.formatError(error), false)}).`
+    detail: toastIssueDetail(
+      fileTab.file.canonicalPath(),
+      `The file was saved as ${common.fileName(newFilePath)}, but its file tab could not be renamed (${common.formatMessage(common.formatError(error), false)}).`
+    )
   });
 };
 

@@ -66,7 +66,7 @@ import * as locApi from '../../libopencor/locApi';
 
 import { useOpenCORContext } from '../OpenCORContext';
 import { useOpenCORMessage } from '../OpenCORMessage';
-import { useOpenCORToast } from '../OpenCORToast';
+import { toastIssueDetail, useOpenCORToast } from '../OpenCORToast';
 
 import './toolbar-based-view.css';
 
@@ -335,7 +335,7 @@ const onExportCombineArchive = async (kind: string): Promise<void> => {
     addToast({
       severity: 'error',
       summary: kind === EXPORT_KIND_SIMULATE ? 'Cannot Simulate Diagram' : 'Cannot Export COMBINE Archive',
-      detail: common.formatMessage(common.formatError(error))
+      detail: toastIssueDetail(props.file.canonicalPath(), common.formatMessage(common.formatError(error)))
     });
   } finally {
     opencorMessage.hide();

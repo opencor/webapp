@@ -172,7 +172,7 @@ import * as vueCommon from '../common/vueCommon';
 import ContentsComponent from '../components/ContentsComponent.vue';
 import { provideOpenCORContext } from '../components/OpenCORContext';
 import { provideOpenCORMessage } from '../components/OpenCORMessage';
-import { provideOpenCORToast } from '../components/OpenCORToast';
+import { provideOpenCORToast, toastIssueDetail } from '../components/OpenCORToast';
 import * as locApi from '../libopencor/locApi';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
@@ -673,27 +673,74 @@ const addToast = (options: Parameters<typeof toast.add>[0]) => {
   activateInstance();
 
   toast.add({ ...options, group: toastId.value, life: undefined });
+
+  // Make sure that our new toast can be seen, should our toasts not all fit (see TOAST_PT).
+
+  void vue.nextTick().then(() => {
+    const toastsElement = document.getElementById(toastId.value);
+
+    toastsElement?.scrollTo({ top: toastsElement.scrollHeight });
+  });
 };
 
 provideOpenCORToast(addToast);
 
+// Let people know if our settings could not be saved, in which case they only apply until OpenCOR gets reloaded.
+// Note #1: this is a warning rather than an error since our settings still apply.
+// Note #2: our settings are shared by all our instances, but only the active one (i.e. the one in which our settings
+//          were changed) reports the issue.
+
+trackCleanup(
+  settings.onSaveIssue((issue: string) => {
+    if (compIsActiveApp.value) {
+      addToast({
+        severity: 'warn',
+        summary: 'Cannot Save Settings',
+        detail: `${issue} The settings will only apply until OpenCOR is reloaded.`
+      });
+    }
+  })
+);
+
 // Our toasts are positioned within OpenCOR (rather than within the page), below our main menu (if any) so that they
 // don't cover it, and shown/hidden without any animation, and their messages are rendered by ToastMessageWidget.vue,
-// hence we remove the styling of PrimeVue's messages.
+// hence we remove the styling of PrimeVue's messages. Also, our toasts may not all fit within OpenCOR (e.g., if several
+// files could not be opened), in which case they can be scrolled (and a new toast is scrolled into view, see
+// addToast()), rather than go off the bottom of OpenCOR.
 // Note: we must use a pt object (rather than some pt: attributes) since PrimeVue's Toast component only passes its pt
 //       object to its messages.
+
+// Note: our toasts are 0.75rem away from the edges of OpenCOR, which we achieve using some padding rather than some
+//       offsets so that their shadow doesn't get clipped when they can be scrolled. That padding must, however, not
+//       block the mouse, hence only our toasts handle pointer events, which means that a scrollbar couldn't be dragged,
+//       so we don't show one (our toasts can still be scrolled using the mouse wheel, a trackpad, or the keyboard, and
+//       a toast that is partly cut off shows that there are more of them).
 
 const TOAST_PT = {
   root: {
     style: {
       position: 'absolute',
-      top: 'calc(var(--main-menu-height, 0px) + 0.75rem)',
-      right: '0.75rem',
-      width: 'min(24rem, calc(100% - 1.5rem))'
+      top: 'var(--main-menu-height, 0px)',
+      right: '0',
+      boxSizing: 'border-box',
+      width: 'min(25.5rem, 100%)',
+      maxHeight: 'calc(100% - var(--main-menu-height, 0px))',
+      padding: '0.75rem 0.75rem 0.25rem',
+      overflowY: 'auto',
+      overscrollBehavior: 'contain',
+      scrollbarWidth: 'none',
+      pointerEvents: 'none'
     }
   },
   message: {
-    style: { margin: '0 0 0.5rem', border: 'none', background: 'none', boxShadow: 'none', backdropFilter: 'none' }
+    style: {
+      margin: '0 0 0.5rem',
+      border: 'none',
+      background: 'none',
+      boxShadow: 'none',
+      backdropFilter: 'none',
+      pointerEvents: 'auto'
+    }
   },
   transition: {
     css: false
@@ -864,7 +911,7 @@ const handleAction = (action: string): void => {
       addToast({
         severity: 'error',
         summary: 'Cannot Handle Action',
-        detail: `${action}\n\nThe action could not be handled.`
+        detail: toastIssueDetail(`${FULL_URI_SCHEME}${action}`, 'The action is not supported.')
       });
     }
   }
@@ -1434,13 +1481,16 @@ const reportFileIssue = (
       issues.value.push({ type: locApi.IssueType.ERROR, description: issueMessage });
     });
   } else if (toastShown) {
-    // Note: a data URL can be very long, so we don't show it (the issue message says that it is a data URL anyway).
+    // Note: a data URL can be very long and is meaningless to people, so we don't show it (the issue message says that
+    //       it is a data URL anyway).
 
     addToast({
       severity: 'error',
       summary: 'Cannot Open File',
-      detail:
-        filePath.startsWith('data:') || filePath.startsWith('#data:') ? issueMessage : `${filePath}\n\n${issueMessage}`
+      detail: toastIssueDetail(
+        filePath.startsWith('data:') || filePath.startsWith('#data:') ? undefined : filePath,
+        issueMessage
+      )
     });
   }
 
@@ -2477,7 +2527,11 @@ if (props.omex) {
 
         trackCleanup(
           vue.watch(initialisingOpencorMessageVisible, (newInitialisingOpencorMessageVisible: boolean) => {
-            if (!newInitialisingOpencorMessageVisible && window.location.search) {
+            // Note: a query string that is not an action (e.g., some tracking parameters such as "?fbclid=..." or
+            //       "?utm_source=..." added by the site that linked to us, or the query string of the page in which we
+            //       are embedded) is none of our business, so we leave it (and the URL) alone.
+
+            if (!newInitialisingOpencorMessageVisible && window.location.search.startsWith(`?${FULL_URI_SCHEME}`)) {
               // Retrieve the action from the URL.
               // Note: we also include the hash since it is used to pass a model that is encoded as a data URL.
 
@@ -2491,15 +2545,7 @@ if (props.omex) {
 
               window.history.replaceState({}, document.title, window.location.pathname);
 
-              if (action.startsWith(FULL_URI_SCHEME)) {
-                handleAction(action.slice(FULL_URI_SCHEME.length));
-              } else {
-                addToast({
-                  severity: 'error',
-                  summary: 'Cannot Handle Action',
-                  detail: `${action}\n\nThe action could not be handled.`
-                });
-              }
+              handleAction(action.slice(FULL_URI_SCHEME.length));
             }
           })
         );
@@ -2524,9 +2570,8 @@ const deleteGitHubAccessToken = async (silent: boolean = false): Promise<void> =
     if (silent) {
       console.warn('OpenCOR: failed to remove the stored GitHub access token:', common.formatError(error));
     } else {
-      toast.add({
+      addToast({
         severity: 'warn',
-        group: toastId.value,
         summary: 'Cannot Remove GitHub Access Token',
         detail: common.formatMessage(common.formatError(error))
       });
