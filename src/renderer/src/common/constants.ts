@@ -8,7 +8,11 @@ export const LONG_DELAY: number = 369;
 
 export const STOP_RUN_TIMEOUT: number = 5000;
 
+// How long a toast is shown for, depending on its severity (see ToastMessageWidget.vue), with an error being shown until
+// it is closed.
+
 export const TOAST_LIFE: number = 3000;
+export const WARNING_TOAST_LIFE: number = 8000;
 
 export const COPY_FEEDBACK_LIFE: number = 2000;
 

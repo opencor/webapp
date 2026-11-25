@@ -10,8 +10,6 @@
     <Toast :id="toastId" :class="compIsActiveApp ? 'visible' : 'invisible'"
       :group="toastId"
       :pt="TOAST_PT"
-      :onMouseEnter="onToastHover"
-      :onMouseLeave="onToastHover"
     >
       <template #container="{ message, closeCallback }">
         <ToastMessageWidget :message="message" @close="closeCallback" />
@@ -152,7 +150,7 @@ import celldlIcon from '../assets/celldl.svg?inline';
 import '../assets/primeicons-assets';
 import * as changelog from '../common/changelog';
 import * as common from '../common/common';
-import { FULL_URI_SCHEME, LONG_DELAY, MAX_RECENT_FILES, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
+import { FULL_URI_SCHEME, LONG_DELAY, MAX_RECENT_FILES, SHORT_DELAY } from '../common/constants';
 import { electronApi } from '../common/electronApi';
 import { FOCUS_RING_HIDDEN_CLASS, hasFocusRing, isTextEntry } from '../common/focusRing';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -645,6 +643,8 @@ provideOpenCORContext({
 
 // Get ready to show toasts and provide a helper to show them that ensures that the proper group id is used and that the
 // instance becomes active before the message is pushed.
+// Note: the life of a toast depends on its severity and is handled by the toast itself (see ToastMessageWidget.vue), so
+//       PrimeVue mustn't handle it.
 
 const toast = useToast();
 const toastId = vue.ref(`opencorToast${crtInstanceUid}`);
@@ -652,24 +652,25 @@ const toastId = vue.ref(`opencorToast${crtInstanceUid}`);
 const addToast = (options: Parameters<typeof toast.add>[0]) => {
   activateInstance();
 
-  toast.add({ ...options, group: toastId.value });
+  toast.add({ ...options, group: toastId.value, life: undefined });
 };
 
 provideOpenCORToast(addToast);
 
-// Note: PrimeVue only pauses the life of a toast while it is hovered if it has some mouse enter and leave handlers, so
-//       we give it some (that don't need to do anything), so that the user has time to read a toast that they hover.
-
-const onToastHover = (): void => {};
-
-// Our toasts are positioned within OpenCOR (rather than within the page) and shown/hidden without any animation, and
-// their messages are rendered by ToastMessageWidget.vue, hence we remove the styling of PrimeVue's messages.
+// Our toasts are positioned within OpenCOR (rather than within the page), below our main menu (if any) so that they
+// don't cover it, and shown/hidden without any animation, and their messages are rendered by ToastMessageWidget.vue,
+// hence we remove the styling of PrimeVue's messages.
 // Note: we must use a pt object (rather than some pt: attributes) since PrimeVue's Toast component only passes its pt
 //       object to its messages.
 
 const TOAST_PT = {
   root: {
-    style: { position: 'absolute', top: '0.75rem', right: '0.75rem', width: 'min(24rem, calc(100% - 1.5rem))' }
+    style: {
+      position: 'absolute',
+      top: 'calc(var(--main-menu-height, 0px) + 0.75rem)',
+      right: '0.75rem',
+      width: 'min(24rem, calc(100% - 1.5rem))'
+    }
   },
   message: {
     style: { margin: '0 0 0.5rem', border: 'none', background: 'none', boxShadow: 'none', backdropFilter: 'none' }
@@ -843,8 +844,7 @@ const handleAction = (action: string): void => {
       addToast({
         severity: 'error',
         summary: 'Handling an action',
-        detail: `${action}\n\nThe action could not be handled.`,
-        life: TOAST_LIFE
+        detail: `${action}\n\nThe action could not be handled.`
       });
     }
   }
@@ -1203,8 +1203,7 @@ const onError = (message: string): void => {
   addToast({
     severity: 'error',
     summary: 'Error',
-    detail: message,
-    life: TOAST_LIFE
+    detail: message
   });
 };
 
@@ -1387,8 +1386,7 @@ const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePa
       severity: 'error',
       summary: 'Opening a file',
       detail:
-        filePath.startsWith('data:') || filePath.startsWith('#data:') ? issueMessage : `${filePath}\n\n${issueMessage}`,
-      life: TOAST_LIFE
+        filePath.startsWith('data:') || filePath.startsWith('#data:') ? issueMessage : `${filePath}\n\n${issueMessage}`
     });
   }
 
@@ -2415,8 +2413,7 @@ if (props.omex) {
                 addToast({
                   severity: 'error',
                   summary: 'Handling an action',
-                  detail: `${action}\n\nThe action could not be handled.`,
-                  life: TOAST_LIFE
+                  detail: `${action}\n\nThe action could not be handled.`
                 });
               }
             }
@@ -2447,8 +2444,7 @@ const deleteGitHubAccessToken = async (silent: boolean = false): Promise<void> =
         severity: 'warn',
         group: toastId.value,
         summary: 'Removing GitHub access token',
-        detail: common.formatMessage(common.formatError(error)),
-        life: TOAST_LIFE
+        detail: common.formatMessage(common.formatError(error))
       });
     }
   }
@@ -2498,16 +2494,14 @@ const saveGitHubAccessToken = async (accessToken: string): Promise<void> => {
       addToast({
         severity: 'warn',
         summary: 'Remembering GitHub access token',
-        detail: 'The token could not be stored securely, so you will need to sign in again next time.',
-        life: TOAST_LIFE
+        detail: 'The token could not be stored securely, so you will need to sign in again next time.'
       });
     }
   } catch (error: unknown) {
     addToast({
       severity: 'warn',
       summary: 'Remembering GitHub access token',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      detail: common.formatMessage(common.formatError(error))
     });
   }
 };
@@ -2550,8 +2544,7 @@ const onDisconnectFromGitHub = async (): Promise<void> => {
     addToast({
       severity: 'error',
       summary: 'GitHub sign-out',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      detail: common.formatMessage(common.formatError(error))
     });
   } finally {
     disconnectFromGitHubVisible.value = false;
@@ -2592,8 +2585,7 @@ const onGitHubButtonClick = async (): Promise<void> => {
     addToast({
       severity: 'error',
       summary: 'GitHub sign-in',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      detail: common.formatMessage(common.formatError(error))
     });
   } finally {
     connectingToGitHub.value = false;
