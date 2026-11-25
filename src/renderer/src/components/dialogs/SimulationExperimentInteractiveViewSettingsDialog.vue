@@ -156,11 +156,11 @@
 
                     <div class="form-row">
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.id" aria-label="ID" class="w-full" size="small" />
+                        <InputText v-model="input.id" aria-label="ID" class="w-full" size="small" :invalid="uiJsonFieldInvalid('input', inputIndex, 'id')" />
                         <label>ID</label>
                       </FloatLabel>
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.name" aria-label="Name" class="w-full" size="small" />
+                        <InputText v-model="input.name" aria-label="Name" class="w-full" size="small" :invalid="uiJsonFieldInvalid('input', inputIndex, 'name')" />
                         <label>Name</label>
                       </FloatLabel>
                       <FloatLabel variant="on" class="form-field">
@@ -179,11 +179,12 @@
                     </div>
                     <div class="form-row">
                       <InputScientificNumberWidget v-model="input.defaultValue" class="form-field"
+                        :invalid="uiJsonFieldInvalid('input', inputIndex, 'defaultValue')"
                         label="Default value"
                         size="small"
                       />
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.visible" aria-label="Visible (optional)" class="w-full" size="small" />
+                        <InputText v-model="input.visible" aria-label="Visible (optional)" class="w-full" size="small" :invalid="uiJsonFieldInvalid('input', inputIndex, 'visible')" />
                         <label>Visible (optional)</label>
                       </FloatLabel>
                     </div>
@@ -192,14 +193,17 @@
 
                     <div v-if="locApi.isScalarInput(input)" class="form-row">
                       <InputScientificNumberWidget v-model="input.minimumValue" class="form-field"
+                        :invalid="uiJsonFieldInvalid('input', inputIndex, 'minimumValue')"
                         label="Minimum value"
                         size="small"
                       />
                       <InputScientificNumberWidget v-model="input.maximumValue" class="form-field"
+                        :invalid="uiJsonFieldInvalid('input', inputIndex, 'maximumValue')"
                         label="Maximum value"
                         size="small"
                       />
                       <InputScientificNumberWidget v-model="input.stepValue" class="form-field"
+                        :invalid="uiJsonFieldInvalid('input', inputIndex, 'stepValue')"
                         label="Step value (optional)"
                         :allowEmpty="true"
                         size="small"
@@ -226,10 +230,11 @@
                         <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="itemKey(possibleValue)" class="entry-row">
                           <span class="item-index">{{ Number(possibleValueIndex) + 1 }}</span>
                           <FloatLabel variant="on" class="flex-1">
-                            <InputText v-model="possibleValue.name" aria-label="Name" class="w-full" size="small" />
+                            <InputText v-model="possibleValue.name" aria-label="Name" class="w-full" size="small" :invalid="uiJsonFieldInvalid('input', inputIndex, 'possibleValues', possibleValueIndex, 'name')" />
                             <label>Name</label>
                           </FloatLabel>
                           <InputScientificNumberWidget v-model="possibleValue.value" class="form-field"
+                            :invalid="uiJsonFieldInvalid('input', inputIndex, 'possibleValues', possibleValueIndex, 'value')"
                             label="Value"
                             size="small"
                           />
@@ -280,6 +285,7 @@
                   <span class="item-index">{{ Number(parameterIndex) + 1 }}</span>
                   <FloatLabel variant="on" class="flex-1">
                     <Select v-model="parameter.name" ariaLabel="Model parameter"
+                      :invalid="uiJsonFieldInvalid('parameters', parameterIndex, 'name')"
                       class="w-full" panelClass="item-filter"
                       size="small"
                       filter filterMode="lenient"
@@ -289,7 +295,7 @@
                     <label>Model parameter</label>
                   </FloatLabel>
                   <FloatLabel v-hint.html="parameterValueTooltip()" variant="on" class="flex-1">
-                    <InputText v-model="parameter.value" aria-label="Value" class="w-full" size="small" />
+                    <InputText v-model="parameter.value" aria-label="Value" class="w-full" size="small" :invalid="uiJsonFieldInvalid('parameters', parameterIndex, 'value')" />
                     <label>Value</label>
                   </FloatLabel>
                   <ToolbarButtonWidget class="remove-button"
@@ -334,11 +340,12 @@
                 <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="itemKey(data)" class="entry-row">
                   <span class="item-index">{{ Number(dataIndex) + 1 }}</span>
                   <FloatLabel variant="on" class="flex-1">
-                    <InputText v-model="data.id" aria-label="ID" class="w-full" size="small" />
+                    <InputText v-model="data.id" aria-label="ID" class="w-full" size="small" :invalid="uiJsonFieldInvalid('output', 'data', dataIndex, 'id')" />
                     <label>ID</label>
                   </FloatLabel>
                   <FloatLabel variant="on" class="flex-1">
                     <Select v-model="data.name" ariaLabel="Model parameter"
+                      :invalid="uiJsonFieldInvalid('output', 'data', dataIndex, 'name')"
                       class="w-full" panelClass="item-filter"
                       size="small"
                       filter filterMode="lenient"
@@ -453,7 +460,7 @@
                         <label>Description (optional)</label>
                       </FloatLabel>
                       <FloatLabel v-hint.html="externalDataVoiExpressionTooltip()" variant="on" class="flex-1">
-                        <InputText v-model="externalDataFile.voiExpression" aria-label="VOI expression (optional)" class="w-full" size="small" />
+                        <InputText v-model="externalDataFile.voiExpression" aria-label="VOI expression (optional)" class="w-full" size="small" :invalid="uiJsonFieldInvalid('output', 'externalData', externalDataFileIndex, 'voiExpression')" />
                         <label>VOI expression (optional)</label>
                       </FloatLabel>
                     </div>
@@ -467,11 +474,12 @@
                       <div v-for="(externalData, externalDataIndex) in externalDataEntries(externalDataFile)" :key="itemKey(externalData)" class="entry-row">
                         <span class="item-index">{{ Number(externalDataIndex) + 1 }}</span>
                         <FloatLabel variant="on" class="flex-1">
-                          <InputText v-model="externalData.id" aria-label="ID" class="w-full" size="small" />
+                          <InputText v-model="externalData.id" aria-label="ID" class="w-full" size="small" :invalid="uiJsonFieldInvalid('output', 'externalData', externalDataFileIndex, 'data', externalDataIndex, 'id')" />
                           <label>ID</label>
                         </FloatLabel>
                         <FloatLabel variant="on" class="flex-1">
                           <Select v-model="externalData.name" ariaLabel="External data"
+                            :invalid="uiJsonFieldInvalid('output', 'externalData', externalDataFileIndex, 'data', externalDataIndex, 'name')"
                             class="w-full" panelClass="item-filter"
                             size="small"
                             filter filterMode="lenient"
@@ -582,11 +590,11 @@
                             <label>Name (optional)</label>
                           </FloatLabel>
                           <FloatLabel v-hint.html="xyValueTooltip(true)" variant="on" class="flex-1">
-                            <InputText v-model="trace.xValue" aria-label="X value" class="w-full" size="small" />
+                            <InputText v-model="trace.xValue" aria-label="X value" class="w-full" size="small" :invalid="uiJsonFieldInvalid(...tracePath(plotIndex, traceIndex, 'xValue'))" />
                             <label>X value</label>
                           </FloatLabel>
                           <FloatLabel v-hint.html="xyValueTooltip(false)" variant="on" class="flex-1">
-                            <InputText v-model="trace.yValue" aria-label="Y value" class="w-full" size="small" />
+                            <InputText v-model="trace.yValue" aria-label="Y value" class="w-full" size="small" :invalid="uiJsonFieldInvalid(...tracePath(plotIndex, traceIndex, 'yValue'))" />
                             <label>Y value</label>
                           </FloatLabel>
                         </div>
@@ -895,13 +903,63 @@ const solversSettingsIssues = vue.computed<locApi.Issue[]>(() => {
 
   return res;
 });
-const uiJsonIssues = vue.computed<locApi.Issue[]>(() => {
+const uiJsonIssues = vue.computed<locApi.UiJsonIssue[]>(() => {
   // Validate our local UI JSON and return any issues.
 
   return validateUiJson(localSettings.value.interactive.uiJson, {
     allModelParameters: props.allModelParameters,
     editableModelParameters: props.editableModelParameters
   });
+});
+
+// The fields of our UI JSON that have issues, i.e. the fields of the values that our UI JSON issues are about (see
+// locUiJsonApi.ts), as well as the interactive sections that have issues.
+// Note: an issue may be about a value that has no field (e.g., an input's possible values that are required by a
+//       discrete input while the input is a scalar one), in which case only its section is shown as having issues.
+//       Similarly, an issue may be about no value (e.g., if no UI JSON was provided) or about a value that is not in
+//       any of our sections, in which case only the group of interactive sections is shown as having issues.
+
+const uiJsonInvalidPathKeys = vue.computed<Set<string>>(() => {
+  return new Set(uiJsonIssues.value.flatMap((issue: locApi.UiJsonIssue) => issue.paths.map(locApi.uiJsonPathKey)));
+});
+
+const uiJsonFieldInvalid = (...path: locApi.UiJsonPath): boolean => {
+  return uiJsonInvalidPathKeys.value.has(locApi.uiJsonPathKey(path));
+};
+
+const tracePath = (plotIndex: number, traceIndex: number, key: string): locApi.UiJsonPath => {
+  // The path of the given value of the given trace of the given plot, i.e. of the plot itself for its main trace (i.e.
+  // its first trace) or of one of its additional traces (see plotTraces()).
+
+  return traceIndex
+    ? ['output', 'plots', plotIndex, 'additionalTraces', traceIndex - 1, key]
+    : ['output', 'plots', plotIndex, key];
+};
+
+const OUTPUT_INTERACTIVE_TABS: Record<string, string> = {
+  data: 'simulationData',
+  externalData: 'externalData',
+  plots: 'plots'
+};
+
+const uiJsonInteractiveTab = (path: locApi.UiJsonPath): string | undefined => {
+  if (path[0] === 'input') {
+    return 'simulationInputs';
+  }
+
+  if (path[0] === 'parameters') {
+    return 'modelParameters';
+  }
+
+  return path[0] === 'output' && typeof path[1] === 'string' ? OUTPUT_INTERACTIVE_TABS[path[1]] : undefined;
+};
+
+const uiJsonInteractiveTabsWithIssues = vue.computed<Set<string | undefined>>(() => {
+  return new Set(
+    uiJsonIssues.value.flatMap((issue: locApi.UiJsonIssue) =>
+      issue.paths.length ? issue.paths.map(uiJsonInteractiveTab) : [undefined]
+    )
+  );
 });
 
 // The issues of the active section, i.e. of our simulation, solvers, or interactive settings, along with a label for
@@ -939,8 +997,9 @@ vue.watch(
 
 // Our navigation, which groups our sections and lets people know about the number of items in a section and whether a
 // section (or group of sections) has issues.
-// Note: our interactive settings are validated as a whole, so we can only let people know that the group of interactive
-//       sections has issues, not which section(s) in particular.
+// Note: our interactive settings are validated as a whole, but we can still tell which interactive section(s) have
+//       issues, unless an issue is not about any of them (see uiJsonInteractiveTabsWithIssues), in which case we let
+//       people know that the group of interactive sections has issues.
 
 interface NavItem {
   tab: string;
@@ -981,11 +1040,12 @@ const navGroups = vue.computed<NavGroup[]>(() => {
     },
     {
       label: 'Interactive',
-      hasIssues: uiJsonIssues.value.length > 0,
+      hasIssues: uiJsonInteractiveTabsWithIssues.value.has(undefined),
       items: [
         {
           tab: 'interactive',
           interactiveTab: 'simulationInputs',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('simulationInputs'),
           label: 'Simulation inputs',
           icon: 'pi pi-sign-in',
           count: uiJson.input.length
@@ -993,6 +1053,7 @@ const navGroups = vue.computed<NavGroup[]>(() => {
         {
           tab: 'interactive',
           interactiveTab: 'modelParameters',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('modelParameters'),
           label: 'Model parameters',
           icon: 'pi pi-list',
           count: uiJson.parameters.length
@@ -1000,6 +1061,7 @@ const navGroups = vue.computed<NavGroup[]>(() => {
         {
           tab: 'interactive',
           interactiveTab: 'simulationData',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('simulationData'),
           label: 'Simulation data',
           icon: 'pi pi-database',
           count: uiJson.output.data.length
@@ -1007,6 +1069,7 @@ const navGroups = vue.computed<NavGroup[]>(() => {
         {
           tab: 'interactive',
           interactiveTab: 'externalData',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('externalData'),
           label: 'External data',
           icon: 'pi pi-download',
           count: externalDataCount.value
@@ -1014,6 +1077,7 @@ const navGroups = vue.computed<NavGroup[]>(() => {
         {
           tab: 'interactive',
           interactiveTab: 'plots',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('plots'),
           label: 'Plots',
           icon: 'pi pi-chart-line',
           count: uiJson.output.plots.length

@@ -86,6 +86,30 @@ export const isDiscreteInput = (input: UiJsonInput): input is UiJsonDiscreteInpu
   return 'possibleValues' in input;
 };
 
+// The path of a value in a UI JSON, i.e. the keys (of objects) and indices (of arrays) that lead to it from the root of
+// the UI JSON (e.g., ['input', 0, 'name'] for the name of the first input).
+
+export type UiJsonPath = (string | number)[];
+
+export const uiJsonPathKey = (path: UiJsonPath): string => {
+  return path.join('/');
+};
+
+// An issue with a UI JSON, along with the paths of the values that it is about, if any (e.g., so that the fields that
+// correspond to those values can be shown as invalid, see SimulationExperimentInteractiveViewSettingsDialog.vue).
+
+export interface UiJsonIssue extends Issue {
+  paths: UiJsonPath[];
+}
+
+const uiJsonIssue = (description: string, ...paths: UiJsonPath[]): UiJsonIssue => {
+  return {
+    type: IssueType.WARNING,
+    description: `UI JSON: ${description}`,
+    paths
+  };
+};
+
 export const uiJsonReplacer = (_key: string, value: unknown): unknown => {
   return value instanceof Float64Array ? Array.from(value) : value;
 };
@@ -275,10 +299,10 @@ const uiJsonForSchemaValidation = (uiJson: UiJson): unknown => {
 
 const MAX_REPORTED_NON_NUMERIC_VALUE_INDICES = 5;
 
-const nonNumericValuesIssues = (uiJson: UiJson): Issue[] => {
-  const res: Issue[] = [];
+const nonNumericValuesIssues = (uiJson: UiJson): UiJsonIssue[] => {
+  const res: UiJsonIssue[] = [];
 
-  const check = (values: unknown, what: string): void => {
+  const check = (values: unknown, what: string, path: UiJsonPath): void => {
     if (!(values instanceof Float64Array) && !Array.isArray(values)) {
       return;
     }
@@ -308,10 +332,7 @@ const nonNumericValuesIssues = (uiJson: UiJson): Issue[] => {
         ? `the value at index ${indices[0]} is not`
         : `${count} values are not, at indices ${indices.join(', ')}${otherCount ? `, and ${otherCount} more` : ''}`;
 
-    res.push({
-      type: IssueType.WARNING,
-      description: `UI JSON: ${what} must only contain numbers (${where}).`
-    });
+    res.push(uiJsonIssue(`${what} must only contain numbers (${where}).`, path));
   };
 
   const output: unknown = (uiJson as unknown as Record<string, unknown>).output;
@@ -320,21 +341,24 @@ const nonNumericValuesIssues = (uiJson: UiJson): Issue[] => {
     return res;
   }
 
-  for (const externalDataItem of output.externalData) {
+  for (const [externalDataIndex, externalDataItem] of output.externalData.entries()) {
     if (!common.isObject(externalDataItem)) {
       continue;
     }
 
-    check(externalDataItem.voiValues, 'an output external data VOI values');
+    const externalDataPath = ['output', 'externalData', externalDataIndex];
+
+    check(externalDataItem.voiValues, 'an output external data VOI values', [...externalDataPath, 'voiValues']);
 
     if (Array.isArray(externalDataItem.dataSeries)) {
-      for (const dataSeries of externalDataItem.dataSeries) {
+      for (const [dataSeriesIndex, dataSeries] of externalDataItem.dataSeries.entries()) {
         if (common.isObject(dataSeries)) {
           check(
             dataSeries.values,
             typeof dataSeries.name === 'string' && dataSeries.name
               ? `an output external data series values ('${dataSeries.name}')`
-              : 'an output external data series values'
+              : 'an output external data series values',
+            [...externalDataPath, 'dataSeries', dataSeriesIndex, 'values']
           );
         }
       }
@@ -414,6 +438,15 @@ export const cleanUiJson = (uiJson: UiJson): UiJson => {
   return cleanUiJsonRec(uiJson) as UiJson;
 };
 
+// A schema validation error (as reported by jsonschema), of which we only use what we need.
+
+interface SchemaValidationError {
+  path: UiJsonPath;
+  name: string;
+  argument: unknown;
+  toString: () => string;
+}
+
 interface ValidateUiJsonOptions {
   allModelParameters?: string[];
   editableModelParameters?: string[];
@@ -437,16 +470,11 @@ const listOfItems = (items: Set<string>): string => {
   return `${list.slice(0, -1).join(', ')}, or ${list[list.length - 1]}`;
 };
 
-export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJsonOptions): Issue[] => {
+export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJsonOptions): UiJsonIssue[] => {
   // Make sure that we have some UI JSON.
 
   if (!uiJson) {
-    return [
-      {
-        type: IssueType.WARNING,
-        description: 'UI JSON: no UI JSON was provided.'
-      }
-    ];
+    return [uiJsonIssue('no UI JSON was provided.')];
   }
 
   // Clean our UI JSON (in case there were optional values that were not provided and are now empty).
@@ -713,18 +741,27 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
   const nonNumericIssues = nonNumericValuesIssues(uiJson);
 
   if (!validatorRes.valid || nonNumericIssues.length) {
-    const res: Issue[] = [];
+    const res: UiJsonIssue[] = [];
 
-    if (!validatorRes.valid) {
-      for (const issue of String(validatorRes).split('\n')) {
-        if (issue) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: ${common.formatMessage(issue)}`
-          });
-        }
+    // Note #1: an error is about the value at its path, except if it is about a required property of that value that
+    //          is missing, in which case it is about that property.
+    // Note #2: an error about an additional property (i.e. a property that is not allowed) is about the value that has
+    //          that property rather than about that property. Indeed, such a property is not part of a valid UI JSON,
+    //          except for an input, which can be either a discrete input or a scalar input (see our schema), in which
+    //          case we get errors for both kinds of inputs, e.g., a scalar input with an issue (e.g., a missing name)
+    //          also has errors about its minimum and maximum values not being allowed in a discrete input, but they
+    //          are not what is wrong with it.
+    // Note #3: we number our errors, like jsonschema does when converting its result to a string.
+
+    validatorRes.errors.forEach((error: SchemaValidationError, index: number) => {
+      const path: UiJsonPath = [...error.path];
+
+      if (error.name === 'required' && typeof error.argument === 'string') {
+        path.push(error.argument);
       }
-    }
+
+      res.push(uiJsonIssue(common.formatMessage(`${index}: ${error.toString()}`), path));
+    });
 
     res.push(...nonNumericIssues);
 
@@ -736,40 +773,35 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
 
   // Make sure that the input information makes sense.
 
-  const res: Issue[] = [];
+  const res: UiJsonIssue[] = [];
   const inputIdUsed = new Set<string>();
 
-  for (const input of uiJson.input) {
+  for (const [inputIndex, input] of uiJson.input.entries()) {
+    const inputPath = (...keys: UiJsonPath): UiJsonPath => ['input', inputIndex, ...keys];
+
     if (input.id) {
       if (inputIdUsed.has(input.id)) {
-        res.push({
-          type: IssueType.WARNING,
-          description: `UI JSON: an input id must be unique ('${input.id}' is used more than once).`
-        });
+        res.push(uiJsonIssue(`an input id must be unique ('${input.id}' is used more than once).`, inputPath('id')));
       }
 
       inputIdUsed.add(input.id);
     } else {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an input id must not be empty.`
-      });
+      res.push(uiJsonIssue(`an input id must not be empty.`, inputPath('id')));
     }
 
     if (!input.name) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an input name must not be empty.`
-      });
+      res.push(uiJsonIssue(`an input name must not be empty.`, inputPath('name')));
     }
 
     if ('possibleValues' in input) {
-      for (const possibleValue of input.possibleValues) {
+      for (const [possibleValueIndex, possibleValue] of input.possibleValues.entries()) {
         if (!possibleValue.name) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an input possible value name must not be empty.`
-          });
+          res.push(
+            uiJsonIssue(
+              `an input possible value name must not be empty.`,
+              inputPath('possibleValues', possibleValueIndex, 'name')
+            )
+          );
         }
       }
 
@@ -779,69 +811,83 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       const listOfPossibleValues = listOfItems(new Set(possibleValues.map((possibleValue) => String(possibleValue))));
       const usedPossibleValues = new Set<number>();
 
-      for (const possibleValue of possibleValues) {
+      for (const [possibleValueIndex, possibleValue] of possibleValues.entries()) {
         if (usedPossibleValues.has(possibleValue)) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an input possible value must have a unique value ('${possibleValue}' is used more than once).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an input possible value must have a unique value ('${possibleValue}' is used more than once).`,
+              inputPath('possibleValues', possibleValueIndex, 'value')
+            )
+          );
         }
 
         usedPossibleValues.add(possibleValue);
       }
 
       if (!possibleValues.includes(input.defaultValue)) {
-        res.push({
-          type: IssueType.WARNING,
-          description: `UI JSON: an input default value must be one of the possible values ('${input.defaultValue}' is not one of ${listOfPossibleValues}).`
-        });
+        res.push(
+          uiJsonIssue(
+            `an input default value must be one of the possible values ('${input.defaultValue}' is not one of ${listOfPossibleValues}).`,
+            inputPath('defaultValue')
+          )
+        );
       }
     }
 
     if (isScalarInput(input)) {
       if (input.minimumValue >= input.maximumValue) {
-        res.push({
-          type: IssueType.WARNING,
-          description: `UI JSON: an input minimum value must be lower than the maximum value (${input.minimumValue} is not lower than ${input.maximumValue}).`
-        });
+        res.push(
+          uiJsonIssue(
+            `an input minimum value must be lower than the maximum value (${input.minimumValue} is not lower than ${input.maximumValue}).`,
+            inputPath('minimumValue'),
+            inputPath('maximumValue')
+          )
+        );
       }
 
       if (input.defaultValue < input.minimumValue || input.defaultValue > input.maximumValue) {
-        res.push({
-          type: IssueType.WARNING,
-          description: `UI JSON: an input default value must be greater or equal than the minimum value and lower or equal than the maximum value (${input.defaultValue} is not between ${input.minimumValue} and ${input.maximumValue}).`
-        });
+        res.push(
+          uiJsonIssue(
+            `an input default value must be greater or equal than the minimum value and lower or equal than the maximum value (${input.defaultValue} is not between ${input.minimumValue} and ${input.maximumValue}).`,
+            inputPath('defaultValue')
+          )
+        );
       }
 
       const range = input.maximumValue - input.minimumValue;
 
       if (input.stepValue !== undefined && input.stepValue !== null) {
         if (input.stepValue <= 0 || input.stepValue > range) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an input step value must be greater than zero and lower or equal than the range value (${input.stepValue} is not between 0 and ${range}).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an input step value must be greater than zero and lower or equal than the range value (${input.stepValue} is not between 0 and ${range}).`,
+              inputPath('stepValue')
+            )
+          );
         }
 
         if (!common.isDivisible(range, input.stepValue)) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an input step value must be a factor of the range value (${input.stepValue} is not a factor of ${range}).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an input step value must be a factor of the range value (${input.stepValue} is not a factor of ${range}).`,
+              inputPath('stepValue')
+            )
+          );
         }
       } else if (!common.isDivisible(range, 1)) {
-        res.push({
-          type: IssueType.WARNING,
-          description: `UI JSON: an input step value must be a factor of the range value (1 is not a factor of ${range}).`
-        });
+        // Note: there is no step value, so we consider that the issue is about the step value that should be given.
+
+        res.push(
+          uiJsonIssue(
+            `an input step value must be a factor of the range value (1 is not a factor of ${range}).`,
+            inputPath('stepValue')
+          )
+        );
       }
     }
 
     if (input.visible !== undefined && input.visible !== null && !input.visible) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an input visible must not be empty.`
-      });
+      res.push(uiJsonIssue(`an input visible must not be empty.`, inputPath('visible')));
     }
   }
 
@@ -850,115 +896,135 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
   const outputIdUsed = new Set<string>();
   const listOfAllModelParameters = listOfItems(allModelParametersSet);
 
-  for (const outputData of uiJson.output.data) {
+  for (const [outputDataIndex, outputData] of uiJson.output.data.entries()) {
+    const outputDataPath = (key: string): UiJsonPath => ['output', 'data', outputDataIndex, key];
+
     if (!outputData.id) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an output data id must not be empty.`
-      });
+      res.push(uiJsonIssue(`an output data id must not be empty.`, outputDataPath('id')));
     }
 
     if (outputIdUsed.has(outputData.id)) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an output data id must be unique ('${outputData.id}' is used more than once).`
-      });
+      res.push(
+        uiJsonIssue(
+          `an output data id must be unique ('${outputData.id}' is used more than once).`,
+          outputDataPath('id')
+        )
+      );
     }
 
     outputIdUsed.add(outputData.id);
 
     if (!outputData.name) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an output data name must not be empty.`
-      });
+      res.push(uiJsonIssue(`an output data name must not be empty.`, outputDataPath('name')));
     } else if (allModelParametersSet.size > 0 && !allModelParametersSet.has(outputData.name)) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an output data name must match one of the available options ('${outputData.name}' is not one of ${listOfAllModelParameters}).`
-      });
+      res.push(
+        uiJsonIssue(
+          `an output data name must match one of the available options ('${outputData.name}' is not one of ${listOfAllModelParameters}).`,
+          outputDataPath('name')
+        )
+      );
     }
   }
 
   if (uiJson.output.externalData !== undefined && uiJson.output.externalData !== null) {
-    for (const outputExternalData of uiJson.output.externalData) {
+    for (const [outputExternalDataIndex, outputExternalData] of uiJson.output.externalData.entries()) {
+      const outputExternalDataPath = (...keys: UiJsonPath): UiJsonPath => [
+        'output',
+        'externalData',
+        outputExternalDataIndex,
+        ...keys
+      ];
+
       if (outputExternalData.voiExpression) {
         try {
           dependencies._mathJs.parse(outputExternalData.voiExpression);
         } catch (error: unknown) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data VOI expression must be valid ('${outputExternalData.voiExpression}' is not: ${common.formatMessage(common.formatError(error), false)}).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an output external data VOI expression must be valid ('${outputExternalData.voiExpression}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
+              outputExternalDataPath('voiExpression')
+            )
+          );
         }
       }
 
       if (!outputExternalData.voiValues.length) {
-        res.push({
-          type: IssueType.WARNING,
-          description: 'UI JSON: an output external data VOI values must not be empty.'
-        });
+        res.push(
+          uiJsonIssue('an output external data VOI values must not be empty.', outputExternalDataPath('voiValues'))
+        );
       }
 
       const outputExternalDataSeriesNames = new Set<string>();
 
-      for (const outputExternalDataSeries of outputExternalData.dataSeries) {
+      for (const [outputExternalDataSeriesIndex, outputExternalDataSeries] of outputExternalData.dataSeries.entries()) {
+        const outputExternalDataSeriesPath = (key: string): UiJsonPath =>
+          outputExternalDataPath('dataSeries', outputExternalDataSeriesIndex, key);
+
         if (outputExternalDataSeriesNames.has(outputExternalDataSeries.name)) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data series name must be unique ('${outputExternalDataSeries.name}' is used more than once).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an output external data series name must be unique ('${outputExternalDataSeries.name}' is used more than once).`,
+              outputExternalDataSeriesPath('name')
+            )
+          );
         }
 
         outputExternalDataSeriesNames.add(outputExternalDataSeries.name);
 
         if (!outputExternalDataSeries.name) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data series name must not be empty.`
-          });
+          res.push(
+            uiJsonIssue(`an output external data series name must not be empty.`, outputExternalDataSeriesPath('name'))
+          );
         }
 
         if (!outputExternalDataSeries.values.length) {
-          res.push({
-            type: IssueType.WARNING,
-            description: 'UI JSON: an output external data series values must not be empty.'
-          });
+          res.push(
+            uiJsonIssue(
+              'an output external data series values must not be empty.',
+              outputExternalDataSeriesPath('values')
+            )
+          );
         }
 
         if (outputExternalDataSeries.values.length !== outputExternalData.voiValues.length) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data series values length must match the output external data VOI values length (${outputExternalDataSeries.values.length} is not equal to ${outputExternalData.voiValues.length}).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an output external data series values length must match the output external data VOI values length (${outputExternalDataSeries.values.length} is not equal to ${outputExternalData.voiValues.length}).`,
+              outputExternalDataSeriesPath('values')
+            )
+          );
         }
       }
 
       const outputExternalDataIds = new Set<string>();
       const listOfOutputExternalDataSeriesNames = listOfItems(outputExternalDataSeriesNames);
 
-      for (const outputExternalDataEntry of outputExternalData.data) {
+      for (const [outputExternalDataEntryIndex, outputExternalDataEntry] of outputExternalData.data.entries()) {
+        const outputExternalDataEntryPath = (key: string): UiJsonPath =>
+          outputExternalDataPath('data', outputExternalDataEntryIndex, key);
+
         if (!outputExternalDataEntry.id) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data id must not be empty.`
-          });
+          res.push(uiJsonIssue(`an output external data id must not be empty.`, outputExternalDataEntryPath('id')));
         }
 
         if (outputExternalDataIds.has(outputExternalDataEntry.id)) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data id must be unique ('${outputExternalDataEntry.id}' is used more than once).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an output external data id must be unique ('${outputExternalDataEntry.id}' is used more than once).`,
+              outputExternalDataEntryPath('id')
+            )
+          );
         }
 
         outputExternalDataIds.add(outputExternalDataEntry.id);
 
         if (outputExternalDataEntry.id && outputIdUsed.has(outputExternalDataEntry.id)) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data id must be unique across simulation and external data ('${outputExternalDataEntry.id}' is used more than once).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an output external data id must be unique across simulation and external data ('${outputExternalDataEntry.id}' is used more than once).`,
+              outputExternalDataEntryPath('id')
+            )
+          );
         }
 
         if (outputExternalDataEntry.id) {
@@ -966,82 +1032,62 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
         }
 
         if (!outputExternalDataEntry.name) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data name must not be empty.`
-          });
+          res.push(uiJsonIssue(`an output external data name must not be empty.`, outputExternalDataEntryPath('name')));
         }
 
         if (!outputExternalDataSeriesNames.has(outputExternalDataEntry.name)) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output external data name must match one of the available options ('${outputExternalDataEntry.name}' is not one of ${listOfOutputExternalDataSeriesNames}).`
-          });
+          res.push(
+            uiJsonIssue(
+              `an output external data name must match one of the available options ('${outputExternalDataEntry.name}' is not one of ${listOfOutputExternalDataSeriesNames}).`,
+              outputExternalDataEntryPath('name')
+            )
+          );
         }
       }
 
       if (!outputExternalData.dataSeries.length) {
-        res.push({
-          type: IssueType.WARNING,
-          description: 'UI JSON: an output external data series entries must not be empty.'
-        });
+        res.push(
+          uiJsonIssue('an output external data series entries must not be empty.', outputExternalDataPath('dataSeries'))
+        );
       }
     }
   }
 
-  for (const outputPlot of uiJson.output.plots) {
-    const parsePlotValue = (value: string, axisLabel: 'X value' | 'Y value'): void => {
+  for (const [outputPlotIndex, outputPlot] of uiJson.output.plots.entries()) {
+    const checkTraceValue = (
+      value: string,
+      axisLabel: 'X value' | 'Y value',
+      trace: string,
+      path: UiJsonPath
+    ): void => {
       if (!value) {
+        res.push(uiJsonIssue(`an output plot ${trace}${axisLabel} must not be empty.`, path));
+
         return;
       }
 
       try {
         dependencies._mathJs.parse(value);
       } catch (error: unknown) {
-        res.push({
-          type: IssueType.WARNING,
-          description: `UI JSON: an output plot ${axisLabel} must be valid ('${value}' is not: ${common.formatMessage(common.formatError(error), false)}).`
-        });
+        res.push(
+          uiJsonIssue(
+            `an output plot ${axisLabel} must be valid ('${value}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
+            path
+          )
+        );
       }
     };
+    const outputPlotPath: UiJsonPath = ['output', 'plots', outputPlotIndex];
 
-    if (!outputPlot.xValue) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an output plot X value must not be empty.`
-      });
-    } else {
-      parsePlotValue(outputPlot.xValue, 'X value');
-    }
-
-    if (!outputPlot.yValue) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: an output plot Y value must not be empty.`
-      });
-    } else {
-      parsePlotValue(outputPlot.yValue, 'Y value');
-    }
+    checkTraceValue(outputPlot.xValue, 'X value', '', [...outputPlotPath, 'xValue']);
+    checkTraceValue(outputPlot.yValue, 'Y value', '', [...outputPlotPath, 'yValue']);
 
     if (outputPlot.additionalTraces !== undefined && outputPlot.additionalTraces !== null) {
-      for (const additionalTrace of outputPlot.additionalTraces) {
-        if (!additionalTrace.xValue) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output plot additional trace X value must not be empty.`
-          });
-        } else {
-          parsePlotValue(additionalTrace.xValue, 'X value');
-        }
+      for (const [additionalTraceIndex, additionalTrace] of outputPlot.additionalTraces.entries()) {
+        const additionalTracePath: UiJsonPath = [...outputPlotPath, 'additionalTraces', additionalTraceIndex];
 
-        if (!additionalTrace.yValue) {
-          res.push({
-            type: IssueType.WARNING,
-            description: `UI JSON: an output plot additional trace Y value must not be empty.`
-          });
-        } else {
-          parsePlotValue(additionalTrace.yValue, 'Y value');
-        }
+        checkTraceValue(additionalTrace.xValue, 'X value', 'additional trace ', [...additionalTracePath, 'xValue']);
+        checkTraceValue(additionalTrace.yValue, 'Y value', 'additional trace ', [...additionalTracePath, 'yValue']);
       }
     }
   }
@@ -1050,32 +1096,32 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
 
   const listOfEditableModelParameters = listOfItems(editableModelParametersSet);
 
-  for (const parameter of uiJson.parameters) {
+  for (const [parameterIndex, parameter] of uiJson.parameters.entries()) {
+    const parameterPath = (key: string): UiJsonPath => ['parameters', parameterIndex, key];
+
     if (!parameter.name) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: a parameter name must not be empty.`
-      });
+      res.push(uiJsonIssue(`a parameter name must not be empty.`, parameterPath('name')));
     } else if (editableModelParametersSet.size > 0 && !editableModelParametersSet.has(parameter.name)) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: a parameter name must match one of the available options ('${parameter.name}' is not one of ${listOfEditableModelParameters}).`
-      });
+      res.push(
+        uiJsonIssue(
+          `a parameter name must match one of the available options ('${parameter.name}' is not one of ${listOfEditableModelParameters}).`,
+          parameterPath('name')
+        )
+      );
     }
 
     if (!parameter.value) {
-      res.push({
-        type: IssueType.WARNING,
-        description: `UI JSON: a parameter value must not be empty.`
-      });
+      res.push(uiJsonIssue(`a parameter value must not be empty.`, parameterPath('value')));
     } else {
       try {
         dependencies._mathJs.parse(parameter.value);
       } catch (error: unknown) {
-        res.push({
-          type: IssueType.WARNING,
-          description: `UI JSON: a parameter value must be valid ('${parameter.value}' is not: ${common.formatMessage(common.formatError(error), false)}).`
-        });
+        res.push(
+          uiJsonIssue(
+            `a parameter value must be valid ('${parameter.value}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
+            parameterPath('value')
+          )
+        );
       }
     }
   }
