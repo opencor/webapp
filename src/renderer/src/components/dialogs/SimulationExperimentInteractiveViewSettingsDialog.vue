@@ -151,15 +151,15 @@
 
                     <div class="form-row">
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.id" class="w-full" size="small" />
+                        <InputText v-model="input.id" aria-label="ID" class="w-full" size="small" />
                         <label>ID</label>
                       </FloatLabel>
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.name" class="w-full" size="small" />
+                        <InputText v-model="input.name" aria-label="Name" class="w-full" size="small" />
                         <label>Name</label>
                       </FloatLabel>
                       <FloatLabel variant="on" class="form-field">
-                        <Select
+                        <Select ariaLabel="Type"
                           :modelValue="locApi.isDiscreteInput(input) ? 'discrete' : 'scalar'"
                           @update:modelValue="(val: string) => toggleInputType(inputIndex, val)"
                           :options="[{label: 'Discrete', value: 'discrete'}, {label: 'Scalar', value: 'scalar'}]"
@@ -178,7 +178,7 @@
                         size="small"
                       />
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.visible" class="w-full" size="small" />
+                        <InputText v-model="input.visible" aria-label="Visible (optional)" class="w-full" size="small" />
                         <label>Visible (optional)</label>
                       </FloatLabel>
                     </div>
@@ -221,7 +221,7 @@
                         <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possible_value_${possibleValueIndex}`" class="entry-row">
                           <span class="item-index">{{ Number(possibleValueIndex) + 1 }}</span>
                           <FloatLabel variant="on" class="flex-1">
-                            <InputText v-model="possibleValue.name" class="w-full" size="small" />
+                            <InputText v-model="possibleValue.name" aria-label="Name" class="w-full" size="small" />
                             <label>Name</label>
                           </FloatLabel>
                           <InputScientificNumberWidget v-model="possibleValue.value" class="form-field"
@@ -274,7 +274,7 @@
                 <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
                   <span class="item-index">{{ Number(parameterIndex) + 1 }}</span>
                   <FloatLabel variant="on" class="flex-1">
-                    <Select v-model="parameter.name"
+                    <Select v-model="parameter.name" ariaLabel="Model parameter"
                       class="w-full" panelClass="item-filter"
                       size="small"
                       filter filterMode="lenient"
@@ -284,7 +284,7 @@
                     <label>Model parameter</label>
                   </FloatLabel>
                   <FloatLabel v-hint.html="parameterValueTooltip()" variant="on" class="flex-1">
-                    <InputText v-model="parameter.value" class="w-full" size="small" />
+                    <InputText v-model="parameter.value" aria-label="Value" class="w-full" size="small" />
                     <label>Value</label>
                   </FloatLabel>
                   <ToolbarButtonWidget class="remove-button"
@@ -329,11 +329,11 @@
                 <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="`data_${dataIndex}`" class="entry-row">
                   <span class="item-index">{{ Number(dataIndex) + 1 }}</span>
                   <FloatLabel variant="on" class="flex-1">
-                    <InputText v-model="data.id" class="w-full" size="small" />
+                    <InputText v-model="data.id" aria-label="ID" class="w-full" size="small" />
                     <label>ID</label>
                   </FloatLabel>
                   <FloatLabel variant="on" class="flex-1">
-                    <Select v-model="data.name"
+                    <Select v-model="data.name" ariaLabel="Model parameter"
                       class="w-full" panelClass="item-filter"
                       size="small"
                       filter filterMode="lenient"
@@ -388,7 +388,7 @@
               <div class="external-data-import-url">
                 <div class="opencor-section-title opencor-section-title-small">or</div>
                 <FloatLabel variant="on" class="flex-1 min-w-0">
-                  <InputText v-model="externalDataUrl" class="w-full" size="small"
+                  <InputText v-model="externalDataUrl" aria-label="URL of a CSV file" class="w-full" size="small"
                     @keydown.enter="onExternalDataUrlKeydownEnter"
                   />
                   <label>URL of a CSV file</label>
@@ -443,11 +443,11 @@
 
                     <div class="form-row">
                       <FloatLabel v-hint.html="externalDataDescriptionTooltip()" variant="on" class="flex-1">
-                        <InputText v-model="externalDataFile.description" class="w-full" size="small" />
+                        <InputText v-model="externalDataFile.description" aria-label="Description (optional)" class="w-full" size="small" />
                         <label>Description (optional)</label>
                       </FloatLabel>
                       <FloatLabel v-hint.html="externalDataVoiExpressionTooltip()" variant="on" class="flex-1">
-                        <InputText v-model="externalDataFile.voiExpression" class="w-full" size="small" />
+                        <InputText v-model="externalDataFile.voiExpression" aria-label="VOI expression (optional)" class="w-full" size="small" />
                         <label>VOI expression (optional)</label>
                       </FloatLabel>
                     </div>
@@ -461,11 +461,11 @@
                       <div v-for="(externalData, externalDataIndex) in externalDataEntries(externalDataFile)" :key="`external_data_${externalDataFileIndex}_${externalDataIndex}`" class="entry-row">
                         <span class="item-index">{{ Number(externalDataIndex) + 1 }}</span>
                         <FloatLabel variant="on" class="flex-1">
-                          <InputText v-model="externalData.id" class="w-full" size="small" />
+                          <InputText v-model="externalData.id" aria-label="ID" class="w-full" size="small" />
                           <label>ID</label>
                         </FloatLabel>
                         <FloatLabel variant="on" class="flex-1">
-                          <Select v-model="externalData.name"
+                          <Select v-model="externalData.name" ariaLabel="External data"
                             class="w-full" panelClass="item-filter"
                             size="small"
                             filter filterMode="lenient"
@@ -545,11 +545,11 @@
 
                     <div class="form-row">
                       <FloatLabel variant="on" class="flex-1">
-                        <InputText v-model="plot.xAxisTitle" class="w-full" size="small" />
+                        <InputText v-model="plot.xAxisTitle" aria-label="X axis title (optional)" class="w-full" size="small" />
                         <label>X axis title (optional)</label>
                       </FloatLabel>
                       <FloatLabel variant="on" class="flex-1">
-                        <InputText v-model="plot.yAxisTitle" class="w-full" size="small" />
+                        <InputText v-model="plot.yAxisTitle" aria-label="Y axis title (optional)" class="w-full" size="small" />
                         <label>Y axis title (optional)</label>
                       </FloatLabel>
                     </div>
@@ -572,15 +572,15 @@
                         </div>
                         <div class="form-row">
                           <FloatLabel v-hint.html="traceNameTooltip()" variant="on" class="flex-1">
-                            <InputText v-model="trace.name" class="w-full" size="small" />
+                            <InputText v-model="trace.name" aria-label="Name (optional)" class="w-full" size="small" />
                             <label>Name (optional)</label>
                           </FloatLabel>
                           <FloatLabel v-hint.html="xyValueTooltip(true)" variant="on" class="flex-1">
-                            <InputText v-model="trace.xValue" class="w-full" size="small" />
+                            <InputText v-model="trace.xValue" aria-label="X value" class="w-full" size="small" />
                             <label>X value</label>
                           </FloatLabel>
                           <FloatLabel v-hint.html="xyValueTooltip(false)" variant="on" class="flex-1">
-                            <InputText v-model="trace.yValue" class="w-full" size="small" />
+                            <InputText v-model="trace.yValue" aria-label="Y value" class="w-full" size="small" />
                             <label>Y value</label>
                           </FloatLabel>
                         </div>
@@ -930,6 +930,9 @@ vue.watch(
     }
   }
 );
+
+// Note: the label of a float label is not associated with its field (it has no for attribute and doesn't contain its
+//       field), so each of our text fields and selects is given an accessible name that matches its label.
 
 // Our navigation, which groups our sections and lets people know about the number of items in a section and whether a
 // section (or group of sections) has issues.
@@ -1702,6 +1705,20 @@ const toggleIssues = (event: Event) => {
 /**
  * Lists, cards, and entries.
  */
+
+/**
+ * Our scroll panels clip their contents, so their contents have some padding, which our scroll panels take from around
+ * them (using negative margins), for the focus ring of an element at their edges (e.g., a remove button) to be fully
+ * visible (see --opencor-focus-ring-extent in app.css).
+ */
+
+.settings-section > .p-scrollpanel {
+  margin: calc(-1 * var(--opencor-focus-ring-extent));
+}
+
+.settings-section > .p-scrollpanel :deep(.p-scrollpanel-content > *) {
+  padding: var(--opencor-focus-ring-extent);
+}
 
 .items-list {
   display: flex;

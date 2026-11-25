@@ -256,7 +256,7 @@ const updateTooltipPosition = (event: Event): void => {
   transition: visibility 0s 0.5s;
 }
 
-.toolbar-button:focus-visible .toolbar-button-tooltip {
+:where(.opencor:not(.opencor-focus-ring-hidden)) .toolbar-button:focus-visible .toolbar-button-tooltip {
   visibility: visible;
   transition: none;
 }

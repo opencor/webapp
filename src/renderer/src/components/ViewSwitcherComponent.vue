@@ -42,6 +42,7 @@
 import * as vue from 'vue';
 
 import { HINT_DELAY } from '../common/constants';
+import { hasFocusRing } from '../common/focusRing';
 import {
   type ViewDescriptor,
   useViewRegistry,
@@ -155,7 +156,8 @@ const viewButtonWithFocusRing = (): HTMLElement | null => {
 
   return activeElement instanceof HTMLElement &&
     navRef.value?.contains(activeElement) &&
-    activeElement.matches('.view-icon:focus-visible')
+    activeElement.matches('.view-icon') &&
+    hasFocusRing(activeElement)
     ? activeElement
     : null;
 };
@@ -182,7 +184,7 @@ const onMouseLeave = (): void => {
 const onFocus = (label: string, event: FocusEvent): void => {
   const element = event.currentTarget as HTMLElement;
 
-  if (element.matches(':focus-visible')) {
+  if (hasFocusRing(element)) {
     tooltipDismissed = false;
 
     showTooltip(label, element, true);

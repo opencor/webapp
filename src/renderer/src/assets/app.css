@@ -96,10 +96,32 @@ body {
     --opencor-error-color: var(--p-red-600);
 
     /**
-     * The width of our focus ring (see :focus-visible below).
+     * The width of our focus ring (see :focus-visible below), as well as how far our focus ring extends beyond its
+     * element (i.e. its width plus its offset), which is the room that a container that clips its contents (e.g., the
+     * contents of a dialog or a scroll panel) must leave around a focusable element for its focus ring to be fully
+     * visible.
+     * Note: our focus ring extent is not based on our focus ring width since the latter is set to 0px when our focus
+     *       ring is hidden (see below), and the room left for our focus ring must not change then.
      */
 
     --opencor-focus-ring-width: 2px;
+    --opencor-focus-ring-extent: 4px;
+
+    /**
+     * Hide our focus ring (but keep the keyboard focus where it is) when the user last used their pointing device
+     * rather than the keyboard, or pressed Escape with nothing to close (see focusRing.ts and OpenCOR.vue).
+     * Note: the root item of our main menu that has the keyboard focus is highlighted (see MainMenu.vue), unless our
+     *       focus ring is hidden, in which case it looks like the other root items.
+     */
+
+    &.opencor-focus-ring-hidden {
+      --opencor-focus-ring-width: 0px;
+
+      .p-menubar-root-list > .p-menubar-item.p-focus:not(.p-menubar-item-active) > .p-menubar-item-content:not(:hover) {
+        background-color: transparent;
+        color: var(--p-menubar-item-color);
+      }
+    }
 
     *,
     ::before,
@@ -139,11 +161,14 @@ body {
      * Note #3: our focus ring has no specificity (thanks to :where()), so that any element can override it (e.g., to
      *          change its offset or not to show it), including a PrimeVue component, which may draw its own focus ring
      *          on another element (e.g., the box of a checkbox).
+     * Note #4: an element that gets scrolled into view when it gets the keyboard focus (e.g., in a scroll panel) is
+     *          scrolled far enough for its focus ring to be fully visible (thanks to its scroll margin).
      */
 
     :where(:focus-visible) {
       outline: var(--opencor-focus-ring-width) solid var(--opencor-focus-ring-color, var(--p-primary-color));
       outline-offset: var(--opencor-focus-ring-width);
+      scroll-margin: var(--opencor-focus-ring-extent);
     }
 
     /**

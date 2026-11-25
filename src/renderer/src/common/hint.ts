@@ -1,6 +1,7 @@
 import type * as vue from 'vue';
 
 import { HINT_DELAY } from './constants';
+import * as focusRing from './focusRing';
 
 // A directive that shows a hint for an element (e.g., v-hint="'Close'"), i.e. a replacement for the native tooltip of
 // an element (which we can't style and which is shown after a long delay), which looks like the tooltip of our toolbar
@@ -251,7 +252,7 @@ const hasFocusRing = (element: HTMLElement): boolean => {
   return (
     activeElement instanceof HTMLElement &&
     element.contains(activeElement) &&
-    activeElement.matches(':focus-visible') &&
+    focusRing.hasFocusRing(activeElement) &&
     closestHintedElement(activeElement) === element
   );
 };
@@ -440,7 +441,7 @@ export const vHint: vue.Directive<HTMLElement, string | undefined> = {
         if (
           !windowFocusLost &&
           event.target instanceof Element &&
-          event.target.matches(':focus-visible') &&
+          focusRing.hasFocusRing(event.target) &&
           closestHintedElement(event.target) === element
         ) {
           cancelPendingHint();

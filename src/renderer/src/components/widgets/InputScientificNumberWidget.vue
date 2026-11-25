@@ -3,6 +3,10 @@
     <span :class="rootClass">
       <InputText ref="inputElement" :model-value="internalValue" class="p-inputnumber-input w-full"
         :aria-label="label"
+        role="spinbutton"
+        :aria-valuenow="modelValue"
+        :aria-valuemin="min"
+        :aria-valuemax="max"
         v-bind="inputAttrs"
         v-keyfilter="{ pattern: /^[+-]?(\d*(\.\d*)?|\.\d*)([eE][+-]?\d*)?$/ }"
         @update:model-value="onUpdateModelValue"
@@ -362,30 +366,6 @@ const onInputKeydown = (event: KeyboardEvent) => {
 
         event.preventDefault();
         event.stopPropagation();
-      }
-
-      break;
-    case 'Home':
-      if (props.min !== undefined) {
-        isEditing.value = false;
-
-        updateInternalValue(props.min);
-
-        emit('update:modelValue', props.min);
-
-        event.preventDefault();
-      }
-
-      break;
-    case 'End':
-      if (props.max !== undefined) {
-        isEditing.value = false;
-
-        updateInternalValue(props.max);
-
-        emit('update:modelValue', props.max);
-
-        event.preventDefault();
       }
 
       break;

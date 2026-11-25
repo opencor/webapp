@@ -50,6 +50,7 @@
       @focusout="onSliderFocusOut"
       @dblclick="onSliderDoubleClick">
       <Slider v-model="value" class="w-full"
+        :ariaLabel="name"
         :min="minimumValue" :max="maximumValue" :step="compStepValue"
         size="small"
         @change="sliderChange"

@@ -26,6 +26,7 @@
 
 <script setup lang="ts">
 import type Menubar from 'primevue/menubar';
+import type { MenuItem, MenuItemCommandEvent } from 'primevue/menuitem';
 import * as vue from 'vue';
 
 import type { OpenCORTheme } from '../../index';
@@ -93,9 +94,44 @@ const onThemeSwitch = (newTheme: OpenCORTheme) => {
   settings.save();
 };
 
-// Menu items, which are computed so that they can be reactive to changes in our props.
+// When a menu item is selected using the pointing device, return the keyboard focus to where it was before our main
+// menu got it (or remove it from our main menu), as a native menu does, and only then handle the menu item. Otherwise,
+// our main menu would keep the keyboard focus (PrimeVue gives it to our root list once a menu item has been selected),
+// and would, for instance, get it back (with its first root item highlighted) when closing a dialog that was opened
+// using a menu item.
+// Note #1: a menu item selected using the keyboard is "clicked" by PrimeVue, but with no click count.
+// Note #2: PrimeVue gives the keyboard focus to our root list after having called the command of the selected menu
+//          item, hence we call it in a microtask, i.e. once PrimeVue is done.
 
-const items = vue.computed(() => [
+const returnFocusOnPointerCommand = (menuItems: MenuItem[]): MenuItem[] => {
+  return menuItems.map((menuItem: MenuItem): MenuItem => {
+    const command = menuItem.command;
+
+    return {
+      ...menuItem,
+      ...(menuItem.items ? { items: returnFocusOnPointerCommand(menuItem.items as MenuItem[]) } : {}),
+      ...(command
+        ? {
+            command: (event: MenuItemCommandEvent) => {
+              if (event.originalEvent instanceof MouseEvent && event.originalEvent.detail > 0) {
+                queueMicrotask(() => {
+                  blurMainMenu();
+                  command(event);
+                });
+              } else {
+                command(event);
+              }
+            }
+          }
+        : {})
+    };
+  });
+};
+
+// Menu items, which are computed so that they can be reactive to changes in our props, and which return the keyboard
+// focus to where it was when selected using the pointing device (see returnFocusOnPointerCommand() above).
+
+const menuItems = vue.computed(() => [
   {
     label: 'File',
     items: [
@@ -274,6 +310,8 @@ const items = vue.computed(() => [
   }
 ]);
 
+const items = vue.computed(() => returnFocusOnPointerCommand(menuItems.value));
+
 // Some of the internal state of PrimeVue's Menubar component, which we need to handle some keys ourselves (see
 // onRootListKeyDown() below).
 
@@ -326,7 +364,7 @@ vue.onMounted(() => {
     //     - with no submenu shown: return the keyboard focus to where it was before our main menu got it using our
     //       keyboard shortcut (see focusMainMenu() below). Our main menu may, however, have been given the keyboard
     //       focus otherwise (e.g., using Tab), in which case there is nowhere to return to, so we just remove the
-    //       keyboard focus from it (as for other elements, see onEscapeKeyDown() in OpenCOR.vue).
+    //       keyboard focus from it.
     //     - with a submenu of a submenu shown: only close that submenu (and select the item that opened it), as in a
     //       native menu and as recommended by the WAI-ARIA menu pattern, rather than close all our submenus (and select
     //       the root item), as PrimeVue does.
@@ -391,12 +429,27 @@ vue.onMounted(() => {
       previouslyFocusedElement = null;
     };
 
+    // Remember where the keyboard focus was before our main menu gets it using the pointing device, so that it can be
+    // returned there once a menu item has been selected (see returnFocusOnPointerCommand() above).
+
+    const onRootListPointerDown = () => {
+      const focusedElement = document.activeElement;
+
+      if (focusedElement instanceof HTMLElement && rootListElement?.contains(focusedElement)) {
+        return;
+      }
+
+      previouslyFocusedElement =
+        focusedElement instanceof HTMLElement && focusedElement !== document.body ? focusedElement : null;
+    };
+
     // Let assistive technologies know about our keyboard shortcut.
 
     rootListElement?.setAttribute('aria-keyshortcuts', 'Control+Alt+M');
 
     rootListElement?.addEventListener('keydown', onRootListKeyDown, { capture: true });
     rootListElement?.addEventListener('focusout', onRootListFocusOut);
+    rootListElement?.addEventListener('pointerdown', onRootListPointerDown, { capture: true });
 
     // Clean up the mutation observer and event listeners when the component is unmounted.
 
@@ -407,6 +460,7 @@ vue.onMounted(() => {
 
       rootListElement?.removeEventListener('keydown', onRootListKeyDown, { capture: true });
       rootListElement?.removeEventListener('focusout', onRootListFocusOut);
+      rootListElement?.removeEventListener('pointerdown', onRootListPointerDown, { capture: true });
     });
   }
 });
@@ -553,6 +607,7 @@ useOpenCORKeyStroke((event: KeyboardEvent) => {
  * Only highlight a root item when it is hovered, when its submenu is shown, or when it has the keyboard focus, i.e. not
  * when it has the focus as a result of a mouse click (which would otherwise leave it highlighted after a menu item has
  * been selected).
+ * Note: the same is done when our focus ring is hidden (see app.css).
  */
 
 :deep(

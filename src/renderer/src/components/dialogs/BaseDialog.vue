@@ -1,8 +1,12 @@
 <template>
   <!--
-  Note: our mask covers the whole of OpenCOR (which may not cover the whole window, e.g., if it is embedded in a page),
-        so it is a container (named opencor-dialog) that can be queried to know whether our dialog should use a narrow
-        layout (see, for instance, AboutDialog.vue).
+  Note #1: our mask covers the whole of OpenCOR (which may not cover the whole window, e.g., if it is embedded in a
+           page), so it is a container (named opencor-dialog) that can be queried to know whether our dialog should use
+           a narrow layout (see, for instance, AboutDialog.vue).
+  Note #2: our content clips its contents (since it can be scrolled), so it has some vertical padding, which it takes
+           from our header and footer (using negative margins), for the focus ring of an element at its top or bottom
+           (e.g., a button in the header of a section of a settings dialog) to be fully visible (see
+           --opencor-focus-ring-extent in app.css).
   -->
   <Dialog ref="dialogRef" :modal="true" appendTo="self"
     :pt:mask:style="{
@@ -12,7 +16,12 @@
     }"
     :pt:content="{
       class: 'h-full',
-      style: 'padding-bottom: 0'
+      style: {
+        paddingTop: 'var(--opencor-focus-ring-extent)',
+        paddingBottom: 'var(--opencor-focus-ring-extent)',
+        marginTop: 'calc(-1 * var(--opencor-focus-ring-extent))',
+        marginBottom: 'calc(-1 * var(--opencor-focus-ring-extent))'
+      }
     }"
     :pt:footer="{
       style: 'padding-top: 1.25rem'

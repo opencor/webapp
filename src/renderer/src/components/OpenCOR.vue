@@ -1,5 +1,5 @@
 <template>
-  <SafeBlockUIWidget ref="safeBlockUiRef" class="opencor" :class="isFullWebApp ? 'with-main-menu' : ''"
+  <SafeBlockUIWidget ref="safeBlockUiRef" class="opencor" :class="{ 'with-main-menu': isFullWebApp, [FOCUS_RING_HIDDEN_CLASS]: focusRingHidden }"
     :blocked="compBlockUiEnabled"
     @click="activateInstance"
     @focus="activateInstance"
@@ -154,6 +154,7 @@ import * as changelog from '../common/changelog';
 import * as common from '../common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, MAX_RECENT_FILES, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
 import { electronApi } from '../common/electronApi';
+import { FOCUS_RING_HIDDEN_CLASS, hasFocusRing, isTextEntry } from '../common/focusRing';
 /* TODO: enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 */
@@ -973,29 +974,36 @@ if (!electronApi) {
   });
 }
 
-// Remove the keyboard focus when the user presses the Escape key, so that whatever has it no longer looks focused
-// (e.g., with a focus ring), unless something is open (e.g., a menu or a popover), in which case the Escape key is for
-// closing it.
-// Note #1: we only do this for our instance of OpenCOR, and only if it is active and its UI is enabled (i.e. our UI is
-//          neither blocked nor showing a dialog, see compUiEnabled).
-// Note #2: we listen to the Escape key during the capture phase of our window, i.e. before PrimeVue components get it,
-//          since some of them (e.g., a select) stop its propagation even when they have nothing to close.
-// Note #3: a text entry (e.g., the input of an input widget or the range editor of a graph panel) and CellDL Editor may
-//          use the Escape key themselves (e.g., to discard a value being edited or to cancel what the user is doing),
-//          so we leave the keyboard focus alone if it is within one of them. Otherwise, blurring a text entry could,
-//          for instance, commit the value being edited rather than discard it.
-// Note #4: an open element may have a fixed position (in which case its offsetParent is null), so we check whether it
+// Hide our focus ring when the user uses their pointing device, and show it again when they press a key (other than
+// Escape or a modifier key), so that our focus ring is only shown when the keyboard is being used (see focusRing.ts).
+// Similarly, hide our focus ring when the user presses Escape with nothing to close (e.g., a menu or a popover), so
+// that whatever has the keyboard focus no longer looks focused.
+// Note #1: we hide our focus ring rather than remove the keyboard focus (i.e. blur the focused element), since the
+//          keyboard focus would otherwise go back to the top of the page (e.g., pressing Tab would then focus the first
+//          focusable element of the page rather than the element after the one that had the keyboard focus), and
+//          screen readers would lose their place.
+// Note #2: Escape doesn't show our focus ring again, so that a dialog that was opened using the pointing device and
+//          closed using Escape doesn't give the keyboard focus back to where it was with a focus ring.
+// Note #3: we only handle Escape for our instance of OpenCOR, and only if it is active and its UI is enabled (i.e. our
+//          UI is neither blocked nor showing a dialog, see compUiEnabled).
+// Note #4: we listen to keys during the capture phase of our window, i.e. before PrimeVue components get them, since
+//          some of them (e.g., a select) stop the propagation of Escape even when they have nothing to close.
+// Note #5: a text entry (e.g., the input of an input widget or the range editor of a graph panel) and CellDL Editor may
+//          use Escape themselves (e.g., to discard a value being edited or to cancel what the user is doing), so we
+//          leave our focus ring alone if the keyboard focus is within one of them. A text entry also shows that it has
+//          the keyboard focus, whether or not it has our focus ring (e.g., with a highlighted border).
+// Note #6: an open element may have a fixed position (in which case its offsetParent is null), so we check whether it
 //          is rendered using its client rects.
-// Note #5: our main menu handles the Escape key itself, so that it can return the keyboard focus to where it was before
-//          it got it using its keyboard shortcut (see MainMenu.vue).
+// Note #7: our main menu handles Escape itself, so that it can return the keyboard focus to where it was before it got
+//          it using its keyboard shortcut (see MainMenu.vue).
+
+const focusRingHidden = vue.ref<boolean>(false);
 
 const ESCAPE_KEY_OPEN_ELEMENTS = '.p-popover, .p-select-overlay, .p-contextmenu, .p-menubar-submenu';
-const ESCAPE_KEY_TEXT_ENTRIES =
-  'textarea, input:not([type="button"], [type="checkbox"], [type="color"], [type="file"], [type="radio"], [type="range"], [type="reset"], [type="submit"])';
+const MODIFIER_KEYS = ['Alt', 'AltGraph', 'Control', 'Meta', 'Shift'];
 
 const onEscapeKeyDown = (event: KeyboardEvent): void => {
   if (
-    event.key !== 'Escape' ||
     event.altKey ||
     event.ctrlKey ||
     event.metaKey ||
@@ -1013,9 +1021,8 @@ const onEscapeKeyDown = (event: KeyboardEvent): void => {
     !root ||
     !(focusedElement instanceof HTMLElement) ||
     !root.contains(focusedElement) ||
-    !focusedElement.matches(':focus-visible') ||
-    focusedElement.isContentEditable ||
-    focusedElement.matches(ESCAPE_KEY_TEXT_ENTRIES) ||
+    !hasFocusRing(focusedElement) ||
+    isTextEntry(focusedElement) ||
     focusedElement.closest('.celldl-editor-container') ||
     focusedElement.matches('.p-menubar-root-list') ||
     Array.from(root.querySelectorAll<HTMLElement>(ESCAPE_KEY_OPEN_ELEMENTS)).some(
@@ -1025,13 +1032,27 @@ const onEscapeKeyDown = (event: KeyboardEvent): void => {
     return;
   }
 
-  focusedElement.blur();
+  focusRingHidden.value = true;
 };
 
-window.addEventListener('keydown', onEscapeKeyDown, { capture: true });
+const onKeyDown = (event: KeyboardEvent): void => {
+  if (event.key === 'Escape') {
+    onEscapeKeyDown(event);
+  } else if (!MODIFIER_KEYS.includes(event.key)) {
+    focusRingHidden.value = false;
+  }
+};
+
+const onPointerDown = (): void => {
+  focusRingHidden.value = true;
+};
+
+window.addEventListener('keydown', onKeyDown, { capture: true });
+window.addEventListener('pointerdown', onPointerDown, { capture: true });
 
 trackCleanup(() => {
-  window.removeEventListener('keydown', onEscapeKeyDown, { capture: true });
+  window.removeEventListener('keydown', onKeyDown, { capture: true });
+  window.removeEventListener('pointerdown', onPointerDown, { capture: true });
 });
 
 // Auto update.
