@@ -64,7 +64,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.9",
-    "@celldl/editor": "^0.20261109.0",
+    "@celldl/editor": "^0.20261126.0",
     "@celldl/rdf": "^1.20260822.0",
     "@opencor/libopencor-types": "^1.20261125.0",
     "@opencor/plot": "^0.20261125.6",
