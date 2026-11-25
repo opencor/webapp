@@ -893,6 +893,10 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
   //       schema error about it or about any of its descendants, while objectEntries() returns the entries of the given
   //       value that are objects if it is an array (or no entries otherwise), so that we only check the items of an
   //       array that are objects (i.e. those that have the expected type), while keeping track of their index.
+  // Note: we don't check whether a value is empty since an empty value (e.g., a field that was cleared in our settings
+  //       dialog) gets removed when our UI JSON is cleaned (see cleanUiJson()), and is then reported by our schema
+  //       validation as not being provided (or as being empty, see schemaErrorDescription()), which also reports the
+  //       arrays that are empty while they shouldn't.
 
   const valid = (...path: UiJsonPath): boolean => {
     const pathKey = uiJsonPathKey(path);
@@ -919,33 +923,14 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
     const inputValid = (...keys: UiJsonPath): boolean => valid(...inputPath(...keys));
 
     if (inputValid('id')) {
-      if (input.id) {
-        if (inputIdUsed.has(input.id)) {
-          res.push(uiJsonIssue(`an input id must be unique ('${input.id}' is used more than once).`, inputPath('id')));
-        }
-
-        inputIdUsed.add(input.id);
-      } else {
-        res.push(uiJsonIssue(`an input id must not be empty.`, inputPath('id')));
+      if (inputIdUsed.has(input.id)) {
+        res.push(uiJsonIssue(`an input id must be unique ('${input.id}' is used more than once).`, inputPath('id')));
       }
-    }
 
-    if (inputValid('name') && !input.name) {
-      res.push(uiJsonIssue(`an input name must not be empty.`, inputPath('name')));
+      inputIdUsed.add(input.id);
     }
 
     if ('possibleValues' in input) {
-      for (const [possibleValueIndex, possibleValue] of objectEntries(input.possibleValues)) {
-        if (inputValid('possibleValues', possibleValueIndex, 'name') && !possibleValue.name) {
-          res.push(
-            uiJsonIssue(
-              `an input possible value name must not be empty.`,
-              inputPath('possibleValues', possibleValueIndex, 'name')
-            )
-          );
-        }
-      }
-
       // Note: we can only check the values of our possible values if they are all valid.
 
       if (inputValid('possibleValues')) {
@@ -1035,10 +1020,6 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
         );
       }
     }
-
-    if (inputValid('visible') && input.visible !== undefined && input.visible !== null && !input.visible) {
-      res.push(uiJsonIssue(`an input visible must not be empty.`, inputPath('visible')));
-    }
   }
 
   // Make sure that the output information makes sense.
@@ -1051,10 +1032,6 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
     const outputDataPath = (key: string): UiJsonPath => ['output', 'data', outputDataIndex, key];
 
     if (valid(...outputDataPath('id'))) {
-      if (!outputData.id) {
-        res.push(uiJsonIssue(`an output data id must not be empty.`, outputDataPath('id')));
-      }
-
       if (outputIdUsed.has(outputData.id)) {
         res.push(
           uiJsonIssue(
@@ -1067,17 +1044,17 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       outputIdUsed.add(outputData.id);
     }
 
-    if (valid(...outputDataPath('name'))) {
-      if (!outputData.name) {
-        res.push(uiJsonIssue(`an output data name must not be empty.`, outputDataPath('name')));
-      } else if (allModelParametersSet.size > 0 && !allModelParametersSet.has(outputData.name)) {
-        res.push(
-          uiJsonIssue(
-            `an output data name must match one of the available options ('${outputData.name}' is not one of ${listOfAllModelParameters}).`,
-            outputDataPath('name')
-          )
-        );
-      }
+    if (
+      valid(...outputDataPath('name')) &&
+      allModelParametersSet.size > 0 &&
+      !allModelParametersSet.has(outputData.name)
+    ) {
+      res.push(
+        uiJsonIssue(
+          `an output data name must match one of the available options ('${outputData.name}' is not one of ${listOfAllModelParameters}).`,
+          outputDataPath('name')
+        )
+      );
     }
   }
 
@@ -1105,12 +1082,6 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
 
     const voiValuesValid = outputExternalDataValid('voiValues');
 
-    if (voiValuesValid && !outputExternalData.voiValues.length) {
-      res.push(
-        uiJsonIssue('an output external data VOI values must not be empty.', outputExternalDataPath('voiValues'))
-      );
-    }
-
     const outputExternalDataSeriesNames = new Set<string>();
 
     for (const [outputExternalDataSeriesIndex, outputExternalDataSeries] of objectEntries(
@@ -1130,32 +1101,19 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
         }
 
         outputExternalDataSeriesNames.add(outputExternalDataSeries.name);
-
-        if (!outputExternalDataSeries.name) {
-          res.push(
-            uiJsonIssue(`an output external data series name must not be empty.`, outputExternalDataSeriesPath('name'))
-          );
-        }
       }
 
-      if (valid(...outputExternalDataSeriesPath('values'))) {
-        if (!outputExternalDataSeries.values.length) {
-          res.push(
-            uiJsonIssue(
-              'an output external data series values must not be empty.',
-              outputExternalDataSeriesPath('values')
-            )
-          );
-        }
-
-        if (voiValuesValid && outputExternalDataSeries.values.length !== outputExternalData.voiValues.length) {
-          res.push(
-            uiJsonIssue(
-              `an output external data series values length must match the output external data VOI values length (${outputExternalDataSeries.values.length} is not equal to ${outputExternalData.voiValues.length}).`,
-              outputExternalDataSeriesPath('values')
-            )
-          );
-        }
+      if (
+        valid(...outputExternalDataSeriesPath('values')) &&
+        voiValuesValid &&
+        outputExternalDataSeries.values.length !== outputExternalData.voiValues.length
+      ) {
+        res.push(
+          uiJsonIssue(
+            `an output external data series values length must match the output external data VOI values length (${outputExternalDataSeries.values.length} is not equal to ${outputExternalData.voiValues.length}).`,
+            outputExternalDataSeriesPath('values')
+          )
+        );
       }
     }
 
@@ -1171,10 +1129,6 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
         outputExternalDataPath('data', outputExternalDataEntryIndex, key);
 
       if (valid(...outputExternalDataEntryPath('id'))) {
-        if (!outputExternalDataEntry.id) {
-          res.push(uiJsonIssue(`an output external data id must not be empty.`, outputExternalDataEntryPath('id')));
-        }
-
         if (outputExternalDataIds.has(outputExternalDataEntry.id)) {
           res.push(
             uiJsonIssue(
@@ -1186,7 +1140,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
 
         outputExternalDataIds.add(outputExternalDataEntry.id);
 
-        if (outputExternalDataEntry.id && outputIdUsed.has(outputExternalDataEntry.id)) {
+        if (outputIdUsed.has(outputExternalDataEntry.id)) {
           res.push(
             uiJsonIssue(
               `an output external data id must be unique across simulation and external data ('${outputExternalDataEntry.id}' is used more than once).`,
@@ -1195,48 +1149,27 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
           );
         }
 
-        if (outputExternalDataEntry.id) {
-          outputIdUsed.add(outputExternalDataEntry.id);
-        }
+        outputIdUsed.add(outputExternalDataEntry.id);
       }
 
-      if (valid(...outputExternalDataEntryPath('name'))) {
-        if (!outputExternalDataEntry.name) {
-          res.push(uiJsonIssue(`an output external data name must not be empty.`, outputExternalDataEntryPath('name')));
-        }
-
-        if (dataSeriesValid && !outputExternalDataSeriesNames.has(outputExternalDataEntry.name)) {
-          res.push(
-            uiJsonIssue(
-              `an output external data name must match one of the available options ('${outputExternalDataEntry.name}' is not one of ${listOfOutputExternalDataSeriesNames}).`,
-              outputExternalDataEntryPath('name')
-            )
-          );
-        }
+      if (
+        valid(...outputExternalDataEntryPath('name')) &&
+        dataSeriesValid &&
+        !outputExternalDataSeriesNames.has(outputExternalDataEntry.name)
+      ) {
+        res.push(
+          uiJsonIssue(
+            `an output external data name must match one of the available options ('${outputExternalDataEntry.name}' is not one of ${listOfOutputExternalDataSeriesNames}).`,
+            outputExternalDataEntryPath('name')
+          )
+        );
       }
-    }
-
-    if (dataSeriesValid && !outputExternalData.dataSeries.length) {
-      res.push(
-        uiJsonIssue('an output external data series entries must not be empty.', outputExternalDataPath('dataSeries'))
-      );
     }
   }
 
   for (const [outputPlotIndex, outputPlot] of objectEntries(output.plots)) {
-    const checkTraceValue = (
-      value: string,
-      axisLabel: 'X value' | 'Y value',
-      trace: string,
-      path: UiJsonPath
-    ): void => {
+    const checkTraceValue = (value: string, axisLabel: 'X value' | 'Y value', path: UiJsonPath): void => {
       if (!valid(...path)) {
-        return;
-      }
-
-      if (!value) {
-        res.push(uiJsonIssue(`an output plot ${trace}${axisLabel} must not be empty.`, path));
-
         return;
       }
 
@@ -1253,14 +1186,14 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
     };
     const outputPlotPath: UiJsonPath = ['output', 'plots', outputPlotIndex];
 
-    checkTraceValue(outputPlot.xValue, 'X value', '', [...outputPlotPath, 'xValue']);
-    checkTraceValue(outputPlot.yValue, 'Y value', '', [...outputPlotPath, 'yValue']);
+    checkTraceValue(outputPlot.xValue, 'X value', [...outputPlotPath, 'xValue']);
+    checkTraceValue(outputPlot.yValue, 'Y value', [...outputPlotPath, 'yValue']);
 
     for (const [additionalTraceIndex, additionalTrace] of objectEntries(outputPlot.additionalTraces)) {
       const additionalTracePath: UiJsonPath = [...outputPlotPath, 'additionalTraces', additionalTraceIndex];
 
-      checkTraceValue(additionalTrace.xValue, 'X value', 'additional trace ', [...additionalTracePath, 'xValue']);
-      checkTraceValue(additionalTrace.yValue, 'Y value', 'additional trace ', [...additionalTracePath, 'yValue']);
+      checkTraceValue(additionalTrace.xValue, 'X value', [...additionalTracePath, 'xValue']);
+      checkTraceValue(additionalTrace.yValue, 'Y value', [...additionalTracePath, 'yValue']);
     }
   }
 
@@ -1271,33 +1204,29 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
   for (const [parameterIndex, parameter] of objectEntries(uiJson.parameters)) {
     const parameterPath = (key: string): UiJsonPath => ['parameters', parameterIndex, key];
 
-    if (valid(...parameterPath('name'))) {
-      if (!parameter.name) {
-        res.push(uiJsonIssue(`a parameter name must not be empty.`, parameterPath('name')));
-      } else if (editableModelParametersSet.size > 0 && !editableModelParametersSet.has(parameter.name)) {
-        res.push(
-          uiJsonIssue(
-            `a parameter name must match one of the available options ('${parameter.name}' is not one of ${listOfEditableModelParameters}).`,
-            parameterPath('name')
-          )
-        );
-      }
+    if (
+      valid(...parameterPath('name')) &&
+      editableModelParametersSet.size > 0 &&
+      !editableModelParametersSet.has(parameter.name)
+    ) {
+      res.push(
+        uiJsonIssue(
+          `a parameter name must match one of the available options ('${parameter.name}' is not one of ${listOfEditableModelParameters}).`,
+          parameterPath('name')
+        )
+      );
     }
 
     if (valid(...parameterPath('value'))) {
-      if (!parameter.value) {
-        res.push(uiJsonIssue(`a parameter value must not be empty.`, parameterPath('value')));
-      } else {
-        try {
-          dependencies._mathJs.parse(parameter.value);
-        } catch (error: unknown) {
-          res.push(
-            uiJsonIssue(
-              `a parameter value must be valid ('${parameter.value}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
-              parameterPath('value')
-            )
-          );
-        }
+      try {
+        dependencies._mathJs.parse(parameter.value);
+      } catch (error: unknown) {
+        res.push(
+          uiJsonIssue(
+            `a parameter value must be valid ('${parameter.value}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
+            parameterPath('value')
+          )
+        );
       }
     }
   }
