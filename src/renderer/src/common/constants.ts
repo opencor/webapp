@@ -20,6 +20,13 @@ export const MAX_RECENT_FILES: number = 10;
 
 export const HINT_DELAY: number = 500;
 
+// The overlays that Escape closes (e.g., a popover or the panel of a select), which are appended to the overlay container
+// of an instance of OpenCOR (see useAppendTarget() in vueCommon.ts), and the tooltips that Escape dismisses (see hint.ts,
+// ViewSwitcherComponent.vue, and ToolbarButtonWidget.vue), which are also within an instance of OpenCOR.
+
+export const ESCAPE_KEY_OVERLAYS: string = '.p-popover, .p-select-overlay, .p-contextmenu, .p-menubar-submenu';
+export const ESCAPE_KEY_TOOLTIPS: string = '.opencor-hint, .view-tooltip, .toolbar-button-tooltip';
+
 export const NARROW_LAYOUT_WIDTH: number = 640;
 
 export const SPIN_INITIAL_DELAY: number = 500;

@@ -151,7 +151,14 @@ import celldlIcon from '../assets/celldl.svg?inline';
 import '../assets/primeicons-assets';
 import * as changelog from '../common/changelog';
 import * as common from '../common/common';
-import { FULL_URI_SCHEME, LONG_DELAY, MAX_RECENT_FILES, SHORT_DELAY } from '../common/constants';
+import {
+  ESCAPE_KEY_OVERLAYS,
+  ESCAPE_KEY_TOOLTIPS,
+  FULL_URI_SCHEME,
+  LONG_DELAY,
+  MAX_RECENT_FILES,
+  SHORT_DELAY
+} from '../common/constants';
 import { electronApi } from '../common/electronApi';
 import { FOCUS_RING_HIDDEN_CLASS, hasFocusRing, isTextEntry } from '../common/focusRing';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -977,8 +984,8 @@ if (!electronApi) {
 
 // Hide our focus ring when the user uses their pointing device, and show it again when they press a key (other than
 // Escape or a modifier key), so that our focus ring is only shown when the keyboard is being used (see focusRing.ts).
-// Similarly, hide our focus ring when the user presses Escape with nothing to close (e.g., a menu or a popover), so
-// that whatever has the keyboard focus no longer looks focused.
+// Similarly, hide our focus ring when the user presses Escape with nothing to close or dismiss (e.g., a menu, a popover,
+// or a tooltip), so that whatever has the keyboard focus no longer looks focused.
 // Note #1: we hide our focus ring rather than remove the keyboard focus (i.e. blur the focused element), since the
 //          keyboard focus would otherwise go back to the top of the page (e.g., pressing Tab would then focus the first
 //          focusable element of the page rather than the element after the one that had the keyboard focus), and
@@ -994,13 +1001,14 @@ if (!electronApi) {
 //          leave our focus ring alone if the keyboard focus is within one of them. A text entry also shows that it has
 //          the keyboard focus, whether or not it has our focus ring (e.g., with a highlighted border).
 // Note #6: an open element may have a fixed position (in which case its offsetParent is null), so we check whether it
-//          is rendered using its client rects.
+//          is rendered using its client rects. A tooltip is also checked for its visibility since the tooltip of a
+//          toolbar button is always rendered, but only visible when needed (see ToolbarButtonWidget.vue). Our listener
+//          is added before those of our tooltips, so they are still shown when we check them.
 // Note #7: our main menu handles Escape itself, so that it can return the keyboard focus to where it was before it got
 //          it using its keyboard shortcut (see MainMenu.vue).
 
 const focusRingHidden = vue.ref<boolean>(false);
 
-const ESCAPE_KEY_OPEN_ELEMENTS = '.p-popover, .p-select-overlay, .p-contextmenu, .p-menubar-submenu';
 const MODIFIER_KEYS = ['Alt', 'AltGraph', 'Control', 'Meta', 'Shift'];
 
 const onEscapeKeyDown = (event: KeyboardEvent): void => {
@@ -1026,8 +1034,11 @@ const onEscapeKeyDown = (event: KeyboardEvent): void => {
     isTextEntry(focusedElement) ||
     focusedElement.closest('.celldl-editor-container') ||
     focusedElement.matches('.p-menubar-root-list') ||
-    Array.from(root.querySelectorAll<HTMLElement>(ESCAPE_KEY_OPEN_ELEMENTS)).some(
+    Array.from(root.querySelectorAll<HTMLElement>(ESCAPE_KEY_OVERLAYS)).some(
       (element) => element.getClientRects().length
+    ) ||
+    Array.from(root.querySelectorAll<HTMLElement>(ESCAPE_KEY_TOOLTIPS)).some(
+      (element) => element.getClientRects().length && getComputedStyle(element).visibility === 'visible'
     )
   ) {
     return;

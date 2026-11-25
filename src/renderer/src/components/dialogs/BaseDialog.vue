@@ -9,8 +9,9 @@
            from our header and footer (using negative margins), for the focus ring of an element at its top or bottom
            (e.g., a button in the header of a section of a settings dialog) to be fully visible (see
            --opencor-focus-ring-extent in app.css).
+  Note #4: we handle Escape ourselves (see onDocumentKeyDown() below).
   -->
-  <Dialog ref="dialogRef" :modal="true" appendTo="self"
+  <Dialog ref="dialogRef" :modal="true" appendTo="self" :closeOnEscape="false"
     :style="{ width: DIALOG_WIDTHS[size], maxWidth: 'calc(100% - 2rem)' }"
     :pt:mask:style="{
       position: 'absolute',
@@ -43,6 +44,8 @@
 import type Dialog from 'primevue/dialog';
 import * as vue from 'vue';
 
+import { ESCAPE_KEY_OVERLAYS } from '../../common/constants';
+
 // Note: we emit our hidden event whenever we get hidden, be it because we have been accepted (e.g., using an OK button)
 //       or dismissed (e.g., using Escape or our close button).
 
@@ -51,10 +54,12 @@ export type DialogSize = 'sm' | 'md' | 'lg';
 const props = withDefaults(
   defineProps<{
     centreOn?: HTMLElement | null;
+    closeOnEscape?: boolean;
     size?: DialogSize;
   }>(),
   {
     centreOn: null,
+    closeOnEscape: true,
     size: 'sm'
   }
 );
@@ -79,7 +84,7 @@ const { incrementDialogs, decrementDialogs } = useDialogState();
 //       the same page.
 
 const dialogRef = vue.shallowRef<
-  (InstanceType<typeof Dialog> & { container: HTMLElement | null; mask: HTMLElement | null }) | null
+  (InstanceType<typeof Dialog> & { container: HTMLElement | null; mask: HTMLElement | null; close: () => void }) | null
 >(null);
 
 let dialogElement: HTMLElement | null = null;
@@ -131,10 +136,63 @@ const disconnectMutationObserver = () => {
   }
 };
 
+// Close ourselves when Escape is pressed, but only if we are the top-most dialog (rather than let PrimeVue do it, since
+// it would close all the dialogs that are shown, e.g., a question asked on top of another dialog and that other dialog)
+// and if nothing is open on top of us (e.g., a popover, which closes itself when Escape is pressed, or the panel of a
+// select, in which case Escape is for it).
+// Note #1: like PrimeVue, we listen to Escape during the bubble phase of our document, so that an element can keep
+//          Escape for itself by stopping its propagation (e.g., one of our input widgets to discard the value being
+//          edited).
+// Note #2: our list of shown dialogs is shared by all the instances of OpenCOR on the same page, so that Escape only
+//          closes the dialog that was shown last, whichever instance of OpenCOR it belongs to.
+
+const dialogId = Symbol('BaseDialog');
+
+const onDocumentKeyDown = (event: KeyboardEvent): void => {
+  if (
+    event.key !== 'Escape' ||
+    event.isComposing ||
+    !props.closeOnEscape ||
+    shownDialogs[shownDialogs.length - 1] !== dialogId
+  ) {
+    return;
+  }
+
+  const opencorElement = dialogRef.value?.container?.closest('.opencor');
+
+  if (
+    opencorElement &&
+    Array.from(opencorElement.querySelectorAll<HTMLElement>(ESCAPE_KEY_OVERLAYS)).some(
+      (element) => element.getClientRects().length
+    )
+  ) {
+    return;
+  }
+
+  dialogRef.value?.close();
+};
+
+const addToShownDialogs = (): void => {
+  shownDialogs.push(dialogId);
+
+  document.addEventListener('keydown', onDocumentKeyDown);
+};
+
+const removeFromShownDialogs = (): void => {
+  const index = shownDialogs.indexOf(dialogId);
+
+  if (index !== -1) {
+    shownDialogs.splice(index, 1);
+  }
+
+  document.removeEventListener('keydown', onDocumentKeyDown);
+};
+
 const onShow = () => {
   shown = true;
 
   incrementDialogs();
+  addToShownDialogs();
 
   void vue.nextTick().then(() => {
     if (!shown) {
@@ -163,6 +221,7 @@ const onHide = () => {
     shown = false;
 
     decrementDialogs();
+    removeFromShownDialogs();
   }
 
   emit('hidden');
@@ -181,6 +240,7 @@ vue.onBeforeUnmount(() => {
     shown = false;
 
     decrementDialogs();
+    removeFromShownDialogs();
   }
 
   disconnectMutationObserver();
@@ -188,6 +248,10 @@ vue.onBeforeUnmount(() => {
 </script>
 
 <script lang="ts">
+// The dialogs that are shown, in the order in which they were shown (see onDocumentKeyDown() above).
+
+const shownDialogs: symbol[] = [];
+
 // Dialog state management for tracking active dialogs in a given instance of OpenCOR.
 // Note: this uses Vue's provide()/inject() methods to ensure that each OpenCOR instance has its own dialog state.
 
