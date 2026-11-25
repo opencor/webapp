@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="About OpenCOR" class="w-169" @cancel="copyToClipboard.reset">
+  <BaseDialog header="About OpenCOR" size="md" @hidden="copyToClipboard.reset">
     <div class="flex flex-col gap-4 mb-1">
       <!-- Logo, name, copyright, and description (our version being part of our system details) -->
 

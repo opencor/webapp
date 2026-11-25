@@ -30,7 +30,7 @@
       <div v-show="!issues.length" ref="containerRef" class="celldl-editor-container h-full" />
       <BlockingMessageComponent v-if="!client.loaded && !issues.length" message="Loading CellDL Editor..." />
     </div>
-    <BaseDialog v-model:visible="exportIssuesVisible" :header="exportIssuesTitle" class="w-156">
+    <BaseDialog v-model:visible="exportIssuesVisible" :header="exportIssuesTitle" size="md">
       <p class="export-issues-text">The diagram couldn't be converted to CellML, so it couldn't be {{ exportIssuesKind === EXPORT_KIND_SIMULATE ? 'simulated' : 'exported' }}.</p>
       <div class="export-issues">
         <IssuesView :issues="exportIssues" :extraSpace="false" />

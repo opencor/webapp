@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog :header="title" class="w-120" role="alertdialog" :aria-describedby="`${iconId} ${textId}`">
+  <BaseDialog :header="title" role="alertdialog" :aria-describedby="`${iconId} ${textId}`">
     <div class="message-dialog" :class="`message-dialog-${severity}`">
       <span class="message-dialog-icon">
         <i :id="iconId" :class="severityInfo.icon" role="img" :aria-label="severityInfo.label" />

@@ -3,12 +3,15 @@
   Note #1: our mask covers the whole of OpenCOR (which may not cover the whole window, e.g., if it is embedded in a
            page), so it is a container (named opencor-dialog) that can be queried to know whether our dialog should use
            a narrow layout (see, for instance, AboutDialog.vue).
-  Note #2: our content clips its contents (since it can be scrolled), so it has some vertical padding, which it takes
+  Note #2: our width depends on our size (see DIALOG_WIDTHS below), but we never get wider than OpenCOR (minus some
+           margin), e.g. on a narrow screen.
+  Note #3: our content clips its contents (since it can be scrolled), so it has some vertical padding, which it takes
            from our header and footer (using negative margins), for the focus ring of an element at its top or bottom
            (e.g., a button in the header of a section of a settings dialog) to be fully visible (see
            --opencor-focus-ring-extent in app.css).
   -->
   <Dialog ref="dialogRef" :modal="true" appendTo="self"
+    :style="{ width: DIALOG_WIDTHS[size], maxWidth: 'calc(100% - 2rem)' }"
     :pt:mask:style="{
       position: 'absolute',
       containerType: 'inline-size',
@@ -40,13 +43,34 @@
 import type Dialog from 'primevue/dialog';
 import * as vue from 'vue';
 
-const props = defineProps<{
-  centreOn?: HTMLElement | null;
-}>();
+// Note: we emit our hidden event whenever we get hidden, be it because we have been accepted (e.g., using an OK button)
+//       or dismissed (e.g., using Escape or our close button).
+
+export type DialogSize = 'sm' | 'md' | 'lg';
+
+const props = withDefaults(
+  defineProps<{
+    centreOn?: HTMLElement | null;
+    size?: DialogSize;
+  }>(),
+  {
+    centreOn: null,
+    size: 'sm'
+  }
+);
 
 const emit = defineEmits<{
-  cancel: [];
+  hidden: [];
 }>();
+
+// The width of our small dialogs (e.g., our message dialogs), medium dialogs (e.g., our About dialog), and large dialogs
+// (e.g., the settings dialog of our interactive view).
+
+const DIALOG_WIDTHS: Record<DialogSize, string> = {
+  sm: '30rem',
+  md: '42.25rem',
+  lg: '67.5rem'
+};
 
 const { incrementDialogs, decrementDialogs } = useDialogState();
 
@@ -141,7 +165,7 @@ const onHide = () => {
     decrementDialogs();
   }
 
-  emit('cancel');
+  emit('hidden');
 
   void vue.nextTick().then(() => {
     disconnectMutationObserver();

@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="Update Available" class="w-160"
+  <BaseDialog header="Update Available" size="md"
     :closeButtonProps="{ severity: 'secondary', text: true, rounded: true, disabled: reloading }"
     :closeOnEscape="!reloading"
     @show="onShow"
@@ -44,14 +44,14 @@
       </div>
     </div>
     <template #footer>
-      <template v-if="electronApi">
+      <DialogButtons v-if="electronApi">
         <Button label="Download and Install" autofocus @click="$emit('downloadAndInstall')" />
         <Button label="Later" severity="secondary" @click="$emit('close')" />
-      </template>
-      <template v-else>
+      </DialogButtons>
+      <DialogButtons v-else>
         <Button :label="reloading ? 'Reloading...' : 'Reload'" autofocus :loading="reloading" @click="$emit('reload')" />
         <Button label="Later" severity="secondary" :disabled="reloading" @click="$emit('close')" />
-      </template>
+      </DialogButtons>
     </template>
   </BaseDialog>
 </template>

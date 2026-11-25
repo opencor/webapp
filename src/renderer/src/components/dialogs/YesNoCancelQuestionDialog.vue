@@ -1,17 +1,19 @@
 <template>
   <MessageDialog kind="question" :title="title" :text="question" :severity="severity">
     <template #footer>
-      <Button :autofocus="severity !== 'danger'"
-        :label="yesLabel"
-        :severity="severity === 'danger' ? 'danger' : undefined"
-        @click="$emit('yes')"
-      />
-      <Button :label="noLabel" severity="secondary" @click="$emit('no')" />
-      <Button :autofocus="severity === 'danger'"
-        :label="cancelLabel"
-        severity="secondary"
-        @click="$emit('cancel')"
-      />
+      <DialogButtons>
+        <Button :autofocus="severity !== 'danger'"
+          :label="yesLabel"
+          :severity="severity === 'danger' ? 'danger' : undefined"
+          @click="$emit('yes')"
+        />
+        <Button :label="noLabel" severity="secondary" @click="$emit('no')" />
+        <Button :autofocus="severity === 'danger'"
+          :label="cancelLabel"
+          severity="secondary"
+          @click="$emit('cancel')"
+        />
+      </DialogButtons>
     </template>
   </MessageDialog>
 </template>

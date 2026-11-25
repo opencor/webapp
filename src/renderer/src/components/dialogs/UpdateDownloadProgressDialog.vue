@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog :header="installing ? 'Installing Update' : 'Downloading Update'" class="w-120" :closable="false" :closeOnEscape="false">
+  <BaseDialog :header="installing ? 'Installing Update' : 'Downloading Update'" :closable="false" :closeOnEscape="false">
     <div class="download">
       <div class="download-header">
         <span class="opencor-spinner" />

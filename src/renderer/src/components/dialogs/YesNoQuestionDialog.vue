@@ -1,12 +1,14 @@
 <template>
   <MessageDialog kind="question" :title="title" :text="question" :severity="severity">
     <template #footer>
-      <Button :autofocus="severity !== 'danger'"
-        :label="yesLabel"
-        :severity="severity === 'danger' ? 'danger' : undefined"
-        @click="$emit('yes')"
-      />
-      <Button :autofocus="severity === 'danger'" :label="noLabel" severity="secondary" @click="$emit('no')" />
+      <DialogButtons>
+        <Button :autofocus="severity !== 'danger'"
+          :label="yesLabel"
+          :severity="severity === 'danger' ? 'danger' : undefined"
+          @click="$emit('yes')"
+        />
+        <Button :autofocus="severity === 'danger'" :label="noLabel" severity="secondary" @click="$emit('no')" />
+      </DialogButtons>
     </template>
   </MessageDialog>
 </template>

@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="Open Location" class="w-169" @cancel="reset">
+  <BaseDialog header="Open Location" size="md" @hidden="reset">
     <div class="flex flex-col gap-2 mt-1 mb-2">
       <p class="description">Enter the {{ inputDescription }} of a CellML file, SED-ML file, or COMBINE archive.</p>
       <IconField>
@@ -45,8 +45,10 @@
       </div>
     </div>
     <template #footer>
-      <Button label="Open" :disabled="!normalisedUrl" @click="emitOpenLocation" />
-      <Button ref="cancelButtonRef" label="Cancel" severity="secondary" @click="emitClose" />
+      <DialogButtons>
+        <Button label="Open" :disabled="!normalisedUrl" @click="emitOpenLocation" />
+        <Button ref="cancelButtonRef" label="Cancel" severity="secondary" @click="emitClose" />
+      </DialogButtons>
     </template>
   </BaseDialog>
 </template>

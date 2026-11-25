@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="Changelog" class="w-169">
+  <BaseDialog header="Changelog" size="md">
     <ChangelogComponent v-if="entries.length" class="changelog-list" :entries="entries" />
     <div v-else class="changelog-empty">
       <i class="pi pi-info-circle" />

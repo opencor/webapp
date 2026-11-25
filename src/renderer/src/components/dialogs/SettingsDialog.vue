@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="Settings" class="w-120" @hide="onHide">
+  <BaseDialog header="Settings" @hide="onHide">
     <div class="settings">
       <!-- Appearance -->
 
@@ -36,8 +36,10 @@
       </section>
     </div>
     <template #footer>
-      <Button autofocus label="OK" @click="onOk" />
-      <Button label="Cancel" severity="secondary" @click="$emit('close')" />
+      <DialogButtons>
+        <Button autofocus label="OK" @click="onOk" />
+        <Button label="Cancel" severity="secondary" @click="$emit('close')" />
+      </DialogButtons>
     </template>
   </BaseDialog>
 </template>

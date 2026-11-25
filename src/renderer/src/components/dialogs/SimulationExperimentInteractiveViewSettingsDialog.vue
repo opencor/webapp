@@ -1,9 +1,10 @@
 <template>
   <div ref="rootRef" class="settings-dialog-root">
-    <BaseDialog v-bind="$attrs" header="Settings" class="settings-dialog w-270 h-210"
+    <BaseDialog v-bind="$attrs" header="Settings" class="settings-dialog h-210"
+      size="lg"
       :centreOn="centreOn"
       @keydown.enter="onKeydownEnter"
-      @cancel="onCancel"
+      @hidden="onHidden"
     >
       <div class="settings-body h-full flex min-h-0">
         <!-- Navigation -->
@@ -622,10 +623,10 @@
               <i :class="issuesPopoverVisible ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
             </Button>
           </div>
-          <div class="flex gap-2">
+          <DialogButtons>
             <Button autofocus label="OK" @click="onOk" />
             <Button label="Cancel" severity="secondary" @click="onCancel" />
-          </div>
+          </DialogButtons>
         </div>
       </template>
     </BaseDialog>
@@ -1491,7 +1492,12 @@ const onOk = () => {
 };
 
 const onCancel = () => {
-  // Reset our local settings to the original settings and close the dialog.
+  emit('close');
+};
+
+const onHidden = () => {
+  // Reset our local settings to the original settings, be it because our settings have been accepted (in which case the
+  // original settings are our updated settings) or dismissed (in which case any changes are discarded).
   // Note: we need to do a deep copy here to make sure that any changes made to nested objects in our local settings are
   //       not reflected in the original settings while preserving any typed arrays in the UI JSON.
 
@@ -1500,10 +1506,6 @@ const onCancel = () => {
   // Reset our UX settings.
 
   resetUxSettings();
-
-  // Close the dialog.
-
-  emit('close');
 };
 
 const toggleIssues = (event: Event) => {
