@@ -1,5 +1,5 @@
 <template>
-  <ContextMenu ref="contextMenuRef" :model="model" :appendTo="appendTo" :pt="CONTEXT_MENU_PT">
+  <ContextMenu ref="contextMenuRef" :model="model" :appendTo="appendTo" :pt="CONTEXT_MENU_PT" @focus="onFocus">
     <template #item="{ item, props: itemProps, hasSubmenu }">
       <a v-bind="itemProps.action">
         <i v-if="itemsWithCheckColumn.has(item)" :class="{ 'pi pi-check': item.checked }" class="context-menu-item-check" />
@@ -84,7 +84,16 @@ const CONTEXT_MENU_SHOW_EVENT = 'opencor-context-menu-show';
 const contextMenuId = Symbol('ContextMenuWidget');
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 
-const show = (event: MouseEvent): void => {
+// Show ourselves where the given event happened, focusing our first item if we are shown using the keyboard (e.g., using
+// Shift+F10 or the context menu key), like a native context menu, so that we can be used with the keyboard straightaway.
+// Note: PrimeVue gives the keyboard focus to our menu once we are shown, but without focusing any of our items, so we
+//       then do what PrimeVue does when ArrowDown is pressed, i.e. focus our first item (see onFocus()).
+
+let focusFirstItem = false;
+
+const show = (event: MouseEvent, usingKeyboard = false): void => {
+  focusFirstItem = usingKeyboard;
+
   window.dispatchEvent(
     new CustomEvent(CONTEXT_MENU_SHOW_EVENT, {
       detail: {
@@ -97,7 +106,17 @@ const show = (event: MouseEvent): void => {
 };
 
 const hide = (): void => {
+  focusFirstItem = false;
+
   contextMenuRef.value?.hide();
+};
+
+const onFocus = (event: Event): void => {
+  if (focusFirstItem) {
+    focusFirstItem = false;
+
+    event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+  }
 };
 
 const onContextMenuShow = (event: Event): void => {

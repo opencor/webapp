@@ -145,6 +145,7 @@ import type { OpenCORExternalDataEvent, OpenCORSimulationDataEvent } from '../..
 
 import * as common from '../common/common';
 import { electronApi } from '../common/electronApi';
+import { hasFocusRing } from '../common/focusRing';
 import { vHint } from '../common/hint';
 import * as locCommon from '../common/locCommon';
 import { type FileEditor, useViewRegistry, ViewCategory } from '../common/viewRegistry';
@@ -701,7 +702,10 @@ const onFileTabContextMenu = (event: MouseEvent, filePath: string): void => {
 
   fileTabContextMenuFilePath.value = filePath;
 
-  fileTabContextMenuRef.value?.show(event);
+  // Note: our file tab has a focus ring if our context menu is shown using the keyboard, but not if it is shown using
+  //       the mouse (since pressing a mouse button hides our focus ring, see OpenCOR.vue).
+
+  fileTabContextMenuRef.value?.show(event, event.currentTarget instanceof Element && hasFocusRing(event.currentTarget));
 };
 
 // Hide the context menu of our file tabs, if shown, when our UI gets disabled (e.g., when a file is opened from outside

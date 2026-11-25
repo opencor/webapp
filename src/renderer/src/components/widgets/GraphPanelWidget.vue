@@ -129,7 +129,10 @@ const menuItems = (items: ContextMenuItem[]): MenuItem[] => {
 const onContextMenu = (event: PlotContextMenuEvent): void => {
   contextMenuItems.value = menuItems(event.items);
 
-  contextMenuRef.value?.show(new MouseEvent('contextmenu', { clientX: event.clientX, clientY: event.clientY }));
+  contextMenuRef.value?.show(
+    new MouseEvent('contextmenu', { clientX: event.clientX, clientY: event.clientY }),
+    event.usingKeyboard
+  );
 };
 
 const onContextMenuHide = (): void => {
