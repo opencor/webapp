@@ -97,7 +97,8 @@
 
   /**
    * Splitters (i.e. between our side panel and our plots and, in the Standard view, our console), which gutters are
-   * shown as thin lines that get highlighted when hovered or dragged.
+   * shown as thin lines with a grip (i.e. their handle) in their middle, so that they can be told apart from plain
+   * lines, and which get highlighted when hovered, dragged, or focused.
    */
 
   .p-splitter-gutter {
@@ -115,16 +116,43 @@
   }
 
   /**
-   * Note: our gutter handle is hidden, except when it has the keyboard focus, so that its focus ring can be seen (our
-   *       gutter is then also highlighted, like when it is hovered).
+   * Note #1: our gutter handle is a grip, i.e. three dots in a gap of our gutter. Its dots are drawn using a repeated
+   *          radial gradient (in its content box), and our gap using the background colour of our contents (in its
+   *          padding box), which hides our gutter around our dots.
+   * Note #2: our dots are wider than our gutter (which is only 1px wide/high), so that they can be seen. They overflow
+   *          our gutter on both sides (since our gutter centres our handle), which is why they are 3px wide/high (i.e.
+   *          an odd number of pixels, so that they are centred on our gutter rather than straddle half pixels), and
+   *          they are drawn above our panels (since our gutter has a z-index, see PrimeVue's Splitter).
+   * Note #3: PrimeVue's Splitter sets the width (horizontal layout) or height (vertical layout) of our handle inline (to
+   *          its gutter size, i.e. 4px by default), hence we need !important to override it (as for our gutter).
    */
 
   .p-splitter-gutter-handle {
-    opacity: 0;
+    --grip-dot-color: var(--p-content-border-color);
+
+    flex-shrink: 0;
+    box-sizing: content-box;
+    border-radius: 0;
+    background:
+      radial-gradient(circle at 1.5px 1.5px, var(--grip-dot-color) 1.2px, transparent 1.6px) 0 0 / 3px 6px repeat-y
+      content-box,
+      var(--p-content-background);
   }
 
-  .p-splitter-gutter-handle:focus-visible {
-    opacity: 1;
+  .p-splitter-horizontal > .p-splitter-gutter > .p-splitter-gutter-handle {
+    width: 3px !important;
+    height: 15px;
+    padding: 4px 0;
+  }
+
+  .p-splitter-vertical > .p-splitter-gutter > .p-splitter-gutter-handle {
+    width: 15px;
+    height: 3px !important;
+    padding: 0 4px;
+    background-size:
+      6px 3px,
+      auto;
+    background-repeat: repeat-x, no-repeat;
   }
 
   /**
@@ -142,6 +170,10 @@
   .p-splitter-gutter[data-p-gutter-resizing="true"],
   .p-splitter-gutter:has(.p-splitter-gutter-handle:focus-visible) {
     background-color: var(--p-primary-color);
+
+    .p-splitter-gutter-handle {
+      --grip-dot-color: var(--p-primary-color);
+    }
   }
 
   /**
