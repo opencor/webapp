@@ -571,15 +571,21 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
     }
   );
 
-  // Note: we don't return the body of an error response since it is likely to be an HTML page.
+  // Note: we don't return the body of an error response since it is likely to be an HTML page, so we cancel it rather
+  //       than leave it unread. We ignore any issue with cancelling it since we can still let the app know about the
+  //       error.
 
-  if (!response.ok || !response.body) {
-    return response.ok
-      ? rejectedResponse('The file is empty.')
-      : new Response(null, {
-          status: response.status,
-          headers: CONTENT_HEADERS
-        });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+
+    return new Response(null, {
+      status: response.status,
+      headers: CONTENT_HEADERS
+    });
+  }
+
+  if (!response.body) {
+    return rejectedResponse('The file is empty.');
   }
 
   // Reject content that we know is too large.
