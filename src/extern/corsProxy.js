@@ -598,6 +598,12 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
   const reader = response.body.getReader();
   let { bytes: head, done } = await readBytes(reader, SNIFF_SIZE);
 
+  // Reject empty content, i.e. a response that has a body, but one that turns out to be empty (see above).
+
+  if (done && !head.length) {
+    return rejectedResponse('The file is empty.');
+  }
+
   // Read more of the content if it is an XML file which prolog is longer than what we have read so far (see
   // MAX_XML_PROLOG_SIZE).
 

@@ -1009,7 +1009,9 @@ const addExternalData = async (
   }
 
   if (!csvContents) {
-    return Promise.resolve(addedEvent());
+    return Promise.resolve(
+      issueEvent([common.isUrl(csv) ? `The CSV file from ${csv} is empty.` : 'The external CSV data is empty.'])
+    );
   }
 
   // Make sure that we haven't already added this CSV data (based on a hash of the CSV contents) to avoid accidentally
