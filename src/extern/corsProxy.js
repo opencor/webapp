@@ -308,10 +308,10 @@ const isOmexFile = (bytes) => {
 };
 
 const xmlRootElement = (text) => {
-  // Return the local name and namespace of the root element of the given XML text, skipping its prolog (i.e. its XML
-  // declaration, processing instructions, comments, and document type declaration), or null if there is no such root
-  // element. If the given XML text ends before the start tag of its root element does, i.e. if it is only the start of
-  // some XML text, then let the caller know that it is incomplete.
+  // Return the prefix, local name, and namespace of the root element of the given XML text, skipping its prolog (i.e.
+  // its XML declaration, processing instructions, comments, and document type declaration), or null if there is no such
+  // root element. If the given XML text ends before the start tag of its root element does, i.e. if it is only the
+  // start of some XML text, then let the caller know that it is incomplete.
 
   const INCOMPLETE = { incomplete: true };
 
@@ -366,11 +366,11 @@ const xmlRootElement = (text) => {
     /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
   )) {
     if (attribute === namespaceAttribute) {
-      return { name, namespace: doubleQuotedValue ?? singleQuotedValue };
+      return { prefix, name, namespace: doubleQuotedValue ?? singleQuotedValue };
     }
   }
 
-  return { name, namespace: null };
+  return { prefix, name, namespace: null };
 };
 
 const xmlEncoding = (bytes) => {
@@ -415,7 +415,15 @@ const isCellmlOrSedmlFile = (bytes) => {
 };
 
 const isSvgFile = (bytes) => {
-  return xmlRootElement(xmlText(bytes))?.name === 'svg';
+  // Check that the given bytes are an SVG file, i.e. that their root element is an unprefixed svg element, as the app
+  // requires (see isCellDLFile() in src/renderer/src/common/locCommon.ts).
+  // Note: an SVG file could have a prefixed root element (e.g., <svg:svg xmlns:svg="http://www.w3.org/2000/svg">), but
+  //       the app would then not recognise it as a CellDL file, so we would return a file that it cannot open in its
+  //       CellDL Editor.
+
+  const rootElement = xmlRootElement(xmlText(bytes));
+
+  return rootElement?.name === 'svg' && !rootElement.prefix;
 };
 
 const hasCelldlMetadata = (bytes) => {
