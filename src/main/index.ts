@@ -521,12 +521,18 @@ electron.app
             enableDisableFileSaveAndSaveAsMenuItems(enableSave, enableSaveAs);
           }
         );
-        electron.ipcMain.handle('file-closed', (_event, filePath: string) => {
+        electron.ipcMain.handle('file-closed', (_event, filePath: string, replaced?: boolean) => {
           if (isTrustedFilePath(filePath)) {
             fileClosed(filePath);
           }
 
-          disallowSavingFile(filePath);
+          // Note: a file that is being replaced by another file tab is about to be open again, so our renderer must
+          //       still be able to save it (see ContentsComponent.saveFileTo()). Letting our renderer tell us that
+          //       doesn't let it save more files since it could just as well not tell us that the file was closed.
+
+          if (!replaced) {
+            disallowSavingFile(filePath);
+          }
         });
         electron.ipcMain.handle('file-issue', (_event, filePath: string, canonicalFilePath: string) => {
           fileIssue(filePath, canonicalFilePath);

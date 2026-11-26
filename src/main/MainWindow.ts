@@ -506,8 +506,9 @@ export const closeRequestReceived = (): void => {
 //          get to save a file by having it reopened.
 // Note #3: our renderer may only save a file while it is open, so that it cannot save a file that has been closed
 //          should it get compromised afterwards (e.g., by a file opened later). So, it stops being able to save a file
-//          once it tells us that the file has been closed, couldn't be opened, or isn't open after all (e.g., if the
-//          user chose to save a file to it using our File|Save As dialog, but that file couldn't be saved to it, see
+//          once it tells us that the file has been closed (unless another file tab is replacing it, see
+//          ContentsComponent.saveFileTo()), couldn't be opened, or isn't open after all (e.g., if the user chose to
+//          save a file to it using our File|Save As dialog, but that file couldn't be saved to it, see
 //          ContentsComponent.doSaveFileAs()), and it cannot save any file once it is gone (see onRenderProcessGone()).
 //          It can save the file again once the user reopens it.
 // Note #4: our renderer refers to a file using the path that was used to open it, but tells us about the files that are

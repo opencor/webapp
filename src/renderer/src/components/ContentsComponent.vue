@@ -584,7 +584,8 @@ const openFile = async (file: locApi.File, wait: boolean = false, fileHandle?: F
 const closeFile = async (
   filePath: string,
   force: boolean = false,
-  save: (fileTab: FileTab) => Promise<SaveOutcome> = saveFile
+  save: (fileTab: FileTab) => Promise<SaveOutcome> = saveFile,
+  replaced: boolean = false
 ): Promise<boolean> => {
   // Close the given file and return whether it was closed (or had no file tab), i.e. whether the user didn't cancel its
   // closing.
@@ -602,6 +603,9 @@ const closeFile = async (
   //          whether it is once it has been saved (by which time its file tab may also have been closed). If we are
   //          called while a file is being saved (see Note #3), then that file is not the given one, so we don't wait
   //          for ourselves.
+  // Note #5: the file may be closed because another file tab is replacing it (see saveFileTo()), in which case that
+  //          file tab is about to be for it, so our main process must still let us save it (see canSaveFile() in
+  //          src/main/MainWindow.ts).
 
   const fileTab = fileTabs.value.find((fileTab) => fileTab.file.path() === filePath);
 
@@ -667,7 +671,7 @@ const closeFile = async (
     }
   }
 
-  electronApi?.fileClosed(canonicalFilePath);
+  electronApi?.fileClosed(canonicalFilePath, replaced);
 
   emit('fileClosed', filePath, fileTab.fileHandle);
 
@@ -1431,12 +1435,15 @@ const saveFileTo = async (
 
   // Close the other file tab, if it is still open (see above), without asking the user whether to save it since it is
   // for the file that we have just saved and the user wants it replaced.
-  // Note: closing a file tab releases its file on the next tick (see closeFile()), so we wait for it to be released
-  //       since it has the same path as the file that we are about to create (and, with the C++ version of libOpenCOR,
-  //       releasing it would otherwise unmanage our new file).
+  // Note #1: closing a file tab releases its file on the next tick (see closeFile()), so we wait for it to be released
+  //          since it has the same path as the file that we are about to create (and, with the C++ version of
+  //          libOpenCOR, releasing it would otherwise unmanage our new file).
+  // Note #2: our file tab is about to be for the file, so we must still be able to save it once the other file tab has
+  //          been closed (see closeFile()). If we fail to rename our file tab, then no file tab is for the file and we
+  //          stop being able to save it (see doSaveFileAs()).
 
   if (otherFileTab && fileTabs.value.includes(otherFileTab)) {
-    await closeFile(otherFileTab.file.path(), true);
+    await closeFile(otherFileTab.file.path(), true, saveFile, true);
     await vue.nextTick();
   }
 

@@ -117,7 +117,7 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
     electron.ipcRenderer.invoke('enable-disable-file-next-and-previous-menu-items', enable),
   enableDisableFileSaveAndSaveAsMenuItems: (enableSave: boolean, enableSaveAs: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-save-and-save-as-menu-items', enableSave, enableSaveAs),
-  fileClosed: (filePath: string) => electron.ipcRenderer.invoke('file-closed', filePath),
+  fileClosed: (filePath: string, replaced?: boolean) => electron.ipcRenderer.invoke('file-closed', filePath, replaced),
   fileIssue: (filePath: string, canonicalFilePath: string) =>
     electron.ipcRenderer.invoke('file-issue', filePath, canonicalFilePath),
   fileOpened: (filePath: string, canonicalFilePath: string) =>

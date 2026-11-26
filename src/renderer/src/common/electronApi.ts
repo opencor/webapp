@@ -26,7 +26,7 @@ interface ElectronApi {
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) => void;
   enableDisableFileNextAndPreviousMenuItems: (enable: boolean) => void;
   enableDisableFileSaveAndSaveAsMenuItems: (enableSave: boolean, enableSaveAs: boolean) => void;
-  fileClosed: (filePath: string) => void;
+  fileClosed: (filePath: string, replaced?: boolean) => void;
   fileIssue: (filePath: string, canonicalFilePath: string) => void;
   fileOpened: (filePath: string, canonicalFilePath: string) => void;
   filePath: (file: File) => string;
