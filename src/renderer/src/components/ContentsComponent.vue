@@ -2007,6 +2007,7 @@ const fileHasFocus = (filePath: string): boolean => {
 const backgroundRef = vue.useTemplateRef<InstanceType<typeof BackgroundComponent>>('backgroundRef');
 
 const fileTabBarSwitching = vue.ref<boolean>(false);
+let fileTabBarSwitchingAnimationFrame = 0;
 
 vue.watch(activeFile, (newActiveFile: string) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
@@ -2015,11 +2016,16 @@ vue.watch(activeFile, (newActiveFile: string) => {
   electronApi?.fileSelected(findFileTab(newActiveFile)?.file.canonicalPath() ?? newActiveFile);
 
   // Switch our file tabs without any transition (see .file-tab-bar-switching).
+  // Note: our file tabs may be switched again before the transitions of a previous switch are back on (e.g., when
+  //       holding Ctrl+Tab), in which case we cancel that, so that the transitions only come back on once the colours
+  //       of our last switch have settled (as for updateDocumentClasses() in src/renderer/src/common/vueCommon.ts).
 
   fileTabBarSwitching.value = true;
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
+  cancelAnimationFrame(fileTabBarSwitchingAnimationFrame);
+
+  fileTabBarSwitchingAnimationFrame = requestAnimationFrame(() => {
+    fileTabBarSwitchingAnimationFrame = requestAnimationFrame(() => {
       fileTabBarSwitching.value = false;
     });
   });
