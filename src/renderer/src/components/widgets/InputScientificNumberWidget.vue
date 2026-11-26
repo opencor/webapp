@@ -345,11 +345,14 @@ const onBlur = () => {
     return;
   }
 
+  // Note: a number may be too large (in magnitude) to be represented (e.g., 1e999), in which case it gets parsed as
+  //       Infinity (or -Infinity), which we reject, whether or not we have a minimum and/or maximum value.
+
   const parsedValue = parseFloat(internalValue.value);
 
-  if (Number.isNaN(parsedValue)) {
+  if (!Number.isFinite(parsedValue)) {
     updateInternalValue(props.modelValue);
-    showCorrection('This is not a valid number.');
+    showCorrection(Number.isNaN(parsedValue) ? 'This is not a valid number.' : 'This number is too large.');
 
     return;
   }
