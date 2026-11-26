@@ -129,10 +129,12 @@ autoUpdater.on('error', (error: Error) => {
 });
 
 // Download an update, which can be cancelled (see cancelUpdateDownload()).
-// Note: an update may have been fully downloaded by the time its download gets cancelled, in which case we don't let
-//       our renderer know that it has been downloaded (since the user doesn't want to install it now), but it may still
-//       get installed when OpenCOR gets quit (see autoInstallOnAppQuit in electron-updater). Similarly, we don't let
-//       our renderer know about the error that electron-updater reports when a download gets cancelled.
+// Note #1: an update may have been fully downloaded by the time its download gets cancelled, in which case we don't let
+//          our renderer know that it has been downloaded (since the user doesn't want to install it now), but it may
+//          still get installed when OpenCOR gets quit (see autoInstallOnAppQuit in electron-updater). Similarly, we
+//          don't let our renderer know about the error that electron-updater reports when a download gets cancelled.
+// Note #2: a cancelled download may only finish once another download has been started, in which case we ignore its
+//          outcome since it would otherwise overwrite the state of the new download.
 
 let updateDownloadCancellationToken: CancellationToken | null = null;
 
@@ -148,6 +150,10 @@ export const downloadAndInstallUpdate = (): void => {
   autoUpdater
     .downloadUpdate(cancellationToken)
     .then(() => {
+      if (updateDownloadCancellationToken !== cancellationToken) {
+        return;
+      }
+
       updateState = 'downloaded';
       updateDownloadPercent = 100;
       updateDownloadTransferred = updateDownloadTotal;
@@ -157,6 +163,10 @@ export const downloadAndInstallUpdate = (): void => {
       }
     })
     .catch((error: unknown) => {
+      if (updateDownloadCancellationToken !== cancellationToken) {
+        return;
+      }
+
       updateState = 'idle';
 
       if (!cancellationToken.cancelled) {
