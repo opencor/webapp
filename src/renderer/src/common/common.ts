@@ -198,18 +198,29 @@ export const corsProxyUrl = (url: string, contentKind: CorsProxyContentKind): st
 };
 
 // A method to fetch a URL, giving up if its server doesn't respond (i.e. if we don't get the headers of its response)
-// within FETCH_RESPONSE_TIMEOUT or if the given signal gets aborted (e.g., if people cancel the loading of a file).
-// Note: our timeout only applies to the response itself, not to its body, which may take a while to be read (e.g., for
-//       a large file over a slow connection), hence we don't use AbortSignal.timeout(), but the given signal (if any)
-//       applies to both.
+// within the given timeout or if the given signal gets aborted (e.g., if people cancel the loading of a file).
+// Note #1: our timeout only applies to the response itself, not to its body, which may take a while to be read (e.g.,
+//          for a large file over a slow connection), hence we don't use AbortSignal.timeout(), but the given signal (if
+//          any) applies to both.
+// Note #2: our CORS proxy may need to fully read a file before it responds (e.g., an OMEX file, see
+//          src/extern/corsProxy.js), which may take a while (e.g., for a large file on a slow server), hence it gets
+//          more time to respond than a server that we fetch a URL from directly. Its timeout is long enough for it to
+//          read the largest file it accepts (i.e. 32 MB) at about 100 KB/s. Our CORS proxy gives up on a server that
+//          stalls (see STALL_TIMEOUT in src/extern/corsProxy.js), so we only have to wait that long for a server that
+//          is slow (or for our CORS proxy itself, should it stall).
 
 const FETCH_RESPONSE_TIMEOUT = 30 * 1000; // 30 seconds.
+const CORS_PROXY_RESPONSE_TIMEOUT = 5 * 60 * 1000; // 5 minutes.
 
-const fetchWithTimeout = async (url: string, signal?: AbortSignal): Promise<Response> => {
+const fetchWithTimeout = async (
+  url: string,
+  signal?: AbortSignal,
+  timeout: number = FETCH_RESPONSE_TIMEOUT
+): Promise<Response> => {
   const timeoutAbortController = new AbortController();
   const timeoutTimer = setTimeout(() => {
     timeoutAbortController.abort(new Error('The server took too long to respond.'));
-  }, FETCH_RESPONSE_TIMEOUT);
+  }, timeout);
 
   try {
     return await fetch(url, {
@@ -243,7 +254,7 @@ export const fetchThroughCorsProxy = async (
   let corsProxyIssue: string;
 
   try {
-    const response = await fetchWithTimeout(corsProxyUrl(url, contentKind), signal);
+    const response = await fetchWithTimeout(corsProxyUrl(url, contentKind), signal, CORS_PROXY_RESPONSE_TIMEOUT);
 
     if (response.ok) {
       const body = await response.arrayBuffer();

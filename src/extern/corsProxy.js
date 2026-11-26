@@ -75,6 +75,53 @@ const concatenate = (chunks, length) => {
   return bytes;
 };
 
+// Give up on the server of the target URL if it stalls, i.e. if it doesn't send us the headers of its response or the
+// next chunk of its content within STALL_TIMEOUT.
+// Note: the app gives us much more time to respond than it gives a server it fetches a URL from directly since we may
+//       need to fully read some content before responding (see fetchThroughCorsProxy() in
+//       src/renderer/src/common/common.ts). So, without this, a server that stalls would keep the app waiting for a
+//       long time before it tries to fetch the target URL directly. With it, the app can only be kept waiting that long
+//       by a server that is slow, but still sending us its content.
+
+const STALL_TIMEOUT = 30 * 1000; // 30 seconds.
+const STALLED_MESSAGE = 'The server took too long to respond.';
+
+class StalledError extends Error {
+  constructor() {
+    super(STALLED_MESSAGE);
+  }
+}
+
+const withStallTimeout = async (promise, onStall) => {
+  // Return what the given promise resolves to, unless it takes longer than STALL_TIMEOUT, in which case reject with a
+  // StalledError and call the given function (to stop whatever the promise is waiting for).
+  // Note: stopping what the promise is waiting for settles it (e.g., a cancelled read resolves as if the content had
+  //       ended), so we must reject before doing so. Otherwise, the promise would win the race.
+
+  let stallTimer;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_resolve, reject) => {
+        stallTimer = setTimeout(() => {
+          reject(new StalledError());
+
+          onStall();
+        }, STALL_TIMEOUT);
+      })
+    ]);
+  } finally {
+    clearTimeout(stallTimer);
+  }
+};
+
+const read = (reader) => {
+  return withStallTimeout(reader.read(), () => {
+    reader.cancel().catch(() => {});
+  });
+};
+
 const readChunks = async (reader, maxSize, initialChunks = []) => {
   // Read chunks until (roughly) the given number of bytes, including those of the given initial chunks, has been
   // reached and let the caller know whether the end of the stream was reached.
@@ -86,7 +133,7 @@ const readChunks = async (reader, maxSize, initialChunks = []) => {
   let done = false;
 
   while (length < maxSize) {
-    const result = await reader.read();
+    const result = await read(reader);
 
     if (result.done) {
       done = true;
@@ -139,7 +186,20 @@ const replayStream = (bytes, reader) => {
       controller.enqueue(bytes);
     },
     async pull(controller) {
-      const { done, value } = await reader.read();
+      // Note: we have already responded, so if the server stalls, all we can do is error our stream, which the app sees
+      //       as a network error, in which case it fetches the target URL directly (see fetchThroughCorsProxy() in
+      //       src/renderer/src/common/common.ts).
+
+      let done;
+      let value;
+
+      try {
+        ({ done, value } = await read(reader));
+      } catch (error) {
+        controller.error(error);
+
+        return;
+      }
 
       if (done) {
         controller.close();
@@ -491,10 +551,17 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
     forwardHeaders.delete(header);
   }
 
-  const response = await fetch(targetUrl, {
-    method: 'GET',
-    headers: forwardHeaders
-  });
+  const fetchAbortController = new AbortController();
+  const response = await withStallTimeout(
+    fetch(targetUrl, {
+      method: 'GET',
+      headers: forwardHeaders,
+      signal: fetchAbortController.signal
+    }),
+    () => {
+      fetchAbortController.abort();
+    }
+  );
 
   // Note: we don't return the body of an error response since it is likely to be an HTML page.
 
@@ -641,12 +708,17 @@ export default {
         return errorResponse('Method not allowed.', 405);
       }
 
-      // Note: we may not be able to fetch the target URL (e.g., it is only reachable from the user's network), in which
-      //       case the app may still be able to fetch it directly, so we let it know using an HTTP 502 error.
+      // Note: we may not be able to fetch the target URL (e.g., it is only reachable from the user's network) or its
+      //       server may stall (see STALL_TIMEOUT), in which case the app may still be able to fetch it directly, so we
+      //       let it know using an HTTP 502 or 504 error, respectively.
 
       try {
         return await forwardRequest(targetUrl, contentKind, request);
       } catch (error) {
+        if (error instanceof StalledError) {
+          return errorResponse(STALLED_MESSAGE, 504);
+        }
+
         return errorResponse(`The file could not be retrieved (${errorMessage(error)}).`, 502);
       }
     } catch (error) {
