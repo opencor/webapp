@@ -1,7 +1,7 @@
 // A simple CORS proxy handler for Cloudflare Workers (see https://workers.cloudflare.com/).
 // Note #1: the proxy accepts any target URL, but it only returns content that is a file that the app can open (i.e. a
 //          CellML file, a SED-ML file, an OMEX file, or a CellDL file, see isCelldlFile()) or a CSV file (which the app
-//          can use as external data in its Interactive view, see isCsvFile()), and that is not too large (see
+//          can use as external data in its Interactive view, see csvFileIssue()), and that is not too large (see
 //          MAX_SIZE). Such content is returned as an opaque, sandboxed download, so that a browser never renders or
 //          executes it.
 // Note #2: the app tells us which kind of content it expects (see CONTENT_KINDS), so that we only return that kind of
@@ -34,6 +34,9 @@ const MAX_XML_PROLOG_SIZE = 1024 * 1024; // 1 MB.
 // Note: the prolog of an XML file (i.e. its XML declaration, processing instructions, comments, and document type
 //       declaration) may be longer than SNIFF_SIZE (e.g., because of a long licence comment), in which case we read up
 //       to MAX_XML_PROLOG_SIZE of it to find its root element (see forwardRequest()).
+const MAX_CSV_HEAD_SIZE = 1024 * 1024; // 1 MB.
+// Note: the header and first row of data of a CSV file may be longer than SNIFF_SIZE (e.g., because it has thousands of
+//       columns), in which case we read up to MAX_CSV_HEAD_SIZE of it to check them (see forwardRequest()).
 const MAX_SIZE = 32 * 1024 * 1024; // 32 MB.
 // Note: an OMEX file, as well as some content which size we don't know in advance, needs to be fully read (see
 //       forwardRequest()), which means holding two copies of it (i.e. the chunks we read and their concatenation, see
@@ -155,6 +158,15 @@ const readBytes = async (reader, maxSize) => {
   const { chunks, length, done } = await readChunks(reader, maxSize);
 
   return { bytes: concatenate(chunks, length), done };
+};
+
+const readMoreBytes = async (reader, head, maxSize) => {
+  // Read more of some content, the start of which we have already read, i.e. up to (roughly) twice as many bytes (but
+  // no more than the given number of bytes), and let the caller know whether the end of the stream was reached.
+
+  const more = await readChunks(reader, Math.min(2 * head.length, maxSize), [head]);
+
+  return { bytes: concatenate(more.chunks, more.length), done: more.done };
 };
 
 const readRest = async (reader, head) => {
@@ -440,12 +452,14 @@ const isCelldlFile = (bytes) => {
   return isSvgFile(bytes) && hasCelldlMetadata(bytes);
 };
 
-const isCsvFile = (bytes, complete) => {
+const csvFileIssue = (bytes, complete) => {
   // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks)
   // that looks like a CSV file as expected by the app, i.e. lines are separated by line breaks and values by commas,
   // there are at least two lines (i.e. a header and some data), and every line has the same number of values, which
   // must be at least two (i.e. a VOI column and a data column). Like the app, we decode the text as UTF-8 (replacing
-  // invalid byte sequences, like Response.text() does), trim lines, and skip blank lines.
+  // invalid byte sequences, like Response.text() does), trim lines, and skip blank lines. If the given bytes are a CSV
+  // file, then return null. Otherwise, return why they are not (worded like in parseExternalCsvData(), so that the user
+  // gets told the same thing whether the app or we find the issue) and whether more bytes are needed to tell.
   // Note #1: if we only have the start of the CSV file, then we ignore its last (and likely incomplete) line.
   // Note #2: we check the text even if the URL has a .csv extension. Indeed, we accept any target URL, so we would
   //          otherwise return almost any text from anywhere (e.g., https://example.com/anything.csv), i.e. act as a
@@ -456,7 +470,7 @@ const isCsvFile = (bytes, complete) => {
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: we are looking for control characters.
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) {
-    return false;
+    return { message: 'it is not a text file', incomplete: false };
   }
 
   const lines = text.split(/\r?\n/);
@@ -465,8 +479,8 @@ const isCsvFile = (bytes, complete) => {
     lines.pop();
   }
 
-  let nbOfLines = 0;
-  let nbOfValuesPerLine = -1;
+  let nbOfRows = 0;
+  let nbOfColumns = 0;
 
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -477,16 +491,29 @@ const isCsvFile = (bytes, complete) => {
 
     const nbOfValues = trimmedLine.split(',').length;
 
-    if (nbOfValues < 2 || (nbOfValuesPerLine !== -1 && nbOfValues !== nbOfValuesPerLine)) {
-      return false;
+    ++nbOfRows;
+
+    if (nbOfRows === 1) {
+      if (nbOfValues < 2) {
+        return { message: 'its header does not have at least two columns', incomplete: false };
+      }
+
+      nbOfColumns = nbOfValues;
+    } else if (nbOfValues !== nbOfColumns) {
+      return {
+        message: `its row #${nbOfRows} does not have the same number of columns as its header, i.e. ${nbOfColumns}, not ${nbOfValues}`,
+        incomplete: false
+      };
     }
-
-    nbOfValuesPerLine = nbOfValues;
-
-    ++nbOfLines;
   }
 
-  return nbOfLines >= 2;
+  if (nbOfRows < 2) {
+    return complete
+      ? { message: 'it does not have a header and at least one row of data', incomplete: false }
+      : { message: 'its header and first row of data are too long', incomplete: true };
+  }
+
+  return null;
 };
 
 const errorResponse = (message, status) => {
@@ -608,16 +635,26 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
   // MAX_XML_PROLOG_SIZE).
 
   while (!done && head.length < MAX_XML_PROLOG_SIZE && isIncompleteXmlProlog(head)) {
-    const more = await readChunks(reader, Math.min(2 * head.length, MAX_XML_PROLOG_SIZE), [head]);
-
-    head = concatenate(more.chunks, more.length);
-    done = more.done;
+    ({ bytes: head, done } = await readMoreBytes(reader, head, MAX_XML_PROLOG_SIZE));
   }
 
-  if (
-    (filesAccepted && (isCellmlOrSedmlFile(head) || isCelldlFile(head))) ||
-    (csvFilesAccepted && isCsvFile(head, done))
-  ) {
+  const isAcceptedFile = filesAccepted && (isCellmlOrSedmlFile(head) || isCelldlFile(head));
+  let csvIssue = null;
+
+  if (!isAcceptedFile && csvFilesAccepted) {
+    csvIssue = csvFileIssue(head, done);
+
+    // Read more of the content if it may be a CSV file which header and first row of data are longer than what we have
+    // read so far (see MAX_CSV_HEAD_SIZE).
+
+    while (csvIssue?.incomplete && !done && head.length < MAX_CSV_HEAD_SIZE) {
+      ({ bytes: head, done } = await readMoreBytes(reader, head, MAX_CSV_HEAD_SIZE));
+
+      csvIssue = csvFileIssue(head, done);
+    }
+  }
+
+  if (isAcceptedFile || (csvFilesAccepted && !csvIssue)) {
     if (done || hasKnownSize(response)) {
       return new Response(done ? head : replayStream(head, reader), {
         status: response.status,
@@ -662,7 +699,12 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
   if (!filesAccepted || !isZipFile(head)) {
     await reader.cancel();
 
-    return rejectedResponse(`The file is not ${CONTENT_KINDS[contentKind] ?? ANY_CONTENT}.`);
+    // Note: we only say why the content is not a CSV file if a CSV file is all that the app expects. Otherwise, the
+    //       content is likely meant to be some other kind of file, so why it is not a CSV file would be confusing.
+
+    const csvIssueMessage = contentKind === 'csv' && csvIssue ? ` (${csvIssue.message})` : '';
+
+    return rejectedResponse(`The file is not ${CONTENT_KINDS[contentKind] ?? ANY_CONTENT}${csvIssueMessage}.`);
   }
 
   const bytes = done ? head : await readRest(reader, head);
