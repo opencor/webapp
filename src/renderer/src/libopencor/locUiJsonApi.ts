@@ -562,6 +562,11 @@ interface ValidateUiJsonOptions {
   editableModelParameters?: string[];
 }
 
+// Note: there may be many items (e.g., hundreds of model parameters), in which case we only list the first ones, so that
+//       our issues remain readable.
+
+const MAX_LISTED_ITEMS = 10;
+
 const listOfItems = (items: Set<string>): string => {
   if (items.size === 0) {
     return '';
@@ -575,6 +580,10 @@ const listOfItems = (items: Set<string>): string => {
 
   if (list.length === 2) {
     return `${list[0]} or ${list[1]}`;
+  }
+
+  if (list.length > MAX_LISTED_ITEMS) {
+    return `${list.slice(0, MAX_LISTED_ITEMS).join(', ')}, or ${common.formatCount(list.length - MAX_LISTED_ITEMS)} others`;
   }
 
   return `${list.slice(0, -1).join(', ')}, or ${list[list.length - 1]}`;
