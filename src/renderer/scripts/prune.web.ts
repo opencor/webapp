@@ -19,9 +19,21 @@ import path from 'node:path';
 //          version of our Web app was deployed 100 days earlier). So, we use a grace period that is generous enough to
 //          cover that case too.
 // Note #3: we use OpenSSH's sftp since it comes with all the GitHub-hosted runners.
+// Note #4: our assets get uploaded to a temporary file (named ".in.<file name>") which only gets renamed once it has
+//          been fully uploaded (see xfer:use-temp-file in .github/workflows/cd.yml and .github/workflows/cddev.yml).
+//          So, if an upload fails, then its temporary file is left behind. Such a file is never part of our current
+//          deployment, so we prune it like an asset that is not used anymore. We also give it the same grace period, so
+//          that we never delete a file that is still being uploaded (e.g., by another deployment).
 
 const GRACE_PERIOD = 30 * 24 * 60 * 60 * 1000; // 30 days, in milliseconds.
 const HASHED_ASSET_REGEX = /^\w[\w.-]*-[\w-]{8}\.\w+$/;
+const TEMP_FILE_PREFIX = '.in.';
+
+const isHashedAssetOrTempFile = (fileName: string): boolean => {
+  return HASHED_ASSET_REGEX.test(
+    fileName.startsWith(TEMP_FILE_PREFIX) ? fileName.slice(TEMP_FILE_PREFIX.length) : fileName
+  );
+};
 const PRUNE_FILE_NAME = '.prune.json';
 
 const remotePath = process.argv[2];
@@ -104,7 +116,10 @@ try {
   // Note #1: a command prefixed with "-" doesn't abort sftp if it fails, which is what we want since our prune file
   //          doesn't exist the first time we are run.
   // Note #2: we use a long listing so that we only consider regular files (i.e. lines that start with "-"), and since
-  //          our hashed assets have no space in their names, their name is the last field of their line.
+  //          our hashed assets (and their temporary files) have no space in their names, their name is the last field
+  //          of their line.
+  // Note #3: we list all the files, including those which name starts with a dot, so that we also get the temporary
+  //          files of our assets (see Note #4 at the top).
 
   const remoteIndexHtmlFile = path.join(tmpPath, 'index.html');
   const pruneFile = path.join(tmpPath, PRUNE_FILE_NAME);
@@ -113,12 +128,12 @@ try {
     `get index.html "${remoteIndexHtmlFile}"`,
     'cd assets',
     `-get ${PRUNE_FILE_NAME} "${pruneFile}"`,
-    'ls -l'
+    'ls -la'
   ])
     .split('\n')
     .filter((line) => line.startsWith('-'))
     .map((line) => line.trim().split(/\s+/).pop() ?? '')
-    .filter((fileName) => HASHED_ASSET_REGEX.test(fileName));
+    .filter((fileName) => isHashedAssetOrTempFile(fileName));
 
   // Make sure that our current deployment is the one that is deployed. Otherwise, we would consider the assets of the
   // deployed version of our Web app as not being used anymore.
