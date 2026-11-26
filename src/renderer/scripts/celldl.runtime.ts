@@ -78,8 +78,8 @@ export const buildCellDLRuntime = async (publicDir: string): Promise<string> => 
     // Compute the hash of what our CellDL runtime is built from.
     // Note #1: we hash the contents of our modules rather than their path, which depends on where they are installed. A
     //          virtual module (e.g., our shared Vue module), however, has no contents, so we hash its ID instead.
-    // Note #2: our configuration files may have Windows line endings (depending on how our repository was checked
-    //          out), so we normalise them.
+    // Note #2: our configuration files may have Windows line endings (depending on how our repository was checked out),
+    //          so we normalise them.
 
     const require = createRequire(import.meta.url);
     const digests: string[] = [

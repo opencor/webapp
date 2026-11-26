@@ -212,8 +212,8 @@
                 />
               </div>
               <!--
-              Note: in simulation-only mode, we have no toolbar, so our Stop button is shown above our plots instead (see
-                    the Stop button in our toolbar).
+              Note: in simulation-only mode, we have no toolbar, so our Stop button is shown above our plots instead
+                    (see the Stop button in our toolbar).
               -->
               <ToolbarButtonWidget v-if="simulationOnly && slowSimulation" ref="stopButtonRef"
                 class="floating-stop-button"
@@ -474,10 +474,10 @@ const voiId = vue.ref(instanceTask ? (voiName.value.split('/')[1] ?? '') : '');
 const voiUnit = vue.ref(instanceTask ? instanceTask.voiUnit() : '');
 
 const actualUiJson = vue.ref<locApi.UiJson>(
-  // Note: we deep clone our UI JSON, sharing its external data values rather than copying them (see cloneUiJson()),
-  //       and normalise it to make sure that its external data values are Float64Arrays rather than plain arrays.
-  //       Indeed, plain arrays would be deeply tracked by Vue (i.e. element by element), which would be both slow and
-  //       memory hungry for large external data.
+  // Note: we deep clone our UI JSON, sharing its external data values rather than copying them (see cloneUiJson()), and
+  //       normalise it to make sure that its external data values are Float64Arrays rather than plain arrays. Indeed,
+  //       plain arrays would be deeply tracked by Vue (i.e. element by element), which would be both slow and memory
+  //       hungry for large external data.
 
   uiJsonWithExpectedStructure
     ? locApi.normaliseUiJson(locApi.cloneUiJson(uiJsonWithExpectedStructure.uiJson))
@@ -728,8 +728,9 @@ const runs = vue.ref<SimulationRun[]>([
   }
 ]);
 
-// The number of our last tracked run, which a tracked run keeps (rather than being numbered after its position), so that
-// removing a run doesn't renumber the other ones. Our numbering starts again once there are no tracked runs anymore.
+// The number of our last tracked run, which a tracked run keeps (rather than being numbered after its position), so
+// that removing a run doesn't renumber the other ones. Our numbering starts again once there are no tracked runs
+// anymore.
 
 let trackedRunId = 0;
 let simulationGeneration = 0;
@@ -2525,10 +2526,10 @@ const onColorSwatchesKeyDown = (event: KeyboardEvent): void => {
 // Return the given SED-ML, but with its model referring to the model file in our OMEX file.
 // Note #1: libOpenCOR uses the file name or URL of our model as its source, e.g., "file:///some/path/model.cellml" for
 //          a local file (and with some characters percent-encoded), so we cannot simply replace the file name of our
-//          model with the name of the model file in our OMEX file (we would, for instance, get
-//          "file://model.cellml", which is an absolute URL rather than a reference to a file in our OMEX file).
-// Note #2: a model which source starts with "#" is derived from another model in the SED-ML, so we leave its source
-//          as is.
+//          model with the name of the model file in our OMEX file (we would, for instance, get "file://model.cellml",
+//          which is an absolute URL rather than a reference to a file in our OMEX file).
+// Note #2: a model which source starts with "#" is derived from another model in the SED-ML, so we leave its source as
+//          is.
 
 const archiveSedml = (sedml: string): string => {
   const sedmlDocument = new DOMParser().parseFromString(sedml, 'application/xml');
@@ -2544,8 +2545,8 @@ const archiveSedml = (sedml: string): string => {
   }
 
   // Note: XMLSerializer may or may not include an XML declaration (and, if it does, it doesn't follow it with a new
-  //       line) and it doesn't end its output with a new line, unlike libOpenCOR, so we use our own XML declaration
-  //       and new lines.
+  //       line) and it doesn't end its output with a new line, unlike libOpenCOR, so we use our own XML declaration and
+  //       new lines.
 
   const root = new XMLSerializer()
     .serializeToString(sedmlDocument)
@@ -2556,9 +2557,9 @@ const archiveSedml = (sedml: string): string => {
 };
 
 // Download OMEX file.
-// Note: creating our OMEX file may fail (e.g., if libOpenCOR throws an exception while retrieving the contents of
-//       our model file or serialising our document, or if our OMEX file cannot be generated), in which case we
-//       let people know about it (as in the CellDL Editor view) rather than silently not download anything.
+// Note: creating our OMEX file may fail (e.g., if libOpenCOR throws an exception while retrieving the contents of our
+//       model file or serialising our document, or if our OMEX file cannot be generated), in which case we let people
+//       know about it (as in the CellDL Editor view) rather than silently not download anything.
 
 const reportOmexFileExportIssue = (issue: unknown): void => {
   addToast({
@@ -2657,13 +2658,12 @@ const onSettingsOk = (updatedSettings: SimulationExperimentInteractiveViewSettin
 
   // Update our settings and hide the dialog.
   // Note: our settings may have been confirmed even though they have some issues (so that they can, for instance, be
-  //       saved as an OMEX file and fixed later), in which case we must not silently run our simulation with some
-  //       other settings, but let libOpenCOR report those issues. So, our number of steps is such that our point
-  //       interval can be retrieved from it (e.g., a negative point interval gives a negative number of steps), unless
-  //       our point interval is zero, not finite, or so small that our number of steps cannot be handled by libOpenCOR,
-  //       in which case we use zero steps. Either way, libOpenCOR will report an invalid number of steps. If our
-  //       settings are valid, then we use at least one step (i.e. if our point interval is greater than our simulation
-  //       range).
+  //       saved as an OMEX file and fixed later), in which case we must not silently run our simulation with some other
+  //       settings, but let libOpenCOR report those issues. So, our number of steps is such that our point interval can
+  //       be retrieved from it (e.g., a negative point interval gives a negative number of steps), unless our point
+  //       interval is zero, not finite, or so small that our number of steps cannot be handled by libOpenCOR, in which
+  //       case we use zero steps. Either way, libOpenCOR will report an invalid number of steps. If our settings are
+  //       valid, then we use at least one step (i.e. if our point interval is greater than our simulation range).
 
   const { initialPoint, startingPoint, endingPoint, pointInterval } = updatedSettings.simulation;
 
@@ -2705,8 +2705,8 @@ const onSettingsOk = (updatedSettings: SimulationExperimentInteractiveViewSettin
 
   // Remove the model changes from our previous simulation run if our new UI JSON is invalid.
   // Note: we don't run any simulation with an invalid UI JSON, so those model changes would otherwise be left in our
-  //       document and, therefore, be exported with it (see onDownloadOmexFile()) even though they don't match
-  //       our new UI JSON.
+  //       document and, therefore, be exported with it (see onDownloadOmexFile()) even though they don't match our new
+  //       UI JSON.
 
   if (uiJsonIssues.value.length > 0) {
     applyModelChanges([]);

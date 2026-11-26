@@ -20,8 +20,8 @@ import * as vue from 'vue';
 // animation (see .opencor-context-menu and the anchored overlays in app.css).
 // Note: only one context menu should be shown at any given time, but PrimeVue only hides a context menu when the user
 //       clicks outside of it, so we let our other context menus know when we are about to be shown, and we hide
-//       ourselves when another context menu is about to be shown. Similarly, we hide ourselves when our window loses the
-//       focus (e.g., when switching to another tab or application), like a native context menu.
+//       ourselves when another context menu is about to be shown. Similarly, we hide ourselves when our window loses
+//       the focus (e.g., when switching to another tab or application), like a native context menu.
 
 const props = defineProps<{
   model: MenuItem[];
@@ -84,8 +84,9 @@ const CONTEXT_MENU_SHOW_EVENT = 'opencor-context-menu-show';
 const contextMenuId = Symbol('ContextMenuWidget');
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 
-// Show ourselves where the given event happened, focusing our first item if we are shown using the keyboard (e.g., using
-// Shift+F10 or the context menu key), like a native context menu, so that we can be used with the keyboard straightaway.
+// Show ourselves where the given event happened, focusing our first item if we are shown using the keyboard (e.g.,
+// using Shift+F10 or the context menu key), like a native context menu, so that we can be used with the keyboard
+// straightaway.
 // Note: PrimeVue gives the keyboard focus to our menu once we are shown, but without focusing any of our items, so we
 //       then do what PrimeVue does when ArrowDown is pressed, i.e. focus our first item (see onFocus()).
 

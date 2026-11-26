@@ -129,8 +129,8 @@ autoUpdater.on('error', (error: Error) => {
 });
 
 // Download an update, which can be cancelled (see cancelUpdateDownload()).
-// Note: an update may have been fully downloaded by the time its download gets cancelled, in which case we don't let our
-//       renderer know that it has been downloaded (since the user doesn't want to install it now), but it may still
+// Note: an update may have been fully downloaded by the time its download gets cancelled, in which case we don't let
+//       our renderer know that it has been downloaded (since the user doesn't want to install it now), but it may still
 //       get installed when OpenCOR gets quit (see autoInstallOnAppQuit in electron-updater). Similarly, we don't let
 //       our renderer know about the error that electron-updater reports when a download gets cancelled.
 
@@ -822,8 +822,8 @@ export class MainWindow extends ApplicationWindow {
     });
 
     // Don't get closed (e.g., because OpenCOR is being quit) if some files have been modified, but ask our renderer to
-    // ask the user whether to save them, after which our renderer will close us (see closeConfirmed()), unless the
-    // user cancels.
+    // ask the user whether to save them, after which our renderer will close us (see closeConfirmed()), unless the user
+    // cancels.
     // Note #1: this must be our first close listener since our other close listeners must ignore a close event that we
     //          prevent (i.e. when we are not actually going to be closed).
     // Note #2: preventing our closing also cancels the quitting of OpenCOR, if any, in which case we are not being
@@ -854,8 +854,8 @@ export class MainWindow extends ApplicationWindow {
     //          Windows can end the session, unless the user cancels.
     // Note #2: Windows doesn't wait for anyone when the session must end (e.g., because the system is running out of
     //          power), so there is no point in asking the user in that case.
-    // Note #3: we don't consider ourselves as being closed since the session may not end after all (see the
-    //          session-end listener below).
+    // Note #3: we don't consider ourselves as being closed since the session may not end after all (see the session-end
+    //          listener below).
 
     this.on('query-session-end', (event) => {
       if (this._closeConfirmed || !modifiedFilePaths.length || event.reasons.includes('critical')) {
@@ -1091,8 +1091,8 @@ export class MainWindow extends ApplicationWindow {
 
     // Note: on Windows, before-quit doesn't get emitted when the session ends (i.e. when shutting down or restarting
     //       the system, or when logging off), and our renderer may get killed before we get closed, so we also rely on
-    //       session-end. We don't rely on query-session-end though since the session may not end after all (e.g., if
-    //       we or another application prevent it from ending), in which case we would ignore our renderer crashing (see
+    //       session-end. We don't rely on query-session-end though since the session may not end after all (e.g., if we
+    //       or another application prevent it from ending), in which case we would ignore our renderer crashing (see
     //       onRenderProcessGone()) for the rest of our lifetime.
 
     this.once('session-end', () => {
@@ -1325,10 +1325,10 @@ export class MainWindow extends ApplicationWindow {
     // Note #1: we add them in reverse order and the selected file last, so that the selected file ends up being the
     //          most recent one, followed by the other files in their original order (see fileClosed()).
     // Note #2: unlike the files that we would have reopened, the files that we were asked to open were never given to
-    //          our renderer, so their path may not be canonical (only libOpenCOR, i.e. our renderer, can canonicalise
-    //          a path). So, we ask our reloaded renderer to canonicalise them once it is ready (see rendererReady()).
-    //          We still add them straight away though, so that they don't get lost should OpenCOR be quit before
-    //          then (or instead of reloading our renderer).
+    //          our renderer, so their path may not be canonical (only libOpenCOR, i.e. our renderer, can canonicalise a
+    //          path). So, we ask our reloaded renderer to canonicalise them once it is ready (see rendererReady()). We
+    //          still add them straight away though, so that they don't get lost should OpenCOR be quit before then (or
+    //          instead of reloading our renderer).
 
     const filesNotToReopen = this._rendererReady
       ? this.filesToReopen()
@@ -1436,10 +1436,10 @@ export class MainWindow extends ApplicationWindow {
 
   // A file has been opened or not (e.g., because it couldn't be retrieved).
   // Note: we only reopen the next file if the given file is the one that we are reopening. Indeed, other files may be
-  //       opened while we are reopening files (e.g., files passed on the command line or files opened by the user)
-  //       and they must not result in us reopening the next file before the file that we are reopening has been opened
-  //       (or not) since we would otherwise end up reopening several files at once and selecting the previously
-  //       selected file before it has been reopened.
+  //       opened while we are reopening files (e.g., files passed on the command line or files opened by the user) and
+  //       they must not result in us reopening the next file before the file that we are reopening has been opened (or
+  //       not) since we would otherwise end up reopening several files at once and selecting the previously selected
+  //       file before it has been reopened.
 
   fileOpenedOrNot(filePath: string, opened: boolean): void {
     // Make sure that we don't select a file that couldn't be (re)opened.
@@ -1459,8 +1459,8 @@ export class MainWindow extends ApplicationWindow {
 
   // Reopen previously opened files, if any, and select the previously selected file.
   // Note: we reopen one file at a time since a file may be a remote file which means that it may take some time to
-  //       reopen. So, we only reopen the next file once our renderer has told us that the previous file has been
-  //       opened (or couldn't be opened), see fileOpenedOrNot().
+  //       reopen. So, we only reopen the next file once our renderer has told us that the previous file has been opened
+  //       (or couldn't be opened), see fileOpenedOrNot().
 
   reopenFilePathsAndSelectFilePath(): void {
     // Reopen the next file, if any.

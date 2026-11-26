@@ -60,8 +60,8 @@ import type { ToolbarButtonProps } from '../../common/vueCommon';
 //          SimulationExperimentInteractiveView.vue), in which case it is shown above it (if there is enough room
 //          there).
 // Note #7: like a hint (see hint.ts), a tooltip can be dismissed by pressing Escape, be it shown or about to be shown
-//          (including when it gives some feedback, see Note #5), in which case it isn't shown again until its button
-//          is hovered, focused, or pressed anew (so that it can, for instance, give some feedback again). Escape is
+//          (including when it gives some feedback, see Note #5), in which case it isn't shown again until its button is
+//          hovered, focused, or pressed anew (so that it can, for instance, give some feedback again). Escape is
 //          otherwise left to do what it normally does (e.g., remove the keyboard focus, see OpenCOR.vue).
 
 const TOOLTIP_OFFSET = 6; // Distance between our button and our tooltip (see .toolbar-button-tooltip below).

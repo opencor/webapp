@@ -174,11 +174,11 @@ const diagram = async (): Promise<string> => {
 //          modified again (see LIMITATIONS).
 // Note #2: CellDL Editor doesn't tell us about each edit, so we count as an edit anything that may edit our diagram,
 //          i.e. a change of its modified state or of its ability to undo something, and some user input within CellDL
-//          Editor (e.g., a pointer being released, a field being changed, or a key being pressed, except for a
-//          keyboard shortcut that isn't one of CellDL Editor's, like Ctrl/Cmd+S), rather than any change of its
-//          status (e.g., its selection gets cleared when our diagram is retrieved). We may therefore count an edit that
-//          doesn't actually edit anything, but we would rather consider our diagram modified when it isn't than the
-//          other way round.
+//          Editor (e.g., a pointer being released, a field being changed, or a key being pressed, except for a keyboard
+//          shortcut that isn't one of CellDL Editor's, like Ctrl/Cmd+S), rather than any change of its status (e.g.,
+//          its selection gets cleared when our diagram is retrieved). We may therefore count an edit that doesn't
+//          actually edit anything, but we would rather consider our diagram modified when it isn't than the other way
+//          round.
 // Note #3: marking our diagram as unmodified changes CellDL Editor's status, which is not an edit (see markSaved()
 //          below).
 
@@ -208,12 +208,12 @@ const onEditorKeyDown = (event: KeyboardEvent): void => {
 };
 
 // Let people know that we can edit our file, so that it can be saved (see ContentsComponent.vue).
-// Note #1: our diagram may get edited while it is being saved (e.g., while our file is being written), in which case
-//          it must still be considered modified once saved, hence we keep track of the number of edits that had been
-//          made when we asked for some contents, for each contents that we provide (since several of them may be being
-//          saved at once, see FileEditor). We do so before asking for them since an edit made while they are being
-//          retrieved may or may not be part of them, in which case we would rather consider our diagram modified when
-//          it isn't than the other way round.
+// Note #1: our diagram may get edited while it is being saved (e.g., while our file is being written), in which case it
+//          must still be considered modified once saved, hence we keep track of the number of edits that had been made
+//          when we asked for some contents, for each contents that we provide (since several of them may be being saved
+//          at once, see FileEditor). We do so before asking for them since an edit made while they are being retrieved
+//          may or may not be part of them, in which case we would rather consider our diagram modified when it isn't
+//          than the other way round.
 // Note #2: our file may have unsaved contents (see viewRegistry.markUnsavedContents()), in which case our diagram is
 //          modified until it gets saved, even though CellDL Editor doesn't consider it modified. The same holds if our
 //          diagram was edited while it was being saved (see Note #1), since what got saved may not be our diagram.

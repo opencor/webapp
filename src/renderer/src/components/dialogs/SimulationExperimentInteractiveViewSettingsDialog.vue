@@ -819,8 +819,8 @@ const settingsChanged = (): boolean => {
 };
 
 // Ask people whether to discard their changes, if any, when our dialog is about to be dismissed using Escape or its
-// close button (rather than our Cancel button, which is an explicit request to discard them), since those can easily
-// be used by mistake.
+// close button (rather than our Cancel button, which is an explicit request to discard them), since those can easily be
+// used by mistake.
 // Note: we get told that our dialog is to be hidden through our owner's update:visible listener (see v-model:visible),
 //       which we therefore don't pass on to our dialog, but call ourselves once our changes can be discarded.
 
@@ -1392,8 +1392,8 @@ const newTraceValues = (usedYValues: string[]): { xValue: string; yValue: string
 };
 
 // A unique id for a new simulation input or simulation data, i.e. the given prefix followed by the first number (from
-// the number of items that there will be) that isn't already used by an id of our UI JSON, so that adding an item (e.g.,
-// after having removed another one) doesn't result in a duplicate id.
+// the number of items that there will be) that isn't already used by an id of our UI JSON, so that adding an item
+// (e.g., after having removed another one) doesn't result in a duplicate id.
 
 const uniqueIdNumber = (prefix: string, itemCount: number): number => {
   const uiJson = localSettings.value.interactive.uiJson;
@@ -1570,10 +1570,10 @@ const onExternalDataFileInputChange = async (event: Event): Promise<void> => {
   input.value = '';
 };
 
-// Note: a dragleave event is also fired when the pointer moves from our drop zone to one of its children (or vice versa),
-//       so we count the elements of our drop zone that the pointer has entered (a dragenter event being fired on the
-//       element that the pointer enters before the dragleave event on the element that it leaves), so that our drop
-//       zone doesn't flicker.
+// Note: a dragleave event is also fired when the pointer moves from our drop zone to one of its children (or vice
+//       versa), so we count the elements of our drop zone that the pointer has entered (a dragenter event being fired
+//       on the element that the pointer enters before the dragleave event on the element that it leaves), so that our
+//       drop zone doesn't flicker.
 
 let externalDataFileDragDepth = 0;
 

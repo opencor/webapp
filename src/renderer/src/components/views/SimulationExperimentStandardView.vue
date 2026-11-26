@@ -52,9 +52,9 @@
             </div>
             <!--
             Note: our run status is announced by assistive technologies through a visually hidden live region (which
-                  must exist before its contents change for them to get announced, and which doesn't affect our
-                  layout). That live region doesn't include the progress of a running simulation since it would
-                  otherwise get announced every time it changes (our progress bar already exposes it).
+                  must exist before its contents change for them to get announced, and which doesn't affect our layout).
+                  That live region doesn't include the progress of a running simulation since it would otherwise get
+                  announced every time it changes (our progress bar already exposes it).
             -->
             <span v-if="runStatus" class="run-status" :class="`run-status-${runStatus.type}`" aria-hidden="true">
               <i :class="runStatus.icon"></i>
@@ -80,8 +80,8 @@
           <SplitterPanel :size="simulationOnly ? 100 : 89">
             <!--
             Note: our side panel is stacked above our plot when we use a narrow layout (see narrowLayout), in which case
-                  we use a vertical splitter. Our splitter is not remounted when our layout changes, and its panels
-                  have the sizes of our current layout (see useSidePanelSplitter()).
+                  we use a vertical splitter. Our splitter is not remounted when our layout changes, and its panels have
+                  the sizes of our current layout (see useSidePanelSplitter()).
             -->
             <Splitter :layout="narrowLayout ? 'vertical' : 'horizontal'" @resizeend="onSidePanelResizeEnd">
               <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="sidePanelSizes[0]">
@@ -227,8 +227,8 @@ const data = vue.ref<PlotData>({
 // Our console, i.e. a header (the path of our file) followed by some entries (e.g., the issues of a simulation run or
 // its simulation time), each of which is some HTML (indented using non-breaking spaces, so that it is also indented
 // when copied as plain text, see copyConsole()).
-// Note: each entry is rendered on its own (rather than as part of a single HTML string), so that adding an entry doesn't
-//       re-render our whole console, and we only keep our most recent entries, so that our console doesn't keep
+// Note: each entry is rendered on its own (rather than as part of a single HTML string), so that adding an entry
+//       doesn't re-render our whole console, and we only keep our most recent entries, so that our console doesn't keep
 //       growing (e.g., when running many simulations).
 
 interface ConsoleEntry {
@@ -551,9 +551,8 @@ const delayText = vue.computed<string>(() => {
 // Whether a delay was used at some point during our current (or last) run, be it from its start or because a delay was
 // set while it was running or paused.
 // Note: the time reported for a run excludes the time spent waiting for our delay, but a delay still slows down the
-//       computation itself (each output point is computed after the CPU was given up for the duration of our delay,
-//       so caches get cold, the thread may resume on another core, etc.), hence we let people know when a delay was
-//       used.
+//       computation itself (each output point is computed after the CPU was given up for the duration of our delay, so
+//       caches get cold, the thread may resume on another core, etc.), hence we let people know when a delay was used.
 
 let runDelayed = false;
 
@@ -780,12 +779,12 @@ const computedDataSize = (progress: number): number => {
 //          only processes the new data (see retrieveLiveData()), so doing this every frame is fine.
 // Note #2: we only plot while our simulation is running, i.e. not while it is paused (since no new data is computed
 //          then), and while we are the active view (since our plot cannot be seen otherwise). Otherwise, our loop stops
-//          and gets resumed once our simulation is running again (see the watcher below) or once we are the active
-//          view again (see onActivated() below), at which point we plot all the data computed in the meantime.
+//          and gets resumed once our simulation is running again (see the watcher below) or once we are the active view
+//          again (see onActivated() below), at which point we plot all the data computed in the meantime.
 // Note #3: our loop gets stopped (see stopLivePlotting()) when our run is over (in which case our results get plotted
 //          by onRunPause(), unless our run was stopped or failed, in which case our plot is kept as is), when a new run
-//          is started, and when we get unmounted. A frame that has already been requested then does nothing since
-//          our live run is gone.
+//          is started, and when we get unmounted. A frame that has already been requested then does nothing since our
+//          live run is gone.
 // Note #4: retrieving the progress of our simulation or its data may fail (e.g., if libOpenCOR throws an exception), in
 //          which case we stop plotting our simulation (and let waitWhileRunning() report the error, if any, see
 //          onRunPause()).
@@ -949,8 +948,8 @@ const releaseResources = async (): Promise<void> => {
 // report, for instance.
 // Note #1: our console uses non-breaking spaces to indent its messages, so we replace them with normal spaces.
 // Note #2: our console may change while our copy button lets people know whether it was copied (e.g., if it gets
-//          cleared or if a simulation run reports something), in which case we reset our copy button since its
-//          feedback would no longer be about our (current) console.
+//          cleared or if a simulation run reports something), in which case we reset our copy button since its feedback
+//          would no longer be about our (current) console.
 
 const copyToClipboard = vueCommon.useCopyToClipboard();
 
@@ -1157,8 +1156,8 @@ const onRunPause = async (): Promise<void> => {
         activeElement.blur();
       }
 
-      // Stop plotting our previous run, if any, and reset our abort flag, our live data, the outcome (and issues) of our
-      // last run, and whether our Stop button had the keyboard focus.
+      // Stop plotting our previous run, if any, and reset our abort flag, our live data, the outcome (and issues) of
+      // our last run, and whether our Stop button had the keyboard focus.
       // Note: our live data is normally reset at the end of a simulation run (see updatePlot()), but not if the run was
       //       aborted or failed, in which case we would otherwise end up plotting (some of) the data of that run.
 
@@ -1293,8 +1292,8 @@ const onRunPause = async (): Promise<void> => {
       // exception), in which case we cannot rely on our instance anymore.
       // Note #1: we only know that we couldn't retrieve the status (or progress) of the simulation, which may therefore
       //          still be running (or be paused). So, we try to stop it and wait for it to be idle. Otherwise, our next
-      //          run would, for instance, end up pausing the simulation rather than starting a new one (see the
-      //          RUNNING case above). If this fails too, then there is nothing more that we can do.
+      //          run would, for instance, end up pausing the simulation rather than starting a new one (see the RUNNING
+      //          case above). If this fails too, then there is nothing more that we can do.
       // Note #2: the run is over either way, so we reset our progress bar and live data, but we keep our plot as is (as
       //          when a run is aborted) so that the user can see how far the simulation went.
       // Note #3: we consider our run as finishing while we wait for our instance to be idle, so that our Run/Pause

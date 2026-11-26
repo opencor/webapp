@@ -675,8 +675,8 @@ vue.onBeforeUnmount(() => {
 }
 
 /**
- * Make room for our reset button without making us any wider than when we don't have one, i.e. compensate for its
- * extra padding with a negative margin so that our intrinsic width remains the same.
+ * Make room for our reset button without making us any wider than when we don't have one, i.e. compensate for its extra
+ * padding with a negative margin so that our intrinsic width remains the same.
  */
 
 .p-inputnumber-resettable .p-inputnumber-input {

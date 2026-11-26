@@ -56,9 +56,9 @@
 //          lower values).
 // Note #2: our position can be changed by dragging our wheel left/right, by scrolling it (sideways or up/down), using
 //          the keyboard (arrow, Page Up/Down, Home, and End keys), and reset by double-clicking our wheel.
-// Note #3: our wheel can have a number of steps, in which case our position snaps to multiples of 1/steps (e.g., to
-//          map our position to a list of values, see SimulationExperimentStandardView.vue), our arrow keys move it by
-//          one step, and our Page Up/Down keys by several steps. Our wheel still rotates in steps, but dragging and
+// Note #3: our wheel can have a number of steps, in which case our position snaps to multiples of 1/steps (e.g., to map
+//          our position to a list of values, see SimulationExperimentStandardView.vue), our arrow keys move it by one
+//          step, and our Page Up/Down keys by several steps. Our wheel still rotates in steps, but dragging and
 //          scrolling it are accumulated (in rawPosition), so that small drags and scrolls eventually move it by a step.
 // Note #4: our wheel turns smoothly to its new position (e.g., from one step to the next), unless reduced motion is
 //          requested, in which case it gets there straightaway.

@@ -64,8 +64,8 @@ export const useViewRegistry = vueusecore.createGlobalState(() => {
   const _unsavedContentsFiles = new WeakSet<File>();
 
   // Register a view descriptor.
-  // Note: it must be called before any resolution. Registering a descriptor which ID is already registered replaces
-  //       the previous one in place (e.g., multiple OpenCOR instances mounted in the same page register the same
+  // Note: it must be called before any resolution. Registering a descriptor which ID is already registered replaces the
+  //       previous one in place (e.g., multiple OpenCOR instances mounted in the same page register the same
   //       descriptors), so the registry never grows unbounded.
 
   function register(descriptor: ViewDescriptor): void {

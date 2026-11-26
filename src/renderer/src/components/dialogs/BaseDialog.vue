@@ -68,8 +68,8 @@ const emit = defineEmits<{
   hidden: [];
 }>();
 
-// The width of our small dialogs (e.g., our message dialogs), medium dialogs (e.g., our About dialog), and large dialogs
-// (e.g., the settings dialog of our interactive view).
+// The width of our small dialogs (e.g., our message dialogs), medium dialogs (e.g., our About dialog), and large
+// dialogs (e.g., the settings dialog of our interactive view).
 
 const DIALOG_WIDTHS: Record<DialogSize, string> = {
   sm: '30rem',

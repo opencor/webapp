@@ -29,9 +29,9 @@ interface MathJsLike {
 }
 
 const ELEMENTWISE_REGEX = /\.([*/^])/g;
-// Note #1: we match numbers as well as identifiers so that the exponent of a number in scientific notation (e.g., e3
-//          in 2e3 or 2.e3) is not mistaken for an identifier while still allowing for implicit multiplication (e.g., 2x
-//          or 2e). A number is matched the way Math.js tokenises it (see parse.js in Math.js), i.e. either some digits
+// Note #1: we match numbers as well as identifiers so that the exponent of a number in scientific notation (e.g., e3 in
+//          2e3 or 2.e3) is not mistaken for an identifier while still allowing for implicit multiplication (e.g., 2x or
+//          2e). A number is matched the way Math.js tokenises it (see parse.js in Math.js), i.e. either some digits
 //          followed by an optional decimal mark (a "." that is not the start of an element-wise operator, i.e. ".*",
 //          "./", or ".^") and some optional digits, or a decimal mark followed by some digits, with an optional
 //          exponent in both cases.

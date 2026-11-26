@@ -21,7 +21,7 @@ type Candidate = {
   latest: string;
 };
 
-// Run a command synchronously, inheriting stdio.  Exit on failure.
+// Run a command synchronously, inheriting stdio. Exit on failure.
 
 const run = (command: string, args: string[]): void => {
   const res = spawnSync({

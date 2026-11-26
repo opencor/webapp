@@ -123,8 +123,8 @@
    *          our gutter on both sides (since our gutter centres our handle), which is why they are 3px wide/high (i.e.
    *          an odd number of pixels, so that they are centred on our gutter rather than straddle half pixels), and
    *          they are drawn above our panels (since our gutter has a z-index, see PrimeVue's Splitter).
-   * Note #3: PrimeVue's Splitter sets the width (horizontal layout) or height (vertical layout) of our handle inline (to
-   *          its gutter size, i.e. 4px by default), hence we need !important to override it (as for our gutter).
+   * Note #3: PrimeVue's Splitter sets the width (horizontal layout) or height (vertical layout) of our handle inline
+   *          (to its gutter size, i.e. 4px by default), hence we need !important to override it (as for our gutter).
    */
 
   .p-splitter-gutter-handle {

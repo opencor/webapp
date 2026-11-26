@@ -433,13 +433,13 @@ const {
 // Block the user's input once the user has confirmed that OpenCOR can be quit (or restarted), until it actually is.
 // Note #1: our main process doesn't quit OpenCOR straight away (e.g., on macOS, an update gets fetched by Squirrel.Mac
 //          before being installed), and the user might otherwise modify a file in the meantime (e.g., by undoing
-//          something in a CellDL file), in which case the modification would be lost without the user having been
-//          asked whether to save it.
+//          something in a CellDL file), in which case the modification would be lost without the user having been asked
+//          whether to save it.
 // Note #2: we intercept the user's input before anything else can handle it, i.e. during the capture phase of our
 //          window, using listeners that are added before anything else gets a chance to add its own (since the
-//          listeners of a given target and phase are called in the order in which they were added), e.g., before
-//          CellDL Editor gets loaded. We also disable our main menu (see compUiEnabled below), so that the user cannot,
-//          for instance, paste something using it.
+//          listeners of a given target and phase are called in the order in which they were added), e.g., before CellDL
+//          Editor gets loaded. We also disable our main menu (see compUiEnabled below), so that the user cannot, for
+//          instance, paste something using it.
 // Note #3: our main process may not quit OpenCOR after all (e.g., if an update couldn't be installed), in which case we
 //          unblock the user's input.
 
@@ -494,9 +494,9 @@ if (electronApi) {
 // Note: compBlockUiEnabled is used to determine whether PrimeVue's BlockUI component should be enabled, whereas
 //       compUiEnabled is used to determine whether the UI should be enabled (it checks whether various dialogs are
 //       visible since those dialogs block the UI). Whether a dialog is visible or not is tracked in compUiEnabled
-//       rather than compBlockUiEnabled because we don't want to show the BlockUI's overlay when a dialog is open
-//       since a dialog already has some overlaying effect and the BlockUI's overlay would just make things look darker
-//       and worse.
+//       rather than compBlockUiEnabled because we don't want to show the BlockUI's overlay when a dialog is open since
+//       a dialog already has some overlaying effect and the BlockUI's overlay would just make things look darker and
+//       worse.
 
 const compBlockUiEnabled = vue.computed<boolean>(() => {
   return (
@@ -1080,12 +1080,12 @@ if (!electronApi) {
 
 // Hide our focus ring when the user uses their pointing device, and show it again when they press a key (other than
 // Escape or a modifier key), so that our focus ring is only shown when the keyboard is being used (see focusRing.ts).
-// Similarly, hide our focus ring when the user presses Escape with nothing to close or dismiss (e.g., a menu, a popover,
-// or a tooltip), so that whatever has the keyboard focus no longer looks focused.
+// Similarly, hide our focus ring when the user presses Escape with nothing to close or dismiss (e.g., a menu, a
+// popover, or a tooltip), so that whatever has the keyboard focus no longer looks focused.
 // Note #1: we hide our focus ring rather than remove the keyboard focus (i.e. blur the focused element), since the
 //          keyboard focus would otherwise go back to the top of the page (e.g., pressing Tab would then focus the first
-//          focusable element of the page rather than the element after the one that had the keyboard focus), and
-//          screen readers would lose their place.
+//          focusable element of the page rather than the element after the one that had the keyboard focus), and screen
+//          readers would lose their place.
 // Note #2: Escape doesn't show our focus ring again, so that a dialog that was opened using the pointing device and
 //          closed using Escape doesn't give the keyboard focus back to where it was with a focus ring.
 // Note #3: we only handle Escape for our instance of OpenCOR, and only if it is active and its UI is enabled (i.e. our
@@ -1601,16 +1601,16 @@ const processFile = async (
   }
 
   // Check whether the file is already open or being opened and if so then select it.
-  // Note: a file may be opened more than once at the same time (e.g., by dropping the same file twice or by selecting
-  //       the same sample file twice). Since a file is only considered open once it has a file tab, we also need to
-  //       keep track of the files that are being opened, so that we don't end up with several file tabs for the same
-  //       file (and, with the C++ version of libOpenCOR, several File objects sharing, and therefore releasing, the
-  //       same native file). Also, a file may be referred to using different paths (e.g., through a symbolic link),
-  //       hence we keep track of the canonical path of the files that are being opened (our contents component does
-  //       the same for the files that are open, see ContentsComponent.findFileTab()).
-  // Note: this may fail (e.g., if the file path cannot be determined), in which case we report the issue so that the
-  //       user knows about it and our main process doesn't wait for the file forever (e.g., if the file is being
-  //       reopened at startup, see MainWindow.fileOpenedOrNot()).
+  // Note #1: a file may be opened more than once at the same time (e.g., by dropping the same file twice or by
+  //          selecting the same sample file twice). Since a file is only considered open once it has a file tab, we
+  //          also need to keep track of the files that are being opened, so that we don't end up with several file tabs
+  //          for the same file (and, with the C++ version of libOpenCOR, several File objects sharing, and therefore
+  //          releasing, the same native file). Also, a file may be referred to using different paths (e.g., through a
+  //          symbolic link), hence we keep track of the canonical path of the files that are being opened (our contents
+  //          component does the same for the files that are open, see ContentsComponent.findFileTab()).
+  // Note #2: this may fail (e.g., if the file path cannot be determined), in which case we report the issue so that the
+  //          user knows about it and our main process doesn't wait for the file forever (e.g., if the file is being
+  //          reopened at startup, see MainWindow.fileOpenedOrNot()).
 
   let filePath = '';
   let canonicalFilePath = '';
@@ -2039,8 +2039,8 @@ const onDrop = async (event: DragEvent): Promise<void> => {
   dragAndDropVisible.value = false;
 
   // Retrieve the dropped files and their file handle.
-  // Note: this must be done before we await anything since the dropped items can only be accessed while the drop
-  //       event is being handled.
+  // Note: this must be done before we await anything since the dropped items can only be accessed while the drop event
+  //       is being handled.
 
   const droppedFiles = Array.from(event.dataTransfer?.items ?? [])
     .filter((item) => item.kind === 'file')

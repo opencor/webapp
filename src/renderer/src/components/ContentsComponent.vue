@@ -27,8 +27,8 @@
       <!--
       Note: our file tabs follow the WAI-ARIA tabs pattern (see https://www.w3.org/WAI/ARIA/apg/patterns/tabs/), i.e.
             only the active file tab is in the tab sequence, the arrow keys (as well as Home and End) select another
-            file tab (and give it the keyboard focus), Shift with the left or right arrow key moves the focused file
-            tab (see moveFileTab()), and Delete (or Backspace) closes the file of the focused file tab. This is why the
+            file tab (and give it the keyboard focus), Shift with the left or right arrow key moves the focused file tab
+            (see moveFileTab()), and Delete (or Backspace) closes the file of the focused file tab. This is why the
             close button of a file tab is not in the tab sequence (it would otherwise be one extra tab stop for each
             file tab and, as the content of a tab, it isn't exposed to assistive technologies anyway).
       -->
@@ -781,10 +781,10 @@ const fileTabContextMenuItems = vue.computed<MenuItem[]>(() => {
         const canonicalPath = findFileTab(filePath)?.file.canonicalPath();
 
         // Note #1: navigator.clipboard is undefined in an insecure context (e.g., if we are embedded in a page served
-        //          over HTTP), in which case calling navigator.clipboard.writeText() would throw synchronously, hence we
-        //          call it from an async function.
-        // Note #2: we confirm that the path has been copied since, unlike with a download, nothing else would show
-        //          it (as when a plot gets copied, see GraphPanelWidget.vue).
+        //          over HTTP), in which case calling navigator.clipboard.writeText() would throw synchronously, hence
+        //          we call it from an async function.
+        // Note #2: we confirm that the path has been copied since, unlike with a download, nothing else would show it
+        //          (as when a plot gets copied, see GraphPanelWidget.vue).
 
         if (canonicalPath) {
           (async () => {
@@ -826,8 +826,8 @@ const onCloseButtonClick = (filePath: string): void => {
 // Note #1: the context menu may also be shown using the keyboard (e.g., using Shift+F10 when a file tab has the
 //          keyboard focus, see onFileTabBarKeyDown()), hence we check that our UI is enabled (see onSelectView()).
 // Note #2: our context menu may be requested while it is shown (e.g., if a Web browser turns Shift+F10 into a
-//          contextmenu event even though we prevented its default behaviour), in which case the keyboard focus is in our
-//          context menu, so we keep track of where it was before.
+//          contextmenu event even though we prevented its default behaviour), in which case the keyboard focus is in
+//          our context menu, so we keep track of where it was before.
 // Note #3: the file tab from which our context menu was requested may get removed (e.g., using our Close menu item), in
 //          which case closing its file takes care of the keyboard focus (see closeFile()).
 
@@ -896,8 +896,8 @@ const updateFileTabBarOverflow = (): void => {
 };
 
 // Note: we observe both our file tab bar and our file tabs (see setFileTabRef()), since the width of a file tab may
-//       change without the size of our file tab bar or the number of our file tabs changing (e.g., when a file is
-//       saved under a longer name).
+//       change without the size of our file tab bar or the number of our file tabs changing (e.g., when a file is saved
+//       under a longer name).
 
 const fileTabBarResizeObserver = new ResizeObserver(updateFileTabBarOverflow);
 
@@ -1265,8 +1265,8 @@ const doSaveFileAs = async (fileTab: FileTab): Promise<SaveOutcome> => {
   // Save the given file under a name of the user's choosing and return the outcome.
 
   // Let the user choose where to save the file.
-  // Note: in OpenCOR's Web app, we can only let the user choose where to save the file if the File System Access API
-  //       is available (and allowed, e.g., it isn't in a cross-origin iframe). If it isn't, then we download the file
+  // Note: in OpenCOR's Web app, we can only let the user choose where to save the file if the File System Access API is
+  //       available (and allowed, e.g., it isn't in a cross-origin iframe). If it isn't, then we download the file
   //       instead, using its suggested name (see suggestedFileName()), since we cannot know where (and under which
   //       name) it will be downloaded. For the same reason, and since the download may not even happen (e.g., the Web
   //       browser may block it or the user may decline it), we don't consider the file saved, i.e. it remains modified
@@ -1442,9 +1442,9 @@ const saveFileTo = async (
 
   // Replace the file of our file tab with the saved file, which renames our file tab.
   // Note #1: our file tab's views are keyed by the path of its file, so they get recreated for the saved file (and get
-  //          unmounted before we release the old file, see closeFile()). This means that we don't need to mark the
-  //          file as saved and that, should we fail to replace it, our file tab, which is still for the old file,
-  //          remains modified if it was.
+  //          unmounted before we release the old file, see closeFile()). This means that we don't need to mark the file
+  //          as saved and that, should we fail to replace it, our file tab, which is still for the old file, remains
+  //          modified if it was.
   // Note #2: our file may have been edited while it was being saved, in which case those edits would be lost when our
   //          views get recreated from the saved file. So, we create the saved file using the latest contents of our
   //          file (rather than have libOpenCOR retrieve them from disk in OpenCOR, see locCommon.file()) and mark it as
@@ -1833,9 +1833,9 @@ const onDragEnd = (): void => {
   dropIndicatorLeft.value = null;
 };
 
-// Scroll our file tab bar horizontally when the user scrolls vertically over it (e.g., using a mouse wheel), but let our
-// Web browser handle a horizontal scroll (e.g., using a trackpad or Shift and a mouse wheel) and a pinch-to-zoom (which
-// is a wheel event with the Ctrl key), and don't do anything if our file tab bar can't be scrolled.
+// Scroll our file tab bar horizontally when the user scrolls vertically over it (e.g., using a mouse wheel), but let
+// our Web browser handle a horizontal scroll (e.g., using a trackpad or Shift and a mouse wheel) and a pinch-to-zoom
+// (which is a wheel event with the Ctrl key), and don't do anything if our file tab bar can't be scrolled.
 
 const WHEEL_LINE_HEIGHT = 16;
 
@@ -1984,9 +1984,9 @@ const fileTabHasFocus = (): boolean => {
 };
 
 // Determine whether the given file (i.e. its file tab or contents) has the keyboard focus.
-// Note: if the context menu of our file tabs has the keyboard focus, then we consider where the keyboard focus was before
-//       it got shown (see showFileTabContextMenu()), since it is about to be given back there (e.g., when closing a
-//       file using our Close menu item, our context menu only gets hidden once the file has been closed).
+// Note: if the context menu of our file tabs has the keyboard focus, then we consider where the keyboard focus was
+//       before it got shown (see showFileTabContextMenu()), since it is about to be given back there (e.g., when
+//       closing a file using our Close menu item, our context menu only gets hidden once the file has been closed).
 
 const fileHasFocus = (filePath: string): boolean => {
   const fileTab = fileTabRefs[filePath];
@@ -2324,8 +2324,8 @@ if (common.isDocumentTitleOwned() && !simulationOnly.value) {
 /**
  * Note: on a device without hover (e.g., a tablet), our close button couldn't be revealed before being tapped, yet it
  *       would still be tappable (since it is only transparent), i.e. tapping the end of a file tab could close its file
- *       without our close button ever being seen. So, we always show our close button and, if our file is modified,
- *       our modified indicator next to it (rather than in its place).
+ *       without our close button ever being seen. So, we always show our close button and, if our file is modified, our
+ *       modified indicator next to it (rather than in its place).
  */
 
 @media (hover: none) {

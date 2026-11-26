@@ -58,10 +58,10 @@ const severity = vue.computed<Severity>(() => {
 
 // Close ourselves once our life is over, which depends on our severity, with an error being shown until it is closed
 // (so that the user has time to read it and, if needed, to copy it).
-// Note #1: our life is paused while we are hovered or have the keyboard focus (e.g., our close button), so that the user
-//          has time to read us.
-// Note #2: we handle our life ourselves (rather than letting PrimeVue do it) since PrimeVue only pauses it while a toast
-//          is hovered, not while it has the keyboard focus.
+// Note #1: our life is paused while we are hovered or have the keyboard focus (e.g., our close button), so that the
+//          user has time to read us.
+// Note #2: we handle our life ourselves (rather than letting PrimeVue do it) since PrimeVue only pauses it while a
+//          toast is hovered, not while it has the keyboard focus.
 
 const LIVES: Record<Severity, number | undefined> = {
   info: TOAST_LIFE,

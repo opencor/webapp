@@ -1,7 +1,7 @@
 // A simple CORS proxy handler for Cloudflare Workers (see https://workers.cloudflare.com/).
 // Note #1: the proxy accepts any target URL, but it only returns content that is a file that the app can open (i.e. a
-//          CellML file, a SED-ML file, an OMEX file, or a CellDL file, see isCelldlFile()) or a CSV file (which the
-//          app can use as external data in its Interactive view, see isCsvFile()), and that is not too large (see
+//          CellML file, a SED-ML file, an OMEX file, or a CellDL file, see isCelldlFile()) or a CSV file (which the app
+//          can use as external data in its Interactive view, see isCsvFile()), and that is not too large (see
 //          MAX_SIZE). Such content is returned as an opaque, sandboxed download, so that a browser never renders or
 //          executes it.
 // Note #2: the app tells us which kind of content it expects (see CONTENT_KINDS), so that we only return that kind of

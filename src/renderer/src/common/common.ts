@@ -98,9 +98,9 @@ export const isImeKeyDown = (event: KeyboardEvent): boolean => {
 //          (e.g., AltGr+O produces "ó" on a Polish keyboard), in which case the key is for typing that character rather
 //          than for a keyboard shortcut.
 // Note #3: the key may otherwise produce a character that is not a letter (from A to Z) in two cases, in which case we
-//          rely on the physical position of the key: on macOS, the Option key changes the character that is produced
-//          by a key (e.g., Option+O produces "ø"), while with a non-Latin keyboard layout (e.g., a Russian one), the
-//          key produces a non-Latin character (e.g., "щ").
+//          rely on the physical position of the key: on macOS, the Option key changes the character that is produced by
+//          a key (e.g., Option+O produces "ø"), while with a non-Latin keyboard layout (e.g., a Russian one), the key
+//          produces a non-Latin character (e.g., "щ").
 
 export const shortcutLetter = (event: KeyboardEvent): string | null => {
   if (isImeKeyDown(event)) {
@@ -119,8 +119,8 @@ export const shortcutLetter = (event: KeyboardEvent): string | null => {
 };
 
 // Some methods to let OpenCOR own the title of its document (e.g., to show the name of the selected file in it, see
-// ContentsComponent.vue), which is only the case when OpenCOR is not used as a library (see main.ts) since the title
-// of a page that embeds OpenCOR is not ours to change.
+// ContentsComponent.vue), which is only the case when OpenCOR is not used as a library (see main.ts) since the title of
+// a page that embeds OpenCOR is not ours to change.
 
 let _documentTitleOwned = false;
 
@@ -183,9 +183,9 @@ export const isUrl = (filePath: string): boolean => {
 };
 
 // A method to get the CORS proxy URL for a URL, which content is expected to be of the given kind, i.e. a file that we
-// can open (i.e. a CellML file, a SED-ML file, an OMEX file, or a CellDL file) or a CSV file (i.e. some external
-// data), so that our CORS proxy only returns that kind of content and, if it gets something else, tells us what it
-// expected (see src/extern/corsProxy.js).
+// can open (i.e. a CellML file, a SED-ML file, an OMEX file, or a CellDL file) or a CSV file (i.e. some external data),
+// so that our CORS proxy only returns that kind of content and, if it gets something else, tells us what it expected
+// (see src/extern/corsProxy.js).
 // Note: the URL must be encoded since it is passed as a query parameter, which our CORS proxy decodes. Otherwise, the
 //       URL would get truncated at its first "&" (e.g., https://example.com/export?format=csv&gid=123 would become
 //       https://example.com/export?format=csv), lose its fragment, and have its "+" and percent-encoded characters
@@ -225,8 +225,8 @@ const fetchWithTimeout = async (url: string, signal?: AbortSignal): Promise<Resp
 //          (HTTP 404 error), not be able to fetch the URL (HTTP 502 error; e.g., the URL is only reachable from the
 //          user's network), be rate limited (HTTP 429 error), be unavailable (HTTP 5xx error), be too slow to respond,
 //          or get some other error from the server of the URL (e.g., because it blocks requests from our CORS proxy),
-//          in which case fetching the URL directly may still work. So, we fetch the URL directly whenever our CORS proxy
-//          doesn't give us an OK response.
+//          in which case fetching the URL directly may still work. So, we fetch the URL directly whenever our CORS
+//          proxy doesn't give us an OK response.
 // Note #2: if fetching the URL directly also fails, then it is most likely because of CORS, about which a browser tells
 //          us next to nothing (e.g., "Failed to fetch"), so we report why our CORS proxy failed instead.
 // Note #3: we read the body of our CORS proxy's response before returning it, so that we can also fetch the URL
@@ -610,8 +610,8 @@ export const waitForNextAnimationFrame = (): Promise<number> => {
 //          next animation frame.
 // Note #3: no animation frames are run while our document is hidden (e.g., when our window is minimised), in which case
 //          there is nothing to paint for people to see, so we don't wait (or stop waiting) for our UI to be painted.
-//          Otherwise, we would wait until our document is visible again (e.g., a simulation run would only finish
-//          once our window is restored).
+//          Otherwise, we would wait until our document is visible again (e.g., a simulation run would only finish once
+//          our window is restored).
 
 const waitForNextAnimationFrameUnlessHidden = (): Promise<void> => {
   return new Promise((resolve) => {

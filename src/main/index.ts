@@ -84,8 +84,8 @@ interface ElectronConfContents {
 
 export let electronConf: ElectronConf<ElectronConfContents>;
 
-// A helper function to sanitise a (loaded) configuration value against its default value, i.e. to use the default
-// value for whatever is missing or of the wrong type.
+// A helper function to sanitise a (loaded) configuration value against its default value, i.e. to use the default value
+// for whatever is missing or of the wrong type.
 // Note #1: electron-conf only merges our default configuration at the top level, so a configuration file that was saved
 //          by an older version of OpenCOR or edited by hand may lack some (nested) values or have values of the wrong
 //          type (e.g., a string rather than an array of file paths), which would otherwise prevent OpenCOR from
@@ -355,8 +355,8 @@ electron.app
     }
 
     // Set process.env.NODE_ENV to 'production' if we are not the default app.
-    // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they
-    //       should run in development mode (default) or production mode.
+    // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they should
+    //       run in development mode (default) or production mode.
 
     if (!process.defaultApp) {
       process.env.NODE_ENV = 'production';
@@ -594,8 +594,8 @@ electron.app
         try {
           mainWindow = new MainWindow(process.argv, splashScreenWindow, await rendererUrl);
 
-          // Forget about our main window once it has been closed (and therefore destroyed), so that we don't try to
-          // use it (e.g., from our main menu or when another instance of OpenCOR is started).
+          // Forget about our main window once it has been closed (and therefore destroyed), so that we don't try to use
+          // it (e.g., from our main menu or when another instance of OpenCOR is started).
 
           mainWindow.on('closed', () => {
             mainWindow = null;

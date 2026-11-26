@@ -199,8 +199,8 @@ export const uiJsonWithExpectedStructure = (value: unknown): UiJsonWithExpectedS
 
 const toFloat64Array = (values: unknown): unknown => {
   // Note: new Float64Array(values) would silently convert some non-numeric values to valid numbers (e.g., null, false,
-  //       "", and [] to 0, true to 1, "3" to 3, and [5] to 5), so we convert any non-numeric value to NaN ourselves,
-  //       so that validateUiJson() reports it (see fromFloat64ArrayForSchemaValidation()).
+  //       "", and [] to 0, true to 1, "3" to 3, and [5] to 5), so we convert any non-numeric value to NaN ourselves, so
+  //       that validateUiJson() reports it (see fromFloat64ArrayForSchemaValidation()).
 
   if (!Array.isArray(values)) {
     return values;
@@ -533,8 +533,8 @@ const schemaErrorDescription = (error: SchemaValidationError, path: UiJsonPath, 
   // Return a description of the given schema error, which is about the value at the given path, using the same terms as
   // our other issues (e.g., "a simulation input name must not be empty.").
   // Note: a value that is required may be missing (e.g., in a UI JSON file) or empty (e.g., if it was cleared in our
-  //       settings dialog, in which case it got removed when our UI JSON was cleaned, see cleanUiJson()), hence we check
-  //       the original UI JSON to tell which.
+  //       settings dialog, in which case it got removed when our UI JSON was cleaned, see cleanUiJson()), hence we
+  //       check the original UI JSON to tell which.
 
   const name = UI_JSON_VALUE_NAMES[uiJsonPathKey(path.map((key) => (typeof key === 'number' ? '*' : key)))];
 
@@ -566,8 +566,8 @@ interface ValidateUiJsonOptions {
   editableModelParameters?: string[];
 }
 
-// Note: there may be many items (e.g., hundreds of model parameters), in which case we only list the first ones, so that
-//       our issues remain readable.
+// Note: there may be many items (e.g., hundreds of model parameters), in which case we only list the first ones, so
+//       that our issues remain readable.
 
 const MAX_LISTED_ITEMS = 10;
 
@@ -871,8 +871,8 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
   // Report our schema errors and keep track of the values that they are about.
   // Note #1: an error is about the value at its path, except if it is about a required property of that value that is
   //          missing, in which case it is about that property. An error about an additional property (i.e. a property
-  //          that is not allowed) is about the value that has that property since such a property has no place in a
-  //          UI JSON (and therefore no field in our settings dialog). However, that property is the only value that is
+  //          that is not allowed) is about the value that has that property since such a property has no place in a UI
+  //          JSON (and therefore no field in our settings dialog). However, that property is the only value that is
   //          invalid, not the value that has it (whose other properties can still be checked).
   // Note #2: external data values that are not numbers are not reported by our schema validation (see
   //          fromFloat64ArrayForSchemaValidation()), but they are just as invalid, so we report them alongside. They
@@ -900,16 +900,16 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
 
   res.push(...nonNumericValuesIssues(uiJson));
 
-  // Make sure that our UI JSON makes sense, but only check the values that passed our schema validation, i.e. the values
-  // that have the expected type (and are present, if required) and so have the contents that our checks expect.
-  // Note: valid() tells whether the value at the given path passed our schema validation, i.e. whether there is no
-  //       schema error about it or about any of its descendants, while objectEntries() returns the entries of the given
-  //       value that are objects if it is an array (or no entries otherwise), so that we only check the items of an
-  //       array that are objects (i.e. those that have the expected type), while keeping track of their index.
-  // Note: we don't check whether a value is empty since an empty value (e.g., a field that was cleared in our settings
-  //       dialog) gets removed when our UI JSON is cleaned (see cleanUiJson()), and is then reported by our schema
-  //       validation as not being provided (or as being empty, see schemaErrorDescription()), which also reports the
-  //       arrays that are empty while they shouldn't.
+  // Make sure that our UI JSON makes sense, but only check the values that passed our schema validation, i.e. the
+  // values that have the expected type (and are present, if required) and so have the contents that our checks expect.
+  // Note #1: valid() tells whether the value at the given path passed our schema validation, i.e. whether there is no
+  //          schema error about it or about any of its descendants, while objectEntries() returns the entries of the
+  //          given value that are objects if it is an array (or no entries otherwise), so that we only check the items
+  //          of an array that are objects (i.e. those that have the expected type), while keeping track of their index.
+  // Note #2: we don't check whether a value is empty since an empty value (e.g., a field that was cleared in our
+  //          settings dialog) gets removed when our UI JSON is cleaned (see cleanUiJson()), and is then reported by our
+  //          schema validation as not being provided (or as being empty, see schemaErrorDescription()), which also
+  //          reports the arrays that are empty while they shouldn't.
 
   const valid = (...path: UiJsonPath): boolean => {
     const pathKey = uiJsonPathKey(path);

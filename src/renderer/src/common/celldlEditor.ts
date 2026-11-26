@@ -8,8 +8,8 @@ import * as common from './common';
 // its events, and let our caller open a diagram in it, retrieve its (possibly edited) diagram, and mark its diagram as
 // unmodified (e.g., once it has been saved).
 // Note #1: CellDL Editor lets us know through its editor-state event when it is ready (i.e. when it can handle our
-//          commands), when its status changes (e.g., when its diagram gets modified or unmodified), and when it fails to
-//          open a diagram. It may also fail to get ready (e.g., if it fails to initialise itself), in which case our
+//          commands), when its status changes (e.g., when its diagram gets modified or unmodified), and when it fails
+//          to open a diagram. It may also fail to get ready (e.g., if it fails to initialise itself), in which case our
 //          caller tells us about it (see failed()) since we would otherwise wait for it forever.
 // Note #2: CellDL Editor can only handle one command at a time and doesn't tell us when it is done with one, but it
 //          handles a command as soon as it gets it and then only needs a tick to finish handling it, so we run our
@@ -62,8 +62,8 @@ export const useCellDLEditor = (callbacks: CellDLEditorCallbacks) => {
   // Retrieve the diagram from CellDL Editor.
   // Note #1: we give up if CellDL Editor doesn't provide the diagram in time since, otherwise, our queue of operations
   //          would be blocked forever.
-  // Note #2: we also give up if CellDL Editor provides no diagram (e.g., if it failed to serialise it) since, otherwise,
-  //          we would provide nothing as the diagram.
+  // Note #2: we also give up if CellDL Editor provides no diagram (e.g., if it failed to serialise it) since,
+  //          otherwise, we would provide nothing as the diagram.
 
   let dataRequestNumber = 0;
   const dataRequests = new Map<string, (data: string | undefined) => void>();

@@ -16,8 +16,8 @@ import { electronApi } from './electronApi';
 // shows it to their left, so that its plots remain usable on a phone or when OpenCOR is embedded in a small container).
 // Note #1: we use the width of the given element (rather than that of the window), since OpenCOR may not take the whole
 //          window (e.g., when it is embedded in a page).
-// Note #2: we ignore a width of zero, which means that the given element is not shown (e.g., if it is in a view that
-//          is not currently shown), so that our layout doesn't change for nothing.
+// Note #2: we ignore a width of zero, which means that the given element is not shown (e.g., if it is in a view that is
+//          not currently shown), so that our layout doesn't change for nothing.
 
 export const useNarrowLayout = (elementRef: vue.Ref<HTMLElement | null>): vue.Ref<boolean> => {
   const narrowLayout = vue.ref<boolean>(false);
@@ -78,8 +78,8 @@ export const useTheme = vueusecore.createGlobalState(() => {
   // Note: our theme is changed instantaneously, i.e. without any of our elements transitioning their colours (e.g., a
   //       PrimeVue form field, which transitions its background and border colours), which would otherwise be
   //       distracting. So, we disable all transitions while our theme is being changed (see .opencor-theme-changing in
-  //       app.css) and re-enable them two frames later, i.e. once our elements have been restyled, including those
-  //       that only get updated after Vue's next tick (e.g., an element with a class that depends on useDarkMode()).
+  //       app.css) and re-enable them two frames later, i.e. once our elements have been restyled, including those that
+  //       only get updated after Vue's next tick (e.g., an element with a class that depends on useDarkMode()).
 
   let themeChangingAnimationFrame = 0;
 

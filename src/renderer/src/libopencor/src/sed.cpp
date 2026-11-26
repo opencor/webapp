@@ -45,9 +45,9 @@ libOpenCOR::SedInstanceTaskPtr toSedInstanceTask(const Napi::CallbackInfo &pInfo
     return task;
 }
 
-// Retrieve the index, within values of the given size, that corresponds to the given start or end of a slice, using
-// the same semantics as JavaScript's TypedArray.prototype.subarray() (e.g., a negative index is relative to the end of
-// the values and a non-finite index is clamped), so that we behave the same way as the WASM version of libOpenCOR (see
+// Retrieve the index, within values of the given size, that corresponds to the given start or end of a slice, using the
+// same semantics as JavaScript's TypedArray.prototype.subarray() (e.g., a negative index is relative to the end of the
+// values and a non-finite index is clamped), so that we behave the same way as the WASM version of libOpenCOR (see
 // sliceValues() in src/renderer/src/libopencor/locSedApi.ts).
 
 size_t sliceIndex(const Napi::Value &pValue, size_t pSize, size_t pDefaultIndex)

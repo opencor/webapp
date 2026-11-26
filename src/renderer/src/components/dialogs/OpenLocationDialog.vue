@@ -89,8 +89,8 @@ const checked = vue.ref<boolean>(false);
 //          "192.168.010.001", which the URL parser would normalise to "192.168.8.1" since "010" is an octal number) is
 //          not considered as a valid URL. A URL with a scheme can have any host (e.g., an intranet host, such as
 //          "http://modelserver/model.omex").
-// Note #3: a data URL is also valid if it is a Base64-encoded OMEX file (i.e. "data:application/zip;base64,...")
-//          or zipped CellML file (i.e. "data:application/x.vnd.zip-cellml+zip;base64,..."), since it can then be opened
+// Note #3: a data URL is also valid if it is a Base64-encoded OMEX file (i.e. "data:application/zip;base64,...") or
+//          zipped CellML file (i.e. "data:application/x.vnd.zip-cellml+zip;base64,..."), since it can then be opened
 //          like any other file (see OpenCOR.openFile() and locCommon.zipDataFromDataUrl()). It is used as is, apart
 //          from its scheme, media type, and ";base64" which are lowercased (since locCommon.zipDataFromDataUrl()
 //          expects them to be), so, unlike for other URLs, we don't let people know which URL will be opened since it
@@ -286,14 +286,14 @@ const normalisedUrl = vue.computed<string>(() => {
 //          considered as checked the next time our dialog is shown and people would be told off while typing it.
 // Note #3: our issue is an alert, so that it gets announced by assistive technologies when it is shown.
 // Note #4: we don't consider our URL as checked when leaving our input field for our Cancel button or the close button
-//          of our dialog, since our dialog is then about to be closed. Otherwise, our issue would briefly be shown
-//          (and announced) before our dialog gets closed. Our input field is left either when the keyboard focus moves
-//          to one of those buttons (e.g., using Tab or, in some browsers, when clicking it), in which case we know
-//          which button gets the keyboard focus, or when one of those buttons is pressed (in browsers where clicking a
-//          button doesn't give it the keyboard focus, e.g., Safari), in which case we need to know which button is
-//          being pressed, hence we keep track of it (in the capture phase, i.e. before our input field gets blurred)
-//          until it has been clicked (rather than released since, with touch input, a button is released before our
-//          input field gets blurred).
+//          of our dialog, since our dialog is then about to be closed. Otherwise, our issue would briefly be shown (and
+//          announced) before our dialog gets closed. Our input field is left either when the keyboard focus moves to
+//          one of those buttons (e.g., using Tab or, in some browsers, when clicking it), in which case we know which
+//          button gets the keyboard focus, or when one of those buttons is pressed (in browsers where clicking a button
+//          doesn't give it the keyboard focus, e.g., Safari), in which case we need to know which button is being
+//          pressed, hence we keep track of it (in the capture phase, i.e. before our input field gets blurred) until it
+//          has been clicked (rather than released since, with touch input, a button is released before our input field
+//          gets blurred).
 
 const showIssue = vue.computed<boolean>(() => {
   return checked.value && !!url.value.trim() && !normalisedUrl.value;

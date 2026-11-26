@@ -101,10 +101,10 @@ try {
 
   // Retrieve our deployed index.html, our deployed assets, and when we first noticed that some of them were not used
   // anymore.
-  // Note: a command prefixed with "-" doesn't abort sftp if it fails, which is what we want since our prune file
-  //       doesn't exist the first time we are run.
-  // Note: we use a long listing so that we only consider regular files (i.e. lines that start with "-"), and since our
-  //       hashed assets have no space in their names, their name is the last field of their line.
+  // Note #1: a command prefixed with "-" doesn't abort sftp if it fails, which is what we want since our prune file
+  //          doesn't exist the first time we are run.
+  // Note #2: we use a long listing so that we only consider regular files (i.e. lines that start with "-"), and since
+  //          our hashed assets have no space in their names, their name is the last field of their line.
 
   const remoteIndexHtmlFile = path.join(tmpPath, 'index.html');
   const pruneFile = path.join(tmpPath, PRUNE_FILE_NAME);

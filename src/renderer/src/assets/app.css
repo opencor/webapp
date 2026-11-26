@@ -167,8 +167,8 @@ body {
      *          colours mode (e.g., Windows' high contrast mode), which removes box shadows. PrimeVue's focus rings are
      *          also outlines.
      * Note #2: our focus ring is offset from its element, so that it is visible on a filled element (e.g., a primary
-     *          button). An element in a container that would clip our focus ring (e.g., a file tab in our file tab
-     *          bar) draws it inside itself instead, i.e. with a negative offset.
+     *          button). An element in a container that would clip our focus ring (e.g., a file tab in our file tab bar)
+     *          draws it inside itself instead, i.e. with a negative offset.
      * Note #3: our focus ring has no specificity (thanks to :where()), so that any element can override it (e.g., to
      *          change its offset or not to show it), including a PrimeVue component, which may draw its own focus ring
      *          on another element (e.g., the box of a checkbox).
@@ -313,8 +313,8 @@ body {
      * menu (see MainMenu.vue).
      * Note: our context menus use an item template (see ContextMenuWidget.vue), which shows an icon
      *       (.context-menu-item-icon), a label, and, for an item that has a submenu, a chevron
-     *       (.context-menu-item-chevron), with, in a menu that has a checked item, room for a check mark to the left
-     *       of the icon (.context-menu-item-check).
+     *       (.context-menu-item-chevron), with, in a menu that has a checked item, room for a check mark to the left of
+     *       the icon (.context-menu-item-check).
      */
 
     .opencor-context-menu {
@@ -432,8 +432,8 @@ body {
   animation: opencor-spinner-spin 0.8s linear infinite;
 
   /**
-   * Note: our spinner is slowed down (rather than stopped, which would make it look as if OpenCOR had frozen) for people
-   *       who prefer reduced motion.
+   * Note: our spinner is slowed down (rather than stopped, which would make it look as if OpenCOR had frozen) for
+   *       people who prefer reduced motion.
    */
 
   @media (prefers-reduced-motion: reduce) {

@@ -176,8 +176,8 @@ const userAgentData = (): UserAgentData | undefined => {
 // Note #1: from Chromium 146, the values are 2, 4, 8, 16, and 32 on desktop, and 2, 4, and 8 on Android (see
 //          https://groups.google.com/a/chromium.org/g/blink-dev/c/vXtAmrVZeDk and https://crbug.com/454354290) while
 //          they used to be 0.25, 0.5, 1, 2, 4, and 8 on all platforms.
-// Note #2: Chromium's implementation may now report 1 on Android, but we still consider 2 as the lowest value there,
-//          so that a device reporting 2 is described as having about 2 GB "or less" (which is true either way).
+// Note #2: Chromium's implementation may now report 1 on Android, but we still consider 2 as the lowest value there, so
+//          that a device reporting 2 is described as having about 2 GB "or less" (which is true either way).
 // Note #3: if we can't tell the version of Chromium, then we assume the old values.
 
 const UPDATED_DEVICE_MEMORY_LIMITS_CHROMIUM_VERSION = 146;
@@ -370,8 +370,8 @@ const copyDetails = (): void => {
  * Note #1: our software and hardware details are each shown as a grid of label/value pairs (rather than as a list), so
  *          that they fill our frame rather than leave most of it empty. Both grids have the same columns, so that they
  *          are aligned. Our software details are listed column by column (i.e. where OpenCOR runs on the left and our
- *          versions on the right), while our hardware details are listed row by row, with the last one taking the
- *          whole row if it would otherwise be on its own (e.g., our GPU, which may have a long name).
+ *          versions on the right), while our hardware details are listed row by row, with the last one taking the whole
+ *          row if it would otherwise be on its own (e.g., our GPU, which may have a long name).
  * Note #2: our copy button is positioned in the top right corner of our frame (rather than next to our grids), so that
  *          our separator can span the whole width of our frame. Our grids leave some room for it.
  */

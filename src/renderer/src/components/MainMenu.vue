@@ -1,7 +1,7 @@
 <template>
   <!--
-  Note: our menubar is never turned into a hamburger menu (which PrimeVue does below its breakpoint), hence our breakpoint
-        of 0px.
+  Note: our menubar is never turned into a hamburger menu (which PrimeVue does below its breakpoint), hence our
+        breakpoint of 0px.
   -->
   <Menubar ref="menuBarRef" :id="props.id" :model="items" breakpoint="0px" :pt="MENUBAR_PT">
     <template #item="{ item, props, root }">
@@ -452,8 +452,8 @@ vue.onMounted(() => {
     //    Reopen submenu when there are no recent files, i.e. when its only item is disabled): PrimeVue doesn't handle
     //    that case (i.e. ArrowLeft does nothing while ArrowUp throws an exception), so we close that submenu (and
     //    select the item that opened it) for ArrowLeft and do nothing for ArrowUp and ArrowDown.
-    // Note: with only the submenu of a root item shown, PrimeVue already does the right thing for Escape and
-    //       ArrowLeft, i.e. close that submenu and select its root item, or select the previous root item.
+    // Note: with only the submenu of a root item shown, PrimeVue already does the right thing for Escape and ArrowLeft,
+    //       i.e. close that submenu and select its root item, or select the previous root item.
 
     const rootListElement = menuBarElement.querySelector<HTMLElement>('.p-menubar-root-list');
 
@@ -526,7 +526,8 @@ vue.onMounted(() => {
     // Keep a submenu open when the item that opened it (e.g., our Open Sample item) gets clicked while its submenu is
     // open (e.g., after it got opened by hovering that item), rather than close it, as PrimeVue does (i.e. it toggles
     // it), which looks broken to people who click an item to open its submenu.
-    // Note: we leave our root items alone, i.e. clicking one of them still toggles its submenu, as in a native menu bar.
+    // Note: we leave our root items alone, i.e. clicking one of them still toggles its submenu, as in a native menu
+    //       bar.
 
     const onRootListClick = (event: MouseEvent) => {
       const item = (event.target as Element | null)?.closest('.p-menubar-item');
@@ -607,10 +608,10 @@ vue.onMounted(() => {
 });
 
 // Give the keyboard focus to our main menu or return it to where it was.
-// Note: desktop applications let people access their main menu using Alt or F10 (Windows and Linux) or Ctrl+F2
-//       (macOS), but those shortcuts are used by Web browsers or the operating system, so we use our own shortcut (see
-//       below), i.e. Ctrl+Alt+M on all platforms. On macOS, we don't use Cmd+Alt+M (as for our other shortcuts) since
-//       it is used to minimise all the windows of the Web browser, but Ctrl+Alt+M, which is also in line with Ctrl+F2.
+// Note: desktop applications let people access their main menu using Alt or F10 (Windows and Linux) or Ctrl+F2 (macOS),
+//       but those shortcuts are used by Web browsers or the operating system, so we use our own shortcut (see below),
+//       i.e. Ctrl+Alt+M on all platforms. On macOS, we don't use Cmd+Alt+M (as for our other shortcuts) since it is
+//       used to minimise all the windows of the Web browser, but Ctrl+Alt+M, which is also in line with Ctrl+F2.
 
 let previouslyFocusedElement: HTMLElement | null = null;
 

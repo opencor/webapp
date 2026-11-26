@@ -53,8 +53,8 @@ class SettingsManager {
   private constructor() {
     // Start with some default settings and then load them.
     // Note: to have default settings is critical when running the desktop version of OpenCOR since they are loaded
-    //       asynchronously, so we need to ensure that our settings are always defined. This is not the case for the
-    //       Web version of OpenCOR, where we can load our settings directly from the cookies.
+    //       asynchronously, so we need to ensure that our settings are always defined. This is not the case for the Web
+    //       version of OpenCOR, where we can load our settings directly from the cookies.
 
     this.reset();
     this.load();

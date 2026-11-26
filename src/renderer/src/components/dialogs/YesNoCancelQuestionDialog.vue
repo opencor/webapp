@@ -22,8 +22,8 @@
 import type { QuestionDialogSeverity } from './MessageDialog.vue';
 
 // Note: same as for YesNoQuestionDialog.vue when it comes to the labels of our buttons, the colour of our yes button,
-//       and which button has the focus by default, except that it is our cancel button (rather than our no button)
-//       that has the focus by default if our question is about something dangerous, since it is the safest option.
+//       and which button has the focus by default, except that it is our cancel button (rather than our no button) that
+//       has the focus by default if our question is about something dangerous, since it is the safest option.
 
 withDefaults(
   defineProps<{

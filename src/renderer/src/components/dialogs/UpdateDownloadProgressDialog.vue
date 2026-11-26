@@ -29,14 +29,15 @@
 import * as vue from 'vue';
 
 // The progress of the download of an update and then of its installation, with the download (but not the installation)
-// being cancellable (in which case our Cancel button has the keyboard focus, so that our dialog has the keyboard focus).
+// being cancellable (in which case our Cancel button has the keyboard focus, so that our dialog has the keyboard
+// focus).
 // Note #1: the progress of the installation is not known, so our progress bar is then indeterminate.
 // Note #2: our Cancel button gets removed once the update is being installed, so we then give the keyboard focus to our
 //          contents (rather than let it go to the body of the page, i.e. outside of our dialog), and our text being a
 //          status, the switch to the installation gets announced by assistive technologies.
-// Note #3: the version of the update is not known if OpenCOR has been reloaded while the update was being downloaded (see
-//          onUpdateDownloadProgress() in OpenCOR.vue), and the size of the update is not known until we get the first
-//          progress report. We only mention them once they are known.
+// Note #3: the version of the update is not known if OpenCOR has been reloaded while the update was being downloaded
+//          (see onUpdateDownloadProgress() in OpenCOR.vue), and the size of the update is not known until we get the
+//          first progress report. We only mention them once they are known.
 
 defineEmits<{
   cancel: [];
