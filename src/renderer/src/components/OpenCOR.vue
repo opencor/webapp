@@ -1524,8 +1524,15 @@ const reportFileIssue = (
   // Note #2: we don't show a toast if the issue is the result of something that people did (e.g., they cancelled the
   //          loading of a remote file), unless we are in simulation-only mode since our issues are then all that is
   //          shown.
+  // Note #3: the file may have got opened before the issue occurred (e.g., if selecting it failed, see
+  //          openFileInContents() and fileAlreadyOpen()), in which case our main process has already been told that it
+  //          is open (see ContentsComponent.openFile()). So, we don't tell it otherwise since it would then stop
+  //          letting us save the file (see canSaveFile() in src/main/MainWindow.ts) and forget it as a recent file,
+  //          even though it is still open.
 
-  electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
+  if (!contentsRef.value?.hasFile(filePath)) {
+    electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
+  }
 
   if (props.omex) {
     void vue.nextTick().then(() => {
