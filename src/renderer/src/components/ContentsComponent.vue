@@ -33,6 +33,7 @@
             file tab and, as the content of a tab, it isn't exposed to assistive technologies anyway).
       -->
       <div ref="fileTabBarRef" class="file-tab-bar flex overflow-x-auto"
+        :class="{ 'file-tab-bar-switching': fileTabBarSwitching }"
         role="tablist"
         aria-label="Open files"
         @keydown="onFileTabBarKeyDown"
@@ -2003,11 +2004,23 @@ const fileHasFocus = (filePath: string): boolean => {
 
 const backgroundRef = vue.useTemplateRef<InstanceType<typeof BackgroundComponent>>('backgroundRef');
 
+const fileTabBarSwitching = vue.ref<boolean>(false);
+
 vue.watch(activeFile, (newActiveFile: string) => {
   // Note: activeFile can get updated by clicking on a tab or by calling selectFile(), hence we need to watch it to let
   //       people know that a file has been selected.
 
   electronApi?.fileSelected(findFileTab(newActiveFile)?.file.canonicalPath() ?? newActiveFile);
+
+  // Switch our file tabs without any transition (see .file-tab-bar-switching).
+
+  fileTabBarSwitching.value = true;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fileTabBarSwitching.value = false;
+    });
+  });
 
   // Give the keyboard focus to the selected file tab if one of our file tabs has it (e.g., when using the arrow keys or
   // Ctrl[+Alt]+Tab, or when the file of the focused file tab gets closed using Delete), so that it follows our roving
@@ -2188,6 +2201,17 @@ if (common.isDocumentTitleOwned() && !simulationOnly.value) {
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
+}
+
+/**
+ * Note: our transitions are for when a file tab gets hovered or unhovered. They are disabled when switching file tabs
+ *       since the background and text colours of the previously/newly active file tab would otherwise lag behind its
+ *       borders (which don't transition), resulting in a short flash.
+ */
+
+.file-tab-bar-switching .file-tab,
+.file-tab-bar-switching .file-tab-close-button {
+  transition: none;
 }
 
 .file-tab:focus-visible {
