@@ -760,10 +760,113 @@ const updatePlot = (dataSize: number = 0): void => {
   };
 };
 
+// Whether we are the currently active view, for keyboard shortcut handling (see useOpenCORKeyStroke() below) and live
+// plotting (see plotLiveRun() below).
+
+let isActiveView = true;
+
+// The number of data points that have been computed, given the progress of our simulation.
+
+const computedDataSize = (progress: number): number => {
+  return Math.round(progress * (uniformTimeCourse?.numberOfSteps() ?? 0)) + 1;
+};
+
+// Plot our simulation while it is running, i.e. plot the data that has been computed so far every frame.
+// Note #1: we use requestAnimationFrame() rather than a timer, since a timer isn't in step with frames, meaning that
+//          some frames wouldn't get any new data and our trace would therefore grow in chunks rather than smoothly.
+//          Retrieving the progress of our simulation and its new data is cheap (with both the C++ and WASM versions of
+//          libOpenCOR, the former being called directly from our preload script, i.e. without any IPC) and our plot
+//          only processes the new data (see retrieveLiveData()), so doing this every frame is fine.
+// Note #2: we only plot while our simulation is running, i.e. not while it is paused (since no new data is computed
+//          then), and while we are the active view (since our plot cannot be seen otherwise). Otherwise, our loop stops
+//          and gets resumed once our simulation is running again (see the watcher below) or once we are the active
+//          view again (see onActivated() below), at which point we plot all the data computed in the meantime.
+// Note #3: our loop gets stopped (see stopLivePlotting()) when our run is over (in which case our results get plotted
+//          by onRunPause(), unless our run was stopped or failed, in which case our plot is kept as is), when a new run
+//          is started, and when we get unmounted. A frame that has already been requested then does nothing since
+//          our live run is gone.
+// Note #4: retrieving the progress of our simulation or its data may fail (e.g., if libOpenCOR throws an exception), in
+//          which case we stop plotting our simulation (and let waitWhileRunning() report the error, if any, see
+//          onRunPause()).
+
+interface LiveRun {
+  instance: locSedApi.SedInstance;
+  dataSize: number;
+}
+
+let liveRun: LiveRun | null = null;
+let livePlottingFrame: number | undefined;
+
+const stopLivePlotting = (): void => {
+  liveRun = null;
+
+  if (livePlottingFrame !== undefined) {
+    cancelAnimationFrame(livePlottingFrame);
+
+    livePlottingFrame = undefined;
+  }
+};
+
+const plotLiveRun = (): void => {
+  livePlottingFrame = undefined;
+
+  const run = liveRun;
+
+  if (!run || !isActiveView || simulationStatus.value !== locSedApi.SedInstanceStatus.RUNNING) {
+    return;
+  }
+
+  livePlottingFrame = requestAnimationFrame(plotLiveRun);
+
+  try {
+    const progress = run.instance.progress();
+
+    if (progress <= 0) {
+      return;
+    }
+
+    const dataSize = computedDataSize(progress);
+
+    if (dataSize !== run.dataSize) {
+      run.dataSize = dataSize;
+
+      updatePlot(dataSize);
+    }
+  } catch (error: unknown) {
+    stopLivePlotting();
+
+    console.error('OpenCOR: an error occurred while plotting a simulation run:', error);
+  }
+};
+
+const resumeLivePlotting = (): void => {
+  if (
+    liveRun &&
+    livePlottingFrame === undefined &&
+    isActiveView &&
+    simulationStatus.value === locSedApi.SedInstanceStatus.RUNNING
+  ) {
+    livePlottingFrame = requestAnimationFrame(plotLiveRun);
+  }
+};
+
+const startLivePlotting = (sedInstance: locSedApi.SedInstance): void => {
+  stopLivePlotting();
+
+  liveRun = {
+    instance: sedInstance,
+    dataSize: 0
+  };
+
+  resumeLivePlotting();
+};
+
+vue.watch(simulationStatus, resumeLivePlotting);
+
 // Update the plot after the X or Y parameter has changed.
 // Note #1: while a simulation is running or paused, only part of its data has been computed (the rest is either zeros
 //          or the data of a previous run), so we only plot the data that has been computed so far (as we do while
-//          running, see onRunPause()).
+//          running, see plotLiveRun()).
 // Note #2: retrieving the progress of our simulation may fail (e.g., if libOpenCOR throws an exception while a failed
 //          run is being stopped, see onRunPause()), in which case we plot all of our data, as if our simulation was
 //          idle.
@@ -779,7 +882,7 @@ const onParameterChange = (): void => {
     }
 
     if (progress !== undefined) {
-      updatePlot(Math.round(progress * (uniformTimeCourse?.numberOfSteps() ?? 0)) + 1);
+      updatePlot(computedDataSize(progress));
 
       return;
     }
@@ -1053,10 +1156,12 @@ const onRunPause = async (): Promise<void> => {
         activeElement.blur();
       }
 
-      // Reset our abort flag, our live data, the outcome (and issues) of our last run, and whether our Stop button had
-      // the keyboard focus.
+      // Stop plotting our previous run, if any, and reset our abort flag, our live data, the outcome (and issues) of our
+      // last run, and whether our Stop button had the keyboard focus.
       // Note: our live data is normally reset at the end of a simulation run (see updatePlot()), but not if the run was
       //       aborted or failed, in which case we would otherwise end up plotting (some of) the data of that run.
+
+      stopLivePlotting();
 
       runAborted.value = false;
       liveData = null;
@@ -1126,10 +1231,10 @@ const onRunPause = async (): Promise<void> => {
       }
 
       // Wait for the simulation to finish, handling pause/resume cycles asynchronously so that the UI remains
-      // responsive.
+      // responsive, and plot it while it is running (see plotLiveRun()).
+      // Note: waitWhileRunning() polls our instance, so we only use it to keep track of the status and progress of our
+      //       simulation, and of when it is over, not to plot it (since its polling isn't in step with frames).
 
-      const numberOfSteps = uniformTimeCourse?.numberOfSteps() ?? 0;
-      let lastPlottingAreaUpdateTime = Date.now();
       let runIsOver = false;
 
       const { promise: runPromise, cancel: runCancel } = vueCommon.waitWhileRunning(
@@ -1139,25 +1244,8 @@ const onRunPause = async (): Promise<void> => {
           // ignore the (delayed) reset of the progress bar by waitWhileRunning(), which could otherwise reset the
           // progress bar of our next run.
 
-          if (runIsOver) {
-            return;
-          }
-
-          progress.value = newProgress;
-
-          // Update the plotting area only if the progress has changed and a certain amount of time has passed since the
-          // last update (to avoid excessive updates).
-
-          if (newProgress === 0) {
-            return;
-          }
-
-          const now = Date.now();
-
-          if (now - lastPlottingAreaUpdateTime >= MEDIUM_DELAY) {
-            updatePlot(Math.round(0.01 * newProgress * numberOfSteps) + 1);
-
-            lastPlottingAreaUpdateTime = now;
+          if (!runIsOver) {
+            progress.value = newProgress;
           }
         },
         (status) => {
@@ -1175,6 +1263,8 @@ const onRunPause = async (): Promise<void> => {
 
       isWaitingOnRun = true;
 
+      startLivePlotting(instance);
+
       let runError: unknown = null;
 
       try {
@@ -1182,6 +1272,8 @@ const onRunPause = async (): Promise<void> => {
       } catch (error: unknown) {
         runError = error;
       } finally {
+        stopLivePlotting();
+
         runIsOver = true;
         isWaitingOnRun = false;
 
@@ -1413,13 +1505,14 @@ vue.onMounted(() => {
   updatePlot();
 });
 
-// Stop polling our simulation run, if any, cancel our pending timers (progress reset and run status), and release our
-// resources (unless a simulation run is still waiting on our instance, see below).
+// Stop polling and plotting our simulation run, if any, cancel our pending timers (progress reset and run status), and
+// release our resources (unless a simulation run is still waiting on our instance, see below).
 
 vue.onUnmounted(() => {
   isUnmounted = true;
 
   cancelRunPolling?.();
+  stopLivePlotting();
 
   clearTimeout(progressResetTimer);
   clearTimeout(runStatusTimer);
@@ -1433,12 +1526,12 @@ vue.onUnmounted(() => {
   }
 });
 
-// Track whether the view is the currently active view for keyboard shortcut handling.
-
-let isActiveView = true;
+// Track whether the view is the currently active view (see isActiveView).
 
 vue.onActivated(() => {
   isActiveView = true;
+
+  resumeLivePlotting();
 });
 
 vue.onDeactivated(() => {
