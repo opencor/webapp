@@ -1063,12 +1063,7 @@ const suggestedFileName = (fileTab: FileTab): string => {
 };
 
 const isLocalFilePath = (filePath: string): boolean => {
-  return (
-    !!electronApi &&
-    !common.isUrl(filePath) &&
-    !common.isDataUrlFileName(filePath) &&
-    (filePath.startsWith('/') || filePath.startsWith('\\\\') || /^[A-Za-z]:[\\/]/.test(filePath))
-  );
+  return !!electronApi && common.isAbsoluteFilePath(filePath);
 };
 
 const canBeSavedInPlace = async (fileTab: FileTab): Promise<boolean> => {

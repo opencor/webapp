@@ -5,7 +5,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { OpenCORTheme } from '../renderer/index';
-import { formatError, isDataUrlFileName, type Settings, isUrl, sleep } from '../renderer/src/common/common';
+import {
+  formatError,
+  isDataUrlFileName,
+  isInMemoryFilePath,
+  type Settings,
+  isUrl,
+  sleep
+} from '../renderer/src/common/common';
 import { FULL_URI_SCHEME, LONG_DELAY, MAX_RECENT_FILES } from '../renderer/src/common/constants';
 import { appImagePath, isMacOs, isPackaged, isWindows } from '../renderer/src/common/electron';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -326,21 +333,21 @@ export const clearRecentFiles = (): void => {
   }
 
   // Let our renderer know that our recent files have been cleared, so that it can release the contents that it kept for
-  // the files that were opened using a data URL and then closed (see OpenCOR.addRecentFile()).
+  // the files that only existed in memory and were then closed (see OpenCOR.addRecentFile()).
 
   MainWindow.instance?.send('clear-recent-files');
 };
 
-// Note: a file opened using a data URL only exists in memory, in our renderer (see isDataUrlFileName()), so it can only
-//       be reopened during the current session and only as long as our renderer is not gone. Hence, we never save such
-//       a file as a recent file (see the constructor of MainWindow) and we forget about it when our renderer is gone
-//       (see onRenderProcessGone()).
+// Note: a file may only exist in memory, in our renderer (e.g., a file opened using a data URL, see
+//       isInMemoryFilePath()), so it can only be reopened during the current session and only as long as our renderer
+//       is not gone. Hence, we never save such a file as a recent file (see the constructor of MainWindow) and we
+//       forget about it when our renderer is gone (see onRenderProcessGone()).
 
 const persistentRecentFilePaths = (): string[] => {
-  return recentFilePaths.filter((filePath) => !isDataUrlFileName(filePath));
+  return recentFilePaths.filter((filePath) => !isInMemoryFilePath(filePath));
 };
 
-const forgetDataUrlRecentFilePaths = (): void => {
+const forgetInMemoryRecentFilePaths = (): void => {
   const filePaths = persistentRecentFilePaths();
 
   if (filePaths.length !== recentFilePaths.length) {
@@ -686,9 +693,9 @@ export const saveFileAs = (defaultFilePath: string): Promise<string | null> => {
 
 // Retrieve the files that are currently open and the file that is currently selected, so that they can be reopened and
 // selected (e.g., the next time OpenCOR is started or after our renderer has crashed).
-// Note: a file that was opened using a data URL only exists in memory (under a made-up name, e.g., "OMEX #1", see
-//       isDataUrlFileName()), so it cannot be reopened. Hence, we don't reopen such a file and, if it is the selected
-//       file, we select the first file that is to be reopened instead.
+// Note: a file may only exist in memory (e.g., a file opened using a data URL, under a made-up name such as "OMEX #1",
+//       see isInMemoryFilePath()), so it cannot be reopened. Hence, we don't reopen such a file and, if it is the
+//       selected file, we select the first file that is to be reopened instead.
 
 interface FilesToReopen {
   opened: string[];
@@ -696,8 +703,8 @@ interface FilesToReopen {
 }
 
 const currentFilesToReopen = (): FilesToReopen => {
-  const opened = openedFilePaths.filter((filePath) => !isDataUrlFileName(filePath));
-  const selected = selectedFilePath && !isDataUrlFileName(selectedFilePath) ? selectedFilePath : (opened[0] ?? '');
+  const opened = openedFilePaths.filter((filePath) => !isInMemoryFilePath(filePath));
+  const selected = selectedFilePath && !isInMemoryFilePath(selectedFilePath) ? selectedFilePath : (opened[0] ?? '');
 
   return { opened, selected };
 };
@@ -1205,10 +1212,10 @@ export class MainWindow extends ApplicationWindow {
 
     disallowSavingAnyFile();
 
-    // Our renderer is gone, so are the contents of the files that were opened using a data URL and then closed, i.e.
+    // Our renderer is gone, so are the contents of the files that only existed in memory and were then closed, i.e.
     // those files cannot be reopened anymore.
 
-    forgetDataUrlRecentFilePaths();
+    forgetInMemoryRecentFilePaths();
 
     // Ignore our renderer being gone if we are being closed (e.g., because OpenCOR is being quit), whatever the reason.
     // Indeed, our renderer will normally exit cleanly in that case, but it may also be killed (e.g., when logging off
@@ -1429,7 +1436,7 @@ export class MainWindow extends ApplicationWindow {
     const opened = new Set(res.opened);
 
     for (const filePath of [this._reopeningFilePath, ...this._openedFilePaths.slice(this._openedFilePathIndex)]) {
-      if (filePath && !isDataUrlFileName(filePath)) {
+      if (filePath && !isInMemoryFilePath(filePath)) {
         opened.add(filePath);
       }
     }

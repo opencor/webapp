@@ -2079,15 +2079,15 @@ const onDrop = async (event: DragEvent): Promise<void> => {
 trackCleanup(
   electronApi?.onOpenFile((filePath: string) => {
     handleExternalRequest(() => {
-      // Note: our main process may ask us to reopen a file that was opened using a data URL (through its File|Reopen
-      //       menu), in which case we reopen it using the contents that we kept for it (see addRecentFile()).
+      // Note: our main process may ask us to reopen a file that only existed in memory (through its File|Reopen menu),
+      //       in which case we reopen it using the contents that we kept for it (see addRecentFile()).
 
-      const closedDataUrlFile = closedDataUrlFiles.get(filePath);
+      const closedInMemoryFile = closedInMemoryFiles.get(filePath);
 
-      if (closedDataUrlFile) {
-        closedDataUrlFiles.delete(filePath);
+      if (closedInMemoryFile) {
+        closedInMemoryFiles.delete(filePath);
 
-        openFile(closedDataUrlFile.contents, closedDataUrlFile.filePath);
+        openFile(closedInMemoryFile.contents, closedInMemoryFile.filePath);
       } else {
         openFile(filePath);
       }
@@ -2187,20 +2187,22 @@ const onOpenSampleLorenzMenu = (): void => {
 //          object. Similarly, a file opened using a data URL only exists in memory (see common.isDataUrlFileName()), so
 //          we keep track of its contents, so that it can be reopened under the same name, but only for the current
 //          session, including in OpenCOR where we keep them for the main process to ask us to reopen the file (see
-//          closedDataUrlFiles). A file opened using some contents cannot be reopened.
+//          closedInMemoryFiles). A file opened using some contents cannot be reopened.
+// Note #3: in OpenCOR, a dropped file that has no path also only exists in memory (see common.isInMemoryFilePath()),
+//          so we keep track of its File object, as for a file opened using a data URL.
 
 interface RecentFile {
   filePath: string;
   source: string | File | FileSystemFileHandle | Uint8Array;
 }
 
-interface ClosedDataUrlFile {
+interface ClosedInMemoryFile {
   filePath: string;
-  contents: Uint8Array;
+  contents: Uint8Array | File;
 }
 
 const openedFiles = new Map<string, File | Uint8Array>();
-const closedDataUrlFiles = new Map<string, ClosedDataUrlFile>();
+const closedInMemoryFiles = new Map<string, ClosedInMemoryFile>();
 // Note: keyed by the canonical path of the file since that is what our main process refers to it by. It only lists up
 //       to MAX_RECENT_FILES files, so we never need to keep more than that.
 const recentFiles = vue.shallowRef<RecentFile[]>([]);
@@ -2220,7 +2222,7 @@ const addRecentFile = (filePath: string, fileHandle?: FileSystemFileHandle): voi
   openedFiles.delete(filePath);
 
   if (electronApi) {
-    if (!(file instanceof Uint8Array)) {
+    if (!(file instanceof Uint8Array) && !(file instanceof File && common.isInMemoryFilePath(filePath))) {
       return;
     }
 
@@ -2234,15 +2236,15 @@ const addRecentFile = (filePath: string, fileHandle?: FileSystemFileHandle): voi
       return;
     }
 
-    closedDataUrlFiles.delete(canonicalFilePath);
-    closedDataUrlFiles.set(canonicalFilePath, { filePath, contents: file });
+    closedInMemoryFiles.delete(canonicalFilePath);
+    closedInMemoryFiles.set(canonicalFilePath, { filePath, contents: file });
 
-    for (const oldCanonicalFilePath of closedDataUrlFiles.keys()) {
-      if (closedDataUrlFiles.size <= MAX_RECENT_FILES) {
+    for (const oldCanonicalFilePath of closedInMemoryFiles.keys()) {
+      if (closedInMemoryFiles.size <= MAX_RECENT_FILES) {
         break;
       }
 
-      closedDataUrlFiles.delete(oldCanonicalFilePath);
+      closedInMemoryFiles.delete(oldCanonicalFilePath);
     }
 
     return;
@@ -2304,11 +2306,11 @@ const onReopenMenu = async (filePath: string): Promise<void> => {
 };
 
 // Note: in OpenCOR, our main process clears its recent files itself, but it lets us know about it so that we can
-//       release the contents of the files that were opened using a data URL and then closed (see addRecentFile()).
+//       release the contents of the files that only existed in memory and were then closed (see addRecentFile()).
 
 trackCleanup(
   electronApi?.onClearRecentFiles(() => {
-    closedDataUrlFiles.clear();
+    closedInMemoryFiles.clear();
   })
 );
 

@@ -170,6 +170,23 @@ export const isDataUrlFileName = (fileName: string): boolean => {
   return fileName.startsWith(OMEX_PREFIX) || fileName.startsWith(CELLML_PREFIX);
 };
 
+// A method to determine whether a file path is an absolute path, be it a POSIX path, a UNC path, or a Windows path with
+// a drive letter.
+
+export const isAbsoluteFilePath = (filePath: string): boolean => {
+  return filePath.startsWith('/') || filePath.startsWith('\\\\') || /^[A-Za-z]:[\\/]/.test(filePath);
+};
+
+// A method to determine whether, in OpenCOR, a file only exists in memory, i.e. whether its path is neither a URL nor
+// an absolute path. This is the case for a file opened using a data URL (see isDataUrlFileName()) and for a dropped
+// file that has no path (e.g., a file dragged from a Web browser or from a ZIP file viewer), which is known by its
+// name (see locCommon.filePath()). Either way, such a file can only be reopened during the current session (see
+// OpenCOR.addRecentFile()).
+
+export const isInMemoryFilePath = (filePath: string): boolean => {
+  return !isUrl(filePath) && !isAbsoluteFilePath(filePath);
+};
+
 // A method to determine whether the given value is an object (and not an array).
 
 export const isObject = (value: unknown): value is Record<string, unknown> => {
