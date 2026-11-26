@@ -158,32 +158,40 @@ const onContextMenuHide = (): void => {
 // Note #2: if we get unmounted while exporting (e.g., if our file gets closed), then our plot stops exporting, but we
 //          don't get told that it has finished (since Vue doesn't emit events from an unmounted component), so we hide
 //          our message ourselves. Otherwise, it would remain shown and keep blocking our UI.
+// Note #3: another export may start while we wait before hiding our message (see Note #1), in which case we must only
+//          hide our own message, not that of the other export (see OpenCORMessage.ts).
 
-let csvExportInProgress = false;
+let csvExportMessageId: number | undefined;
 
-const hideCsvExportMessage = (): void => {
-  if (csvExportInProgress) {
-    csvExportInProgress = false;
+const hideCsvExportMessage = (messageId: number | undefined = csvExportMessageId): void => {
+  if (messageId === undefined) {
+    return;
+  }
 
-    opencorMessage.hide();
+  opencorMessage.hide(messageId);
+
+  if (csvExportMessageId === messageId) {
+    csvExportMessageId = undefined;
   }
 };
 
-vue.onUnmounted(hideCsvExportMessage);
+vue.onUnmounted(() => {
+  hideCsvExportMessage();
+});
 
 const onCsvExport = async (event: PlotCsvExportEvent): Promise<void> => {
   if (event.type === 'started') {
-    csvExportInProgress = true;
-
-    opencorMessage.show('Exporting data to CSV...');
+    csvExportMessageId = opencorMessage.show('Exporting data to CSV...');
   } else if (event.type === 'progress') {
     opencorMessage.update(event.percent);
   } else {
+    const messageId = csvExportMessageId;
+
     if (event.success) {
       await common.sleep(LONG_DELAY);
     }
 
-    hideCsvExportMessage();
+    hideCsvExportMessage(messageId);
 
     if (!event.success) {
       addToast({

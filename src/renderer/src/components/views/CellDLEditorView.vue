@@ -317,6 +317,8 @@ vue.onBeforeUnmount(() => {
 // Export our (possibly edited) diagram to an OMEX file, which we can then either simulate or download.
 
 const onExportOmexFile = async (kind: string): Promise<void> => {
+  let messageId: number | undefined;
+
   try {
     // Get the CellDL data from the editor, which may have been edited by the user.
 
@@ -325,7 +327,7 @@ const onExportOmexFile = async (kind: string): Promise<void> => {
     // Initialise our CellML converter, if needed, and then delay briefly so that the user can see that we reached 100%.
 
     if (!celldl.isConverterInitialised()) {
-      opencorMessage.show('Initialising the CellML converter...');
+      messageId = opencorMessage.show('Initialising the CellML converter...');
 
       await celldl.initialiseConverter(opencorMessage.update);
       await common.sleep(LONG_DELAY);
@@ -333,7 +335,7 @@ const onExportOmexFile = async (kind: string): Promise<void> => {
 
     // Generate the CellML from the CellDL.
 
-    opencorMessage.show('Generating CellML...', false);
+    messageId = opencorMessage.show('Generating CellML...', false);
 
     const res = await celldl.cellmlFromCelldl(celldlData, celldlFileName);
 
@@ -370,7 +372,9 @@ const onExportOmexFile = async (kind: string): Promise<void> => {
       detail: toastIssueDetail(props.file.canonicalPath(), common.formatMessage(common.formatError(error)))
     });
   } finally {
-    opencorMessage.hide();
+    if (messageId !== undefined) {
+      opencorMessage.hide(messageId);
+    }
   }
 };
 </script>
