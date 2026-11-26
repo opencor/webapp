@@ -6,6 +6,7 @@
       <span v-if="progress !== undefined" class="blocking-message-progress" aria-hidden="true">{{ Math.round(progress) }}%</span>
     </div>
     <ProgressBar v-if="progress !== undefined" class="blocking-message-progress-bar"
+      :aria-label="message"
       :value="progress"
       :showValue="false"
       :pt="{

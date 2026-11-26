@@ -57,6 +57,12 @@ import * as focusRing from './focusRing';
 //           hovered or focused. Our element may then get the focus back when our window regains the focus, but this is
 //           not the user focusing our element (using the keyboard), so we don't show our hint again (which we would
 //           otherwise do for a text field, see Note #1).
+// Note #12: our hint may be shown beside our element (e.g., v-hint.side="'Some hint'"), i.e. to its right (or to its
+//           left if there is not enough room to its right), rather than below it, e.g., when our element is in a list,
+//           so that our hint doesn't cover the items that follow it (and their buttons). Our hint is then shown beside
+//           the closest ancestor of our element that has the opencor-hint-anchor class, if any (e.g., the row of a list,
+//           so that our hint doesn't cover the other elements of that row either). If there is not enough room on
+//           either side, then our hint is shown below (or above) our element, as usual.
 
 const HINT_OFFSET = 6; // Distance between our element and our hint.
 const HINT_MARGIN = 4; // Minimum distance between our hint and the edges of the window.
@@ -64,6 +70,7 @@ const HINT_MARGIN = 4; // Minimum distance between our hint and the edges of the
 interface HintState {
   text: string;
   html: boolean;
+  side: boolean;
   timer: number | undefined;
   ariaLabel: string | null;
   ariaDescription: { element: HTMLElement; source: string; text: string } | null;
@@ -396,6 +403,30 @@ const positionHint = (): void => {
 
   hintOwnerRect = elementRect;
 
+  // Show our hint beside its owner, if requested and possible (see Note #12 above).
+
+  if (states.get(hintOwner)?.side) {
+    const anchorRect = (hintOwner.closest('.opencor-hint-anchor') ?? hintOwner).getBoundingClientRect();
+    let sideLeft: number | null = anchorRect.right + HINT_OFFSET;
+
+    if (sideLeft + hintRect.width > window.innerWidth - HINT_MARGIN) {
+      sideLeft = anchorRect.left - HINT_OFFSET - hintRect.width;
+
+      if (sideLeft < HINT_MARGIN) {
+        sideLeft = null;
+      }
+    }
+
+    if (sideLeft !== null) {
+      const sideTop = Math.min(elementRect.top, window.innerHeight - HINT_MARGIN - hintRect.height);
+
+      hintElement.style.left = `${sideLeft}px`;
+      hintElement.style.top = `${Math.max(sideTop, HINT_MARGIN)}px`;
+
+      return;
+    }
+  }
+
   let left = elementRect.left;
   let top = elementRect.bottom + HINT_OFFSET;
 
@@ -459,6 +490,7 @@ export const vHint: vue.Directive<HTMLElement, string | undefined> = {
     const state: HintState = {
       text: binding.value ?? '',
       html: !!binding.modifiers.html,
+      side: !!binding.modifiers.side,
       timer: undefined,
       ariaLabel: null,
       ariaDescription: null,

@@ -17,6 +17,7 @@ import { ApplicationWindow, backgroundColor } from './ApplicationWindow';
 import { electronConf, type ElectronConfState, takeElectronConfBackupFileName } from './index';
 import {
   enableDisableFileCloseAndCloseAllMenuItems,
+  enableDisableFileNextAndPreviousMenuItems,
   enableDisableFileSaveAndSaveAsMenuItems,
   enableDisableMainMenu,
   updateReopenMenu
@@ -1278,15 +1279,17 @@ export class MainWindow extends ApplicationWindow {
     //          we would otherwise save the files that were open at the time of the crash (see currentFilesToReopen())
     //          should OpenCOR be quit before any file gets opened, i.e. reopen the files that might have caused the
     //          crash the next time OpenCOR is started.
-    // Note #2: similarly, our reloaded renderer has no files to start with, so our File|Save, File|Save As, File|Close,
-    //          and File|Close All menu items must be disabled (they will get enabled again once a file gets
-    //          (re)opened). Also, the changes that were made to the files that were open are lost, so there is no point
-    //          in asking our reloaded renderer to save them when we get closed (see the constructor).
+    // Note #2: similarly, our reloaded renderer has no files to start with, so our File|Save, File|Save As, File|Next
+    //          File, File|Previous File, File|Close, and File|Close All menu items must be disabled (they will get
+    //          enabled again once a file gets (re)opened, or two files for File|Next File and File|Previous File).
+    //          Also, the changes that were made to the files that were open are lost, so there is no point in asking
+    //          our reloaded renderer to save them when we get closed (see the constructor).
 
     filesOpened([]);
     filesModified([]);
 
     enableDisableFileCloseAndCloseAllMenuItems(false);
+    enableDisableFileNextAndPreviousMenuItems(false);
     enableDisableFileSaveAndSaveAsMenuItems(false, false);
 
     this._rendererReady = false;

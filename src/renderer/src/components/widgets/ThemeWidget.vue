@@ -1,7 +1,7 @@
 <template>
   <ToolbarButtonWidget
     :icon="`pi ${THEMES[props.theme].icon}`"
-    :label="`${THEMES[props.theme].label} theme (click to switch to ${THEMES[nextTheme()].label} theme)`"
+    :label="`${THEMES[props.theme].label} theme (switch to ${THEMES[nextTheme()].label.toLowerCase()} theme)`"
     small
     @click="emit('switch', nextTheme())"
   />

@@ -46,6 +46,7 @@ import { useOpenCORContext, useOpenCORKeyStroke } from './OpenCORContext';
 const props = defineProps<{
   id?: string;
   hasFiles: boolean;
+  hasSeveralFiles: boolean;
   canSave: boolean;
   canSaveAs: boolean;
   recentFilePaths: string[];
@@ -58,9 +59,11 @@ const emit = defineEmits<{
   close: [];
   closeAll: [];
   download: [];
+  nextFile: [];
   open: [];
   openLocation: [];
   openSampleLorenz: [];
+  previousFile: [];
   reopen: [filePath: string];
   save: [];
   saveAs: [];
@@ -167,7 +170,8 @@ const ARIA_KEY_NAMES: Record<string, string> = {
   '⌃': 'Control',
   '⌥': 'Alt',
   '⇧': 'Shift',
-  '⌘': 'Meta'
+  '⌘': 'Meta',
+  '⇥': 'Tab'
 };
 
 const ariaKeyShortcuts = (shortcut: string): string => {
@@ -305,6 +309,25 @@ const menuItems = vue.computed(() => [
           ]),
       { separator: true },
       {
+        label: 'Next File',
+        icon: 'pi pi-arrow-right',
+        shortcut: isWindowsOrLinux ? 'Ctrl+Alt+Tab' : isMacOs ? '⌃⌥⇥' : undefined,
+        command: () => {
+          emit('nextFile');
+        },
+        disabled: () => !props.hasSeveralFiles
+      },
+      {
+        label: 'Previous File',
+        icon: 'pi pi-arrow-left',
+        shortcut: isWindowsOrLinux ? 'Ctrl+Shift+Alt+Tab' : isMacOs ? '⌃⌥⇧⇥' : undefined,
+        command: () => {
+          emit('previousFile');
+        },
+        disabled: () => !props.hasSeveralFiles
+      },
+      { separator: true },
+      {
         label: 'Close',
         icon: 'pi pi-times',
         shortcut: isWindowsOrLinux ? 'Ctrl+Alt+W' : isMacOs ? '⌥⌘W' : undefined,
@@ -349,7 +372,6 @@ const menuItems = vue.computed(() => [
           window.open('https://opencor.ws/');
         }
       },
-      { separator: true },
       {
         label: 'Changelog',
         icon: 'pi pi-history',
@@ -357,7 +379,6 @@ const menuItems = vue.computed(() => [
           emit('changelog');
         }
       },
-      { separator: true },
       {
         label: 'Report Issue',
         icon: 'pi pi-github',
@@ -502,6 +523,67 @@ vue.onMounted(() => {
         focusedElement instanceof HTMLElement && focusedElement !== document.body ? focusedElement : null;
     };
 
+    // Keep a submenu open when the item that opened it (e.g., our Open Sample item) gets clicked while its submenu is
+    // open (e.g., after it got opened by hovering that item), rather than close it, as PrimeVue does (i.e. it toggles
+    // it), which looks broken to people who click an item to open its submenu.
+    // Note: we leave our root items alone, i.e. clicking one of them still toggles its submenu, as in a native menu bar.
+
+    const onRootListClick = (event: MouseEvent) => {
+      const item = (event.target as Element | null)?.closest('.p-menubar-item');
+
+      if (
+        item &&
+        item.parentElement !== rootListElement &&
+        rootListElement?.contains(item) &&
+        item.getAttribute('aria-expanded') === 'true'
+      ) {
+        event.stopPropagation();
+      }
+    };
+
+    // Position the submenus of our submenus (e.g., our Reopen submenu), which PrimeVue always shows to the right of
+    // their parent item, so that they don't go off the right edge of the page (e.g., on a phone). So, a submenu is
+    // shown to the right of its parent item if it fits there, or to its left if it fits there instead, or otherwise as
+    // far to the right as possible (i.e. over its parent submenu).
+    // Note: PrimeVue shows a submenu (after updating the DOM) whenever its active item path changes, so we position our
+    //       submenus once the DOM has been updated.
+
+    const SUBMENU_GAP = 4; // I.e. 0.25rem, see the margin of a submenu of a submenu below.
+
+    const positionSubmenus = (): void => {
+      const pageWidth = document.documentElement.clientWidth;
+
+      for (const submenu of menuBarElement.querySelectorAll<HTMLElement>('.p-menubar-submenu .p-menubar-submenu')) {
+        submenu.style.left = '';
+        submenu.style.marginLeft = '';
+
+        const item = submenu.parentElement;
+
+        if (!item || !submenu.getClientRects().length) {
+          continue;
+        }
+
+        const itemRect = item.getBoundingClientRect();
+        const submenuWidth = submenu.offsetWidth;
+
+        if (itemRect.right + SUBMENU_GAP + submenuWidth <= pageWidth) {
+          continue;
+        }
+
+        const left =
+          itemRect.left - SUBMENU_GAP - submenuWidth >= 0
+            ? -SUBMENU_GAP - submenuWidth
+            : Math.max(0, pageWidth - submenuWidth) - itemRect.left;
+
+        submenu.style.left = `${left}px`;
+        submenu.style.marginLeft = '0';
+      }
+    };
+
+    vue.watch(() => (menuBarRef.value as unknown as MenubarInternals | null)?.activeItemPath, positionSubmenus, {
+      flush: 'post'
+    });
+
     // Let assistive technologies know about our keyboard shortcut.
 
     rootListElement?.setAttribute('aria-keyshortcuts', 'Control+Alt+M');
@@ -509,6 +591,7 @@ vue.onMounted(() => {
     rootListElement?.addEventListener('keydown', onRootListKeyDown, { capture: true });
     rootListElement?.addEventListener('focusout', onRootListFocusOut);
     rootListElement?.addEventListener('pointerdown', onRootListPointerDown, { capture: true });
+    rootListElement?.addEventListener('click', onRootListClick, { capture: true });
 
     // Clean up our event listeners when the component is unmounted.
 
@@ -518,6 +601,7 @@ vue.onMounted(() => {
       rootListElement?.removeEventListener('keydown', onRootListKeyDown, { capture: true });
       rootListElement?.removeEventListener('focusout', onRootListFocusOut);
       rootListElement?.removeEventListener('pointerdown', onRootListPointerDown, { capture: true });
+      rootListElement?.removeEventListener('click', onRootListClick, { capture: true });
     });
   }
 });
@@ -626,6 +710,7 @@ useOpenCORKeyStroke((event: KeyboardEvent) => {
     event.preventDefault();
 
     emit('close');
+
     /* TODO: enable the settings menu once we have settings for OpenCOR's Web app.
   } else if (common.isCtrlOrCmd(event) && !event.shiftKey && event.altKey && event.code === 'Comma') {
     event.preventDefault();

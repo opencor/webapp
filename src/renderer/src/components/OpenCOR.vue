@@ -1,6 +1,7 @@
 <template>
   <SafeBlockUIWidget ref="safeBlockUiRef" class="opencor" :class="{ 'with-main-menu': isFullWebApp, [FOCUS_RING_HIDDEN_CLASS]: focusRingHidden }"
     :blocked="compBlockUiEnabled"
+    aria-busy="false"
     @click="activateInstance"
     @focus="activateInstance"
     @focusin="activateInstance"
@@ -26,6 +27,7 @@
       <DragNDropComponent v-if="dragAndDropVisible" :fileCount="dragAndDropFileCount" @leave="dragAndDropVisible = false" />
       <MainMenu ref="mainMenuRef" v-if="isFullWebApp"
         :hasFiles="hasFiles"
+        :hasSeveralFiles="hasSeveralFiles"
         :canSave="canSave"
         :canSaveAs="canSaveAs"
         :recentFilePaths="recentFilePaths"
@@ -39,6 +41,8 @@
         @save="onSaveMenu"
         @saveAs="onSaveAsMenu"
         @download="onDownloadMenu"
+        @nextFile="onNextFileMenu"
+        @previousFile="onPreviousFileMenu"
         @close="onCloseMenu"
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
@@ -74,7 +78,7 @@
       />
       <BlockingMessageComponent class="app-blocking-message initialising-opencor-message" v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
       <BlockingMessageComponent class="app-blocking-message" v-if="loadingModelMessageVisible" message="Loading model..." cancellable :cancelFocused="!omex" @cancel="cancelRemoteModelLoads" />
-      <BlockingMessageComponent class="app-blocking-message" v-show="loadingExternalDataVisible" message="Loading external data..." />
+      <BlockingMessageComponent class="app-blocking-message" v-if="loadingExternalDataVisible" message="Loading external data..." cancellable @cancel="cancelExternalDataLoads" />
       <BlockingMessageComponent class="app-blocking-message" v-show="opencorMessageVisible" :message="opencorMessageMessage" :progress="opencorMessageProgress" />
       <OkMessageDialog v-model:visible="updateErrorVisible"
         :title="updateErrorTitle"
@@ -212,7 +216,12 @@ const addExternalData = (csv: string, voiExpression: string | undefined, modelPa
   }
 
   contents
-    .addExternalData(csv, voiExpression, modelParameters)
+    .addExternalData(
+      csv,
+      voiExpression,
+      modelParameters,
+      isRemoteExternalData ? externalDataLoadsAbortController.signal : undefined
+    )
     .then((res: OpenCORExternalDataEvent) => {
       emit('externalData', res);
     })
@@ -332,6 +341,7 @@ const remoteModelLoadsCount = vue.ref<number>(0);
 let remoteModelLoadsAbortController = new AbortController();
 const loadingExternalDataVisible = vue.ref<boolean>(false);
 const externalDataLoadsCount = vue.ref<number>(0);
+let externalDataLoadsAbortController = new AbortController();
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -373,8 +383,20 @@ const cancelRemoteModelLoads = (): void => {
   remoteModelLoadsAbortController = new AbortController();
 };
 
+// Cancel the loading of the remote external data that is being loaded, if any (see cancelRemoteModelLoads()).
+// Note: unlike our Cancel button for remote models, our Cancel button for remote external data never gets the keyboard
+//       focus since external data can only be added when OpenCOR is embedded in a page (i.e. in simulation-only mode),
+//       from which we don't want to take the keyboard focus.
+
+const cancelExternalDataLoads = (): void => {
+  externalDataLoadsAbortController.abort();
+
+  externalDataLoadsAbortController = new AbortController();
+};
+
 vue.onUnmounted(() => {
   remoteModelLoadsAbortController.abort();
+  externalDataLoadsAbortController.abort();
 
   for (const cleanup of cleanups) {
     cleanup();
@@ -494,7 +516,9 @@ const compUiEnabled = vue.computed<boolean>(() => {
 // Make our main menu and our contents inert while our UI is blocked, so that they cannot be reached using the keyboard
 // (e.g., using Tab) since our BlockUI's overlay only blocks the mouse.
 // Note #1: our blocking messages are not made inert since they must remain visible to assistive technologies (so that
-//          they can get announced, see BlockingMessageComponent.vue), but they cannot be interacted with anyway.
+//          they can get announced, see BlockingMessageComponent.vue), but they cannot be interacted with anyway. For
+//          the same reason, our BlockUI is never marked as busy (see aria-busy in our template), since it contains our
+//          blocking messages and assistive technologies may not announce the contents of a busy element.
 // Note #2: a dialog may be shown while our UI is blocked, in which case our main menu and our contents are not inert
 //          since a dialog may be rendered within our contents (see BaseDialog.vue) and the descendants of an inert
 //          element cannot be interacted with. A dialog is modal, so it keeps the keyboard focus within itself anyway.
@@ -934,6 +958,18 @@ vue.watch(
   { immediate: true }
 );
 
+const hasSeveralFiles = vue.computed<boolean>(() => {
+  return contentsRef.value?.hasSeveralFiles() ?? false;
+});
+
+vue.watch(
+  hasSeveralFiles,
+  (newHasSeveralFiles: boolean) => {
+    electronApi?.enableDisableFileNextAndPreviousMenuItems(newHasSeveralFiles);
+  },
+  { immediate: true }
+);
+
 const canSave = vue.computed<boolean>(() => {
   return contentsRef.value?.canSaveCurrentFile() ?? false;
 });
@@ -1072,12 +1108,13 @@ const focusRingHidden = vue.ref<boolean>(false);
 const MODIFIER_KEYS = ['Alt', 'AltGraph', 'Control', 'Meta', 'Shift'];
 
 const onEscapeKeyDown = (event: KeyboardEvent): void => {
-  // Cancel the loading of remote models, if any, as if our Cancel button had been pressed (see our template).
-  // Note: no dialog can normally be shown while remote models are being loaded, but we make sure of it since Escape
-  //       would then be for the dialog.
+  // Cancel the loading of remote models or external data, if any, as if their Cancel button had been pressed (see our
+  // template).
+  // Note: no dialog can normally be shown while remote models or external data are being loaded, but we make sure of it
+  //       since Escape would then be for the dialog.
 
   if (
-    loadingModelMessageVisible.value &&
+    (loadingModelMessageVisible.value || loadingExternalDataVisible.value) &&
     !event.altKey &&
     !event.ctrlKey &&
     !event.metaKey &&
@@ -1088,7 +1125,13 @@ const onEscapeKeyDown = (event: KeyboardEvent): void => {
   ) {
     event.preventDefault();
 
-    cancelRemoteModelLoads();
+    if (loadingModelMessageVisible.value) {
+      cancelRemoteModelLoads();
+    }
+
+    if (loadingExternalDataVisible.value) {
+      cancelExternalDataLoads();
+    }
 
     return;
   }
@@ -1254,7 +1297,8 @@ trackCleanup(
 
     // Installing the update restarts OpenCOR, so ask the user whether to save the files that have been modified first.
     // If the user cancels, then the update will be installed when OpenCOR gets quit (see autoInstallOnAppQuit in
-    // electron-updater) or once the user has checked for updates again (see checkForUpdates() in MainWindow.ts).
+    // electron-updater) or once the user has checked for updates again (see checkForUpdates() in MainWindow.ts), which
+    // we let them know about (since our download progress dialog otherwise just disappears).
 
     if ((await saveModifiedFiles('Install Update')) !== null) {
       userInputBlocked.value = true;
@@ -1267,6 +1311,12 @@ trackCleanup(
       }
     } else {
       updateDownloadProgressVisible.value = false;
+
+      addToast({
+        severity: 'info',
+        summary: 'Update Postponed',
+        detail: `${updateVersion.value ? `OpenCOR ${updateVersion.value}` : 'The update'} will be installed when OpenCOR is quit.`
+      });
     }
   })
 );
@@ -2345,6 +2395,28 @@ const onDownloadMenu = (): void => {
   }
 
   contentsRef.value?.saveCurrentFileAs();
+};
+
+// Next file and previous file.
+
+trackCleanup(
+  electronApi?.onNextFile(() => {
+    onNextFileMenu();
+  })
+);
+
+const onNextFileMenu = (): void => {
+  void contentsRef.value?.selectNextFile();
+};
+
+trackCleanup(
+  electronApi?.onPreviousFile(() => {
+    onPreviousFileMenu();
+  })
+);
+
+const onPreviousFileMenu = (): void => {
+  void contentsRef.value?.selectPreviousFile();
 };
 
 // Close.

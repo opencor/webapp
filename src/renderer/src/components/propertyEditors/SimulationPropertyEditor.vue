@@ -45,9 +45,10 @@ const properties = vue.ref([
   },
   {
     property: 'Point interval',
-    value:
-      (props.uniformTimeCourse.outputEndTime() - props.uniformTimeCourse.outputStartTime()) /
-      props.uniformTimeCourse.numberOfSteps(),
+    value: common.divideNumbers(
+      common.subtractNumbers(props.uniformTimeCourse.outputEndTime(), props.uniformTimeCourse.outputStartTime()),
+      props.uniformTimeCourse.numberOfSteps()
+    ),
     unit: voiUnit
   }
 ]);

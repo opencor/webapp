@@ -24,10 +24,10 @@ const CONTENT_HEADERS = {
 };
 
 const CONTENT_KINDS = {
-  file: 'a CellML file, SED-ML file, OMEX file, or CellDL file',
+  file: 'a CellML file, a SED-ML file, an OMEX file, or a CellDL file',
   csv: 'a CSV file'
 };
-const ANY_CONTENT = 'a CellML file, SED-ML file, OMEX file, CellDL file, or CSV file';
+const ANY_CONTENT = 'a CellML file, a SED-ML file, an OMEX file, a CellDL file, or a CSV file';
 
 const SNIFF_SIZE = 64 * 1024; // 64 KB.
 const MAX_XML_PROLOG_SIZE = 1024 * 1024; // 1 MB.
@@ -152,7 +152,7 @@ const replayStream = (bytes, reader) => {
       if (size > MAX_SIZE) {
         await reader.cancel();
 
-        controller.error(new Error('The target content is too large.'));
+        controller.error(new Error(TOO_LARGE_MESSAGE));
 
         return;
       }
@@ -445,8 +445,13 @@ const errorMessage = (error) => {
   return (error instanceof Error ? error.message : String(error)).replace(/\.+$/, '');
 };
 
-const rejectedResponse = (reason) => {
-  return errorResponse(`Target content is not allowed (${reason}).`, 403);
+// Note: our messages may be shown as is to people (e.g., in a toast, when a file cannot be opened), so they are about
+//       the file that people asked for rather than about our "target" content or URL.
+
+const TOO_LARGE_MESSAGE = `The file is too large (more than ${MAX_SIZE / (1024 * 1024)} MB).`;
+
+const rejectedResponse = (message) => {
+  return errorResponse(message, 403);
 };
 
 const hasKnownSize = (response) => {
@@ -495,7 +500,7 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
 
   if (!response.ok || !response.body) {
     return response.ok
-      ? rejectedResponse('no content')
+      ? rejectedResponse('The file is empty.')
       : new Response(null, {
           status: response.status,
           headers: CONTENT_HEADERS
@@ -509,7 +514,7 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
   if (Number(response.headers.get('content-length')) > MAX_SIZE) {
     await response.body.cancel();
 
-    return rejectedResponse('too large');
+    return rejectedResponse(TOO_LARGE_MESSAGE);
   }
 
   // A CellML, SED-ML, CellDL, or CSV file only needs its start to be checked, after which it can be streamed, but only
@@ -551,7 +556,7 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
     const bytes = await readRest(reader, head);
 
     if (!bytes) {
-      return rejectedResponse('too large');
+      return rejectedResponse(TOO_LARGE_MESSAGE);
     }
 
     return new Response(bytes, {
@@ -567,11 +572,11 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
     const bytes = done ? head : await readRest(reader, head);
 
     if (!bytes) {
-      return rejectedResponse('too large');
+      return rejectedResponse(TOO_LARGE_MESSAGE);
     }
 
     if (!hasCelldlMetadata(bytes)) {
-      return rejectedResponse('SVG file without CellDL metadata');
+      return rejectedResponse('The file is an SVG file, but not a CellDL file.');
     }
 
     return new Response(bytes, {
@@ -585,17 +590,17 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
   if (!filesAccepted || !isZipFile(head)) {
     await reader.cancel();
 
-    return rejectedResponse(`not ${CONTENT_KINDS[contentKind] ?? ANY_CONTENT}`);
+    return rejectedResponse(`The file is not ${CONTENT_KINDS[contentKind] ?? ANY_CONTENT}.`);
   }
 
   const bytes = done ? head : await readRest(reader, head);
 
   if (!bytes) {
-    return rejectedResponse('too large');
+    return rejectedResponse(TOO_LARGE_MESSAGE);
   }
 
   if (!isOmexFile(bytes)) {
-    return rejectedResponse('ZIP file without a manifest.xml file');
+    return rejectedResponse('The file is a ZIP file, but not an OMEX file (it has no manifest.xml file).');
   }
 
   return new Response(bytes, {
@@ -623,7 +628,7 @@ export default {
       }
 
       if (!isValidTargetUrl(targetUrl)) {
-        return errorResponse('Target URL is not allowed.', 403);
+        return errorResponse('The URL is not an HTTP or HTTPS URL.', 403);
       }
 
       const contentKind = extractContentKind(url);
@@ -642,10 +647,10 @@ export default {
       try {
         return await forwardRequest(targetUrl, contentKind, request);
       } catch (error) {
-        return errorResponse(`Target URL could not be fetched (${errorMessage(error)}).`, 502);
+        return errorResponse(`The file could not be retrieved (${errorMessage(error)}).`, 502);
       }
     } catch (error) {
-      return errorResponse(`An error occurred (${errorMessage(error)}).`, 500);
+      return errorResponse(`An unexpected error occurred (${errorMessage(error)}).`, 500);
     }
   }
 };

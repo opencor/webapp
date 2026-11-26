@@ -42,6 +42,12 @@
         </div>
       </ScrollPanel>
     </div>
+
+    <!-- Footer, if any (e.g., an action to fix our issues) -->
+
+    <div v-if="$slots.footer" class="issues-footer">
+      <slot name="footer" />
+    </div>
   </div>
 </template>
 
@@ -139,6 +145,19 @@ vue.watch(issuesText, () => {
   display: flex;
   flex-direction: column;
   container-type: inline-size;
+}
+
+/**
+ * Footer.
+ */
+
+.issues-footer {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-top: 1px solid var(--p-content-border-color);
 }
 
 /**

@@ -1,6 +1,6 @@
 <template>
   <div class="relative h-full shrink-0">
-    <nav ref="navRef" class="view-switcher relative w-12 h-full flex flex-col items-center gap-1 overflow-y-auto py-1.5"
+    <nav ref="navRef" aria-label="Views" class="view-switcher relative w-12 h-full flex flex-col items-center gap-1 overflow-y-auto py-1.5"
       @keydown="onKeyDown"
       @scroll="hideTooltip"
       @wheel.prevent="onWheel"
@@ -16,7 +16,7 @@
           ]"
           :style="{ '--view-category-color': category.color }"
           :aria-label="view.label"
-          :aria-pressed="view.id === activeViewId"
+          :aria-current="view.id === activeViewId ? 'true' : undefined"
           @mousedown.prevent
           @mouseenter="onMouseEnter(view.label, $event)"
           @mouseleave="onMouseLeave"

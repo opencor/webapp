@@ -1,10 +1,12 @@
 <template>
   <BaseDialog header="Open Location" size="md" @hidden="reset">
     <div class="flex flex-col gap-2 mt-1 mb-2">
-      <p class="description">Enter the {{ inputDescription }} of a CellML file, SED-ML file, OMEX file, or CellDL file.</p>
+      <p :id="descriptionId" class="description">Enter the {{ inputDescription }} of a CellML file, a SED-ML file, an OMEX file, or a CellDL file.</p>
       <IconField>
         <InputIcon class="pi pi-link" />
         <InputText ref="inputRef" v-model="url" autofocus fluid
+          :aria-label="inputDescription"
+          :aria-describedby="inputDescribedBy"
           :invalid="showIssue"
           placeholder="https://example.com/model.omex"
           spellcheck="false"
@@ -31,16 +33,16 @@
       -->
 
       <div class="message">
-        <p v-if="showIssue" class="issue" role="alert">
+        <p v-if="showIssue" :id="issueId" class="issue" role="alert">
           <i class="pi pi-exclamation-circle"></i>
           <span>Please enter a valid {{ validInputDescription }} (e.g., <code>https://example.com/model.omex</code>).</span>
         </p>
-        <p v-else-if="normalisedUrl && normalisedUrl !== url.trim() && !normalisedUrl.startsWith('data:')" class="hint"
+        <p v-else-if="willOpenMessageShown" class="hint"
           v-hint="willOpenMessageTruncated ? `This will open ${normalisedUrl}.` : ''"
           @pointerenter="onWillOpenMessagePointerEnter"
         >
           <i class="pi pi-info-circle"></i>
-          <span ref="willOpenMessageRef">This will open <code>{{ normalisedUrl }}</code>.</span>
+          <span ref="willOpenMessageRef" :id="willOpenMessageId">This will open <code>{{ normalisedUrl }}</code>.</span>
         </p>
       </div>
     </div>
@@ -170,6 +172,25 @@ const localFilesSupported = !!electronApi;
 const inputDescription = localFilesSupported ? 'URL or path' : 'URL';
 const validInputDescription = localFilesSupported ? 'Web address or file path' : 'Web address';
 
+// What describes our input field (which accessible name is what can be entered since it only has a placeholder, i.e. an
+// example of what can be entered), i.e. our description and, if any, our issue or what will be opened.
+
+const descriptionId = vue.useId();
+const issueId = vue.useId();
+const willOpenMessageId = vue.useId();
+
+const inputDescribedBy = vue.computed<string>(() => {
+  const ids = [descriptionId];
+
+  if (showIssue.value) {
+    ids.push(issueId);
+  } else if (willOpenMessageShown.value) {
+    ids.push(willOpenMessageId);
+  }
+
+  return ids.join(' ');
+});
+
 // The local file to open, if any (see Note #5 above).
 
 const localFile = vue.computed<string>(() => {
@@ -282,6 +303,13 @@ vue.watch([normalisedUrl, url], ([newNormalisedUrl, newUrl]) => {
   if (newNormalisedUrl || !newUrl.trim()) {
     checked.value = false;
   }
+});
+
+// Whether to let people know which URL will be opened, i.e. if it differs from what they entered (e.g., if they didn't
+// enter a scheme), unless it is a data URL (which can be very long).
+
+const willOpenMessageShown = vue.computed<boolean>(() => {
+  return !!normalisedUrl.value && normalisedUrl.value !== url.value.trim() && !normalisedUrl.value.startsWith('data:');
 });
 
 // Let people know which URL will be opened in full, using a hint, if our message about it is truncated (see .hint).

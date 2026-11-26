@@ -27,9 +27,10 @@
       <!--
       Note: our file tabs follow the WAI-ARIA tabs pattern (see https://www.w3.org/WAI/ARIA/apg/patterns/tabs/), i.e.
             only the active file tab is in the tab sequence, the arrow keys (as well as Home and End) select another
-            file tab (and give it the keyboard focus), and Delete (or Backspace) closes the file of the focused file
-            tab. This is why the close button of a file tab is not in the tab sequence (it would otherwise be one extra
-            tab stop for each file tab and, as the content of a tab, it isn't exposed to assistive technologies anyway).
+            file tab (and give it the keyboard focus), Shift with the left or right arrow key moves the focused file
+            tab (see moveFileTab()), and Delete (or Backspace) closes the file of the focused file tab. This is why the
+            close button of a file tab is not in the tab sequence (it would otherwise be one extra tab stop for each
+            file tab and, as the content of a tab, it isn't exposed to assistive technologies anyway).
       -->
       <div ref="fileTabBarRef" class="file-tab-bar flex overflow-x-auto"
         role="tablist"
@@ -49,7 +50,7 @@
           :aria-selected="fileTab.file.path() === activeFile"
           :aria-controls="fileTabPanelId(fileTabIndex)"
           :aria-description="fileTab.file.canonicalPath()"
-          aria-keyshortcuts="Delete"
+          aria-keyshortcuts="Delete Shift+ArrowLeft Shift+ArrowRight"
           :tabindex="fileTab.file.path() === activeFile ? 0 : -1"
           :class="{
             'file-tab-active': fileTab.file.path() === activeFile,
@@ -364,6 +365,16 @@ const hasFiles = (): boolean => {
   return fileTabs.value.length > 0;
 };
 
+// Whether we have several files, i.e. files to switch between (see selectNextFile() and selectPreviousFile()).
+
+const hasSeveralFiles = (): boolean => {
+  if (simulationOnly.value) {
+    return false;
+  }
+
+  return fileTabs.value.length > 1;
+};
+
 const waitForTabsUpdate = async (): Promise<void> => {
   // Wait a bit to ensure that the file tabs are properly updated.
   // Note: although a bit of a hack, this is needed when opening multiple files. Indeed, without this, the file tab may
@@ -436,6 +447,33 @@ const fileTabPanelId = (fileTabIndex: number): string => {
 //          event, since not all of them do (e.g., Chrome on macOS), and we prevent the default behaviour of Shift+F10
 //          so that the Web browsers that do don't then show our context menu again.
 
+// Move the file tab of the given file one position to the left or to the right (i.e. the keyboard alternative to
+// dragging it, see onDrop()), keeping the keyboard focus on it if it had it.
+// Note: moving an element in the DOM makes it lose the keyboard focus, hence we give it back once our file tabs have
+//       been updated.
+
+const moveFileTab = async (filePath: string, offset: -1 | 1): Promise<void> => {
+  const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTab.file.path() === filePath);
+  const newFileTabIndex = fileTabIndex + offset;
+
+  if (fileTabIndex === -1 || newFileTabIndex < 0 || newFileTabIndex >= fileTabs.value.length) {
+    return;
+  }
+
+  const fileTabElement = fileTabRefs[filePath];
+  const fileTabHadFocus = !!fileTabElement && fileTabElement === document.activeElement;
+  const [fileTab] = fileTabs.value.splice(fileTabIndex, 1) as [FileTab];
+
+  fileTabs.value.splice(newFileTabIndex, 0, fileTab);
+
+  if (fileTabHadFocus) {
+    await vue.nextTick();
+
+    fileTabRefs[filePath]?.focus({ preventScroll: true });
+    fileTabRefs[filePath]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+};
+
 const onFileTabBarKeyDown = (event: KeyboardEvent): void => {
   const fileTabIndex = fileTabs.value.findIndex((fileTab) => fileTabRefs[fileTab.file.path()] === event.target);
 
@@ -459,6 +497,20 @@ const onFileTabBarKeyDown = (event: KeyboardEvent): void => {
       fileTabs.value[fileTabIndex]?.file.path() ?? '',
       true
     );
+
+    return;
+  }
+
+  if (
+    event.shiftKey &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+  ) {
+    event.preventDefault();
+
+    void moveFileTab(fileTabs.value[fileTabIndex]?.file.path() ?? '', event.key === 'ArrowLeft' ? -1 : 1);
 
     return;
   }
@@ -697,6 +749,25 @@ const fileTabContextMenuItems = vue.computed<MenuItem[]>(() => {
       icon: 'pi pi-times-circle',
       command: () => {
         void closeAllFiles();
+      }
+    },
+    {
+      separator: true
+    },
+    {
+      label: 'Move Left',
+      icon: 'pi pi-arrow-left',
+      disabled: fileTabs.value[0]?.file.path() === filePath,
+      command: () => {
+        void moveFileTab(filePath, -1);
+      }
+    },
+    {
+      label: 'Move Right',
+      icon: 'pi pi-arrow-right',
+      disabled: fileTabs.value[fileTabs.value.length - 1]?.file.path() === filePath,
+      command: () => {
+        void moveFileTab(filePath, 1);
       }
     },
     {
@@ -1794,7 +1865,8 @@ const onWheel = (event: WheelEvent): void => {
 const addExternalData = async (
   csv: string,
   voiExpression: string | undefined,
-  modelParameters: string[]
+  modelParameters: string[],
+  signal?: AbortSignal
 ): Promise<OpenCORExternalDataEvent> => {
   const simulationExperimentInteractiveView = simulationExperimentInteractiveViewRef.value;
 
@@ -1807,7 +1879,7 @@ const addExternalData = async (
   }
 
   return simulationExperimentInteractiveView
-    .addExternalData(csv, voiExpression, modelParameters)
+    .addExternalData(csv, voiExpression, modelParameters, signal)
     .catch((error: unknown) => {
       return {
         type: 'issue',
@@ -1862,11 +1934,14 @@ defineExpose({
   closeCurrentFile,
   hasFile,
   hasFiles,
+  hasSeveralFiles,
   modifiedFilePaths,
   saveCurrentFile,
   saveCurrentFileAs,
   saveModifiedFiles,
   selectFile,
+  selectNextFile,
+  selectPreviousFile,
 
   // Simulation-only methods.
 
@@ -1969,10 +2044,16 @@ vue.watch(activeFile, (newActiveFile: string) => {
   }
 });
 
-// Keyboard shortcuts.
+// Keyboard shortcuts, i.e. switch to the next/previous file using Ctrl+Tab/Ctrl+Shift+Tab or, in our browser version,
+// also using Ctrl+Alt+Tab/Ctrl+Alt+Shift+Tab (see the File menu in MainMenu.vue), since a browser keeps Ctrl+Tab and
+// Ctrl+Shift+Tab for itself (unless, for instance, OpenCOR is embedded in a page).
+// Note: in Electron, our File menu handles Ctrl+Tab and Ctrl+Shift+Tab (see src/main/MainMenu.ts), so we don't, since a
+//       file would otherwise be switched twice.
+
+const fileSwitchingKeysHandledByMenu = !!electronApi;
 
 useOpenCORKeyStroke((event: KeyboardEvent) => {
-  if (!fileTabs.value.length) {
+  if (!fileTabs.value.length || fileSwitchingKeysHandledByMenu) {
     return;
   }
 

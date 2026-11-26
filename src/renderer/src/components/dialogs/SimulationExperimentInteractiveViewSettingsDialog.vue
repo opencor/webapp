@@ -101,7 +101,7 @@
             <header class="section-header">
               <div class="min-w-0">
                 <h3 class="section-title">Solvers</h3>
-                <p class="section-description">Configure CVODE's maximum step (additional settings will be added in the future).</p>
+                <p class="section-description">Configure CVODE's maximum step.</p>
               </div>
             </header>
             <div class="settings-form">
@@ -964,7 +964,7 @@ const simulationFieldIssues = vue.computed<Record<SimulationField, string[]>>(()
   }
 
   if (initialPoint !== null && startingPoint !== null && startingPoint < initialPoint) {
-    res.startingPoint.push('The starting point must be greater or equal to the initial point.');
+    res.startingPoint.push('The starting point must be greater than or equal to the initial point.');
   }
 
   if (startingPoint !== null && endingPoint !== null && endingPoint <= startingPoint) {
@@ -1105,7 +1105,7 @@ const activeIssues = vue.computed<locApi.Issue[]>(() => {
 });
 
 const activeSettingsLabel = vue.computed<string>(() => {
-  return activeTab.value === 'simulation' ? 'Simulation' : activeTab.value === 'solvers' ? 'Solvers' : 'Interactive';
+  return activeTab.value === 'simulation' ? 'Simulation' : activeTab.value === 'solvers' ? 'Solver' : 'Interactive';
 });
 
 // The issues of our fields, so that a field that has issues can be described by them for assistive technologies (see

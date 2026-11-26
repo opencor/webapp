@@ -348,7 +348,7 @@ const nonNumericValuesIssues = (uiJson: UiJson): UiJsonIssue[] => {
 
     const externalDataPath = ['output', 'externalData', externalDataIndex];
 
-    check(externalDataItem.voiValues, 'an output external data VOI values', [...externalDataPath, 'voiValues']);
+    check(externalDataItem.voiValues, 'the VOI values of an external data file', [...externalDataPath, 'voiValues']);
 
     if (Array.isArray(externalDataItem.dataSeries)) {
       for (const [dataSeriesIndex, dataSeries] of externalDataItem.dataSeries.entries()) {
@@ -356,8 +356,8 @@ const nonNumericValuesIssues = (uiJson: UiJson): UiJsonIssue[] => {
           check(
             dataSeries.values,
             typeof dataSeries.name === 'string' && dataSeries.name
-              ? `an output external data series values ('${dataSeries.name}')`
-              : 'an output external data series values',
+              ? `the values of a data series ('${dataSeries.name}')`
+              : 'the values of a data series',
             [...externalDataPath, 'dataSeries', dataSeriesIndex, 'values']
           );
         }
@@ -450,58 +450,62 @@ interface SchemaValidationError {
 
 // The names of the values of a UI JSON, as used in our issues, indexed by the key of their path with their indices
 // replaced with '*' (e.g., 'input/*/name' for the name of an input).
+// Note: those names are those used in the settings of the Interactive view (see
+//       SimulationExperimentInteractiveViewSettingsDialog.vue), so that our issues can be related to its fields (e.g.,
+//       "simulation input" rather than "input", "simulation data" rather than "output data", "model parameter" rather
+//       than "parameter", and "trace" rather than "plot" for the X/Y values and name of a plot).
 
 const UI_JSON_VALUE_NAMES: Record<string, string> = {
   '': 'the UI JSON',
-  input: 'the inputs',
-  'input/*': 'an input',
-  'input/*/id': 'an input id',
-  'input/*/name': 'an input name',
-  'input/*/defaultValue': 'an input default value',
-  'input/*/visible': 'an input visible',
-  'input/*/minimumValue': 'an input minimum value',
-  'input/*/maximumValue': 'an input maximum value',
-  'input/*/stepValue': 'an input step value',
-  'input/*/possibleValues': 'an input possible values',
-  'input/*/possibleValues/*': 'an input possible value',
-  'input/*/possibleValues/*/name': 'an input possible value name',
-  'input/*/possibleValues/*/value': 'an input possible value value',
+  input: 'the simulation inputs',
+  'input/*': 'a simulation input',
+  'input/*/id': 'a simulation input ID',
+  'input/*/name': 'a simulation input name',
+  'input/*/defaultValue': 'a simulation input default value',
+  'input/*/visible': 'a simulation input visible condition',
+  'input/*/minimumValue': 'a simulation input minimum value',
+  'input/*/maximumValue': 'a simulation input maximum value',
+  'input/*/stepValue': 'a simulation input step value',
+  'input/*/possibleValues': 'the possible values of a simulation input',
+  'input/*/possibleValues/*': 'a possible value',
+  'input/*/possibleValues/*/name': 'a possible value name',
+  'input/*/possibleValues/*/value': 'the value of a possible value',
   output: 'the output',
-  'output/data': 'the output data',
-  'output/data/*': 'an output data',
-  'output/data/*/id': 'an output data id',
-  'output/data/*/name': 'an output data name',
-  'output/externalData': 'the output external data',
-  'output/externalData/*': 'an output external data',
-  'output/externalData/*/description': 'an output external data description',
-  'output/externalData/*/voiExpression': 'an output external data VOI expression',
-  'output/externalData/*/voiValues': 'an output external data VOI values',
-  'output/externalData/*/voiValues/*': 'an output external data VOI value',
-  'output/externalData/*/dataSeries': 'an output external data series entries',
-  'output/externalData/*/dataSeries/*': 'an output external data series',
-  'output/externalData/*/dataSeries/*/name': 'an output external data series name',
-  'output/externalData/*/dataSeries/*/values': 'an output external data series values',
-  'output/externalData/*/dataSeries/*/values/*': 'an output external data series value',
-  'output/externalData/*/data': 'an output external data entries',
-  'output/externalData/*/data/*': 'an output external data entry',
-  'output/externalData/*/data/*/id': 'an output external data id',
-  'output/externalData/*/data/*/name': 'an output external data name',
-  'output/plots': 'the output plots',
-  'output/plots/*': 'an output plot',
-  'output/plots/*/xAxisTitle': 'an output plot X axis title',
-  'output/plots/*/yAxisTitle': 'an output plot Y axis title',
-  'output/plots/*/xValue': 'an output plot X value',
-  'output/plots/*/yValue': 'an output plot Y value',
-  'output/plots/*/name': 'an output plot name',
-  'output/plots/*/additionalTraces': 'an output plot additional traces',
-  'output/plots/*/additionalTraces/*': 'an output plot additional trace',
-  'output/plots/*/additionalTraces/*/xValue': 'an output plot additional trace X value',
-  'output/plots/*/additionalTraces/*/yValue': 'an output plot additional trace Y value',
-  'output/plots/*/additionalTraces/*/name': 'an output plot additional trace name',
-  parameters: 'the parameters',
-  'parameters/*': 'a parameter',
-  'parameters/*/name': 'a parameter name',
-  'parameters/*/value': 'a parameter value'
+  'output/data': 'the simulation data',
+  'output/data/*': 'a simulation data entry',
+  'output/data/*/id': 'a simulation data ID',
+  'output/data/*/name': 'a simulation data model parameter',
+  'output/externalData': 'the external data',
+  'output/externalData/*': 'an external data file',
+  'output/externalData/*/description': 'an external data file description',
+  'output/externalData/*/voiExpression': 'an external data file VOI expression',
+  'output/externalData/*/voiValues': 'the VOI values of an external data file',
+  'output/externalData/*/voiValues/*': 'a VOI value of an external data file',
+  'output/externalData/*/dataSeries': 'the data series of an external data file',
+  'output/externalData/*/dataSeries/*': 'a data series',
+  'output/externalData/*/dataSeries/*/name': 'a data series name',
+  'output/externalData/*/dataSeries/*/values': 'the values of a data series',
+  'output/externalData/*/dataSeries/*/values/*': 'a value of a data series',
+  'output/externalData/*/data': 'the external data of an external data file',
+  'output/externalData/*/data/*': 'an external data entry',
+  'output/externalData/*/data/*/id': 'an external data ID',
+  'output/externalData/*/data/*/name': 'an external data series',
+  'output/plots': 'the plots',
+  'output/plots/*': 'a plot',
+  'output/plots/*/xAxisTitle': 'a plot X axis title',
+  'output/plots/*/yAxisTitle': 'a plot Y axis title',
+  'output/plots/*/xValue': 'a trace X value',
+  'output/plots/*/yValue': 'a trace Y value',
+  'output/plots/*/name': 'a trace name',
+  'output/plots/*/additionalTraces': 'the additional traces of a plot',
+  'output/plots/*/additionalTraces/*': 'a trace',
+  'output/plots/*/additionalTraces/*/xValue': 'a trace X value',
+  'output/plots/*/additionalTraces/*/yValue': 'a trace Y value',
+  'output/plots/*/additionalTraces/*/name': 'a trace name',
+  parameters: 'the model parameters',
+  'parameters/*': 'a model parameter',
+  'parameters/*/name': 'a model parameter name',
+  'parameters/*/value': 'a model parameter value'
 };
 
 const TYPE_NAMES: Record<string, string> = {
@@ -527,7 +531,7 @@ const uiJsonValueAt = (value: unknown, path: UiJsonPath): unknown => {
 
 const schemaErrorDescription = (error: SchemaValidationError, path: UiJsonPath, originalUiJson: UiJson): string => {
   // Return a description of the given schema error, which is about the value at the given path, using the same terms as
-  // our other issues (e.g., "an input name must not be empty.").
+  // our other issues (e.g., "a simulation input name must not be empty.").
   // Note: a value that is required may be missing (e.g., in a UI JSON file) or empty (e.g., if it was cleared in our
   //       settings dialog, in which case it got removed when our UI JSON was cleaned, see cleanUiJson()), hence we check
   //       the original UI JSON to tell which.
@@ -933,7 +937,9 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
 
     if (inputValid('id')) {
       if (inputIdUsed.has(input.id)) {
-        res.push(uiJsonIssue(`an input id must be unique ('${input.id}' is used more than once).`, inputPath('id')));
+        res.push(
+          uiJsonIssue(`a simulation input ID must be unique ('${input.id}' is used more than once).`, inputPath('id'))
+        );
       }
 
       inputIdUsed.add(input.id);
@@ -953,7 +959,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
           if (usedPossibleValues.has(possibleValue)) {
             res.push(
               uiJsonIssue(
-                `an input possible value must have a unique value ('${possibleValue}' is used more than once).`,
+                `a possible value must have a unique value ('${possibleValue}' is used more than once).`,
                 inputPath('possibleValues', possibleValueIndex, 'value')
               )
             );
@@ -965,7 +971,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
         if (inputValid('defaultValue') && !possibleValues.includes(input.defaultValue)) {
           res.push(
             uiJsonIssue(
-              `an input default value must be one of the possible values ('${input.defaultValue}' is not one of ${listOfPossibleValues}).`,
+              `a simulation input default value must be one of the possible values ('${input.defaultValue}' is not one of ${listOfPossibleValues}).`,
               inputPath('defaultValue')
             )
           );
@@ -977,7 +983,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       if (scalarInput.minimumValue >= scalarInput.maximumValue) {
         res.push(
           uiJsonIssue(
-            `an input minimum value must be lower than the maximum value (${scalarInput.minimumValue} is not lower than ${scalarInput.maximumValue}).`,
+            `a simulation input minimum value must be less than the maximum value (${scalarInput.minimumValue} is not less than ${scalarInput.maximumValue}).`,
             inputPath('minimumValue'),
             inputPath('maximumValue')
           )
@@ -990,7 +996,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       ) {
         res.push(
           uiJsonIssue(
-            `an input default value must be greater or equal than the minimum value and lower or equal than the maximum value (${scalarInput.defaultValue} is not between ${scalarInput.minimumValue} and ${scalarInput.maximumValue}).`,
+            `a simulation input default value must be greater than or equal to the minimum value and less than or equal to the maximum value (${scalarInput.defaultValue} is not between ${scalarInput.minimumValue} and ${scalarInput.maximumValue}).`,
             inputPath('defaultValue')
           )
         );
@@ -1003,7 +1009,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
           if (scalarInput.stepValue <= 0 || scalarInput.stepValue > range) {
             res.push(
               uiJsonIssue(
-                `an input step value must be greater than zero and lower or equal than the range value (${scalarInput.stepValue} is not between 0 and ${range}).`,
+                `a simulation input step value must be greater than zero and less than or equal to the range value (${scalarInput.stepValue} is not between 0 and ${range}).`,
                 inputPath('stepValue')
               )
             );
@@ -1012,7 +1018,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
           if (!common.isDivisible(range, scalarInput.stepValue)) {
             res.push(
               uiJsonIssue(
-                `an input step value must be a factor of the range value (${scalarInput.stepValue} is not a factor of ${range}).`,
+                `a simulation input step value must be a factor of the range value (${scalarInput.stepValue} is not a factor of ${range}).`,
                 inputPath('stepValue')
               )
             );
@@ -1023,7 +1029,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
 
         res.push(
           uiJsonIssue(
-            `an input step value must be a factor of the range value (1 is not a factor of ${range}).`,
+            `a simulation input step value must be a factor of the range value (1 is not a factor of ${range}).`,
             inputPath('stepValue')
           )
         );
@@ -1044,7 +1050,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       if (outputIdUsed.has(outputData.id)) {
         res.push(
           uiJsonIssue(
-            `an output data id must be unique ('${outputData.id}' is used more than once).`,
+            `a simulation data ID must be unique ('${outputData.id}' is used more than once).`,
             outputDataPath('id')
           )
         );
@@ -1060,7 +1066,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
     ) {
       res.push(
         uiJsonIssue(
-          `an output data name must match one of the available options ('${outputData.name}' is not one of ${listOfAllModelParameters}).`,
+          `a simulation data model parameter must match one of the available options ('${outputData.name}' is not one of ${listOfAllModelParameters}).`,
           outputDataPath('name')
         )
       );
@@ -1082,7 +1088,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       } catch (error: unknown) {
         res.push(
           uiJsonIssue(
-            `an output external data VOI expression must be valid ('${outputExternalData.voiExpression}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
+            `an external data file VOI expression must be valid ('${outputExternalData.voiExpression}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
             outputExternalDataPath('voiExpression')
           )
         );
@@ -1103,7 +1109,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
         if (outputExternalDataSeriesNames.has(outputExternalDataSeries.name)) {
           res.push(
             uiJsonIssue(
-              `an output external data series name must be unique ('${outputExternalDataSeries.name}' is used more than once).`,
+              `a data series name must be unique ('${outputExternalDataSeries.name}' is used more than once).`,
               outputExternalDataSeriesPath('name')
             )
           );
@@ -1119,7 +1125,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       ) {
         res.push(
           uiJsonIssue(
-            `an output external data series values length must match the output external data VOI values length (${outputExternalDataSeries.values.length} is not equal to ${outputExternalData.voiValues.length}).`,
+            `the number of values of a data series must match the number of VOI values of its external data file (${outputExternalDataSeries.values.length} is not equal to ${outputExternalData.voiValues.length}).`,
             outputExternalDataSeriesPath('values')
           )
         );
@@ -1141,7 +1147,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
         if (outputExternalDataIds.has(outputExternalDataEntry.id)) {
           res.push(
             uiJsonIssue(
-              `an output external data id must be unique ('${outputExternalDataEntry.id}' is used more than once).`,
+              `an external data ID must be unique ('${outputExternalDataEntry.id}' is used more than once).`,
               outputExternalDataEntryPath('id')
             )
           );
@@ -1152,7 +1158,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
         if (outputIdUsed.has(outputExternalDataEntry.id)) {
           res.push(
             uiJsonIssue(
-              `an output external data id must be unique across simulation and external data ('${outputExternalDataEntry.id}' is used more than once).`,
+              `an external data ID must be unique across simulation and external data ('${outputExternalDataEntry.id}' is used more than once).`,
               outputExternalDataEntryPath('id')
             )
           );
@@ -1168,7 +1174,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       ) {
         res.push(
           uiJsonIssue(
-            `an output external data name must match one of the available options ('${outputExternalDataEntry.name}' is not one of ${listOfOutputExternalDataSeriesNames}).`,
+            `an external data series must match one of the available options ('${outputExternalDataEntry.name}' is not one of ${listOfOutputExternalDataSeriesNames}).`,
             outputExternalDataEntryPath('name')
           )
         );
@@ -1187,7 +1193,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       } catch (error: unknown) {
         res.push(
           uiJsonIssue(
-            `an output plot ${axisLabel} must be valid ('${value}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
+            `a trace ${axisLabel} must be valid ('${value}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
             path
           )
         );
@@ -1220,7 +1226,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
     ) {
       res.push(
         uiJsonIssue(
-          `a parameter name must match one of the available options ('${parameter.name}' is not one of ${listOfEditableModelParameters}).`,
+          `a model parameter name must match one of the available options ('${parameter.name}' is not one of ${listOfEditableModelParameters}).`,
           parameterPath('name')
         )
       );
@@ -1232,7 +1238,7 @@ export const validateUiJson = (uiJson: UiJson | undefined, options?: ValidateUiJ
       } catch (error: unknown) {
         res.push(
           uiJsonIssue(
-            `a parameter value must be valid ('${parameter.value}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
+            `a model parameter value must be valid ('${parameter.value}' is not: ${common.formatMessage(common.formatError(error), false)}).`,
             parameterPath('value')
           )
         );

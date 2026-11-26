@@ -10,6 +10,7 @@ let enabledMenu: electron.Menu | null = null;
 let disabledMenu: electron.Menu | null = null;
 let recentFilePaths: string[] = [];
 let hasFiles = false;
+let hasSeveralFiles = false;
 let canSave = false;
 let canSaveAs = false;
 let menuEnabled = false;
@@ -192,6 +193,25 @@ export const enableDisableMainMenu = (enable: boolean): void => {
     });
     fileSubMenu.push({ type: 'separator' });
     fileSubMenu.push({
+      id: 'fileNext',
+      label: 'Next File',
+      accelerator: 'Ctrl+Tab',
+      click: () => {
+        mainWindow?.send('next-file');
+      },
+      enabled: hasSeveralFiles
+    });
+    fileSubMenu.push({
+      id: 'filePrevious',
+      label: 'Previous File',
+      accelerator: 'Ctrl+Shift+Tab',
+      click: () => {
+        mainWindow?.send('previous-file');
+      },
+      enabled: hasSeveralFiles
+    });
+    fileSubMenu.push({ type: 'separator' });
+    fileSubMenu.push({
       id: 'fileClose',
       label: 'Close',
       accelerator: 'CmdOrCtrl+W',
@@ -292,14 +312,12 @@ export const enableDisableMainMenu = (enable: boolean): void => {
         });
       }
     });
-    helpSubMenu.push({ type: 'separator' });
     helpSubMenu.push({
       label: 'Changelog',
       click: () => {
         mainWindow?.send('changelog');
       }
     });
-    helpSubMenu.push({ type: 'separator' });
     helpSubMenu.push({
       label: 'Report Issue',
       click: () => {
@@ -308,6 +326,8 @@ export const enableDisableMainMenu = (enable: boolean): void => {
         });
       }
     });
+
+    // Note: on macOS, our Check for Updates... and About OpenCOR menu items are in our app menu (see above).
 
     if (!isMacOs()) {
       if (checkForUpdatesMenuItem) {
@@ -371,6 +391,23 @@ export const enableDisableFileCloseAndCloseAllMenuItems = (enable: boolean): voi
     if (fileCloseMenu && fileCloseAllMenu) {
       fileCloseMenu.enabled = hasFiles;
       fileCloseAllMenu.enabled = hasFiles;
+    }
+  }
+};
+
+export const enableDisableFileNextAndPreviousMenuItems = (enable: boolean): void => {
+  // Note: same as for enableDisableFileCloseAndCloseAllMenuItems(), except that we need several files (i.e. at least
+  //       two) to switch between them.
+
+  hasSeveralFiles = enable;
+
+  if (enabledMenu) {
+    const fileNextMenu = enabledMenu.getMenuItemById('fileNext');
+    const filePreviousMenu = enabledMenu.getMenuItemById('filePrevious');
+
+    if (fileNextMenu && filePreviousMenu) {
+      fileNextMenu.enabled = hasSeveralFiles;
+      filePreviousMenu.enabled = hasSeveralFiles;
     }
   }
 };

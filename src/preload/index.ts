@@ -113,6 +113,8 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   enableDisableMainMenu: (enable: boolean) => electron.ipcRenderer.invoke('enable-disable-main-menu', enable),
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
+  enableDisableFileNextAndPreviousMenuItems: (enable: boolean) =>
+    electron.ipcRenderer.invoke('enable-disable-file-next-and-previous-menu-items', enable),
   enableDisableFileSaveAndSaveAsMenuItems: (enableSave: boolean, enableSaveAs: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-save-and-save-as-menu-items', enableSave, enableSaveAs),
   fileClosed: (filePath: string) => electron.ipcRenderer.invoke('file-closed', filePath),
@@ -170,6 +172,8 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   onRecentFiles: (callback: (filePaths: string[]) => void) => onIpc('recent-files', callback),
   onClose: (callback: () => void) => onIpc('close', callback),
   onCloseAll: (callback: () => void) => onIpc('close-all', callback),
+  onNextFile: (callback: () => void) => onIpc('next-file', callback),
+  onPreviousFile: (callback: () => void) => onIpc('previous-file', callback),
   onConfirmClose: (callback: () => void) => onIpc('confirm-close', callback),
   onResetAll: (callback: () => void) => onIpc('reset-all', callback),
   onSave: (callback: () => void) => onIpc('save', callback),

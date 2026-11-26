@@ -21,8 +21,8 @@
             Files can also be dropped here.
           </p>
           <section v-if="recentFiles.length" class="recent-files">
-            <div class="opencor-section-title">Recent</div>
-            <div class="recent-files-list opencor-panel">
+            <div :id="recentFilesTitleId" class="opencor-section-title">Recent</div>
+            <div class="recent-files-list opencor-panel" role="group" :aria-labelledby="recentFilesTitleId">
               <button v-for="recentFile in recentFiles" :key="recentFile.path" class="recent-file"
                 type="button"
                 v-hint="recentFile.path"
@@ -90,6 +90,10 @@ defineExpose({ focusFirstAction });
 // Note: we only show a few of them since our Reopen menu lists all of them anyway.
 
 const MAX_SHOWN_RECENT_FILES = 5;
+
+// Note: our list of recent files is named after its title, so that assistive technologies know what it is about.
+
+const recentFilesTitleId = vue.useId();
 
 const recentFiles = vue.computed<{ path: string; name: string; location: string }[]>(() => {
   return props.recentFilePaths.slice(0, MAX_SHOWN_RECENT_FILES).map((path) => {

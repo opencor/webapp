@@ -31,7 +31,7 @@
             />
             <ToolbarButtonWidget
               icon="pi pi-cog"
-              label="Simulation Settings"
+              label="Simulation settings"
               @click="settingsVisible = true"
             />
           </div>
@@ -63,7 +63,11 @@
               <Button icon="pi pi-cog" label="Open settings" size="small" @mousedown.prevent @click="settingsVisible = true" />
             </template>
           </div>
-          <IssuesView v-else-if="uiJsonIssues.length" class="w-full m-4" :issues="uiJsonIssues" />
+          <IssuesView v-else-if="uiJsonIssues.length" class="w-full m-4" :issues="uiJsonIssues">
+            <template v-if="!simulationOnly" #footer>
+              <Button icon="pi pi-cog" label="Open settings" size="small" @mousedown.prevent @click="settingsVisible = true" />
+            </template>
+          </IssuesView>
           <Splitter v-else
             class="border-none! rounded-none! grow min-w-0 min-h-0"
             :layout="narrowLayout ? 'vertical' : 'horizontal'"
@@ -136,7 +140,7 @@
                     <div ref="runsListRef" class="runs-list">
                       <div v-for="(run, index) in runs"
                         :key="run.id"
-                        class="run-row"
+                        class="run-row opencor-hint-anchor"
                         :class="{ 'run-row-hidden': !run.isVisible }"
                       >
                         <ToolbarButtonWidget class="run-color-button"
@@ -150,7 +154,7 @@
                         Note: the name of a tracked run can get the keyboard focus, so that its details (i.e. its hint)
                               can also be seen using the keyboard and are read by assistive technologies (see hint.ts).
                         -->
-                        <div v-hint.html="run.isLiveRun ? '' : run.tooltip"
+                        <div v-hint.html.side="run.isLiveRun ? '' : run.tooltip"
                           class="run-name grow min-w-0"
                           :class="{ 'cursor-help': !run.isLiveRun }"
                           :tabindex="run.isLiveRun ? undefined : 0"
@@ -191,18 +195,40 @@
               </ScrollPanel>
             </SplitterPanel>
             <SplitterPanel class="plots-column relative flex flex-col min-h-0" :size="sidePanelSizes[1]">
-              <div class="flex flex-col grow gap-2 min-h-0" :class="{ 'invisible pointer-events-none': simulationIssues.length }">
+              <!--
+              Note: our plots share the height of our plots column, but they cannot get smaller than a minimum height
+                    (e.g., when there are many of them, or in our narrow layout), in which case our plots column
+                    scrolls.
+              -->
+              <div class="flex flex-col grow gap-2 min-h-0 overflow-y-auto" :class="{ 'invisible pointer-events-none': simulationIssues.length }">
                 <GraphPanelWidget
                   v-for="(_plot, index) in actualUiJson.output.plots"
                   :ref="(element: any) => graphPanelRefs[index] = element"
                   :key="`plot_${index}`"
-                  class="w-full min-h-0"
+                  class="w-full min-h-40"
                   :margins="compMargins"
                   :data="compData[index] || { traces: [] }"
                   @marginsUpdated="(newMargins: PlotMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
                 />
               </div>
-              <IssuesView v-show="simulationIssues.length" class="absolute inset-0 m-4" :issues="simulationIssues" />
+              <!--
+              Note: in simulation-only mode, we have no toolbar, so our Stop button is shown above our plots instead (see
+                    the Stop button in our toolbar).
+              -->
+              <ToolbarButtonWidget v-if="simulationOnly && slowSimulation" ref="stopButtonRef"
+                class="floating-stop-button"
+                icon="pi pi-stop-circle"
+                accent="danger"
+                label="Stop simulation"
+                tooltipAlign="end"
+                @focus="onStopButtonFocus"
+                @click="onStopSimulation"
+              />
+              <IssuesView v-show="simulationIssues.length" class="absolute inset-0 m-4" :issues="simulationIssues">
+                <template v-if="!simulationOnly" #footer>
+                  <Button icon="pi pi-cog" label="Open settings" size="small" @mousedown.prevent @click="settingsVisible = true" />
+                </template>
+              </IssuesView>
             </SplitterPanel>
           </Splitter>
         </div>
@@ -348,7 +374,7 @@ const evaluateModelChanges = (
       } catch (error: unknown) {
         issues.push({
           type: locApi.IssueType.ERROR,
-          description: `An error occurred while applying parameter change for '${parameter.name}' (${common.formatMessage(common.formatError(error), false)}).`
+          description: `An error occurred while applying model parameter '${parameter.name}' (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
     }
@@ -798,7 +824,10 @@ const settings = vue.computed<SimulationExperimentInteractiveViewSettings>(() =>
       startingPoint: uniformTimeCourse?.outputStartTime() ?? 0,
       endingPoint: uniformTimeCourse?.outputEndTime() ?? 0,
       pointInterval: uniformTimeCourse
-        ? (uniformTimeCourse.outputEndTime() - uniformTimeCourse.outputStartTime()) / uniformTimeCourse.numberOfSteps()
+        ? common.divideNumbers(
+            common.subtractNumbers(uniformTimeCourse.outputEndTime(), uniformTimeCourse.outputStartTime()),
+            uniformTimeCourse.numberOfSteps()
+          )
         : 1
     },
     solvers: {
@@ -837,14 +866,14 @@ const serialisedSettings = (settingsToSerialise: SimulationExperimentInteractive
 
 const oldSettings = vue.ref<string>(serialisedSettings(settings.value));
 
-// Add an information issue to some simulation issues, telling the user to check our settings.
+// Add an information issue to some simulation issues, telling the user to check our settings (which can be opened using
+// the Open settings button below our issues, see our template).
 // Note: our settings cannot be accessed in simulation-only mode (since our toolbar is hidden), so there is no point in
 //       telling the user to check them.
 
 const informationIssue: locApi.Issue = {
   type: locApi.IssueType.INFORMATION,
-  description:
-    'Please check the settings (click on the <i class="pi pi-cog"></i> icon in the top-right corner) and try again.'
+  description: 'Please check the simulation settings and try again.'
 };
 
 const addInformationIssue = (issues: locApi.Issue[]): void => {
@@ -924,7 +953,8 @@ const inFlightExternalDataHashes = new Set<string>();
 const addExternalData = async (
   csv: string,
   voiExpression: string | undefined,
-  modelParameters: string[]
+  modelParameters: string[],
+  signal?: AbortSignal
 ): Promise<OpenCORExternalDataEvent> => {
   const addedEvent = (): OpenCORExternalDataEvent => {
     return {
@@ -955,7 +985,7 @@ const addExternalData = async (
 
   if (common.isUrl(csv)) {
     try {
-      const response = await common.fetchThroughCorsProxy(csv, 'csv');
+      const response = await common.fetchThroughCorsProxy(csv, 'csv', signal);
 
       if (!response.ok) {
         return Promise.resolve(
@@ -967,7 +997,9 @@ const addExternalData = async (
     } catch (error: unknown) {
       return Promise.resolve(
         issueEvent([
-          `Could not retrieve the CSV file from ${csv} (${common.formatMessage(common.formatError(error), false)}).`
+          signal?.aborted
+            ? `The retrieval of the CSV file from ${csv} was cancelled.`
+            : `Could not retrieve the CSV file from ${csv} (${common.formatMessage(common.formatError(error), false)}).`
         ])
       );
     }
@@ -1595,7 +1627,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 
         issues.push({
           type: locApi.IssueType.ERROR,
-          description: `An error occurred while evaluating visibility for input '${input.name}' (${common.formatMessage(common.formatError(error), false)}).`
+          description: `An error occurred while evaluating the visible condition of simulation input '${input.name}' (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
     }
@@ -1765,7 +1797,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
       } catch (error: unknown) {
         issues.push({
           type: locApi.IssueType.ERROR,
-          description: `An error occurred while evaluating the VOI expression '${externalDataItem.voiExpression}' (${common.formatMessage(common.formatError(error), false)}).`
+          description: `An error occurred while evaluating the VOI expression '${externalDataItem.voiExpression}' of an external data file (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
     }
@@ -1895,7 +1927,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     } catch (error: unknown) {
       issues.push({
         type: locApi.IssueType.ERROR,
-        description: `An error occurred while evaluating the X value expression for plot '${plot.name}' (${common.formatMessage(common.formatError(error), false)}).`
+        description: `An error occurred while evaluating the X value of trace 1 of plot ${i + 1} (${common.formatMessage(common.formatError(error), false)}).`
       });
     }
 
@@ -1906,7 +1938,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     } catch (error: unknown) {
       issues.push({
         type: locApi.IssueType.ERROR,
-        description: `An error occurred while evaluating the Y value expression for plot '${plot.name}' (${common.formatMessage(common.formatError(error), false)}).`
+        description: `An error occurred while evaluating the Y value of trace 1 of plot ${i + 1} (${common.formatMessage(common.formatError(error), false)}).`
       });
     }
 
@@ -1942,7 +1974,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
       } catch (error: unknown) {
         issues.push({
           type: locApi.IssueType.ERROR,
-          description: `An error occurred while evaluating the X value expression for additional trace #${additionalTraceIndex + 1} of plot '${plot.name}' (${common.formatMessage(common.formatError(error), false)}).`
+          description: `An error occurred while evaluating the X value of trace ${additionalTraceIndex + 2} of plot ${i + 1} (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
 
@@ -1953,7 +1985,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
       } catch (error: unknown) {
         issues.push({
           type: locApi.IssueType.ERROR,
-          description: `An error occurred while evaluating the Y value expression for additional trace #${additionalTraceIndex + 1} of plot '${plot.name}' (${common.formatMessage(common.formatError(error), false)}).`
+          description: `An error occurred while evaluating the Y value of trace ${additionalTraceIndex + 2} of plot ${i + 1} (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
 
@@ -2904,6 +2936,20 @@ vue.onMounted(() => {
 </script>
 
 <style scoped>
+/**
+ * Stop button, in simulation-only mode (see our template).
+ */
+
+.floating-stop-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  border-radius: var(--p-border-radius-md);
+  background-color: var(--p-content-background);
+  box-shadow: var(--opencor-overlay-shadow);
+}
+
 .color-swatch:hover {
   box-shadow: 0 2px 8px var(--p-shadow-color, rgba(0, 0, 0, 0.15));
 }

@@ -24,6 +24,7 @@ interface ElectronApi {
   downloadAndInstallUpdate: () => void;
   enableDisableMainMenu: (enable: boolean) => void;
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) => void;
+  enableDisableFileNextAndPreviousMenuItems: (enable: boolean) => void;
   enableDisableFileSaveAndSaveAsMenuItems: (enableSave: boolean, enableSaveAs: boolean) => void;
   fileClosed: (filePath: string) => void;
   fileIssue: (filePath: string, canonicalFilePath: string) => void;
@@ -60,6 +61,8 @@ interface ElectronApi {
   onRecentFiles: (callback: (filePaths: string[]) => void) => () => void;
   onClose: (callback: () => void) => () => void;
   onCloseAll: (callback: () => void) => () => void;
+  onNextFile: (callback: () => void) => () => void;
+  onPreviousFile: (callback: () => void) => () => void;
   onConfirmClose: (callback: () => void) => () => void;
   onResetAll: (callback: () => void) => () => void;
   onSave: (callback: () => void) => () => void;

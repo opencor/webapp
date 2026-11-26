@@ -23,6 +23,7 @@ import { startRendererServer, stopRendererServer } from '../renderer/src/common/
 
 import {
   enableDisableFileCloseAndCloseAllMenuItems,
+  enableDisableFileNextAndPreviousMenuItems,
   enableDisableFileSaveAndSaveAsMenuItems,
   enableDisableMainMenu
 } from './MainMenu';
@@ -510,6 +511,9 @@ electron.app
         });
         electron.ipcMain.handle('enable-disable-file-close-and-close-all-menu-items', (_event, enable: boolean) => {
           enableDisableFileCloseAndCloseAllMenuItems(enable);
+        });
+        electron.ipcMain.handle('enable-disable-file-next-and-previous-menu-items', (_event, enable: boolean) => {
+          enableDisableFileNextAndPreviousMenuItems(enable);
         });
         electron.ipcMain.handle(
           'enable-disable-file-save-and-save-as-menu-items',

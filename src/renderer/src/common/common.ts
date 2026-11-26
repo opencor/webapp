@@ -347,6 +347,18 @@ export const subtractNumbers = (value1: number, value2: number): number => {
   return addNumbers(value1, -value2);
 };
 
+// Divide the given values without any (visible) floating-point error, e.g., 2.3 / 23 = 0.1 rather than
+// 0.09999999999999999.
+// Note: unlike the sum or the difference of two values, the quotient of two values may have infinitely many decimals
+//       (e.g., 1 / 3), so we round it to 15 significant digits, i.e. the number of significant digits that a double can
+//       always represent, which removes any floating-point error without losing any meaningful precision.
+
+export const divideNumbers = (value1: number, value2: number): number => {
+  const res = value1 / value2;
+
+  return Number.isFinite(res) ? Number(res.toPrecision(15)) : res;
+};
+
 export const formatCount = (count: number): string => {
   return count.toLocaleString('en');
 };
