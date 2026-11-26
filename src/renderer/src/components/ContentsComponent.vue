@@ -2022,7 +2022,9 @@ vue.watch(activeFile, (newActiveFile: string) => {
   }
 
   if (!dragState.value) {
-    // Make sure that the selected file tab is visible in the file tab bar.
+    // Make sure that the selected file tab is visible in the file tab bar, and not under one of its fades (hence we use
+    // its scroll padding, which is the width of its fades). For the first/last file tab, this means scrolling all the
+    // way to the left/right (since the scroll position gets clamped), so that our left/right fade gets hidden.
 
     void vue.nextTick().then(() => {
       const fileTabBar = fileTabBarRef.value;
@@ -2033,12 +2035,15 @@ vue.watch(activeFile, (newActiveFile: string) => {
       }
 
       const fileTabBarRect = fileTabBar.getBoundingClientRect();
+      const fileTabBarStyle = getComputedStyle(fileTabBar);
+      const leftPadding = Number.parseFloat(fileTabBarStyle.scrollPaddingLeft) || 0;
+      const rightPadding = Number.parseFloat(fileTabBarStyle.scrollPaddingRight) || 0;
       const activeFileTabRect = activeFileTab.getBoundingClientRect();
 
-      if (activeFileTabRect.left < fileTabBarRect.left) {
-        fileTabBar.scrollLeft += activeFileTabRect.left - fileTabBarRect.left;
-      } else if (activeFileTabRect.right > fileTabBarRect.right) {
-        fileTabBar.scrollLeft += activeFileTabRect.right - fileTabBarRect.right;
+      if (activeFileTabRect.left < fileTabBarRect.left + leftPadding) {
+        fileTabBar.scrollLeft += activeFileTabRect.left - fileTabBarRect.left - leftPadding;
+      } else if (activeFileTabRect.right > fileTabBarRect.right - rightPadding) {
+        fileTabBar.scrollLeft += activeFileTabRect.right - fileTabBarRect.right + rightPadding;
       }
     });
   }
@@ -2099,6 +2104,7 @@ if (common.isDocumentTitleOwned() && !simulationOnly.value) {
 
 .file-tab-bar-container {
   --file-tab-bar-background: var(--p-surface-50);
+  --file-tab-bar-fade-width: 2rem;
 
   position: relative;
 }
@@ -2119,9 +2125,15 @@ if (common.isDocumentTitleOwned() && !simulationOnly.value) {
   content-visibility: hidden;
 }
 
+/**
+ * Note: our scroll padding is the width of our fades, so that a file tab that gets scrolled into view isn't under one
+ *       of them (see the watcher of activeFile and moveFileTab()).
+ */
+
 .file-tab-bar {
   position: relative;
   padding: 0.25rem 0.375rem 0;
+  scroll-padding-inline: var(--file-tab-bar-fade-width);
   background-color: var(--file-tab-bar-background);
   box-shadow: inset 0 -1px 0 var(--p-content-border-color);
   scrollbar-width: none;
@@ -2141,7 +2153,7 @@ if (common.isDocumentTitleOwned() && !simulationOnly.value) {
   top: 0;
   bottom: 1px;
   z-index: 2;
-  width: 2rem;
+  width: var(--file-tab-bar-fade-width);
   pointer-events: none;
 }
 
