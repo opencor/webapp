@@ -387,7 +387,7 @@ export const formatTime = (time: number): string => {
   const s = Math.floor((time / 1000) % 60);
   const m = Math.floor((time / (1000 * 60)) % 60);
   const h = Math.floor((time / (1000 * 60 * 60)) % 24);
-  const d = Math.floor((time / (1000 * 60 * 60 * 24)) % 24);
+  const d = Math.floor(time / (1000 * 60 * 60 * 24));
   let res = '';
 
   if (d) {
