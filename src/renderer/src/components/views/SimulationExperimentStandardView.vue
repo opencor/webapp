@@ -80,11 +80,11 @@
           <SplitterPanel :size="simulationOnly ? 100 : 89">
             <!--
             Note: our side panel is stacked above our plot when we use a narrow layout (see narrowLayout), in which case
-                  we use a vertical splitter. A splitter only sizes its panels when it is mounted, hence we remount it
-                  when our layout changes.
+                  we use a vertical splitter. Our splitter is not remounted when our layout changes, and its panels
+                  have the sizes of our current layout (see useSidePanelSplitter()).
             -->
-            <Splitter :key="narrowLayout ? 'narrow' : 'wide'" :layout="narrowLayout ? 'vertical' : 'horizontal'">
-              <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="narrowLayout ? 40 : 17">
+            <Splitter :layout="narrowLayout ? 'vertical' : 'horizontal'" @resizeend="onSidePanelResizeEnd">
+              <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="sidePanelSizes[0]">
                 <ScrollPanel class="h-full">
                   <div ref="sidePanelRef" class="side-panel">
                     <SimulationPropertyEditor v-if="instanceTask && uniformTimeCourse" :key="simulationSettingsKey" :uniformTimeCourse="uniformTimeCourse" :instanceTask="instanceTask" :disabled="simulationSettingsDisabled" @updated="onSimulationSettingsUpdated" />
@@ -127,7 +127,7 @@
                   </div>
                 </ScrollPanel>
               </SplitterPanel>
-              <SplitterPanel class="relative" :size="narrowLayout ? 60 : 83">
+              <SplitterPanel class="relative" :size="sidePanelSizes[1]">
                 <GraphPanelWidget
                   :key="'standard-graph-panel'"
                   :class="{ 'invisible pointer-events-none': runIssuesShown }"
@@ -256,6 +256,7 @@ const simulationStatus = vue.ref<locSedApi.SedInstanceStatus>(instance?.status()
 // Whether we use a narrow layout, i.e. whether our side panel is stacked above our plot (see our template).
 
 const narrowLayout = vueCommon.useNarrowLayout(rootRef);
+const { sizes: sidePanelSizes, onResizeEnd: onSidePanelResizeEnd } = vueCommon.useSidePanelSplitter(narrowLayout);
 
 // The outcome of our last simulation run, if any, and the status of our simulation, which we show in our toolbar.
 

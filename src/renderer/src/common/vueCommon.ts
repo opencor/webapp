@@ -1,5 +1,6 @@
 import * as vueusecore from '@vueuse/core';
 
+import type { SplitterResizeEndEvent } from 'primevue/splitter';
 import * as vue from 'vue';
 
 import type { OpenCORTheme } from '../../index';
@@ -29,6 +30,31 @@ export const useNarrowLayout = (elementRef: vue.Ref<HTMLElement | null>): vue.Re
   });
 
   return narrowLayout;
+};
+
+// A composable to keep track of the sizes of the panels of a splitter that shows a side panel to the left of some
+// contents (wide layout) or above them (narrow layout, see useNarrowLayout()), e.g., in a simulation experiment view.
+// Note #1: our splitter is not remounted when our layout changes (so that, for instance, a value being edited, the
+//          keyboard focus, or the zoom level of a plot doesn't get lost), but it (re)sizes its panels whenever their
+//          size changes, so we give it the sizes for our current layout.
+// Note #2: we keep track of the sizes of each layout, so that the sizes that people chose for a layout are restored
+//          when they switch back to that layout.
+
+export const useSidePanelSplitter = (
+  narrowLayout: vue.Ref<boolean>
+): { sizes: vue.ComputedRef<number[]>; onResizeEnd: (event: SplitterResizeEndEvent) => void } => {
+  const wideSizes = vue.ref<number[]>([17, 83]);
+  const narrowSizes = vue.ref<number[]>([40, 60]);
+
+  const sizes = vue.computed<number[]>(() => {
+    return narrowLayout.value ? narrowSizes.value : wideSizes.value;
+  });
+
+  const onResizeEnd = (event: SplitterResizeEndEvent): void => {
+    (narrowLayout.value ? narrowSizes : wideSizes).value = [...event.sizes];
+  };
+
+  return { sizes, onResizeEnd };
 };
 
 // A constant to know the UID of the active instance of OpenCOR.

@@ -64,16 +64,17 @@
             </template>
           </div>
           <IssuesView v-else-if="uiJsonIssues.length" class="w-full m-4" :issues="uiJsonIssues" />
-          <Splitter v-else :key="narrowLayout ? 'narrow' : 'wide'"
+          <Splitter v-else
             class="border-none! rounded-none! grow min-w-0 min-h-0"
             :layout="narrowLayout ? 'vertical' : 'horizontal'"
+            @resizeend="onSidePanelResizeEnd"
           >
             <!--
             Note: as in the Standard view, our side panel is stacked above our plots when we use a narrow layout (see
-                  narrowLayout), in which case we use a vertical splitter. A splitter only sizes its panels when it is
-                  mounted, hence we remount it when our layout changes.
+                  narrowLayout), in which case we use a vertical splitter. Our splitter is not remounted when our layout
+                  changes, and its panels have the sizes of our current layout (see useSidePanelSplitter()).
             -->
-            <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="narrowLayout ? 40 : 17">
+            <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="sidePanelSizes[0]">
               <ScrollPanel class="h-full">
                 <div class="side-panel">
                   <!-- Simulation inputs -->
@@ -189,7 +190,7 @@
                 </div>
               </ScrollPanel>
             </SplitterPanel>
-            <SplitterPanel class="plots-column relative flex flex-col min-h-0" :size="narrowLayout ? 60 : 83">
+            <SplitterPanel class="plots-column relative flex flex-col min-h-0" :size="sidePanelSizes[1]">
               <div class="flex flex-col grow gap-2 min-h-0" :class="{ 'invisible pointer-events-none': simulationIssues.length }">
                 <GraphPanelWidget
                   v-for="(_plot, index) in actualUiJson.output.plots"
@@ -317,6 +318,7 @@ const model = isDocumentValid ? document.model(0) : null;
 // Whether we use a narrow layout, i.e. whether our side panel is stacked above our plots (see .narrow-layout below).
 
 const narrowLayout = vueCommon.useNarrowLayout(rootRef);
+const { sizes: sidePanelSizes, onResizeEnd: onSidePanelResizeEnd } = vueCommon.useSidePanelSplitter(narrowLayout);
 
 // Some helper functions to evaluate and apply the model changes resulting from the given parameters and scope.
 
