@@ -440,34 +440,23 @@ const isCelldlFile = (bytes) => {
   return isSvgFile(bytes) && hasCelldlMetadata(bytes);
 };
 
-const hasCsvExtension = (url) => {
-  try {
-    return new URL(url).pathname.toLowerCase().endsWith('.csv');
-  } catch {
-    return false;
-  }
-};
-
-const isCsvFile = (bytes, complete, csvExtension) => {
-  // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks).
-  // If the URL we ended up at (i.e. after following redirects) has a .csv extension, then that is all we check since
-  // the app can tell the user why the CSV file cannot be used, if needed (see parseExternalCsvData()). Otherwise, the
-  // content is all we have to go by, so we also check that the text looks like a CSV file as expected by the app, i.e.
-  // lines are separated by line breaks and values by commas, there are at least two lines (i.e. a header and some
-  // data), and every line has the same number of values, which must be at least two (i.e. a VOI column and a data
-  // column). Like the app, we decode the text as UTF-8 (replacing invalid byte sequences, like Response.text() does),
-  // trim lines, and skip blank lines.
-  // Note: if we only have the start of the CSV file, then we ignore its last (and likely incomplete) line.
+const isCsvFile = (bytes, complete) => {
+  // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks)
+  // that looks like a CSV file as expected by the app, i.e. lines are separated by line breaks and values by commas,
+  // there are at least two lines (i.e. a header and some data), and every line has the same number of values, which
+  // must be at least two (i.e. a VOI column and a data column). Like the app, we decode the text as UTF-8 (replacing
+  // invalid byte sequences, like Response.text() does), trim lines, and skip blank lines.
+  // Note #1: if we only have the start of the CSV file, then we ignore its last (and likely incomplete) line.
+  // Note #2: we check the text even if the URL has a .csv extension. Indeed, we accept any target URL, so we would
+  //          otherwise return almost any text from anywhere (e.g., https://example.com/anything.csv), i.e. act as a
+  //          general CORS proxy for text. The app can still tell the user why a CSV file cannot be used if the issue is
+  //          with its values (e.g., a non-numeric value, see parseExternalCsvData()) since we don't check them.
 
   const text = new TextDecoder().decode(bytes, { stream: !complete });
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: we are looking for control characters.
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) {
     return false;
-  }
-
-  if (csvExtension) {
-    return true;
   }
 
   const lines = text.split(/\r?\n/);
@@ -619,13 +608,9 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
     done = more.done;
   }
 
-  // Note: the URL of the response is the one we ended up at, i.e. after following redirects (e.g., a figshare download
-  //       URL redirects to the actual file). We only check its extension, not that of the target URL, since the latter
-  //       could otherwise be used to proxy any text (e.g., https://example.com/file.csv redirecting to any Web page).
-
   if (
     (filesAccepted && (isCellmlOrSedmlFile(head) || isCelldlFile(head))) ||
-    (csvFilesAccepted && isCsvFile(head, done, hasCsvExtension(response.url)))
+    (csvFilesAccepted && isCsvFile(head, done))
   ) {
     if (done || hasKnownSize(response)) {
       return new Response(done ? head : replayStream(head, reader), {
