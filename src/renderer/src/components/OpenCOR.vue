@@ -925,7 +925,11 @@ const handleAction = (action: string): void => {
   } else if (isAction(actionName, 'openSettingsDialog')) {
     onSettingsMenu();
   } else {
-    const filePaths = actionArguments.split('%7C');
+    // Note: the file paths are separated by an encoded "|", which may be in upper or lower case. We don't decode the
+    //       arguments first since the file paths may be URLs that contain other encoded characters, which must remain
+    //       encoded.
+
+    const filePaths = actionArguments.split(/%7C/i);
 
     if (
       (isAction(actionName, 'openFile') && filePaths.length === 1) ||
