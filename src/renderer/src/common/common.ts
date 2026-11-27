@@ -166,6 +166,20 @@ export const nextCellmlDataUrlNumber = (): number => {
   return ++cellmlDataUrlCounter;
 };
 
+// A prefix for the (made-up) name of a file that, in OpenCOR, was dropped but has no path (e.g., if it was dragged from
+// a Web browser or from a ZIP file viewer), and the number to use in the name of the next such file.
+// Note: such a file only exists in memory (see isInMemoryFilePath()) and is named "Dropped #<n>/<file name>", where
+//       <file name> is the name of the file, so that it is still shown under its own name (see fileName()) while two
+//       different files with the same name don't get mistaken for one another (see OpenCOR.processFile()).
+
+export const DROPPED_FILE_PREFIX = 'Dropped #';
+
+let droppedFileCounter = 0;
+
+export const nextDroppedFileNumber = (): number => {
+  return ++droppedFileCounter;
+};
+
 export const isDataUrlFileName = (fileName: string): boolean => {
   return fileName.startsWith(OMEX_PREFIX) || fileName.startsWith(CELLML_PREFIX);
 };
@@ -179,8 +193,8 @@ export const isAbsoluteFilePath = (filePath: string): boolean => {
 
 // A method to determine whether, in OpenCOR, a file only exists in memory, i.e. whether its path is neither a URL nor
 // an absolute path. This is the case for a file opened using a data URL (see isDataUrlFileName()) and for a dropped
-// file that has no path (e.g., a file dragged from a Web browser or from a ZIP file viewer), which is known by its
-// name (see locCommon.filePath()). Either way, such a file can only be reopened during the current session (see
+// file that has no path (e.g., a file dragged from a Web browser or from a ZIP file viewer), which is known by a made-up
+// name (see DROPPED_FILE_PREFIX). Either way, such a file can only be reopened during the current session (see
 // OpenCOR.addRecentFile()).
 
 export const isInMemoryFilePath = (filePath: string): boolean => {

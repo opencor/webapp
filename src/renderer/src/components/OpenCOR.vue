@@ -1632,6 +1632,20 @@ const processFile = async (
     }
   }
 
+  // Give a made-up name to a file that, in OpenCOR, was dropped but has no path (see common.DROPPED_FILE_PREFIX), unless
+  // it is being reopened, in which case we were given the name it was opened under (see electronApi.onOpenFile()).
+  // Note: such a file is otherwise only known by its name, so two different files with the same name would be mistaken
+  //       for one another (i.e. the second one would not get opened and only one of them could be reopened).
+
+  if (
+    !dataUrlFileName &&
+    electronApi &&
+    fileFilePathOrFileContents instanceof File &&
+    !electronApi.filePath(fileFilePathOrFileContents)
+  ) {
+    dataUrlFileName = `${common.DROPPED_FILE_PREFIX}${common.nextDroppedFileNumber()}/${fileFilePathOrFileContents.name}`;
+  }
+
   // Check whether the file is already open or being opened and if so then select it.
   // Note #1: a file may be opened more than once at the same time (e.g., by dropping the same file twice or by
   //          selecting the same sample file twice). Since a file is only considered open once it has a file tab, we

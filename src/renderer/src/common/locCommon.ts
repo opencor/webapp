@@ -179,8 +179,8 @@ export const isCellDLFile = (file: locApi.File): boolean => {
 
 // Determine the path of the given file.
 // Note: in OpenCOR, a dropped file normally has a path, but it may not (e.g., if it was dragged from a Web browser or
-//       from a ZIP file viewer), in which case we use its name, as in OpenCOR's Web app. Such a file then only exists
-//       in memory (see common.isInMemoryFilePath()).
+//       from a ZIP file viewer), in which case it is given a made-up name (see common.DROPPED_FILE_PREFIX), which we
+//       get as dataUrlFileName. Such a file then only exists in memory (see common.isInMemoryFilePath()).
 
 export const filePath = (
   fileFilePathOrFileContents: string | Uint8Array | File,
