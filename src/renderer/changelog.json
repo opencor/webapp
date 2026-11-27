@@ -1,5 +1,139 @@
 [
   {
+    "version": "1.20261127.1",
+    "changes": [
+      {
+        "type": "added",
+        "description": "Logarithmic X and Y axes, which can be chosen from the context menu of a graph panel."
+      },
+      {
+        "type": "added",
+        "description": "The context menu of a graph panel now shows the full name of a trace when it is opened from the trace's legend item."
+      },
+      {
+        "type": "added",
+        "description": "An Initial point field, which is separate from the Starting point field, a delay wheel, and Reset simulation settings and Clear simulation data buttons in the Standard Simulation Experiment view."
+      },
+      {
+        "type": "added",
+        "description": "The progress and status of slow simulation runs in the Interactive Simulation Experiment view, as well as the ability to stop them."
+      },
+      {
+        "type": "added",
+        "description": "The ability to cancel the download of an update, the loading of a remote file, and the import of external data."
+      },
+      {
+        "type": "added",
+        "description": "A keyboard shortcut (Ctrl+Alt+M) to access the main menu in OpenCOR's Web app."
+      },
+      {
+        "type": "added",
+        "description": "A Window menu on macOS and mnemonics for the main menu on Windows and Linux."
+      },
+      {
+        "type": "added",
+        "description": "Opened files are now listed as recent documents on macOS and Windows (e.g., in the Dock or in the jump list), and the window now shows whether some files have been modified on macOS."
+      },
+      {
+        "type": "added",
+        "description": "Remote CellDL files can now be opened using File|Open Location in OpenCOR's Web app."
+      },
+      { "type": "improved", "description": "Upgraded libOpenCOR to version 1.20261125.0." },
+      { "type": "improved", "description": "Upgraded the CellDL Editor to version 0.20261126." },
+      {
+        "type": "improved",
+        "description": "Graph panels now use OpenCOR's own plotting library (`@opencor/plot`), and live simulation runs are now plotted every frame in the Standard Simulation Experiment view, with the last point of each trace highlighted."
+      },
+      {
+        "type": "improved",
+        "description": "Exporting a graph panel to CSV now exports its data as it is plotted, with one X column per set of X values, and copying or exporting a plot image now gets confirmed."
+      },
+      {
+        "type": "improved",
+        "description": "The Simulation Settings dialog now shows which fields and sections have issues, reports clearer issues, keeps the URL imports cancellable, and asks before discarding changes."
+      },
+      {
+        "type": "improved",
+        "description": "Toasts: errors now stay until closed, warnings last longer, toasts pause when they have the focus and sit below the menu bar, and their wording is clearer."
+      },
+      {
+        "type": "improved",
+        "description": "Dialogs now order their buttons as is customary on each platform, and a dangerous question now gives the keyboard focus to its safe button."
+      },
+      {
+        "type": "improved",
+        "description": "Better keyboard support (incl. focus rings shown by default, file tabs that can be reached using the keyboard, Escape only closing the top-most dialog or the innermost submenu, and the keyboard focus being given back after a menu command or when closing a file)."
+      },
+      {
+        "type": "improved",
+        "description": "Keyboard shortcuts now match the letter of a key rather than the key itself (e.g., with a non-QWERTY keyboard layout), and AltGr characters are no longer treated as shortcuts."
+      },
+      {
+        "type": "improved",
+        "description": "Better support for assistive technologies (incl. screen-reader names and hints, and an explanation when a value gets corrected)."
+      },
+      {
+        "type": "improved",
+        "description": "The simulation experiment views now share the same splitter and side panel styles, their splitters have a grip, and they keep their splitter sizes when switching to and from the narrow layout."
+      },
+      {
+        "type": "improved",
+        "description": "The tab bar and the menu bar now scroll horizontally rather than using a hamburger menu, File|Reopen shows shorter paths, and switching file tabs no longer flashes and shows the first/last file tab in full."
+      },
+      {
+        "type": "improved",
+        "description": "Context menus are now hidden when switching to another tab or application, and their first item is selected when they are opened using the keyboard."
+      },
+      { "type": "improved", "description": "Numbers and unit labels are now formatted the same way everywhere." },
+      { "type": "improved", "description": "Switching between light and dark mode no longer uses a transition." },
+      { "type": "improved", "description": "\"OMEX file\" is now used rather than \"COMBINE archive\" throughout." },
+      {
+        "type": "improved",
+        "description": "Better performance (e.g., the console of the Standard Simulation Experiment view is now capped)."
+      },
+      {
+        "type": "improved",
+        "description": "Renamed the interfaces and enums of OpenCOR's component (e.g., `IOpenCORExpose` is now `OpenCORExpose` and `EIssueType` is now `IssueType`), and it now only requires Vue 3.5.2 or later."
+      },
+      {
+        "type": "fixed",
+        "description": "Untrusted HTML (e.g., in a trace name, an axis title, or an issue description) is now sanitised or escaped before being rendered."
+      },
+      {
+        "type": "fixed",
+        "description": "A file without a path (e.g., dropped from a Web browser or from a ZIP file viewer) can now be opened in OpenCOR's desktop app."
+      },
+      {
+        "type": "fixed",
+        "description": "A file saved using File|Save As over another open file can now still be saved."
+      },
+      { "type": "fixed", "description": "The model of an exported OMEX file now refers to the CellML file in it." },
+      {
+        "type": "fixed",
+        "description": "Issues no longer flicker in the Interactive Simulation Experiment view, and runs that fail to start, issues with exporting an OMEX file, and, in simulation-only mode, the issues of a failed run are now reported."
+      },
+      {
+        "type": "fixed",
+        "description": "An opencor:// link that opens several files now accepts a lowercase separator (%7c) and no longer splits a URL that contains an encoded \"|\"."
+      },
+      {
+        "type": "fixed",
+        "description": "Numbers that are too large (in magnitude) to be represented (e.g., 1e999) are now rejected."
+      },
+      { "type": "fixed", "description": "Empty external CSV data is now reported as an issue." },
+      { "type": "fixed", "description": "An empty trace name now gets a generated name everywhere." },
+      { "type": "fixed", "description": "Durations of 24 days or more now show the right number of days." },
+      {
+        "type": "fixed",
+        "description": "The axis fields of the Standard Simulation Experiment view are no longer editable."
+      },
+      {
+        "type": "fixed",
+        "description": "The messages of number fields in the Simulation Settings dialog are no longer clipped."
+      }
+    ]
+  },
+  {
     "version": "1.20261111.0",
     "changes": [
       {
