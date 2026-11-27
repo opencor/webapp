@@ -9,7 +9,7 @@
         "@celldl/editor": "^0.20261126.0",
         "@celldl/rdf": "^1.20260822.0",
         "@opencor/libopencor-types": "^2.20261126.0",
-        "@opencor/plot": "^0.20261125.6",
+        "@opencor/plot": "^0.20261127.0",
         "@physiomelinks/bg2cellml": "^0.6.2",
         "@primeuix/themes": "2.0.3",
         "@primevue/auto-import-resolver": "4.5.5",
@@ -118,7 +118,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@lucide/vue": ["@lucide/vue@1.81.0", "", { "peerDependencies": { "vue": ">=3.0.1" } }, "sha512-IVXQr5EgAJex9OQcEyTOH2KzLxWQ4mQ/3R6Y4fx58ApqwGHnQYFXmifYe9/rqLma6CWKMtq79SeBnQ8dE+s3YA=="],
+    "@lucide/vue": ["@lucide/vue@1.82.0", "", { "peerDependencies": { "vue": ">=3.0.1" } }, "sha512-Wd9UJqVTF1Q0RxEseQfD/46dBXLAgbRXdx1LI0XZTcoIWSAkjQRz7OC7b+fhl8t+tMwlH9U24WYLG6hX/zKO3Q=="],
 
     "@mathjax/mathjax-newcm-font": ["@mathjax/mathjax-newcm-font@4.1.3", "", {}, "sha512-gzAB3dFHilHX1l5x2xUqRL+1jDQt3Fyza1DkEMVXWC4E8SvsGdlgEza47HYi2WhVcgfkvf4zgUGzuhbq3Pjlew=="],
 
@@ -126,7 +126,7 @@
 
     "@opencor/libopencor-types": ["@opencor/libopencor-types@2.20261126.0", "", {}, "sha512-Egjfgz+ZB1iGMb7k3EGDfN2x9z50IIPsibHQ4v+ydaQ4Bdo4as9Uz/7gorvPCZpd1YvswXe0N6P5ax+BzwnccA=="],
 
-    "@opencor/plot": ["@opencor/plot@0.20261125.6", "", { "dependencies": { "uplot": "1.6.32" }, "peerDependencies": { "vue": "^3.5.2" } }, "sha512-nis2VNTgq+syl1tqdmw/U48Hb60brU9kCMn7Oi3iI2C+zb+wY6PJGOxEAA5RpHwkuRF7CBpMcwV0CE2ZlLAXfw=="],
+    "@opencor/plot": ["@opencor/plot@0.20261127.0", "", { "dependencies": { "uplot": "1.6.32" }, "peerDependencies": { "vue": "^3.5.2" } }, "sha512-3QIZ/vCEEiKdghDH3c8D+nu6MVqXSDu3j/mh+AZennU8MIkBj4skJqHjLwp9C9CucdvEaXKnT4ImV/dMrVth/Q=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.160.0", "", {}, "sha512-gw4k9syEmnckbOgw2A2FU1TBDdX9hfwV9jEn/uio65pguPzwWiXQS3OIJDMEhv9m06tj9XiEe6RoD0YA+LgreA=="],
 
@@ -328,7 +328,7 @@
 
     "base64-js": ["base64-js@1.5.1", "", {}, "sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA=="],
 
-    "baseline-browser-mapping": ["baseline-browser-mapping@2.11.39", "", { "bin": { "baseline-browser-mapping": "dist/cli.cjs" } }, "sha512-Q9buOYhr2ggrEZpImICecZTJHCCd8yXkRUokFlUEQ8uiD6oP82F4W4jWnhOHZYV+wlvrC51V7Wy0ULyWjil5Wg=="],
+    "baseline-browser-mapping": ["baseline-browser-mapping@2.11.40", "", { "bin": { "baseline-browser-mapping": "dist/cli.cjs" } }, "sha512-WJhaQ3kW5+5BpOduI64ewvykhCyK/IHHG5jCIzivmW2nkYPRowUjs0DbBXY4CAr1LLrN7QEzZGL9727aXH9sJA=="],
 
     "brace-expansion": ["brace-expansion@5.1.0", "", { "dependencies": { "balanced-match": "^4.0.2" } }, "sha512-aa11Dv491GKnYqxaul3aRJ0szew7yMJMfZPnqD44NjGrZXoj62l41OEDDpdpC4eE2P88vBFfLuSyRhpG91NUvg=="],
 
@@ -370,7 +370,7 @@
 
     "detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
 
-    "electron-to-chromium": ["electron-to-chromium@1.5.494", "", {}, "sha512-Tph7ohL4Xc0ft3DXElYEIVTmPI3H0MtPCTdgtz5AwWGZG6q+vMiT3IzJ3RJX/HJQ8pYzeimQyvi6SsBTOS0nyQ=="],
+    "electron-to-chromium": ["electron-to-chromium@1.5.495", "", {}, "sha512-dZcmtNbDI5oeT9uP9Z+D7h/H5C1mvBewDTLgZgo9WgyPmqOXSt2cmoCK99evPygUOn9lyXZ4w0Eb8APrkBjqBA=="],
 
     "emoji-regex": ["emoji-regex@10.6.0", "", {}, "sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A=="],
 
@@ -566,7 +566,7 @@
 
     "string-width": ["string-width@8.3.0", "", { "dependencies": { "get-east-asian-width": "^1.5.0", "strip-ansi": "^7.1.2" } }, "sha512-ZbmZM0JCihQN91dWnxoipT2KOEyHqEyfRXUyjuRhW8b/xnqPDoq4gWEVApTVa9db2wN8mmoikgFBbjh71+cGeQ=="],
 
-    "string_decoder": ["string_decoder@1.3.0", "", { "dependencies": { "safe-buffer": "~5.2.0" } }, "sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA=="],
+    "string_decoder": ["string_decoder@1.4.0", "", { "dependencies": { "safe-buffer": "~5.2.0" } }, "sha512-r8azg21Y67ckRmeG0hHol5CeDXMs4ZFkFT6eXMO39hX7khvJcopBcYTCeWZ0rQXkMoPh8lVdbjmsOMGL8krxRQ=="],
 
     "strip-ansi": ["strip-ansi@7.2.0", "", { "dependencies": { "ansi-regex": "^6.2.2" } }, "sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w=="],
 

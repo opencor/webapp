@@ -60,7 +60,7 @@
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron-toolkit/utils": "^4.0.0",
     "@opencor/libopencor-types": "^2.20261126.0",
-    "@opencor/plot": "^0.20261125.6",
+    "@opencor/plot": "^0.20261127.0",
     "@physiomelinks/bg2cellml": "^0.6.2",
     "@primeuix/themes": "2.0.3",
     "@primevue/auto-import-resolver": "4.5.5",
