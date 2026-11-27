@@ -927,9 +927,30 @@ const handleAction = (action: string): void => {
   } else {
     // Note: the file paths are separated by an encoded "|", which may be in upper or lower case. We don't decode the
     //       arguments first since the file paths may be URLs that contain other encoded characters, which must remain
-    //       encoded.
+    //       encoded. This means that a URL may itself contain an encoded "|" (e.g., in its query), so we only consider
+    //       an encoded "|" to be a separator if it is followed by the start of a file path, i.e. a URL, an absolute
+    //       path, or a data URL (see zipDataFromDataUrl() in src/renderer/src/common/locCommon.ts).
 
-    const filePaths = actionArguments.split(/%7C/i);
+    const isFilePathStart = (text: string): boolean => {
+      return (
+        common.isUrl(text) || common.isAbsoluteFilePath(text) || text.startsWith('data:') || text.startsWith('#data:')
+      );
+    };
+
+    const filePaths: string[] = [];
+    let filePathStart = 0;
+
+    for (const separator of actionArguments.matchAll(/%7C/gi)) {
+      const separatorEnd = separator.index + separator[0].length;
+
+      if (isFilePathStart(actionArguments.substring(separatorEnd))) {
+        filePaths.push(actionArguments.substring(filePathStart, separator.index));
+
+        filePathStart = separatorEnd;
+      }
+    }
+
+    filePaths.push(actionArguments.substring(filePathStart));
 
     if (
       (isAction(actionName, 'openFile') && filePaths.length === 1) ||
