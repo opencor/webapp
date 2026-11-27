@@ -147,9 +147,33 @@ autoUpdater.on('error', (error: Error) => {
 //          electron-updater would return the promise of the cancelled download (see downloadUpdate() in
 //          electron-updater), i.e. the new download would fail with a cancellation error. So, we wait for the previous
 //          download, if any, to settle before starting a new one (unless the new one gets cancelled in the meantime).
+//          We don't wait forever, though, since a cancelled download might never settle, in which case electron-updater
+//          would keep returning its promise, i.e. the new download could never start. So, rather than leave our
+//          renderer showing a download that doesn't progress, we report an issue, so that the user can try again later.
+
+const PREVIOUS_UPDATE_DOWNLOAD_TIMEOUT = 15000;
 
 let updateDownloadCancellationToken: CancellationToken | null = null;
 let updateDownload: Promise<void> | null = null;
+
+const previousUpdateDownloadSettled = (): Promise<boolean> => {
+  if (updateDownload === null) {
+    return Promise.resolve(true);
+  }
+
+  let timeoutId: NodeJS.Timeout | undefined;
+
+  return Promise.race([
+    updateDownload.then(() => true),
+    new Promise<boolean>((resolve) => {
+      timeoutId = setTimeout(() => {
+        resolve(false);
+      }, PREVIOUS_UPDATE_DOWNLOAD_TIMEOUT);
+    })
+  ]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+};
 
 export const downloadAndInstallUpdate = (): void => {
   const cancellationToken = new CancellationToken();
@@ -160,9 +184,25 @@ export const downloadAndInstallUpdate = (): void => {
   updateDownloadTotal = 0;
   updateDownloadCancellationToken = cancellationToken;
 
-  const download = (updateDownload ?? Promise.resolve())
-    .then(async () => {
+  const previousDownload = updateDownload;
+  let previousDownloadSettled = true;
+
+  const download = previousUpdateDownloadSettled()
+    .then(async (settled: boolean) => {
+      previousDownloadSettled = settled;
+
       if (cancellationToken.cancelled) {
+        return;
+      }
+
+      if (!settled) {
+        updateState = 'idle';
+
+        MainWindow.instance?.send(
+          'update-download-error',
+          'the previous download of the update is still being cancelled, so please try again later'
+        );
+
         return;
       }
 
@@ -193,8 +233,10 @@ export const downloadAndInstallUpdate = (): void => {
         updateDownloadCancellationToken = null;
       }
 
+      // Note: if the previous download still hasn't settled, then a new download must still wait for it to settle.
+
       if (updateDownload === download) {
-        updateDownload = null;
+        updateDownload = previousDownloadSettled ? null : previousDownload;
       }
     });
 
