@@ -136,14 +136,20 @@ autoUpdater.on('error', (error: Error) => {
 });
 
 // Download an update, which can be cancelled (see cancelUpdateDownload()).
-// Note #1: an update may have been fully downloaded by the time its download gets cancelled, in which case we don't let
-//          our renderer know that it has been downloaded (since the user doesn't want to install it now), but it may
-//          still get installed when OpenCOR gets quit (see autoInstallOnAppQuit in electron-updater). Similarly, we
-//          don't let our renderer know about the error that electron-updater reports when a download gets cancelled.
-// Note #2: a cancelled download may only finish once another download has been started, in which case we ignore its
-//          outcome since it would otherwise overwrite the state of the new download.
+// Note #1: once a download has been cancelled, we ignore its outcome, i.e. our state remains 'idle' (see
+//          cancelUpdateDownload()) and we don't let our renderer know about it. Indeed, the user doesn't want to
+//          install the update now, so we must neither offer to install it (see checkForUpdates() and
+//          resendUpdateState()) nor report the error that electron-updater reports when a download gets cancelled. The
+//          update may still have been fully downloaded by the time its download got cancelled, in which case it may get
+//          installed when OpenCOR gets quit (see autoInstallOnAppQuit in electron-updater) and, if the user checks for
+//          updates again, electron-updater will use the downloaded update rather than download it again.
+// Note #2: a cancelled download may not have settled by the time another download is started, in which case
+//          electron-updater would return the promise of the cancelled download (see downloadUpdate() in
+//          electron-updater), i.e. the new download would fail with a cancellation error. So, we wait for the previous
+//          download, if any, to settle before starting a new one (unless the new one gets cancelled in the meantime).
 
 let updateDownloadCancellationToken: CancellationToken | null = null;
+let updateDownload: Promise<void> | null = null;
 
 export const downloadAndInstallUpdate = (): void => {
   const cancellationToken = new CancellationToken();
@@ -154,29 +160,31 @@ export const downloadAndInstallUpdate = (): void => {
   updateDownloadTotal = 0;
   updateDownloadCancellationToken = cancellationToken;
 
-  autoUpdater
-    .downloadUpdate(cancellationToken)
-    .then(() => {
-      if (updateDownloadCancellationToken !== cancellationToken) {
+  const download = (updateDownload ?? Promise.resolve())
+    .then(async () => {
+      if (cancellationToken.cancelled) {
         return;
       }
 
-      updateState = 'downloaded';
-      updateDownloadPercent = 100;
-      updateDownloadTransferred = updateDownloadTotal;
+      try {
+        await autoUpdater.downloadUpdate(cancellationToken);
 
-      if (!cancellationToken.cancelled) {
+        if (cancellationToken.cancelled) {
+          return;
+        }
+
+        updateState = 'downloaded';
+        updateDownloadPercent = 100;
+        updateDownloadTransferred = updateDownloadTotal;
+
         MainWindow.instance?.send('update-downloaded');
-      }
-    })
-    .catch((error: unknown) => {
-      if (updateDownloadCancellationToken !== cancellationToken) {
-        return;
-      }
+      } catch (error: unknown) {
+        if (cancellationToken.cancelled) {
+          return;
+        }
 
-      updateState = 'idle';
+        updateState = 'idle';
 
-      if (!cancellationToken.cancelled) {
         MainWindow.instance?.send('update-download-error', formatError(error));
       }
     })
@@ -184,7 +192,13 @@ export const downloadAndInstallUpdate = (): void => {
       if (updateDownloadCancellationToken === cancellationToken) {
         updateDownloadCancellationToken = null;
       }
+
+      if (updateDownload === download) {
+        updateDownload = null;
+      }
     });
+
+  updateDownload = download;
 };
 
 export const cancelUpdateDownload = (): void => {
