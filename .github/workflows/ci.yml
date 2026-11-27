@@ -18,19 +18,19 @@ jobs:
           - name: Windows (ARM)
             os: windows-11-arm
           - name: Linux (Intel)
-            os: ubuntu-22.04
+            os: ubuntu-26.04
           - name: Linux (ARM)
-            os: ubuntu-22.04-arm
+            os: ubuntu-26.04-arm
           - name: macOS (Intel)
             os: macos-15-intel
           - name: macOS (ARM)
             os: macos-15
           - name: Code formatting
-            os: ubuntu-22.04
+            os: ubuntu-26.04
           - name: Linting
-            os: ubuntu-22.04
+            os: ubuntu-26.04
           - name: Type checking
-            os: ubuntu-22.04
+            os: ubuntu-26.04
     steps:
       - name: Set the timezone to New Zealand
         shell: bash

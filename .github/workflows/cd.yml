@@ -13,7 +13,7 @@ jobs:
   version:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Version
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Check out OpenCOR
         uses: actions/checkout@v7
@@ -51,9 +51,9 @@ jobs:
           - name: Windows (ARM)
             os: windows-11-arm
           - name: Linux (Intel)
-            os: ubuntu-22.04
+            os: ubuntu-26.04
           - name: Linux (ARM)
-            os: ubuntu-22.04-arm
+            os: ubuntu-26.04-arm
           - name: macOS (Intel)
             os: macos-15-intel
           - name: macOS (ARM)
@@ -125,7 +125,7 @@ jobs:
     if: ${{ github.repository == 'opencor/webapp' }}
     needs: version
     name: Web app
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     concurrency:
       group: web-app-deployment-app
       cancel-in-progress: false
@@ -199,7 +199,7 @@ jobs:
     if: ${{ github.repository == 'opencor/webapp' }}
     needs: version
     name: npm
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Set the timezone to New Zealand
         run: sudo timedatectl set-timezone Pacific/Auckland

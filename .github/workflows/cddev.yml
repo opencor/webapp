@@ -9,7 +9,7 @@ jobs:
   web_app:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     concurrency:
       group: web-app-deployment-appdev
       cancel-in-progress: false
