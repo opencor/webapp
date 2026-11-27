@@ -327,9 +327,13 @@ const onExportOmexFile = async (kind: string): Promise<void> => {
     // Initialise our CellML converter, if needed, and then delay briefly so that the user can see that we reached 100%.
 
     if (!celldl.isConverterInitialised()) {
-      messageId = opencorMessage.show('Initialising the CellML converter...');
+      const initialisingMessageId = opencorMessage.show('Initialising the CellML converter...');
 
-      await celldl.initialiseConverter(opencorMessage.update);
+      messageId = initialisingMessageId;
+
+      await celldl.initialiseConverter((percent: number) => {
+        opencorMessage.update(initialisingMessageId, percent);
+      });
       await common.sleep(LONG_DELAY);
     }
 

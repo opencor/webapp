@@ -183,7 +183,9 @@ const onCsvExport = async (event: PlotCsvExportEvent): Promise<void> => {
   if (event.type === 'started') {
     csvExportMessageId = opencorMessage.show('Exporting data to CSV...');
   } else if (event.type === 'progress') {
-    opencorMessage.update(event.percent);
+    if (csvExportMessageId !== undefined) {
+      opencorMessage.update(csvExportMessageId, event.percent);
+    }
   } else {
     const messageId = csvExportMessageId;
 

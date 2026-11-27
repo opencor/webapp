@@ -5,12 +5,13 @@ import * as vue from 'vue';
 // Note #1: this uses Vue's provide()/inject() methods to ensure that each OpenCOR instance has its own message.
 // Note #2: our message is shared by all the components of an OpenCOR instance, so a component may want to hide its
 //          message after another component has shown its own (e.g., if it waits a bit before hiding it, see
-//          GraphPanelWidget.onCsvExport()). So, showing our message returns an id, which must be used to hide it, and
-//          our message only gets hidden if it is still the one that was shown with that id.
+//          GraphPanelWidget.onCsvExport()) or keep updating its progress after another component has shown its own. So,
+//          showing our message returns an id, which must be used to update or hide it, and our message only gets
+//          updated or hidden if it is still the one that was shown with that id.
 
 interface OpenCORMessage {
   show: (message: string, withProgress?: boolean) => number;
-  update: (percent: number) => void;
+  update: (id: number, percent: number) => void;
   hide: (id: number) => void;
 }
 
@@ -37,8 +38,10 @@ export const provideOpenCORMessage = (): OpenCORMessageState => {
     return ++currentId;
   };
 
-  const update = (percent: number): void => {
-    progress.value = percent;
+  const update = (id: number, percent: number): void => {
+    if (id === currentId) {
+      progress.value = percent;
+    }
   };
 
   const hide = (id: number): void => {
