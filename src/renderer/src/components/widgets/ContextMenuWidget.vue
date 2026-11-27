@@ -1,7 +1,8 @@
 <template>
   <ContextMenu ref="contextMenuRef" :model="model" :appendTo="appendTo" :pt="CONTEXT_MENU_PT" @focus="onFocus">
     <template #item="{ item, props: itemProps, hasSubmenu }">
-      <a v-bind="itemProps.action">
+      <div v-if="item.header !== undefined" class="context-menu-header" v-html="common.sanitiseHtml(item.header)" />
+      <a v-else v-bind="itemProps.action">
         <i v-if="itemsWithCheckColumn.has(item)" :class="{ 'pi pi-check': item.checked }" class="context-menu-item-check" />
         <i :class="item.icon" class="context-menu-item-icon" />
         <span class="context-menu-item-label">{{ item.label }}</span>
@@ -15,6 +16,8 @@
 import ContextMenu from 'primevue/contextmenu';
 import type { MenuItem } from 'primevue/menuitem';
 import * as vue from 'vue';
+
+import * as common from '../../common/common';
 
 // A context menu, which looks like the menus of our main menu (see MainMenu.vue) and, like them, is shown without any
 // animation (see .opencor-context-menu and the anchored overlays in app.css).
@@ -69,6 +72,17 @@ const CONTEXT_MENU_PT = {
   },
   item: ({ context }: ContextMenuItemPtOptions) => {
     const item = context.item?.item ?? context.item;
+
+    // Note: a header (e.g., the name of a trace) is some (disabled) text that can't be chosen, so it is not a menu item
+    //       as far as assistive technologies are concerned, like a header of the context menu of our plots.
+
+    if (item?.header !== undefined) {
+      return {
+        class: 'context-menu-header-item',
+        role: 'presentation',
+        'aria-hidden': true
+      };
+    }
 
     return item?.checked === undefined
       ? {}

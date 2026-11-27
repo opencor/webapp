@@ -337,6 +337,38 @@ body {
         margin: 0.125rem 0.5rem;
       }
 
+      /**
+       * A header (e.g., the name of a trace), which is disabled since it can't be chosen, but mustn't look disabled.
+       * Note: a header may be long, in which case it wraps rather than widens our context menu.
+       */
+
+      .context-menu-header-item {
+        opacity: 1;
+      }
+
+      .context-menu-header {
+        width: 0;
+        min-width: 100%;
+        padding: var(--p-contextmenu-item-padding);
+        color: var(--p-text-muted-color);
+        font-weight: 600;
+        overflow-wrap: anywhere;
+
+        sub,
+        sup {
+          position: static;
+          font-size: 70%;
+        }
+
+        sub {
+          vertical-align: sub;
+        }
+
+        sup {
+          vertical-align: super;
+        }
+      }
+
       .context-menu-item-icon {
         width: 1rem;
         color: var(--p-text-muted-color);

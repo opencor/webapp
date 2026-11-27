@@ -123,6 +123,13 @@ const menuItems = (items: ContextMenuItem[]): MenuItem[] => {
       return { separator: true };
     }
 
+    // Note: a header can't be chosen, so we disable it, which also means that PrimeVue skips it when navigating our
+    //       context menu using the keyboard (see ContextMenuWidget.vue).
+
+    if ('header' in item) {
+      return { header: item.header, disabled: true };
+    }
+
     return {
       label: item.label,
       ...(item.icon ? { icon: `pi pi-${item.icon}` } : {}),
