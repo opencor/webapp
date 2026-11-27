@@ -5,7 +5,7 @@
       <div class="background-contents" :style="{ '--recent-file-count': recentFiles.length }">
         <img class="logo" src="../assets/logo.svg" alt="OpenCOR" />
         <template v-if="actions">
-          <div class="actions opencor-panel">
+          <div ref="actionsRef" class="actions opencor-panel">
             <button v-for="action in ACTIONS" :key="action.label" class="action"
               type="button"
               @mousedown.prevent
@@ -21,8 +21,8 @@
             Files can also be dropped here.
           </p>
           <section v-if="recentFiles.length" class="recent-files">
-            <div class="opencor-section-title">Recent</div>
-            <div class="recent-files-list opencor-panel">
+            <div :id="recentFilesTitleId" class="opencor-section-title">Recent</div>
+            <div class="recent-files-list opencor-panel" role="group" :aria-labelledby="recentFilesTitleId">
               <button v-for="recentFile in recentFiles" :key="recentFile.path" class="recent-file"
                 type="button"
                 v-hint="recentFile.path"
@@ -74,11 +74,26 @@ const emit = defineEmits<{
   openSampleLorenz: [];
 }>();
 
+// Give the keyboard focus to our first action, if any (e.g., when the last file gets closed while it had the keyboard
+// focus, see ContentsComponent.vue).
+
+const actionsRef = vue.useTemplateRef<HTMLElement>('actionsRef');
+
+const focusFirstAction = (): void => {
+  actionsRef.value?.querySelector<HTMLElement>('.action')?.focus({ preventScroll: true });
+};
+
+defineExpose({ focusFirstAction });
+
 // Our most recent files, i.e. their path, as well as their name and location (i.e. the path of their folder), which we
 // show separately.
 // Note: we only show a few of them since our Reopen menu lists all of them anyway.
 
 const MAX_SHOWN_RECENT_FILES = 5;
+
+// Note: our list of recent files is named after its title, so that assistive technologies know what it is about.
+
+const recentFilesTitleId = vue.useId();
 
 const recentFiles = vue.computed<{ path: string; name: string; location: string }[]>(() => {
   return props.recentFilePaths.slice(0, MAX_SHOWN_RECENT_FILES).map((path) => {
@@ -107,7 +122,7 @@ const ACTIONS: { label: string; icon: string; shortcut?: string; command: () => 
   {
     label: 'Open...',
     icon: 'pi pi-folder-open',
-    shortcut: electronApi ? shortcut('Ctrl+O', '⌘O') : shortcut('Ctrl+Alt+O', '⌘⌥O'),
+    shortcut: electronApi ? shortcut('Ctrl+O', '⌘O') : shortcut('Ctrl+Alt+O', '⌥⌘O'),
     command: () => {
       emit('open');
     }
@@ -115,13 +130,13 @@ const ACTIONS: { label: string; icon: string; shortcut?: string; command: () => 
   {
     label: 'Open Location...',
     icon: 'pi pi-link',
-    shortcut: electronApi ? shortcut('Ctrl+Shift+O', '⇧⌘O') : shortcut('Ctrl+Shift+Alt+O', '⇧⌘⌥O'),
+    shortcut: electronApi ? shortcut('Ctrl+Shift+O', '⇧⌘O') : shortcut('Ctrl+Shift+Alt+O', '⌥⇧⌘O'),
     command: () => {
       emit('openLocation');
     }
   },
   {
-    label: 'Open the Lorenz Sample',
+    label: 'Open Lorenz Sample',
     icon: 'pi pi-book',
     command: () => {
       emit('openSampleLorenz');
@@ -247,8 +262,7 @@ const ACTIONS: { label: string; icon: string; shortcut?: string; command: () => 
 }
 
 .action:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--p-primary-color);
+  outline-offset: calc(-1 * var(--opencor-focus-ring-width));
 }
 
 .action-icon {
@@ -312,8 +326,7 @@ const ACTIONS: { label: string; icon: string; shortcut?: string; command: () => 
 }
 
 .recent-file:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--p-primary-color);
+  outline-offset: calc(-1 * var(--opencor-focus-ring-width));
 }
 
 .recent-file-icon {

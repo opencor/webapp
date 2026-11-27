@@ -1,20 +1,20 @@
-import type { IOpenCORSimulationDataValue, OpenCORSimulationData, OpenCORTheme } from '../../index';
+import type { OpenCORSimulationDataValue, OpenCORSimulationData, OpenCORTheme } from '../../index';
 
 import * as dependencies from './dependencies';
 import { electronApi } from './electronApi';
 
 // Some interfaces.
 
-export interface ISettingsGeneral {
+export interface SettingsGeneral {
   checkForUpdatesAtStartup: boolean;
   theme: OpenCORTheme;
 }
 
-export interface ISettings {
-  general: ISettingsGeneral;
+export interface Settings {
+  general: SettingsGeneral;
 }
 
-export interface ISystemDetails {
+export interface SystemDetails {
   cpuModel: string;
   logicalCoreCount: number;
   totalMemory: number;
@@ -89,9 +89,38 @@ export const isImeKeyDown = (event: KeyboardEvent): boolean => {
   return event.isComposing || event.keyCode === 229;
 };
 
+// A method to determine the letter (in upper case) of a keyboard shortcut (e.g., "O" for Ctrl+Alt+O), if any.
+// Note #1: we rely on the character that is produced by the key (i.e. event.key) rather than on its physical position
+//          (i.e. event.code), so that our shortcuts are the letter printed on the key whatever the keyboard layout
+//          (e.g., Ctrl+Alt+W is the key labelled W on an AZERTY keyboard, not the one labelled Z), as for the
+//          accelerators of OpenCOR's main menu (see src/main/MainMenu.ts).
+// Note #2: on Windows and Linux, AltGr (which is reported as Ctrl+Alt on Windows) is used to type some characters
+//          (e.g., AltGr+O produces "ó" on a Polish keyboard), in which case the key is for typing that character rather
+//          than for a keyboard shortcut.
+// Note #3: the key may otherwise produce a character that is not a letter (from A to Z) in two cases, in which case we
+//          rely on the physical position of the key: on macOS, the Option key changes the character that is produced by
+//          a key (e.g., Option+O produces "ø"), while with a non-Latin keyboard layout (e.g., a Russian one), the key
+//          produces a non-Latin character (e.g., "щ").
+
+export const shortcutLetter = (event: KeyboardEvent): string | null => {
+  if (isImeKeyDown(event)) {
+    return null;
+  }
+
+  if (/^[a-z]$/i.test(event.key)) {
+    return event.key.toUpperCase();
+  }
+
+  if (!isMacOs() && event.getModifierState('AltGraph')) {
+    return null;
+  }
+
+  return /^Key([A-Z])$/.exec(event.code)?.[1] ?? null;
+};
+
 // Some methods to let OpenCOR own the title of its document (e.g., to show the name of the selected file in it, see
-// ContentsComponent.vue), which is only the case when OpenCOR is not used as a library (see main.ts) since the title
-// of a page that embeds OpenCOR is not ours to change.
+// ContentsComponent.vue), which is only the case when OpenCOR is not used as a library (see main.ts) since the title of
+// a page that embeds OpenCOR is not ours to change.
 
 let _documentTitleOwned = false;
 
@@ -113,7 +142,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
 // is such a name.
 // Note #1: a file opened using a data URL only exists in memory, so it can only be reopened during the current session
 //          (see OpenCOR.addRecentFile()), i.e. not, say, the next time OpenCOR is started.
-// Note #2: a COMBINE archive is named "OMEX #<n>" while a CellML file (from a ZIP-CellML data URL) is named
+// Note #2: an OMEX file is named "OMEX #<n>" while a CellML file (from a ZIP-CellML data URL) is named
 //          "CellML #<n>/<file name>" where <file name> is the name of the CellML file, so that it is still shown under
 //          its own name (see common.fileName()).
 
@@ -137,8 +166,39 @@ export const nextCellmlDataUrlNumber = (): number => {
   return ++cellmlDataUrlCounter;
 };
 
+// A prefix for the (made-up) name of a file that, in OpenCOR, was dropped but has no path (e.g., if it was dragged from
+// a Web browser or from a ZIP file viewer), and the number to use in the name of the next such file.
+// Note: such a file only exists in memory (see isInMemoryFilePath()) and is named "Dropped #<n>/<file name>", where
+//       <file name> is the name of the file, so that it is still shown under its own name (see fileName()) while two
+//       different files with the same name don't get mistaken for one another (see OpenCOR.processFile()).
+
+export const DROPPED_FILE_PREFIX = 'Dropped #';
+
+let droppedFileCounter = 0;
+
+export const nextDroppedFileNumber = (): number => {
+  return ++droppedFileCounter;
+};
+
 export const isDataUrlFileName = (fileName: string): boolean => {
   return fileName.startsWith(OMEX_PREFIX) || fileName.startsWith(CELLML_PREFIX);
+};
+
+// A method to determine whether a file path is an absolute path, be it a POSIX path, a UNC path, or a Windows path with
+// a drive letter.
+
+export const isAbsoluteFilePath = (filePath: string): boolean => {
+  return filePath.startsWith('/') || filePath.startsWith('\\\\') || /^[A-Za-z]:[\\/]/.test(filePath);
+};
+
+// A method to determine whether, in OpenCOR, a file only exists in memory, i.e. whether its path is neither a URL nor
+// an absolute path. This is the case for a file opened using a data URL (see isDataUrlFileName()) and for a dropped
+// file that has no path (e.g., a file dragged from a Web browser or from a ZIP file viewer), which is known by a made-up
+// name (see DROPPED_FILE_PREFIX). Either way, such a file can only be reopened during the current session (see
+// OpenCOR.addRecentFile()).
+
+export const isInMemoryFilePath = (filePath: string): boolean => {
+  return !isUrl(filePath) && !isAbsoluteFilePath(filePath);
 };
 
 // A method to determine whether the given value is an object (and not an array).
@@ -153,34 +213,79 @@ export const isUrl = (filePath: string): boolean => {
   return filePath.startsWith('http://') || filePath.startsWith('https://');
 };
 
-// A method to get the CORS proxy URL for a URL.
+// A method to get the CORS proxy URL for a URL, which content is expected to be of the given kind, i.e. a file that we
+// can open (i.e. a CellML file, a SED-ML file, an OMEX file, or a CellDL file) or a CSV file (i.e. some external data),
+// so that our CORS proxy only returns that kind of content and, if it gets something else, tells us what it expected
+// (see src/extern/corsProxy.js).
 // Note: the URL must be encoded since it is passed as a query parameter, which our CORS proxy decodes. Otherwise, the
 //       URL would get truncated at its first "&" (e.g., https://example.com/export?format=csv&gid=123 would become
 //       https://example.com/export?format=csv), lose its fragment, and have its "+" and percent-encoded characters
 //       decoded (e.g., "%2F" would become "/").
 
-export const corsProxyUrl = (url: string): string => {
-  return `https://cors-proxy.opencor.workers.dev/?url=${encodeURIComponent(url)}`;
+export type CorsProxyContentKind = 'file' | 'csv';
+
+export const corsProxyUrl = (url: string, contentKind: CorsProxyContentKind): string => {
+  return `https://cors-proxy.opencor.workers.dev/?url=${encodeURIComponent(url)}&kind=${contentKind}`;
+};
+
+// A method to fetch a URL, giving up if its server doesn't respond (i.e. if we don't get the headers of its response)
+// within the given timeout or if the given signal gets aborted (e.g., if people cancel the loading of a file).
+// Note #1: our timeout only applies to the response itself, not to its body, which may take a while to be read (e.g.,
+//          for a large file over a slow connection), hence we don't use AbortSignal.timeout(), but the given signal (if
+//          any) applies to both.
+// Note #2: our CORS proxy may need to fully read a file before it responds (e.g., an OMEX file, see
+//          src/extern/corsProxy.js), which may take a while (e.g., for a large file on a slow server), hence it gets
+//          more time to respond than a server that we fetch a URL from directly. Its timeout is long enough for it to
+//          read the largest file it accepts (i.e. 32 MB) at about 100 KB/s. Our CORS proxy gives up on a server that
+//          stalls (see STALL_TIMEOUT in src/extern/corsProxy.js), so we only have to wait that long for a server that
+//          is slow (or for our CORS proxy itself, should it stall).
+
+const FETCH_RESPONSE_TIMEOUT = 30 * 1000; // 30 seconds.
+const CORS_PROXY_RESPONSE_TIMEOUT = 5 * 60 * 1000; // 5 minutes.
+
+const fetchWithTimeout = async (
+  url: string,
+  signal?: AbortSignal,
+  timeout: number = FETCH_RESPONSE_TIMEOUT
+): Promise<Response> => {
+  const timeoutAbortController = new AbortController();
+  const timeoutTimer = setTimeout(() => {
+    timeoutAbortController.abort(new Error('The server took too long to respond.'));
+  }, timeout);
+
+  try {
+    return await fetch(url, {
+      signal: signal ? AbortSignal.any([signal, timeoutAbortController.signal]) : timeoutAbortController.signal
+    });
+  } finally {
+    clearTimeout(timeoutTimer);
+  }
 };
 
 // A method to fetch a URL through our CORS proxy or, if that fails, directly.
 // Note #1: our CORS proxy may not be reachable, not allow the content of the URL (HTTP 403 error), not find the URL
 //          (HTTP 404 error), not be able to fetch the URL (HTTP 502 error; e.g., the URL is only reachable from the
-//          user's network), be rate limited (HTTP 429 error), be unavailable (HTTP 5xx error), or get some other error
-//          from the server of the URL (e.g., because it blocks requests from our CORS proxy), in which case fetching
-//          the URL directly may still work. So, we fetch the URL directly whenever our CORS proxy doesn't give us an OK
-//          response.
+//          user's network), be rate limited (HTTP 429 error), be unavailable (HTTP 5xx error), be too slow to respond,
+//          or get some other error from the server of the URL (e.g., because it blocks requests from our CORS proxy),
+//          in which case fetching the URL directly may still work. So, we fetch the URL directly whenever our CORS
+//          proxy doesn't give us an OK response.
 // Note #2: if fetching the URL directly also fails, then it is most likely because of CORS, about which a browser tells
 //          us next to nothing (e.g., "Failed to fetch"), so we report why our CORS proxy failed instead.
 // Note #3: we read the body of our CORS proxy's response before returning it, so that we can also fetch the URL
 //          directly if reading it fails (e.g., if our CORS proxy aborts it because the content turns out to be too
 //          large). This doesn't cost anything since our callers need the whole body anyway.
+// Note #4: if the given signal gets aborted, then we give up straightaway (i.e. we don't fetch the URL directly) and
+//          reject with the reason of the signal.
 
-export const fetchThroughCorsProxy = async (url: string): Promise<Response> => {
+export const fetchThroughCorsProxy = async (
+  url: string,
+  contentKind: CorsProxyContentKind,
+  signal?: AbortSignal
+): Promise<Response> => {
   let corsProxyIssue: string;
 
   try {
-    const response = await fetch(corsProxyUrl(url));
+    const response = await fetchWithTimeout(corsProxyUrl(url, contentKind), signal, CORS_PROXY_RESPONSE_TIMEOUT);
 
     if (response.ok) {
       const body = await response.arrayBuffer();
@@ -197,17 +302,22 @@ export const fetchThroughCorsProxy = async (url: string): Promise<Response> => {
     corsProxyIssue =
       (await response.text().catch(() => '')) || `The server responded with a status of ${response.status}.`;
   } catch (error: unknown) {
+    signal?.throwIfAborted();
+
     corsProxyIssue = formatError(error);
   }
 
   try {
-    const response = await fetch(url);
+    const response = await fetchWithTimeout(url, signal);
 
     if (response.ok) {
       return response;
     }
   } catch {
-    // Fetching the URL directly failed, so we report why our CORS proxy failed (see Note #2).
+    // Fetching the URL directly failed, so we report why our CORS proxy failed (see Note #2), unless the given signal
+    // got aborted (see Note #4).
+
+    signal?.throwIfAborted();
   }
 
   throw new Error(corsProxyIssue);
@@ -223,6 +333,84 @@ export const xxh64 = (data: string | Uint8Array): string => {
   return dependencies._xxhash.h64Raw(data).toString(16).padStart(16, '0');
 };
 
+// Some methods to format numbers, so that they get formatted the same way everywhere:
+//  - formatNumber() formats a value (e.g., that of a model parameter or of a simulation setting) the way it can be
+//    entered in a numeric field (i.e. using a dot as the decimal separator, no group separators, and an exponent for a
+//    very small or large value), using the shortest text that parses back to that exact value (i.e. no value gets
+//    rounded);
+//  - formatCount() formats a count (e.g., a number of data points), with group separators (e.g., 1,000,001), which is
+//    fine since a count is never entered in a numeric field. We use English (as for the rest of our UI), so that our
+//    group separator cannot be mistaken for the decimal separator used by formatNumber(); and
+//  - formatTime() formats a duration in milliseconds (e.g., the time it took to run a simulation).
+// Note: a value computed from other values (e.g., by a slider or a spin button, which add a step to a value) may have a
+//       floating-point error (e.g., 0.1 + 0.2 = 0.30000000000000004), which formatNumber() would show. So, we round
+//       such a value to the number of decimals of the values it was computed from (see fractionDigits() and
+//       roundToFractionDigits()), i.e. to the value that would have been computed using decimal arithmetic.
+
+export const formatNumber = (value: number): string => {
+  return String(value);
+};
+
+// Return the number of decimals of the given value, i.e. of the shortest text that parses back to it (e.g., 2 for 0.25
+// and 7 for 1e-7).
+
+export const fractionDigits = (value: number): number => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  const [coefficient = '', exponent] = String(value).toLowerCase().split('e');
+  const coefficientFractionDigits = coefficient.split('.')[1]?.length ?? 0;
+
+  return Math.max(0, coefficientFractionDigits - Number(exponent ?? 0));
+};
+
+// Round the given value to the given number of decimals.
+// Note: toFixed() returns the decimal text that is closest to the value, which is exact if the value has no more than
+//       the given number of decimals. However, it only supports up to 100 decimals and values smaller than 1e21 (which
+//       have no decimals anyway), so we leave the other values as they are.
+
+export const roundToFractionDigits = (value: number, digits: number): number => {
+  if (!Number.isFinite(value) || Math.abs(value) >= 1e21 || digits > 100) {
+    return value;
+  }
+
+  return Number(value.toFixed(Math.max(0, digits)));
+};
+
+// Add/subtract the given values without any floating-point error, e.g., 0.1 + 0.2 = 0.3 rather than
+// 0.30000000000000004.
+
+export const addNumbers = (value1: number, value2: number): number => {
+  return roundToFractionDigits(value1 + value2, Math.max(fractionDigits(value1), fractionDigits(value2)));
+};
+
+export const subtractNumbers = (value1: number, value2: number): number => {
+  return addNumbers(value1, -value2);
+};
+
+// Divide the given values without any (visible) floating-point error, e.g., 2.3 / 23 = 0.1 rather than
+// 0.09999999999999999.
+// Note: unlike the sum or the difference of two values, the quotient of two values may have infinitely many decimals
+//       (e.g., 1 / 3), so we round it to 15 significant digits, i.e. the number of significant digits that a double can
+//       always represent, which removes any floating-point error without losing any meaningful precision.
+
+export const divideNumbers = (value1: number, value2: number): number => {
+  const res = value1 / value2;
+
+  return Number.isFinite(res) ? Number(res.toPrecision(15)) : res;
+};
+
+export const formatCount = (count: number): string => {
+  return count.toLocaleString('en');
+};
+
+// A method to add a unit, if any, to a label (e.g., "Ending point (second)" or "Ending point" if there is no unit).
+
+export const labelWithUnit = (label: string, unit?: string): string => {
+  return unit ? `${label} (${unit})` : label;
+};
+
 // A method to format a number of milliseconds into a string.
 
 export const formatTime = (time: number): string => {
@@ -230,7 +418,7 @@ export const formatTime = (time: number): string => {
   const s = Math.floor((time / 1000) % 60);
   const m = Math.floor((time / (1000 * 60)) % 60);
   const h = Math.floor((time / (1000 * 60 * 60)) % 24);
-  const d = Math.floor((time / (1000 * 60 * 60 * 24)) % 24);
+  const d = Math.floor(time / (1000 * 60 * 60 * 24));
   let res = '';
 
   if (d) {
@@ -300,12 +488,12 @@ export const isDivisible = (a: number, b: number): boolean => {
 // A method to determine whether the Web browser has a save file picker, i.e. whether it supports the File System Access
 // API (only Chromium-based Web browsers do). If it doesn't, then a file can only be saved by downloading it.
 
-export interface IWindowWithSaveFilePicker {
+export interface WindowWithSaveFilePicker {
   showSaveFilePicker?: (options?: { suggestedName?: string }) => Promise<FileSystemFileHandle>;
 }
 
 export const hasSaveFilePicker = (): boolean => {
-  return typeof window !== 'undefined' && !!(window as unknown as IWindowWithSaveFilePicker).showSaveFilePicker;
+  return typeof window !== 'undefined' && !!(window as unknown as WindowWithSaveFilePicker).showSaveFilePicker;
 };
 
 // A method to trigger a browser download for a file.
@@ -349,6 +537,89 @@ export const escapeHtml = (text: string): string => {
   return text.replace(/[&<>"']/g, (character: string) => `&#${character.charCodeAt(0)};`);
 };
 
+// A method to sanitise some HTML that may come from an untrusted source (e.g., the name of a trace or the title of an
+// axis in a UI JSON file, or the description of an issue), so that it can be rendered as HTML (e.g., using v-html).
+// Note #1: only a few formatting elements are kept (e.g., "<i>I<sub>K,r</sub></i>"), without any of their attributes,
+//          except for the class of a PrimeIcons icon (e.g., <i class="pi pi-cog"></i>). Any other element is replaced
+//          with its contents, unless its contents are not meant to be shown as text (e.g., a script), in which case it
+//          is removed altogether.
+// Note #2: our HTML is parsed in a separate document, so that nothing in it gets loaded or run (e.g., an image).
+// Note #3: the same HTML tends to be sanitised over and over again (e.g., the name of a trace each time the legend of a
+//          plot is rendered), so we cache our results.
+
+const SANITISE_HTML_ALLOWED_ELEMENTS = new Set<string>(['b', 'br', 'code', 'em', 'i', 'strong', 'sub', 'sup']);
+const SANITISE_HTML_REMOVED_ELEMENTS = new Set<string>([
+  'embed',
+  'iframe',
+  'noscript',
+  'object',
+  'script',
+  'select',
+  'style',
+  'template',
+  'textarea',
+  'title'
+]);
+const SANITISE_HTML_ICON_CLASS_REGEX = /^\s*pi(\s+pi-[a-z0-9-]+)+\s*$/;
+const SANITISE_HTML_CACHE_SIZE = 256;
+
+const sanitiseHtmlCache = new Map<string, string>();
+
+const sanitiseHtmlNode = (node: Node, parent: Node, document: Document): void => {
+  for (const childNode of Array.from(node.childNodes)) {
+    if (childNode.nodeType === Node.TEXT_NODE) {
+      parent.appendChild(document.createTextNode(childNode.textContent ?? ''));
+    } else if (childNode.nodeType === Node.ELEMENT_NODE) {
+      const element = childNode as Element;
+      const elementName = element.localName;
+
+      if (SANITISE_HTML_ALLOWED_ELEMENTS.has(elementName)) {
+        const sanitisedElement = document.createElement(elementName);
+        const elementClass = element.getAttribute('class');
+
+        if (elementName === 'i' && elementClass && SANITISE_HTML_ICON_CLASS_REGEX.test(elementClass)) {
+          sanitisedElement.setAttribute('class', elementClass.trim());
+        }
+
+        sanitiseHtmlNode(element, sanitisedElement, document);
+
+        parent.appendChild(sanitisedElement);
+      } else if (!SANITISE_HTML_REMOVED_ELEMENTS.has(elementName)) {
+        sanitiseHtmlNode(element, parent, document);
+      }
+    }
+  }
+};
+
+export const sanitiseHtml = (html: string | undefined): string => {
+  // Some text without any markup or character reference is already safe.
+
+  if (!html || !/[<&]/.test(html)) {
+    return html ?? '';
+  }
+
+  const cachedSanitisedHtml = sanitiseHtmlCache.get(html);
+
+  if (cachedSanitisedHtml !== undefined) {
+    return cachedSanitisedHtml;
+  }
+
+  const document = new DOMParser().parseFromString(html, 'text/html');
+  const container = document.createElement('div');
+
+  sanitiseHtmlNode(document.body, container, document);
+
+  const res = container.innerHTML;
+
+  if (sanitiseHtmlCache.size >= SANITISE_HTML_CACHE_SIZE) {
+    sanitiseHtmlCache.clear();
+  }
+
+  sanitiseHtmlCache.set(html, res);
+
+  return res;
+};
+
 // A method to get the file name from a file path.
 // Note: the file path should be a canonical path (see locApi.File.canonicalPath()), i.e. a path that libOpenCOR has
 //       already decoded, if needed (e.g., "https://example.com/my%20model.cellml" becomes
@@ -381,8 +652,8 @@ export const waitForNextAnimationFrame = (): Promise<number> => {
 //          next animation frame.
 // Note #3: no animation frames are run while our document is hidden (e.g., when our window is minimised), in which case
 //          there is nothing to paint for people to see, so we don't wait (or stop waiting) for our UI to be painted.
-//          Otherwise, we would wait until our document is visible again (e.g., a simulation run would only finish
-//          once our window is restored).
+//          Otherwise, we would wait until our document is visible again (e.g., a simulation run would only finish once
+//          our window is restored).
 
 const waitForNextAnimationFrameUnlessHidden = (): Promise<void> => {
   return new Promise((resolve) => {
@@ -423,7 +694,7 @@ export const EMPTY_FLOAT64_ARRAY = Object.freeze(new Float64Array(0));
 export const UNDEFINED_SIMULATION_DATA_VALUE = Object.freeze({
   data: EMPTY_FLOAT64_ARRAY,
   unit: ''
-}) as Readonly<IOpenCORSimulationDataValue>;
+}) as Readonly<OpenCORSimulationDataValue>;
 
 // A method to get an object with an empty simulation data values for a list of model parameters.
 

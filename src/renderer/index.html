@@ -2,13 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+    Note: our loading message follows the system theme (see prefers-color-scheme below), as do the native parts of the
+          page (e.g., its scrollbars) until OpenCOR has been loaded, after which they follow OpenCOR's theme (see
+          color-scheme in src/assets/app.css).
+    -->
+    <meta name="color-scheme" content="light dark" />
     <title>OpenCOR</title>
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; connect-src * data:; script-src 'unsafe-eval'; script-src-elem 'self' https://apis.google.com https://cdn.jsdelivr.net https://fastly.jsdelivr.net https://gcore.jsdelivr.net https://cors-proxy.opencor.workers.dev; worker-src 'self' blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://opencorapp.firebaseapp.com; img-src 'self' blob: data:" />
-    <style scoped>
+      content="default-src 'self'; connect-src * data:; script-src 'unsafe-eval'; script-src-elem 'self' blob: https://apis.google.com https://cdn.jsdelivr.net https://fastly.jsdelivr.net https://gcore.jsdelivr.net https://cors-proxy.opencor.workers.dev; worker-src 'self' blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src 'self' https://opencorapp.firebaseapp.com; img-src 'self' blob: data:" />
+    <style>
     body {
       background-color: #ffffff; /* Light version of --p-content-background. */
       color: #334155; /* Light version of --p-content-color. */

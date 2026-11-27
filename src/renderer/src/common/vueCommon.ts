@@ -1,11 +1,13 @@
 import * as vueusecore from '@vueuse/core';
 
+import type { SplitterResizeEndEvent } from 'primevue/splitter';
 import * as vue from 'vue';
 
 import type { OpenCORTheme } from '../../index';
 
 import * as locSedApi from '../libopencor/locSedApi';
 
+import * as common from './common';
 import { COPY_FEEDBACK_LIFE, MEDIUM_DELAY, NARROW_LAYOUT_WIDTH, VERY_SHORT_DELAY } from './constants';
 import { electronApi } from './electronApi';
 
@@ -14,8 +16,8 @@ import { electronApi } from './electronApi';
 // shows it to their left, so that its plots remain usable on a phone or when OpenCOR is embedded in a small container).
 // Note #1: we use the width of the given element (rather than that of the window), since OpenCOR may not take the whole
 //          window (e.g., when it is embedded in a page).
-// Note #2: we ignore a width of zero, which means that the given element is not shown (e.g., if it is in a view that
-//          is not currently shown), so that our layout doesn't change for nothing.
+// Note #2: we ignore a width of zero, which means that the given element is not shown (e.g., if it is in a view that is
+//          not currently shown), so that our layout doesn't change for nothing.
 
 export const useNarrowLayout = (elementRef: vue.Ref<HTMLElement | null>): vue.Ref<boolean> => {
   const narrowLayout = vue.ref<boolean>(false);
@@ -28,6 +30,31 @@ export const useNarrowLayout = (elementRef: vue.Ref<HTMLElement | null>): vue.Re
   });
 
   return narrowLayout;
+};
+
+// A composable to keep track of the sizes of the panels of a splitter that shows a side panel to the left of some
+// contents (wide layout) or above them (narrow layout, see useNarrowLayout()), e.g., in a simulation experiment view.
+// Note #1: our splitter is not remounted when our layout changes (so that, for instance, a value being edited, the
+//          keyboard focus, or the zoom level of a plot doesn't get lost), but it (re)sizes its panels whenever their
+//          size changes, so we give it the sizes for our current layout.
+// Note #2: we keep track of the sizes of each layout, so that the sizes that people chose for a layout are restored
+//          when they switch back to that layout.
+
+export const useSidePanelSplitter = (
+  narrowLayout: vue.Ref<boolean>
+): { sizes: vue.ComputedRef<number[]>; onResizeEnd: (event: SplitterResizeEndEvent) => void } => {
+  const wideSizes = vue.ref<number[]>([17, 83]);
+  const narrowSizes = vue.ref<number[]>([40, 60]);
+
+  const sizes = vue.computed<number[]>(() => {
+    return narrowLayout.value ? narrowSizes.value : wideSizes.value;
+  });
+
+  const onResizeEnd = (event: SplitterResizeEndEvent): void => {
+    (narrowLayout.value ? narrowSizes : wideSizes).value = [...event.sizes];
+  };
+
+  return { sizes, onResizeEnd };
 };
 
 // A constant to know the UID of the active instance of OpenCOR.
@@ -47,9 +74,30 @@ export const useTheme = vueusecore.createGlobalState(() => {
     isDarkMode.value = !prefersColorScheme.matches;
   };
 
+  // Update our document classes, so that our theme gets applied.
+  // Note: our theme is changed instantaneously, i.e. without any of our elements transitioning their colours (e.g., a
+  //       PrimeVue form field, which transitions its background and border colours), which would otherwise be
+  //       distracting. So, we disable all transitions while our theme is being changed (see .opencor-theme-changing in
+  //       app.css) and re-enable them two frames later, i.e. once our elements have been restyled, including those that
+  //       only get updated after Vue's next tick (e.g., an element with a class that depends on useDarkMode()).
+
+  let themeChangingAnimationFrame = 0;
+
   const updateDocumentClasses = () => {
-    document.documentElement.classList.toggle('opencor-light-mode', isLightMode.value);
-    document.documentElement.classList.toggle('opencor-dark-mode', isDarkMode.value);
+    const documentElement = document.documentElement;
+
+    cancelAnimationFrame(themeChangingAnimationFrame);
+
+    documentElement.classList.add('opencor-theme-changing');
+
+    documentElement.classList.toggle('opencor-light-mode', isLightMode.value);
+    documentElement.classList.toggle('opencor-dark-mode', isDarkMode.value);
+
+    themeChangingAnimationFrame = requestAnimationFrame(() => {
+      themeChangingAnimationFrame = requestAnimationFrame(() => {
+        documentElement.classList.remove('opencor-theme-changing');
+      });
+    });
   };
 
   prefersColorScheme.addEventListener('change', (event) => {
@@ -148,15 +196,15 @@ export const trackElementHeight = (
 //       container and its window scroll listener once no component uses it anymore (e.g., once its OpenCOR instance has
 //       been unmounted).
 
-interface IOverlayContainer {
+interface OverlayContainer {
   element: HTMLElement;
   users: number;
   remove: () => void;
 }
 
-const overlayContainers = new WeakMap<Element, IOverlayContainer>();
+const overlayContainers = new WeakMap<Element, OverlayContainer>();
 
-const overlayContainer = (opencor: Element, containerClass: string): IOverlayContainer => {
+const overlayContainer = (opencor: Element, containerClass: string): OverlayContainer => {
   let res = overlayContainers.get(opencor);
 
   if (res) {
@@ -226,7 +274,7 @@ const overlayContainer = (opencor: Element, containerClass: string): IOverlayCon
 export const useAppendTarget = (ancestorRef: vue.Ref<HTMLElement | null>) => {
   const appendTarget = vue.shallowRef<HTMLElement | undefined>(undefined);
   const containerClass = 'opencor-overlay-container';
-  let usedOverlayContainer: IOverlayContainer | null = null;
+  let usedOverlayContainer: OverlayContainer | null = null;
 
   vue.onMounted(() => {
     const opencor = ancestorRef.value?.closest('.opencor');
@@ -260,7 +308,7 @@ export const useAppendTarget = (ancestorRef: vue.Ref<HTMLElement | null>) => {
 //          elsewhere (e.g., "⌘O" or "Ctrl+O" in our main menu), in which case a separate prop would be needed for
 //          aria-keyshortcuts (or our shortcut would need to be converted).
 
-export interface IToolbarButtonProps {
+export interface ToolbarButtonProps {
   icon: string;
   label?: string;
   shortcut?: string;
@@ -270,6 +318,14 @@ export interface IToolbarButtonProps {
   tooltipAlign?: 'start' | 'end';
   feedback?: boolean;
   keepFocus?: boolean;
+}
+
+export interface WheelProps {
+  ariaLabel: string;
+  ariaValueText?: string;
+  disabled?: boolean;
+  steps?: number;
+  majorSteps?: number[];
 }
 
 // A composable to copy some text to the clipboard and to let people know, for a short while, whether it was copied,
@@ -317,7 +373,7 @@ export const useCopyToClipboard = () => {
   // Note: our feedback (i.e. "Copied" or "Could not copy") is shown in the tooltip of our button, which must therefore
   //       be shown even though our button has just been pressed (see ToolbarButtonWidget.vue).
 
-  const buttonProps = (label: string): Pick<IToolbarButtonProps, 'icon' | 'label' | 'accent' | 'feedback'> => {
+  const buttonProps = (label: string): Pick<ToolbarButtonProps, 'icon' | 'label' | 'accent' | 'feedback'> => {
     if (status.value === 'copied') {
       return { icon: 'pi pi-check', label: 'Copied', accent: 'primary', feedback: true };
     }
@@ -404,7 +460,7 @@ export const populateParameters = (
 export const waitWhileRunning = (
   instance: locSedApi.SedInstance,
   onProgress?: (progress: number) => void,
-  onStatusChange?: (status: locSedApi.ESedInstanceStatus) => void,
+  onStatusChange?: (status: locSedApi.SedInstanceStatus) => void,
   runAbortedRef?: vue.Ref<boolean>
 ): { promise: Promise<void>; cancel: () => void } => {
   let lastStatus: number | undefined;
@@ -439,13 +495,13 @@ export const waitWhileRunning = (
         return;
       }
 
-      let status: locSedApi.ESedInstanceStatus;
+      let status: locSedApi.SedInstanceStatus;
       let progress = 0;
 
       try {
         status = instance.status();
 
-        if (status === locSedApi.ESedInstanceStatus.RUNNING) {
+        if (status === locSedApi.SedInstanceStatus.RUNNING) {
           progress = instance.progress();
         }
       } catch (error: unknown) {
@@ -466,17 +522,17 @@ export const waitWhileRunning = (
       // simulation is idle.
 
       switch (status) {
-        case locSedApi.ESedInstanceStatus.RUNNING:
+        case locSedApi.SedInstanceStatus.RUNNING:
           callSafely(() => onProgress?.(100 * progress));
 
           setTimeout(poll, VERY_SHORT_DELAY);
 
           break;
-        case locSedApi.ESedInstanceStatus.PAUSED:
+        case locSedApi.SedInstanceStatus.PAUSED:
           setTimeout(poll, VERY_SHORT_DELAY);
 
           break;
-        default: // locSedApi.ESedInstanceStatus.IDLE.
+        default: // locSedApi.SedInstanceStatus.IDLE.
           if (onProgress && !runAbortedRef?.value) {
             callSafely(() => onProgress(100));
 
@@ -500,7 +556,17 @@ export const waitWhileRunning = (
 };
 
 // A helper function to generate a trace name from optional name and X/Y values.
+// Note #1: an empty (or blank) name means that a name is to be generated from our X/Y values (e.g., when the user
+//          clears the name of a trace in the settings of the Interactive Simulation Experiment view), or "???" if we
+//          don't have both of them (e.g., while the user is editing them).
+// Note #2: a trace name is rendered as HTML, so our X/Y values (which are expressions, e.g., "a < b") are escaped while
+//          our name, which may contain some HTML (e.g., "<i>I<sub>Na</sub></i>"), is to be sanitised when rendered (see
+//          common.sanitiseHtml()).
 
-export const traceName = (name: string | undefined, xValue: string, yValue: string): string => {
-  return name ?? `${yValue} <i>vs.</i> ${xValue}`;
+export const traceName = (name: string | undefined, xValue: string | undefined, yValue: string | undefined): string => {
+  if (name?.trim()) {
+    return name;
+  }
+
+  return xValue && yValue ? `${common.escapeHtml(yValue)} <i>vs.</i> ${common.escapeHtml(xValue)}` : '???';
 };

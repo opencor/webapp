@@ -21,8 +21,8 @@ createApp(App).mount('#app');
 // Prevent a file that is dropped outside of the area where we handle drag and drop (e.g., on a dialog's mask or on our
 // blocking overlay while OpenCOR is initialising) from being opened by the browser, which would replace OpenCOR with
 // that file.
-// Note #1: a drag that is over the area where we handle drag and drop has already been handled (i.e. its default
-//          action has been prevented) by the time it reaches the document, so we leave it alone.
+// Note #1: a drag that is over the area where we handle drag and drop has already been handled (i.e. its default action
+//          has been prevented) by the time it reaches the document, so we leave it alone.
 // Note #2: we only do this for files, so that some text can still be dragged and dropped into an input field.
 // Note #3: we do this here rather than in our OpenCOR component since, when OpenCOR is used as a library, it is not for
 //          us to decide what happens when a file is dropped outside of OpenCOR.

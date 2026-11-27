@@ -6,7 +6,7 @@ export type Module = any;
 export let _jsonSchema: Module = null;
 export let _jsZip: Module = null;
 export let _mathJs: Module = null;
-export let _uPlot: Module = null;
+export let _opencorPlot: Module = null;
 export let _xxhash: Module = null;
 
 export const setJsonSchema = (module: Module): void => {
@@ -21,8 +21,8 @@ export const setMathJs = (module: Module): void => {
   _mathJs = module;
 };
 
-export const setUPlot = (module: Module): void => {
-  _uPlot = module;
+export const setOpenCORPlot = (module: Module): void => {
+  _opencorPlot = module;
 };
 
 // Initialise xxHash.

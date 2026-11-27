@@ -46,9 +46,11 @@
       @pointerdown.capture="onSliderPointerDown"
       @mousedown.capture="onSliderMouseDown"
       @keydown.capture="onSliderKeyDown"
+      @focusin="onSliderFocusIn"
       @focusout="onSliderFocusOut"
       @dblclick="onSliderDoubleClick">
       <Slider v-model="value" class="w-full"
+        :ariaLabel="name"
         :min="minimumValue" :max="maximumValue" :step="compStepValue"
         size="small"
         @change="sliderChange"
@@ -63,6 +65,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
+import * as common from '../../common/common';
 import { LONG_DELAY } from '../../common/constants';
 import { vHint } from '../../common/hint';
 import * as vueCommon from '../../common/vueCommon';
@@ -77,7 +80,7 @@ const props = defineProps<{
   maximumValue?: number;
   minimumValue?: number;
   name: string;
-  possibleValues?: locApi.IUiJsonDiscreteInputPossibleValue[];
+  possibleValues?: locApi.UiJsonDiscreteInputPossibleValue[];
   stepValue?: number;
 }>();
 
@@ -88,13 +91,13 @@ const emit = defineEmits<{
 }>();
 
 let oldValue = value.value;
-const discreteValue = vue.ref<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(
+const discreteValue = vue.ref<locApi.UiJsonDiscreteInputPossibleValue | undefined>(
   props.possibleValues?.find((possibleValue) => possibleValue.value === value.value)
 );
 const rootRef = vue.shallowRef<HTMLElement | null>(null);
 const inputScientificNumberWidgetRef = vue.ref<InstanceType<typeof InputScientificNumberWidget> | null>(null);
 const appendTarget = vueCommon.useAppendTarget(rootRef);
-const defaultPossibleValue = vue.computed<locApi.IUiJsonDiscreteInputPossibleValue | undefined>(() => {
+const defaultPossibleValue = vue.computed<locApi.UiJsonDiscreteInputPossibleValue | undefined>(() => {
   return props.possibleValues?.find((possibleValue) => possibleValue.value === props.defaultValue);
 });
 const atDefaultValue = vue.computed<boolean>(() => {
@@ -130,7 +133,13 @@ const compStepValue = vue.computed<number>(() => {
   }
 
   if (props.maximumValue !== undefined && props.minimumValue !== undefined) {
-    return 0.01 * (props.maximumValue - props.minimumValue);
+    // Note: we round our step to the number of decimals it would have if computed using decimal arithmetic (e.g., 0.009
+    //       rather than 0.009000000000000001 for a minimum value of 0.1 and a maximum value of 1).
+
+    return common.roundToFractionDigits(
+      0.01 * (props.maximumValue - props.minimumValue),
+      Math.max(common.fractionDigits(props.minimumValue), common.fractionDigits(props.maximumValue)) + 2
+    );
   }
 
   return 1;
@@ -294,14 +303,14 @@ const emitChange = (newValue: number) => {
   });
 };
 
-interface ISelectChangeEvent {
+interface SelectChangeEvent {
   value: {
     name: string;
     value: number;
   };
 }
 
-const selectChange = (event: ISelectChangeEvent) => {
+const selectChange = (event: SelectChangeEvent) => {
   if (event.value.value !== oldValue) {
     emitChange(event.value.value);
   }
@@ -330,7 +339,23 @@ const inputTextValueUpdated = (newValue: number | undefined) => {
 };
 
 const sliderChange = (newValue: number | number[]) => {
-  const valueToEmit = Array.isArray(newValue) ? newValue[0] : newValue;
+  // Note: our slider adds a multiple of our step to our old value (and clamps the result to our minimum and maximum
+  //       values), which may result in a floating-point error (e.g., 0.1 + 0.2 = 0.30000000000000004), so we round its
+  //       value to the number of decimals of the values it was computed from (see common.formatNumber()).
+
+  const rawValueToEmit = Array.isArray(newValue) ? newValue[0] : newValue;
+  const valueToEmit =
+    rawValueToEmit !== undefined
+      ? common.roundToFractionDigits(
+          rawValueToEmit,
+          Math.max(
+            common.fractionDigits(oldValue),
+            common.fractionDigits(compStepValue.value),
+            props.minimumValue !== undefined ? common.fractionDigits(props.minimumValue) : 0,
+            props.maximumValue !== undefined ? common.fractionDigits(props.maximumValue) : 0
+          )
+        )
+      : undefined;
 
   if (valueToEmit !== undefined && valueToEmit !== oldValue) {
     emitChange(valueToEmit);
@@ -375,12 +400,52 @@ const onSliderKeyDown = (event: KeyboardEvent): void => {
 // Our slider's handle loses the focus, unless it is only because our window has lost the focus (in which case our
 // handle is still the active element), since it will then get the focus back (and, without us, a focus ring) once our
 // window regains the focus.
+// Note: our handle may get the focus back programmatically (e.g., when a dialog that was opened while our handle had
+//       the focus gets closed, see PrimeVue's Dialog), in which case it should look as it did before, i.e. without a
+//       focus ring if it had been focused using a pointer. Chromium would, however, give it a focus ring if a key was
+//       last pressed (e.g., Escape to close the dialog), hence we remember whether our handle had been focused using a
+//       pointer, until it gets the focus back (see onSliderFocusIn()) or until Tab is pressed (in which case our handle
+//       gets the focus back using the keyboard and should therefore get a focus ring).
+
+let sliderHandleBlurredAfterPointerFocus = false;
+
+const onSliderWindowKeyDown = (event: KeyboardEvent): void => {
+  if (event.key === 'Tab') {
+    forgetSliderHandlePointerFocus();
+  }
+};
+
+const forgetSliderHandlePointerFocus = (): void => {
+  if (sliderHandleBlurredAfterPointerFocus) {
+    sliderHandleBlurredAfterPointerFocus = false;
+
+    window.removeEventListener('keydown', onSliderWindowKeyDown, true);
+  }
+};
 
 const onSliderFocusOut = (event: FocusEvent): void => {
   if (event.target !== document.activeElement) {
+    if (sliderHandleFocusedUsingPointer.value && !sliderHandleBlurredAfterPointerFocus) {
+      sliderHandleBlurredAfterPointerFocus = true;
+
+      window.addEventListener('keydown', onSliderWindowKeyDown, true);
+    }
+
     sliderHandleFocusedUsingPointer.value = false;
   }
 };
+
+const onSliderFocusIn = (event: FocusEvent): void => {
+  if (isSliderHandle(event.target) && sliderHandleBlurredAfterPointerFocus) {
+    sliderHandleFocusedUsingPointer.value = true;
+  }
+
+  forgetSliderHandlePointerFocus();
+};
+
+vue.onBeforeUnmount(() => {
+  forgetSliderHandlePointerFocus();
+});
 
 // Reset our scalar value when double-clicking on our slider's handle.
 // Note: the first click of a double click on our slider's bar moves our slider's handle under the mouse pointer, so we

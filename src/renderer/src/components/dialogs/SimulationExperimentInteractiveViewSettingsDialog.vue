@@ -1,10 +1,18 @@
 <template>
   <div ref="rootRef" class="settings-dialog-root">
-    <BaseDialog v-bind="$attrs" header="Settings" class="settings-dialog w-270 h-210"
+    <BaseDialog v-bind="dialogAttrs" header="Simulation Settings" class="settings-dialog h-210"
+      size="lg"
       :centreOn="centreOn"
+      @update:visible="onUpdateVisible"
       @keydown.enter="onKeydownEnter"
-      @cancel="onCancel"
+      @hidden="onHidden"
     >
+      <!-- The issues of our fields, which describe them for assistive technologies (see fieldIssues) -->
+
+      <div class="sr-only">
+        <span v-for="issues in fieldIssues" :id="issues.id" :key="issues.key">{{ issues.text }}</span>
+      </div>
+
       <div class="settings-body h-full flex min-h-0">
         <!-- Navigation -->
 
@@ -44,7 +52,9 @@
             <div class="settings-form">
               <div class="form-row">
                 <InputScientificNumberWidget v-model="localSettings.simulation.initialPoint" class="form-field"
-                  :label="`Initial point (${voiUnit})`"
+                  :invalid="simulationFieldIssues.initialPoint.length > 0"
+                  :aria-describedby="simulationFieldIssuesId('initialPoint')"
+                  :label="common.labelWithUnit('Initial point', voiUnit)"
                   size="small"
                 />
                 <div class="form-field self-stretch">
@@ -56,17 +66,23 @@
               </div>
               <div class="form-row">
                 <InputScientificNumberWidget v-model="localSettings.simulation.startingPoint" class="form-field"
-                  :label="`Starting point (${voiUnit})`"
+                  :invalid="simulationFieldIssues.startingPoint.length > 0"
+                  :aria-describedby="simulationFieldIssuesId('startingPoint')"
+                  :label="common.labelWithUnit('Starting point', voiUnit)"
                   size="small"
                 />
                 <InputScientificNumberWidget v-model="localSettings.simulation.endingPoint" class="form-field"
-                  :label="`Ending point (${voiUnit})`"
+                  :invalid="simulationFieldIssues.endingPoint.length > 0"
+                  :aria-describedby="simulationFieldIssuesId('endingPoint')"
+                  :label="common.labelWithUnit('Ending point', voiUnit)"
                   size="small"
                 />
               </div>
               <div class="form-row">
                 <InputScientificNumberWidget v-model="localSettings.simulation.pointInterval" class="form-field"
-                  :label="`Point interval (${voiUnit})`"
+                  :invalid="simulationFieldIssues.pointInterval.length > 0"
+                  :aria-describedby="simulationFieldIssuesId('pointInterval')"
+                  :label="common.labelWithUnit('Point interval', voiUnit)"
                   size="small"
                 />
                 <div class="form-field self-stretch">
@@ -85,13 +101,13 @@
             <header class="section-header">
               <div class="min-w-0">
                 <h3 class="section-title">Solvers</h3>
-                <p class="section-description">Configure CVODE's maximum step (additional settings will be added in the future).</p>
+                <p class="section-description">Configure CVODE's maximum step.</p>
               </div>
             </header>
             <div class="settings-form">
               <div class="form-row">
                 <InputScientificNumberWidget v-model="localSettings.solvers.cvodeMaximumStep" class="form-field"
-                  :label="`CVODE's maximum step (${voiUnit})`"
+                  :label="common.labelWithUnit(`CVODE's maximum step`, voiUnit)"
                   size="small"
                 />
                 <div class="form-field self-stretch">
@@ -131,7 +147,7 @@
 
                 <!-- Simulation input cards -->
 
-                <div v-for="(input, inputIndex) in localSettings.interactive.uiJson.input" :key="`input_${inputIndex}`" class="card-item">
+                <div v-for="(input, inputIndex) in localSettings.interactive.uiJson.input" :key="itemKey(input)" class="card-item">
                   <div class="card-header">
                     <div class="card-title">
                       <span class="item-index">{{ Number(inputIndex) + 1 }}</span>
@@ -141,7 +157,7 @@
                     <ToolbarButtonWidget class="remove-button"
                       icon="pi pi-trash"
                       small
-                      label="Remove simulation input"
+                      :label="`Remove simulation input ${Number(inputIndex) + 1}`"
                       tooltipAlign="end"
                       @click="removeInput(inputIndex)"
                     />
@@ -151,15 +167,15 @@
 
                     <div class="form-row">
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.id" class="w-full" size="small" />
+                        <InputText v-model="input.id" :aria-label="fieldName('ID', `simulation input ${Number(inputIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'id')" class="w-full" size="small" :invalid="uiJsonFieldInvalid('input', inputIndex, 'id')" />
                         <label>ID</label>
                       </FloatLabel>
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.name" class="w-full" size="small" />
+                        <InputText v-model="input.name" :aria-label="fieldName('Name', `simulation input ${Number(inputIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'name')" class="w-full" size="small" :invalid="uiJsonFieldInvalid('input', inputIndex, 'name')" />
                         <label>Name</label>
                       </FloatLabel>
                       <FloatLabel variant="on" class="form-field">
-                        <Select
+                        <Select :ariaLabel="fieldName('Type', `simulation input ${Number(inputIndex) + 1}`)"
                           :modelValue="locApi.isDiscreteInput(input) ? 'discrete' : 'scalar'"
                           @update:modelValue="(val: string) => toggleInputType(inputIndex, val)"
                           :options="[{label: 'Discrete', value: 'discrete'}, {label: 'Scalar', value: 'scalar'}]"
@@ -174,11 +190,14 @@
                     </div>
                     <div class="form-row">
                       <InputScientificNumberWidget v-model="input.defaultValue" class="form-field"
+                        :invalid="uiJsonFieldInvalid('input', inputIndex, 'defaultValue')"
+                        :aria-label="fieldName('Default value', `simulation input ${Number(inputIndex) + 1}`)"
+                        :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'defaultValue')"
                         label="Default value"
                         size="small"
                       />
                       <FloatLabel variant="on" class="form-field">
-                        <InputText v-model="input.visible" class="w-full" size="small" />
+                        <InputText v-model="input.visible" :aria-label="fieldName('Visible (optional)', `simulation input ${Number(inputIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'visible')" class="w-full" size="small" :invalid="uiJsonFieldInvalid('input', inputIndex, 'visible')" />
                         <label>Visible (optional)</label>
                       </FloatLabel>
                     </div>
@@ -187,14 +206,23 @@
 
                     <div v-if="locApi.isScalarInput(input)" class="form-row">
                       <InputScientificNumberWidget v-model="input.minimumValue" class="form-field"
+                        :invalid="uiJsonFieldInvalid('input', inputIndex, 'minimumValue')"
+                        :aria-label="fieldName('Minimum value', `simulation input ${Number(inputIndex) + 1}`)"
+                        :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'minimumValue')"
                         label="Minimum value"
                         size="small"
                       />
                       <InputScientificNumberWidget v-model="input.maximumValue" class="form-field"
+                        :invalid="uiJsonFieldInvalid('input', inputIndex, 'maximumValue')"
+                        :aria-label="fieldName('Maximum value', `simulation input ${Number(inputIndex) + 1}`)"
+                        :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'maximumValue')"
                         label="Maximum value"
                         size="small"
                       />
                       <InputScientificNumberWidget v-model="input.stepValue" class="form-field"
+                        :invalid="uiJsonFieldInvalid('input', inputIndex, 'stepValue')"
+                        :aria-label="fieldName('Step value (optional)', `simulation input ${Number(inputIndex) + 1}`)"
+                        :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'stepValue')"
                         label="Step value (optional)"
                         :allowEmpty="true"
                         size="small"
@@ -218,20 +246,23 @@
                         <p>No possible values are configured.</p>
                       </div>
                       <div v-else class="entries-list">
-                        <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="`possible_value_${possibleValueIndex}`" class="entry-row">
+                        <div v-for="(possibleValue, possibleValueIndex) in input.possibleValues" :key="itemKey(possibleValue)" class="entry-row">
                           <span class="item-index">{{ Number(possibleValueIndex) + 1 }}</span>
                           <FloatLabel variant="on" class="flex-1">
-                            <InputText v-model="possibleValue.name" class="w-full" size="small" />
+                            <InputText v-model="possibleValue.name" :aria-label="fieldName('Name', `possible value ${Number(possibleValueIndex) + 1}`, `simulation input ${Number(inputIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'possibleValues', possibleValueIndex, 'name')" class="w-full" size="small" :invalid="uiJsonFieldInvalid('input', inputIndex, 'possibleValues', possibleValueIndex, 'name')" />
                             <label>Name</label>
                           </FloatLabel>
                           <InputScientificNumberWidget v-model="possibleValue.value" class="form-field"
+                            :invalid="uiJsonFieldInvalid('input', inputIndex, 'possibleValues', possibleValueIndex, 'value')"
+                            :aria-label="fieldName('Value', `possible value ${Number(possibleValueIndex) + 1}`, `simulation input ${Number(inputIndex) + 1}`)"
+                            :aria-describedby="uiJsonFieldIssuesId('input', inputIndex, 'possibleValues', possibleValueIndex, 'value')"
                             label="Value"
                             size="small"
                           />
                           <ToolbarButtonWidget class="remove-button"
                             icon="pi pi-times"
                             small
-                            label="Remove possible value"
+                            :label="`Remove possible value ${Number(possibleValueIndex) + 1}`"
                             tooltipAlign="end"
                             @click="removePossibleValue(inputIndex, possibleValueIndex)"
                           />
@@ -271,26 +302,28 @@
               <!-- Model parameter entries -->
 
               <div v-else class="entries-list">
-                <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="`param_${parameterIndex}`" class="entry-row">
+                <div v-for="(parameter, parameterIndex) in localSettings.interactive.uiJson.parameters" :key="itemKey(parameter)" class="entry-row">
                   <span class="item-index">{{ Number(parameterIndex) + 1 }}</span>
                   <FloatLabel variant="on" class="flex-1">
-                    <Select v-model="parameter.name"
+                    <Select v-model="parameter.name" :ariaLabel="fieldName('Model parameter', `model parameter ${Number(parameterIndex) + 1}`)"
+                      :invalid="uiJsonFieldInvalid('parameters', parameterIndex, 'name')"
+                      :pt="{ label: { 'aria-describedby': uiJsonFieldIssuesId('parameters', parameterIndex, 'name') } }"
                       class="w-full" panelClass="item-filter"
                       size="small"
                       filter filterMode="lenient"
-                      :options="editableModelParameters"
+                      :options="selectOptions(editableModelParameters, parameter.name)"
                       :appendTo="appendTarget"
                     />
                     <label>Model parameter</label>
                   </FloatLabel>
                   <FloatLabel v-hint.html="parameterValueTooltip()" variant="on" class="flex-1">
-                    <InputText v-model="parameter.value" class="w-full" size="small" />
+                    <InputText v-model="parameter.value" :aria-label="fieldName('Value', `model parameter ${Number(parameterIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId('parameters', parameterIndex, 'value')" class="w-full" size="small" :invalid="uiJsonFieldInvalid('parameters', parameterIndex, 'value')" />
                     <label>Value</label>
                   </FloatLabel>
                   <ToolbarButtonWidget class="remove-button"
                     icon="pi pi-times"
                     small
-                    label="Remove model parameter"
+                    :label="`Remove model parameter ${Number(parameterIndex) + 1}`"
                     tooltipAlign="end"
                     @click="removeParameter(parameterIndex)"
                   />
@@ -326,18 +359,20 @@
               <!-- Simulation data entries -->
 
               <div v-else class="entries-list">
-                <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="`data_${dataIndex}`" class="entry-row">
+                <div v-for="(data, dataIndex) in localSettings.interactive.uiJson.output.data" :key="itemKey(data)" class="entry-row">
                   <span class="item-index">{{ Number(dataIndex) + 1 }}</span>
                   <FloatLabel variant="on" class="flex-1">
-                    <InputText v-model="data.id" class="w-full" size="small" />
+                    <InputText v-model="data.id" :aria-label="fieldName('ID', `simulation data ${Number(dataIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId('output', 'data', dataIndex, 'id')" class="w-full" size="small" :invalid="uiJsonFieldInvalid('output', 'data', dataIndex, 'id')" />
                     <label>ID</label>
                   </FloatLabel>
                   <FloatLabel variant="on" class="flex-1">
-                    <Select v-model="data.name"
+                    <Select v-model="data.name" :ariaLabel="fieldName('Model parameter', `simulation data ${Number(dataIndex) + 1}`)"
+                      :invalid="uiJsonFieldInvalid('output', 'data', dataIndex, 'name')"
+                      :pt="{ label: { 'aria-describedby': uiJsonFieldIssuesId('output', 'data', dataIndex, 'name') } }"
                       class="w-full" panelClass="item-filter"
                       size="small"
                       filter filterMode="lenient"
-                      :options="allModelParameters"
+                      :options="selectOptions(allModelParameters, data.name)"
                       :appendTo="appendTarget"
                     />
                     <label>Model parameter</label>
@@ -345,7 +380,7 @@
                   <ToolbarButtonWidget class="remove-button"
                     icon="pi pi-times"
                     small
-                    label="Remove simulation data"
+                    :label="`Remove simulation data ${Number(dataIndex) + 1}`"
                     tooltipAlign="end"
                     @click="removeSimulationData(dataIndex)"
                   />
@@ -367,7 +402,8 @@
             <!-- Import bar, which accepts CSV files that are dropped on it -->
 
             <div class="external-data-import" :class="{ 'external-data-import-active': externalDataFileDragging }"
-              @dragover.prevent="onExternalDataFileDragOver"
+              @dragenter.prevent="onExternalDataFileDragEnter"
+              @dragover.prevent
               @drop.prevent="onExternalDataFileDrop"
               @dragleave="onExternalDataFileDragLeave"
             >
@@ -388,17 +424,18 @@
               <div class="external-data-import-url">
                 <div class="opencor-section-title opencor-section-title-small">or</div>
                 <FloatLabel variant="on" class="flex-1 min-w-0">
-                  <InputText v-model="externalDataUrl" class="w-full" size="small"
+                  <InputText v-model="externalDataUrl" aria-label="URL of a CSV file" class="w-full" size="small"
                     @keydown.enter="onExternalDataUrlKeydownEnter"
                   />
                   <label>URL of a CSV file</label>
                 </FloatLabel>
                 <Button class="shrink-0"
-                  icon="pi pi-link"
-                  label="Import"
+                  :icon="importingExternalDataFromUrl ? 'pi pi-spinner pi-spin' : 'pi pi-link'"
+                  :label="importingExternalDataFromUrl ? 'Importing...' : 'Import'"
                   outlined
                   size="small"
-                  :disabled="!isExternalDataUrlValid"
+                  :disabled="!isExternalDataUrlValid && !importingExternalDataFromUrl"
+                  :aria-busy="importingExternalDataFromUrl"
                   @click="importExternalDataFromUrl"
                 />
               </div>
@@ -414,7 +451,7 @@
 
                 <!-- External data files -->
 
-                <div v-for="(externalDataFile, externalDataFileIndex) in (localSettings.interactive.uiJson.output.externalData ?? [])" :key="`external_data_file_${externalDataFileIndex}`" class="card-item">
+                <div v-for="(externalDataFile, externalDataFileIndex) in (localSettings.interactive.uiJson.output.externalData ?? [])" :key="itemKey(externalDataFile)" class="card-item">
                   <div class="card-header">
                     <div class="card-title">
                       <span class="item-index">{{ Number(externalDataFileIndex) + 1 }}</span>
@@ -427,12 +464,13 @@
                         label="Add external data"
                         text
                         size="small"
+                        :disabled="!externalDataSeries(externalDataFile).length"
                         @click="addExternalData(externalDataFileIndex)"
                       />
                       <ToolbarButtonWidget class="remove-button"
                         icon="pi pi-trash"
                         small
-                        label="Remove external data file"
+                        :label="`Remove external data file ${Number(externalDataFileIndex) + 1}`"
                         tooltipAlign="end"
                         @click="removeExternalDataFile(externalDataFileIndex)"
                       />
@@ -443,11 +481,11 @@
 
                     <div class="form-row">
                       <FloatLabel v-hint.html="externalDataDescriptionTooltip()" variant="on" class="flex-1">
-                        <InputText v-model="externalDataFile.description" class="w-full" size="small" />
+                        <InputText v-model="externalDataFile.description" :aria-label="fieldName('Description (optional)', `external data file ${Number(externalDataFileIndex) + 1}`)" class="w-full" size="small" />
                         <label>Description (optional)</label>
                       </FloatLabel>
                       <FloatLabel v-hint.html="externalDataVoiExpressionTooltip()" variant="on" class="flex-1">
-                        <InputText v-model="externalDataFile.voiExpression" class="w-full" size="small" />
+                        <InputText v-model="externalDataFile.voiExpression" :aria-label="fieldName('VOI expression (optional)', `external data file ${Number(externalDataFileIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId('output', 'externalData', externalDataFileIndex, 'voiExpression')" class="w-full" size="small" :invalid="uiJsonFieldInvalid('output', 'externalData', externalDataFileIndex, 'voiExpression')" />
                         <label>VOI expression (optional)</label>
                       </FloatLabel>
                     </div>
@@ -455,21 +493,24 @@
                     <!-- External data entries -->
 
                     <div v-if="!externalDataEntries(externalDataFile).length" class="empty-state empty-state-tight">
-                      <p>No external data is configured for this CSV file.</p>
+                      <p v-if="externalDataSeries(externalDataFile).length">No external data is configured for this CSV file.</p>
+                      <p v-else>This CSV file has no data series, so no external data can be configured for it.</p>
                     </div>
                     <div v-else class="entries-list">
-                      <div v-for="(externalData, externalDataIndex) in externalDataEntries(externalDataFile)" :key="`external_data_${externalDataFileIndex}_${externalDataIndex}`" class="entry-row">
+                      <div v-for="(externalData, externalDataIndex) in externalDataEntries(externalDataFile)" :key="itemKey(externalData)" class="entry-row">
                         <span class="item-index">{{ Number(externalDataIndex) + 1 }}</span>
                         <FloatLabel variant="on" class="flex-1">
-                          <InputText v-model="externalData.id" class="w-full" size="small" />
+                          <InputText v-model="externalData.id" :aria-label="fieldName('ID', `external data ${Number(externalDataIndex) + 1}`, `external data file ${Number(externalDataFileIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId('output', 'externalData', externalDataFileIndex, 'data', externalDataIndex, 'id')" class="w-full" size="small" :invalid="uiJsonFieldInvalid('output', 'externalData', externalDataFileIndex, 'data', externalDataIndex, 'id')" />
                           <label>ID</label>
                         </FloatLabel>
                         <FloatLabel variant="on" class="flex-1">
-                          <Select v-model="externalData.name"
+                          <Select v-model="externalData.name" :ariaLabel="fieldName('External data', `external data ${Number(externalDataIndex) + 1}`, `external data file ${Number(externalDataFileIndex) + 1}`)"
+                            :invalid="uiJsonFieldInvalid('output', 'externalData', externalDataFileIndex, 'data', externalDataIndex, 'name')"
+                            :pt="{ label: { 'aria-describedby': uiJsonFieldIssuesId('output', 'externalData', externalDataFileIndex, 'data', externalDataIndex, 'name') } }"
                             class="w-full" panelClass="item-filter"
                             size="small"
                             filter filterMode="lenient"
-                            :options="externalDataSeries(externalDataFile)"
+                            :options="selectOptions(externalDataSeries(externalDataFile), externalData.name)"
                             :appendTo="appendTarget"
                           />
                           <label>External data</label>
@@ -477,7 +518,7 @@
                         <ToolbarButtonWidget class="remove-button"
                           icon="pi pi-times"
                           small
-                          label="Remove external data"
+                          :label="`Remove external data ${Number(externalDataIndex) + 1}`"
                           tooltipAlign="end"
                           @click="removeExternalData(externalDataFileIndex, externalDataIndex)"
                         />
@@ -495,13 +536,14 @@
             <header class="section-header">
               <div class="min-w-0">
                 <h3 class="section-title">Plots</h3>
-                <p class="section-description">Configure the plots and the corresponding traces using the available simulation data.</p>
+                <p class="section-description">Configure up to {{ MAX_PLOTS }} plots and their traces using the available simulation data.</p>
               </div>
               <Button class="shrink-0"
                 icon="pi pi-plus"
                 label="Add plot"
                 outlined
                 size="small"
+                :disabled="localSettings.interactive.uiJson.output.plots.length >= MAX_PLOTS"
                 @click="addPlot"
               />
             </header>
@@ -516,7 +558,7 @@
 
                 <!-- Plot cards -->
 
-                <div v-for="(plot, plotIndex) in localSettings.interactive.uiJson.output.plots" :key="`plot_${plotIndex}`" class="card-item">
+                <div v-for="(plot, plotIndex) in localSettings.interactive.uiJson.output.plots" :key="itemKey(plot)" class="card-item">
                   <div class="card-header">
                     <div class="card-title">
                       <span class="item-index">{{ Number(plotIndex) + 1 }}</span>
@@ -534,7 +576,7 @@
                       <ToolbarButtonWidget class="remove-button"
                         icon="pi pi-trash"
                         small
-                        label="Remove plot"
+                        :label="`Remove plot ${Number(plotIndex) + 1}`"
                         tooltipAlign="end"
                         @click="removePlot(plotIndex)"
                       />
@@ -545,11 +587,11 @@
 
                     <div class="form-row">
                       <FloatLabel variant="on" class="flex-1">
-                        <InputText v-model="plot.xAxisTitle" class="w-full" size="small" />
+                        <InputText v-model="plot.xAxisTitle" :aria-label="fieldName('X axis title (optional)', `plot ${Number(plotIndex) + 1}`)" class="w-full" size="small" />
                         <label>X axis title (optional)</label>
                       </FloatLabel>
                       <FloatLabel variant="on" class="flex-1">
-                        <InputText v-model="plot.yAxisTitle" class="w-full" size="small" />
+                        <InputText v-model="plot.yAxisTitle" :aria-label="fieldName('Y axis title (optional)', `plot ${Number(plotIndex) + 1}`)" class="w-full" size="small" />
                         <label>Y axis title (optional)</label>
                       </FloatLabel>
                     </div>
@@ -558,29 +600,29 @@
 
                     <div class="sub-list">
                       <span class="opencor-section-title opencor-section-title-small">Traces</span>
-                      <div v-for="(trace, traceIndex) in plotTraces(plot)" :key="`trace_${plotIndex}_${traceIndex}`" class="trace-item">
+                      <div v-for="(trace, traceIndex) in plotTraces(plot)" :key="itemKey(trace)" class="trace-item">
                         <div class="trace-header">
                           <span class="item-index">{{ Number(traceIndex) + 1 }}</span>
-                          <span class="trace-name truncate" v-html="traceName(plot, traceIndex - 1)" />
+                          <span class="trace-name truncate" v-html="common.sanitiseHtml(traceName(plot, traceIndex - 1))" />
                           <ToolbarButtonWidget class="remove-button ml-auto"
                             icon="pi pi-times"
                             small
-                            label="Remove trace"
+                            :label="`Remove trace ${Number(traceIndex) + 1}`"
                             tooltipAlign="end"
                             @click="removeTrace(plotIndex, traceIndex - 1)"
                           />
                         </div>
                         <div class="form-row">
                           <FloatLabel v-hint.html="traceNameTooltip()" variant="on" class="flex-1">
-                            <InputText v-model="trace.name" class="w-full" size="small" />
+                            <InputText v-model="trace.name" :aria-label="fieldName('Name (optional)', `trace ${Number(traceIndex) + 1}`, `plot ${Number(plotIndex) + 1}`)" class="w-full" size="small" />
                             <label>Name (optional)</label>
                           </FloatLabel>
                           <FloatLabel v-hint.html="xyValueTooltip(true)" variant="on" class="flex-1">
-                            <InputText v-model="trace.xValue" class="w-full" size="small" />
+                            <InputText v-model="trace.xValue" :aria-label="fieldName('X value', `trace ${Number(traceIndex) + 1}`, `plot ${Number(plotIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId(...tracePath(plotIndex, traceIndex, 'xValue'))" class="w-full" size="small" :invalid="uiJsonFieldInvalid(...tracePath(plotIndex, traceIndex, 'xValue'))" />
                             <label>X value</label>
                           </FloatLabel>
                           <FloatLabel v-hint.html="xyValueTooltip(false)" variant="on" class="flex-1">
-                            <InputText v-model="trace.yValue" class="w-full" size="small" />
+                            <InputText v-model="trace.yValue" :aria-label="fieldName('Y value', `trace ${Number(traceIndex) + 1}`, `plot ${Number(plotIndex) + 1}`)" :aria-describedby="uiJsonFieldIssuesId(...tracePath(plotIndex, traceIndex, 'yValue'))" class="w-full" size="small" :invalid="uiJsonFieldInvalid(...tracePath(plotIndex, traceIndex, 'yValue'))" />
                             <label>Y value</label>
                           </FloatLabel>
                         </div>
@@ -602,10 +644,15 @@
       <template #footer>
         <div class="w-full flex items-center gap-4">
           <Popover ref="issuesPopoverRef" :appendTo="appendTarget"
+            :pt="{ root: { 'aria-label': `${activeSettingsLabel} settings issues` } }"
             @show="issuesPopoverVisible = true"
-            @hide="issuesPopoverVisible = false"
+            @hide="onIssuesPopoverHide"
           >
-            <div class="issues-popover-content">
+            <!--
+            Note: our popover is modal (as far as PrimeVue is concerned), so our issues get the keyboard focus when they
+                  are shown (see the autofocus attribute and onIssuesPopoverHide()).
+            -->
+            <div class="issues-popover-content" tabindex="-1" autofocus>
               <IssuesView :issues="activeIssues" :extraSpace="false" />
             </div>
           </Popover>
@@ -614,7 +661,9 @@
               <i class="pi pi-check-circle"></i>
               <span>{{ activeSettingsLabel }} settings are valid</span>
             </span>
-            <Button v-else outlined severity="warn" size="small"
+            <Button v-else ref="issuesButtonRef" outlined severity="warn" size="small"
+              aria-haspopup="dialog"
+              :aria-expanded="issuesPopoverVisible"
               @click="toggleIssues"
             >
               <i class="pi pi-exclamation-triangle mr-2"></i>
@@ -622,13 +671,22 @@
               <i :class="issuesPopoverVisible ? 'pi pi-arrow-down-left-and-arrow-up-right-to-center ml-2 text-xs!' : 'pi pi-arrow-up-right-and-arrow-down-left-from-center ml-2 text-xs!'"></i>
             </Button>
           </div>
-          <div class="flex gap-2">
+          <DialogButtons>
             <Button autofocus label="OK" @click="onOk" />
             <Button label="Cancel" severity="secondary" @click="onCancel" />
-          </div>
+          </DialogButtons>
         </div>
       </template>
     </BaseDialog>
+    <YesNoQuestionDialog v-model:visible="discardChangesVisible"
+      title="Discard Changes"
+      question="Your changes to the simulation settings will be lost. Do you want to discard them?"
+      severity="danger"
+      yesLabel="Discard"
+      noLabel="Keep Editing"
+      @yes="onDiscardChanges"
+      @no="discardChangesVisible = false"
+    />
   </div>
 </template>
 
@@ -637,18 +695,17 @@ import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
 import * as common from '../../common/common';
-import { TOAST_LIFE } from '../../common/constants';
 import * as externalData from '../../common/externalData';
 import { vHint } from '../../common/hint';
 import * as vueCommon from '../../common/vueCommon';
 import * as locApi from '../../libopencor/locApi';
 import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 import { validateUiJson } from '../../libopencor/locUiJsonApi';
-import { EIssueType } from '../../libopencor/locLoggerApi';
+import { IssueType } from '../../libopencor/locLoggerApi';
 
-import { useOpenCORToast } from '../OpenCORToast';
+import { toastIssueDetail, useOpenCORToast } from '../OpenCORToast';
 
-export interface ISimulationExperimentInteractiveViewSettingsDialog {
+export interface SimulationExperimentInteractiveViewSettings {
   simulation: {
     initialPoint: number;
     startingPoint: number;
@@ -659,12 +716,12 @@ export interface ISimulationExperimentInteractiveViewSettingsDialog {
     cvodeMaximumStep: number;
   };
   interactive: {
-    uiJson: locUiJsonApi.IUiJson;
+    uiJson: locUiJsonApi.UiJson;
   };
 }
 
 const props = defineProps<{
-  settings: ISimulationExperimentInteractiveViewSettingsDialog;
+  settings: SimulationExperimentInteractiveViewSettings;
   voiId: string;
   voiName: string;
   voiUnit: string;
@@ -675,15 +732,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
-  ok: [settings: ISimulationExperimentInteractiveViewSettingsDialog];
+  ok: [settings: SimulationExperimentInteractiveViewSettings];
 }>();
 
 const DEFAULT_TAB = 'interactive';
 const DEFAULT_INTERACTIVE_TAB = 'simulationInputs';
+const MAX_PLOTS = 9;
 
 function deepCloneSettings(
-  settings: ISimulationExperimentInteractiveViewSettingsDialog
-): ISimulationExperimentInteractiveViewSettingsDialog {
+  settings: SimulationExperimentInteractiveViewSettings
+): SimulationExperimentInteractiveViewSettings {
   // Perform a deep clone of our settings.
   // Note: our external data values (i.e. Float64Arrays) are shared rather than copied (see cloneUiJson()), which is
   //       fine since we never modify them in place.
@@ -706,17 +764,99 @@ function deepCloneSettings(
 }
 
 const addToast = useOpenCORToast();
-const localSettings = vue.ref<ISimulationExperimentInteractiveViewSettingsDialog>(deepCloneSettings(props.settings));
-// Note: we need to do a deep copy here to make sure that any changes made to nested objects in our local settings are
-//       not reflected in the original settings while preserving any typed arrays in the UI JSON.
+const localSettings = vue.ref<SimulationExperimentInteractiveViewSettings>(deepCloneSettings(props.settings));
+let originalSettings = deepCloneSettings(props.settings);
+// Note #1: we need to do a deep copy here to make sure that any changes made to nested objects in our local settings
+//          are not reflected in the original settings while preserving any typed arrays in the UI JSON.
+// Note #2: we also keep a (normalised, see deepCloneSettings()) copy of the original settings, so that we can tell
+//          whether our settings have been changed (see settingsChanged()).
 
-vue.watch(
-  () => props.settings,
-  (newSettings) => {
-    localSettings.value = deepCloneSettings(newSettings);
-  },
-  { deep: true }
-);
+const resetLocalSettings = (): void => {
+  localSettings.value = deepCloneSettings(props.settings);
+  originalSettings = deepCloneSettings(props.settings);
+};
+
+vue.watch(() => props.settings, resetLocalSettings, { deep: true });
+
+// Determine whether our settings have been changed, i.e. whether our local settings are different from our original
+// settings.
+// Note #1: a value may have been unset (e.g., the name of a plot, see removeTrace()) rather than removed, so an
+//          undefined value is the same as a missing one.
+// Note #2: our external data values (i.e. Float64Arrays) are shared rather than copied (see deepCloneSettings()), so
+//          they are normally the same objects, but we still compare their values in case they are not.
+
+const sameValues = (value: unknown, otherValue: unknown): boolean => {
+  if (value === otherValue) {
+    return true;
+  }
+
+  if (ArrayBuffer.isView(value) && ArrayBuffer.isView(otherValue)) {
+    const values = value as unknown as ArrayLike<unknown>;
+    const otherValues = otherValue as unknown as ArrayLike<unknown>;
+
+    return values.length === otherValues.length && Array.prototype.every.call(values, (v, i) => v === otherValues[i]);
+  }
+
+  if (Array.isArray(value) && Array.isArray(otherValue)) {
+    return value.length === otherValue.length && value.every((v, i) => sameValues(v, otherValue[i]));
+  }
+
+  if (common.isObject(value) && common.isObject(otherValue)) {
+    const keys = new Set(
+      [...Object.keys(value), ...Object.keys(otherValue)].filter(
+        (key) => value[key] !== undefined || otherValue[key] !== undefined
+      )
+    );
+
+    return [...keys].every((key) => sameValues(value[key], otherValue[key]));
+  }
+
+  return false;
+};
+
+const settingsChanged = (): boolean => {
+  return !sameValues(localSettings.value, originalSettings);
+};
+
+// Ask people whether to discard their changes, if any, when our dialog is about to be dismissed using Escape or its
+// close button (rather than our Cancel button, which is an explicit request to discard them), since those can easily be
+// used by mistake.
+// Note: we get told that our dialog is to be hidden through our owner's update:visible listener (see v-model:visible),
+//       which we therefore don't pass on to our dialog, but call ourselves once our changes can be discarded.
+
+const attrs = vue.useAttrs();
+const dialogAttrs = vue.computed<Record<string, unknown>>(() => {
+  const { 'onUpdate:visible': _onUpdateVisible, ...res } = attrs;
+
+  return res;
+});
+const discardChangesVisible = vue.ref<boolean>(false);
+
+const updateVisible = (visible: boolean): void => {
+  const listeners = attrs['onUpdate:visible'];
+
+  for (const listener of Array.isArray(listeners) ? listeners : [listeners]) {
+    if (typeof listener === 'function') {
+      listener(visible);
+    }
+  }
+};
+
+const onUpdateVisible = (visible: boolean): void => {
+  if (!visible && settingsChanged()) {
+    discardChangesVisible.value = true;
+
+    return;
+  }
+
+  updateVisible(visible);
+};
+
+const onDiscardChanges = (): void => {
+  discardChangesVisible.value = false;
+
+  updateVisible(false);
+};
 
 const issuesPopoverRef = vue.ref<InstanceType<typeof Popover> | null>(null);
 const rootRef = vue.shallowRef<HTMLElement | null>(null);
@@ -744,13 +884,32 @@ const isExternalDataUrlValid = vue.computed<boolean>(() => {
   }
 });
 
-const externalDataSeries = (externalData: locApi.IUiJsonOutputExternalData): string[] => {
+const externalDataSeries = (externalData: locApi.UiJsonOutputExternalData): string[] => {
   return externalData.dataSeries.map((dataSerie) => {
     return dataSerie.name;
   });
 };
 
-const externalDataEntries = (externalData: locApi.IUiJsonOutputExternalData): locApi.IUiJsonOutputData[] => {
+// A stable key for an item of one of our lists (rather than its index), so that removing an item doesn't result in Vue
+// reusing the elements (and their state, e.g., a value being edited) of the items that follow it for other items.
+
+const itemKeys = new WeakMap<object, number>();
+let nextItemKey = 0;
+
+const itemKey = (item: object): number => {
+  const rawItem = vue.toRaw(item);
+  let res = itemKeys.get(rawItem);
+
+  if (res === undefined) {
+    res = nextItemKey++;
+
+    itemKeys.set(rawItem, res);
+  }
+
+  return res;
+};
+
+const externalDataEntries = (externalData: locApi.UiJsonOutputExternalData): locApi.UiJsonOutputData[] => {
   return externalData.data;
 };
 
@@ -771,7 +930,7 @@ const numberOfDataPoints = vue.computed<string>(() => {
 
   const { startingPoint, endingPoint, pointInterval } = localSettings.value.simulation;
   const points = Math.max(1, Math.round((endingPoint - startingPoint) / pointInterval)) + 1;
-  const res = points.toLocaleString();
+  const res = common.formatCount(points);
 
   if (!common.isDivisible(endingPoint - startingPoint, pointInterval)) {
     return `~${res}`;
@@ -779,120 +938,99 @@ const numberOfDataPoints = vue.computed<string>(() => {
 
   return res;
 });
-const simulationSettingsIssues = vue.computed<locApi.IIssue[]>(() => {
-  // Validate our simulation settings and return any issues.
+// The issues with our simulation settings, by field, so that a field with issues can be shown as invalid.
 
-  const res: locApi.IIssue[] = [];
+type SimulationField = 'initialPoint' | 'startingPoint' | 'endingPoint' | 'pointInterval';
 
-  if (localSettings.value.simulation.initialPoint == null) {
-    res.push({
-      type: EIssueType.WARNING,
-      description: 'The initial point must be specified.'
-    });
+const simulationFieldIssues = vue.computed<Record<SimulationField, string[]>>(() => {
+  const res: Record<SimulationField, string[]> = {
+    initialPoint: [],
+    startingPoint: [],
+    endingPoint: [],
+    pointInterval: []
+  };
+  const { initialPoint, startingPoint, endingPoint, pointInterval } = localSettings.value.simulation;
+
+  if (initialPoint == null) {
+    res.initialPoint.push('The initial point must be specified.');
   }
 
-  if (localSettings.value.simulation.startingPoint == null) {
-    res.push({
-      type: EIssueType.WARNING,
-      description: 'The starting point must be specified.'
-    });
+  if (startingPoint == null) {
+    res.startingPoint.push('The starting point must be specified.');
   }
 
-  if (localSettings.value.simulation.endingPoint == null) {
-    res.push({
-      type: EIssueType.WARNING,
-      description: 'The ending point must be specified.'
-    });
+  if (endingPoint == null) {
+    res.endingPoint.push('The ending point must be specified.');
   }
 
-  if (
-    localSettings.value.simulation.initialPoint !== null &&
-    localSettings.value.simulation.startingPoint !== null &&
-    localSettings.value.simulation.startingPoint < localSettings.value.simulation.initialPoint
-  ) {
-    res.push({
-      type: EIssueType.WARNING,
-      description: 'The starting point must be greater or equal to the initial point.'
-    });
+  if (initialPoint !== null && startingPoint !== null && startingPoint < initialPoint) {
+    res.startingPoint.push('The starting point must be greater than or equal to the initial point.');
   }
 
-  if (
-    localSettings.value.simulation.startingPoint !== null &&
-    localSettings.value.simulation.endingPoint !== null &&
-    localSettings.value.simulation.endingPoint <= localSettings.value.simulation.startingPoint
-  ) {
-    res.push({
-      type: EIssueType.WARNING,
-      description: 'The ending point must be greater than the starting point.'
-    });
+  if (startingPoint !== null && endingPoint !== null && endingPoint <= startingPoint) {
+    res.endingPoint.push('The ending point must be greater than the starting point.');
   }
 
-  if (localSettings.value.simulation.pointInterval == null) {
-    res.push({
-      type: EIssueType.WARNING,
-      description: 'The point interval must be specified.'
-    });
+  if (pointInterval == null) {
+    res.pointInterval.push('The point interval must be specified.');
   }
 
   // Note: a point interval that cannot be saved as a number of steps (e.g., if it is too small) gets saved as zero
   //       steps (see onSettingsOk() in SimulationExperimentInteractiveView.vue), which gives an infinite (or NaN) point
   //       interval when reopened.
 
-  if (
-    localSettings.value.simulation.pointInterval !== null &&
-    !Number.isFinite(localSettings.value.simulation.pointInterval)
-  ) {
-    res.push({
-      type: EIssueType.WARNING,
-      description: 'The point interval must be a finite number.'
-    });
+  if (pointInterval !== null && !Number.isFinite(pointInterval)) {
+    res.pointInterval.push('The point interval must be a finite number.');
   }
 
-  if (localSettings.value.simulation.pointInterval !== null && localSettings.value.simulation.pointInterval <= 0) {
-    res.push({
-      type: EIssueType.WARNING,
-      description: 'The point interval must be a positive number.'
-    });
+  if (pointInterval !== null && pointInterval <= 0) {
+    res.pointInterval.push('The point interval must be a positive number.');
   }
 
   // Make sure that our number of steps can be handled by libOpenCOR, i.e. that our point interval is not too small.
   // Note: we only check this if our other simulation settings are valid.
 
-  if (res.length === 0) {
-    const { startingPoint, endingPoint, pointInterval } = localSettings.value.simulation;
-
+  if (Object.values(res).every((issues: string[]) => !issues.length)) {
     if (!(Math.round((endingPoint - startingPoint) / pointInterval) <= locApi.MAXIMUM_NUMBER_OF_STEPS)) {
-      res.push({
-        type: EIssueType.WARNING,
-        description: `The point interval is too small (the number of steps must not exceed ${locApi.MAXIMUM_NUMBER_OF_STEPS.toLocaleString()}).`
-      });
+      res.pointInterval.push(
+        `The point interval is too small (the number of steps must not exceed ${common.formatCount(locApi.MAXIMUM_NUMBER_OF_STEPS)}).`
+      );
     }
   }
 
   return res;
 });
-const solversSettingsIssues = vue.computed<locApi.IIssue[]>(() => {
+
+const simulationSettingsIssues = vue.computed<locApi.Issue[]>(() => {
+  // Our simulation settings issues, in the order in which our fields are shown.
+
+  return (['initialPoint', 'startingPoint', 'endingPoint', 'pointInterval'] as SimulationField[]).flatMap(
+    (field: SimulationField) =>
+      simulationFieldIssues.value[field].map((description: string) => ({ type: IssueType.WARNING, description }))
+  );
+});
+const solversSettingsIssues = vue.computed<locApi.Issue[]>(() => {
   // Validate our solvers settings and return any issues.
 
-  const res: locApi.IIssue[] = [];
+  const res: locApi.Issue[] = [];
 
   if (localSettings.value.solvers.cvodeMaximumStep === null) {
     res.push({
-      type: EIssueType.WARNING,
+      type: IssueType.WARNING,
       description: "CVODE's maximum step must be specified."
     });
   }
 
   if (localSettings.value.solvers.cvodeMaximumStep !== null && localSettings.value.solvers.cvodeMaximumStep < 0) {
     res.push({
-      type: EIssueType.WARNING,
+      type: IssueType.WARNING,
       description: "CVODE's maximum step must be a non-negative number."
     });
   }
 
   return res;
 });
-const uiJsonIssues = vue.computed<locApi.IIssue[]>(() => {
+const uiJsonIssues = vue.computed<locApi.UiJsonIssue[]>(() => {
   // Validate our local UI JSON and return any issues.
 
   return validateUiJson(localSettings.value.interactive.uiJson, {
@@ -901,10 +1039,60 @@ const uiJsonIssues = vue.computed<locApi.IIssue[]>(() => {
   });
 });
 
+// The fields of our UI JSON that have issues, i.e. the fields of the values that our UI JSON issues are about (see
+// locUiJsonApi.ts), as well as the interactive sections that have issues.
+// Note: an issue may be about a value that has no field (e.g., an input's possible values that are required by a
+//       discrete input while the input is a scalar one), in which case only its section is shown as having issues.
+//       Similarly, an issue may be about no value (e.g., if no UI JSON was provided) or about a value that is not in
+//       any of our sections, in which case only the group of interactive sections is shown as having issues.
+
+const uiJsonInvalidPathKeys = vue.computed<Set<string>>(() => {
+  return new Set(uiJsonIssues.value.flatMap((issue: locApi.UiJsonIssue) => issue.paths.map(locApi.uiJsonPathKey)));
+});
+
+const uiJsonFieldInvalid = (...path: locApi.UiJsonPath): boolean => {
+  return uiJsonInvalidPathKeys.value.has(locApi.uiJsonPathKey(path));
+};
+
+const tracePath = (plotIndex: number, traceIndex: number, key: string): locApi.UiJsonPath => {
+  // The path of the given value of the given trace of the given plot, i.e. of the plot itself for its main trace (i.e.
+  // its first trace) or of one of its additional traces (see plotTraces()).
+
+  return traceIndex
+    ? ['output', 'plots', plotIndex, 'additionalTraces', traceIndex - 1, key]
+    : ['output', 'plots', plotIndex, key];
+};
+
+const OUTPUT_INTERACTIVE_TABS: Record<string, string> = {
+  data: 'simulationData',
+  externalData: 'externalData',
+  plots: 'plots'
+};
+
+const uiJsonInteractiveTab = (path: locApi.UiJsonPath): string | undefined => {
+  if (path[0] === 'input') {
+    return 'simulationInputs';
+  }
+
+  if (path[0] === 'parameters') {
+    return 'modelParameters';
+  }
+
+  return path[0] === 'output' && typeof path[1] === 'string' ? OUTPUT_INTERACTIVE_TABS[path[1]] : undefined;
+};
+
+const uiJsonInteractiveTabsWithIssues = vue.computed<Set<string | undefined>>(() => {
+  return new Set(
+    uiJsonIssues.value.flatMap((issue: locApi.UiJsonIssue) =>
+      issue.paths.length ? issue.paths.map(uiJsonInteractiveTab) : [undefined]
+    )
+  );
+});
+
 // The issues of the active section, i.e. of our simulation, solvers, or interactive settings, along with a label for
 // them.
 
-const activeIssues = vue.computed<locApi.IIssue[]>(() => {
+const activeIssues = vue.computed<locApi.Issue[]>(() => {
   if (activeTab.value === 'simulation') {
     return simulationSettingsIssues.value;
   }
@@ -917,8 +1105,73 @@ const activeIssues = vue.computed<locApi.IIssue[]>(() => {
 });
 
 const activeSettingsLabel = vue.computed<string>(() => {
-  return activeTab.value === 'simulation' ? 'Simulation' : activeTab.value === 'solvers' ? 'Solvers' : 'Interactive';
+  return activeTab.value === 'simulation' ? 'Simulation' : activeTab.value === 'solvers' ? 'Solver' : 'Interactive';
 });
+
+// The issues of our fields, so that a field that has issues can be described by them for assistive technologies (see
+// the visually hidden issues in our template), i.e. our simulation fields (see simulationFieldIssues) and the fields of
+// our UI JSON (see uiJsonInvalidPathKeys).
+
+interface FieldIssues {
+  id: string;
+  key: string;
+  text: string;
+}
+
+const fieldIssuesIdPrefix = `simulation-settings-field-issues-${vue.useId()}`;
+
+const fieldIssues = vue.computed<FieldIssues[]>(() => {
+  const texts = new Map<string, string[]>();
+
+  const addText = (key: string, text: string): void => {
+    const keyTexts = texts.get(key);
+
+    if (keyTexts) {
+      keyTexts.push(text);
+    } else {
+      texts.set(key, [text]);
+    }
+  };
+
+  for (const [field, issues] of Object.entries(simulationFieldIssues.value)) {
+    for (const issue of issues) {
+      addText(`simulation/${field}`, issue);
+    }
+  }
+
+  for (const issue of uiJsonIssues.value) {
+    const text = common.formatMessage(issue.description.replace(/^UI JSON: /, ''));
+
+    for (const path of issue.paths) {
+      addText(`uiJson/${locApi.uiJsonPathKey(path)}`, text);
+    }
+  }
+
+  return [...texts].map(([key, keyTexts], index) => ({
+    id: `${fieldIssuesIdPrefix}-${index}`,
+    key,
+    text: keyTexts.join(' ')
+  }));
+});
+
+const fieldIssuesIds = vue.computed<Map<string, string>>(() => {
+  return new Map(fieldIssues.value.map((issues) => [issues.key, issues.id]));
+});
+
+const simulationFieldIssuesId = (field: SimulationField): string | undefined => {
+  return fieldIssuesIds.value.get(`simulation/${field}`);
+};
+
+const uiJsonFieldIssuesId = (...path: locApi.UiJsonPath): string | undefined => {
+  return fieldIssuesIds.value.get(`uiJson/${locApi.uiJsonPathKey(path)}`);
+};
+
+// The accessible name of a field, i.e. its label followed by what it is about (e.g., "ID, simulation input 2"), since
+// several fields have the same label (e.g., the ID of each simulation input).
+
+const fieldName = (label: string, ...about: string[]): string => {
+  return `${label}, ${about.join(' of ')}`;
+};
 
 // Hide the issues popover if there are no longer any issues to show (since its toggle button is then hidden).
 
@@ -931,12 +1184,16 @@ vue.watch(
   }
 );
 
+// Note: the label of a float label is not associated with its field (it has no for attribute and doesn't contain its
+//       field), so each of our text fields and selects is given an accessible name that matches its label.
+
 // Our navigation, which groups our sections and lets people know about the number of items in a section and whether a
 // section (or group of sections) has issues.
-// Note: our interactive settings are validated as a whole, so we can only let people know that the group of interactive
-//       sections has issues, not which section(s) in particular.
+// Note: our interactive settings are validated as a whole, but we can still tell which interactive section(s) have
+//       issues, unless an issue is not about any of them (see uiJsonInteractiveTabsWithIssues), in which case we let
+//       people know that the group of interactive sections has issues.
 
-interface INavItem {
+interface NavItem {
   tab: string;
   interactiveTab?: string;
   label: string;
@@ -945,13 +1202,13 @@ interface INavItem {
   hasIssues?: boolean;
 }
 
-interface INavGroup {
+interface NavGroup {
   label: string;
   hasIssues: boolean;
-  items: INavItem[];
+  items: NavItem[];
 }
 
-const navGroups = vue.computed<INavGroup[]>(() => {
+const navGroups = vue.computed<NavGroup[]>(() => {
   const uiJson = localSettings.value.interactive.uiJson;
 
   return [
@@ -975,11 +1232,12 @@ const navGroups = vue.computed<INavGroup[]>(() => {
     },
     {
       label: 'Interactive',
-      hasIssues: uiJsonIssues.value.length > 0,
+      hasIssues: uiJsonInteractiveTabsWithIssues.value.has(undefined),
       items: [
         {
           tab: 'interactive',
           interactiveTab: 'simulationInputs',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('simulationInputs'),
           label: 'Simulation inputs',
           icon: 'pi pi-sign-in',
           count: uiJson.input.length
@@ -987,6 +1245,7 @@ const navGroups = vue.computed<INavGroup[]>(() => {
         {
           tab: 'interactive',
           interactiveTab: 'modelParameters',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('modelParameters'),
           label: 'Model parameters',
           icon: 'pi pi-list',
           count: uiJson.parameters.length
@@ -994,6 +1253,7 @@ const navGroups = vue.computed<INavGroup[]>(() => {
         {
           tab: 'interactive',
           interactiveTab: 'simulationData',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('simulationData'),
           label: 'Simulation data',
           icon: 'pi pi-database',
           count: uiJson.output.data.length
@@ -1001,6 +1261,7 @@ const navGroups = vue.computed<INavGroup[]>(() => {
         {
           tab: 'interactive',
           interactiveTab: 'externalData',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('externalData'),
           label: 'External data',
           icon: 'pi pi-download',
           count: externalDataCount.value
@@ -1008,6 +1269,7 @@ const navGroups = vue.computed<INavGroup[]>(() => {
         {
           tab: 'interactive',
           interactiveTab: 'plots',
+          hasIssues: uiJsonInteractiveTabsWithIssues.value.has('plots'),
           label: 'Plots',
           icon: 'pi pi-chart-line',
           count: uiJson.output.plots.length
@@ -1017,14 +1279,14 @@ const navGroups = vue.computed<INavGroup[]>(() => {
   ];
 });
 
-const isActiveSection = (navItem: INavItem): boolean => {
+const isActiveSection = (navItem: NavItem): boolean => {
   return (
     navItem.tab === activeTab.value &&
     (navItem.interactiveTab === undefined || navItem.interactiveTab === activeInteractiveTab.value)
   );
 };
 
-const selectSection = (navItem: INavItem): void => {
+const selectSection = (navItem: NavItem): void => {
   // Hide the issues popover since it may be about the issues of another section.
 
   issuesPopoverRef.value?.hide();
@@ -1036,11 +1298,11 @@ const selectSection = (navItem: INavItem): void => {
   }
 };
 
-const plotTraceCount = (plot: locApi.IUiJsonOutputPlot): number => {
+const plotTraceCount = (plot: locApi.UiJsonOutputPlot): number => {
   return 1 + (plot.additionalTraces?.length ?? 0);
 };
 
-const plotTraces = (plot: locApi.IUiJsonOutputPlot): locApi.IUiJsonOutputPlotAdditionalTrace[] => {
+const plotTraces = (plot: locApi.UiJsonOutputPlot): locApi.UiJsonOutputPlotAdditionalTrace[] => {
   // The traces of a plot, i.e. its main trace (i.e. the plot itself) followed by its additional traces, if any.
 
   return [plot, ...(plot.additionalTraces ?? [])];
@@ -1088,28 +1350,73 @@ const parameterValueTooltip = (): string => {
   return xyParameterValueTooltip('model parameter', 'model input', 'model_input');
 };
 
-const traceName = (plot: locApi.IUiJsonOutputPlot, traceIndex: number): string => {
-  const actualTraceName = (
-    name: string | undefined,
-    xValue: string | undefined,
-    yValue: string | undefined
-  ): string => {
-    return name || (xValue && yValue ? `${yValue} <i>vs.</i> ${xValue}` : '???');
-  };
+const traceName = (plot: locApi.UiJsonOutputPlot, traceIndex: number): string => {
+  const trace = traceIndex === -1 ? plot : plot.additionalTraces?.[traceIndex];
 
-  if (traceIndex === -1) {
-    return actualTraceName(plot.name, plot.xValue, plot.yValue);
+  return vueCommon.traceName(trace?.name, trace?.xValue, trace?.yValue);
+};
+
+// The first of the given options that isn't already used, so that a new item is valid straightaway (e.g., a new model
+// parameter is one of the model's parameters, rather than a placeholder), or the first option if they are all used, or
+// an empty string if there is no option (in which case the new item is invalid, and its issue says why).
+
+const firstUnusedOption = (options: string[], usedOptions: string[]): string => {
+  const usedOptionsSet = new Set(usedOptions);
+
+  return options.find((option) => !usedOptionsSet.has(option)) ?? options[0] ?? '';
+};
+
+// The options of a select, including its current value if it isn't one of them (e.g., because of a typo in a UI JSON
+// file), so that it is shown (and shown as invalid, see uiJsonFieldInvalid()) rather than leave the select blank.
+
+const selectOptions = (options: string[], value: string | undefined): string[] => {
+  return value && !options.includes(value) ? [value, ...options] : options;
+};
+
+// The X and Y values of a new trace, i.e. the VOI (or, if it is not available as simulation data, the first simulation
+// data) for its X value, and the first other simulation data that isn't already used by the given Y values for its Y
+// value, so that a new trace plots something straightaway.
+
+const newTraceValues = (usedYValues: string[]): { xValue: string; yValue: string } => {
+  const ids = localSettings.value.interactive.uiJson.output.data.map((data) => data.id).filter(Boolean);
+  const xValue = ids.includes(props.voiId) ? props.voiId : (ids[0] ?? props.voiId);
+
+  return {
+    xValue,
+    yValue:
+      firstUnusedOption(
+        ids.filter((id) => id !== xValue),
+        usedYValues
+      ) || xValue
+  };
+};
+
+// A unique id for a new simulation input or simulation data, i.e. the given prefix followed by the first number (from
+// the number of items that there will be) that isn't already used by an id of our UI JSON, so that adding an item
+// (e.g., after having removed another one) doesn't result in a duplicate id.
+
+const uniqueIdNumber = (prefix: string, itemCount: number): number => {
+  const uiJson = localSettings.value.interactive.uiJson;
+  const ids = new Set<string>([
+    ...uiJson.input.map((input) => input.id),
+    ...uiJson.output.data.map((data) => data.id),
+    ...(uiJson.output.externalData ?? []).flatMap((externalData) => externalData.data.map((data) => data.id))
+  ]);
+  let res = itemCount + 1;
+
+  while (ids.has(`${prefix}_${res}`)) {
+    ++res;
   }
 
-  const additionalTrace = plot.additionalTraces?.[traceIndex];
-
-  return actualTraceName(additionalTrace?.name, additionalTrace?.xValue, additionalTrace?.yValue);
+  return res;
 };
 
 const addInput = () => {
+  const inputNumber = uniqueIdNumber('model_input', localSettings.value.interactive.uiJson.input.length);
+
   localSettings.value.interactive.uiJson.input.push({
-    id: `model_input_${localSettings.value.interactive.uiJson.input.length + 1}`,
-    name: `Model input #${localSettings.value.interactive.uiJson.input.length + 1}`,
+    id: `model_input_${inputNumber}`,
+    name: `Model input #${inputNumber}`,
     defaultValue: 0,
     minimumValue: 0,
     maximumValue: 10
@@ -1177,13 +1484,19 @@ const removePossibleValue = (inputIndex: number, possibleValueIndex: number) => 
 };
 
 const addSimulationData = () => {
-  localSettings.value.interactive.uiJson.output.data.push({
-    id: `simulation_data`,
-    name: 'component/variable'
+  const outputData = localSettings.value.interactive.uiJson.output.data;
+  const dataNumber = uniqueIdNumber('simulation_data', outputData.length);
+
+  outputData.push({
+    id: `simulation_data_${dataNumber}`,
+    name: firstUnusedOption(
+      props.allModelParameters,
+      outputData.map((data) => data.name)
+    )
   });
 };
 
-const externalDataDescription = (externalData: locApi.IUiJsonOutputExternalData, externalDataIndex: number): string => {
+const externalDataDescription = (externalData: locApi.UiJsonOutputExternalData, externalDataIndex: number): string => {
   return externalData.description?.trim() || `External data #${externalDataIndex + 1}`;
 };
 
@@ -1199,8 +1512,8 @@ const sourceDescription = (source: string): string => {
   }
 };
 
-const createExternalDataFromCsv = (source: string, externalCsvData: externalData.IExternalCsvData): void => {
-  const dataSeries: locApi.IUiJsonOutputExternalDataSeries[] = [];
+const createExternalDataFromCsv = (source: string, externalCsvData: externalData.ExternalCsvData): void => {
+  const dataSeries: locApi.UiJsonOutputExternalDataSeries[] = [];
 
   for (let columnIndex = 1; columnIndex < externalCsvData.headers.length; ++columnIndex) {
     const header = externalCsvData.headers[columnIndex];
@@ -1221,7 +1534,7 @@ const createExternalDataFromCsv = (source: string, externalCsvData: externalData
     dataSeries,
     description: sourceDescription(source),
     voiExpression: 'voi',
-    voiValues: new Float64Array(externalCsvData.columns[0])
+    voiValues: new Float64Array(externalCsvData.columns[0] as number[])
   });
 };
 
@@ -1230,17 +1543,18 @@ const importExternalDataFromFiles = async (files: File[]): Promise<void> => {
     return;
   }
 
-  try {
-    for (const file of files) {
+  // Note: a file that cannot be imported doesn't prevent the other files from being imported.
+
+  for (const file of files) {
+    try {
       createExternalDataFromCsv(file.name, externalData.parseExternalCsvData(await file.text()));
+    } catch (error: unknown) {
+      addToast({
+        severity: 'error',
+        summary: 'Cannot Import External Data',
+        detail: toastIssueDetail(file.name, common.formatMessage(common.formatError(error)))
+      });
     }
-  } catch (error: unknown) {
-    addToast({
-      severity: 'error',
-      summary: 'External data',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
-    });
   }
 };
 
@@ -1256,18 +1570,32 @@ const onExternalDataFileInputChange = async (event: Event): Promise<void> => {
   input.value = '';
 };
 
-const onExternalDataFileDragOver = (): void => {
+// Note: a dragleave event is also fired when the pointer moves from our drop zone to one of its children (or vice
+//       versa), so we count the elements of our drop zone that the pointer has entered (a dragenter event being fired
+//       on the element that the pointer enters before the dragleave event on the element that it leaves), so that our
+//       drop zone doesn't flicker.
+
+let externalDataFileDragDepth = 0;
+
+const onExternalDataFileDragEnter = (): void => {
+  ++externalDataFileDragDepth;
+
   externalDataFileDragging.value = true;
 };
 
 const onExternalDataFileDrop = async (event: DragEvent): Promise<void> => {
+  externalDataFileDragDepth = 0;
   externalDataFileDragging.value = false;
 
   await importExternalDataFromFiles(event.dataTransfer?.files ? Array.from(event.dataTransfer.files) : []);
 };
 
 const onExternalDataFileDragLeave = (): void => {
-  externalDataFileDragging.value = false;
+  externalDataFileDragDepth = Math.max(externalDataFileDragDepth - 1, 0);
+
+  if (!externalDataFileDragDepth) {
+    externalDataFileDragging.value = false;
+  }
 };
 
 // Import some external data from our URL when Enter is pressed (rather than accept our settings, see onKeydownEnter()),
@@ -1287,40 +1615,63 @@ const onExternalDataUrlKeydownEnter = (event: KeyboardEvent): void => {
 };
 
 // Import some external data from our URL.
-// Note: we may be asked to import some external data from our URL while we are already doing so (e.g., if Enter is
-//       pressed twice in a row, kept pressed, or if our Import button is double clicked), in which case we ignore the
-//       request since we would otherwise import the same external data several times.
+// Note #1: we may be asked to import some external data from our URL while we are already doing so (e.g., if Enter is
+//          pressed twice in a row, kept pressed, or if our Import button is double clicked), in which case we ignore
+//          the request since we would otherwise import the same external data several times.
+// Note #2: our import gets cancelled if our dialog gets hidden (or we get unmounted) in the meantime (see
+//          cancelExternalDataUrlImport()), in which case we ignore its outcome since it is not wanted anymore.
+// Note #3: our Import button lets people know that we are importing some external data, but it doesn't get disabled
+//          since it would otherwise lose the keyboard focus (e.g., if it was pressed using the keyboard).
 
-let importingExternalDataFromUrl = false;
+const importingExternalDataFromUrl = vue.ref<boolean>(false);
+let externalDataUrlImportAbortController: AbortController | null = null;
+
+const cancelExternalDataUrlImport = (): void => {
+  externalDataUrlImportAbortController?.abort();
+
+  externalDataUrlImportAbortController = null;
+  importingExternalDataFromUrl.value = false;
+};
 
 const importExternalDataFromUrl = async (): Promise<void> => {
-  if (importingExternalDataFromUrl) {
+  if (importingExternalDataFromUrl.value) {
     return;
   }
 
-  importingExternalDataFromUrl = true;
-
+  const abortController = new AbortController();
   const url = externalDataUrl.value.trim();
 
-  try {
-    const response = await common.fetchThroughCorsProxy(url);
+  externalDataUrlImportAbortController = abortController;
+  importingExternalDataFromUrl.value = true;
 
-    if (!response.ok) {
-      throw new Error(`Could not retrieve CSV file from URL (${response.status}: ${response.statusText}).`);
+  try {
+    // Note: common.fetchThroughCorsProxy() only returns an OK response, i.e. it throws otherwise.
+
+    const response = await common.fetchThroughCorsProxy(url, 'csv', abortController.signal);
+    const csv = await response.text();
+
+    if (abortController.signal.aborted) {
+      return;
     }
 
-    createExternalDataFromCsv(url, externalData.parseExternalCsvData(await response.text()));
+    createExternalDataFromCsv(url, externalData.parseExternalCsvData(csv));
 
     externalDataUrl.value = '';
   } catch (error: unknown) {
+    if (abortController.signal.aborted) {
+      return;
+    }
+
     addToast({
       severity: 'error',
-      summary: 'External data',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      summary: 'Cannot Import External Data',
+      detail: toastIssueDetail(url, common.formatMessage(common.formatError(error)))
     });
   } finally {
-    importingExternalDataFromUrl = false;
+    if (externalDataUrlImportAbortController === abortController) {
+      externalDataUrlImportAbortController = null;
+      importingExternalDataFromUrl.value = false;
+    }
   }
 };
 
@@ -1331,15 +1682,18 @@ const addExternalData = (externalDataIndex: number): void => {
     return;
   }
 
-  const firstOption = externalDataSeries(externalData)[0];
+  const dataSeries = externalDataSeries(externalData);
 
-  if (!firstOption) {
+  if (!dataSeries.length) {
     return;
   }
 
   externalData.data.push({
-    id: '',
-    name: firstOption
+    id: `external_data_${uniqueIdNumber('external_data', externalDataCount.value)}`,
+    name: firstUnusedOption(
+      dataSeries,
+      externalData.data.map((data) => data.name)
+    )
   });
 };
 
@@ -1372,13 +1726,14 @@ const removeSimulationData = (index: number) => {
 };
 
 const addPlot = () => {
-  if (localSettings.value.interactive.uiJson.output.plots.length < 9) {
-    localSettings.value.interactive.uiJson.output.plots.push({
+  const plots = localSettings.value.interactive.uiJson.output.plots;
+
+  if (plots.length < MAX_PLOTS) {
+    plots.push({
       name: '',
       xAxisTitle: '',
-      xValue: props.voiId,
       yAxisTitle: '',
-      yValue: 'y_id',
+      ...newTraceValues(plots.map((plot) => plot.yValue)),
       additionalTraces: []
     });
   }
@@ -1396,10 +1751,7 @@ const addTrace = (plotIndex: number) => {
       plot.additionalTraces = [];
     }
 
-    plot.additionalTraces.push({
-      xValue: props.voiId,
-      yValue: 'y_id'
-    });
+    plot.additionalTraces.push(newTraceValues(plotTraces(plot).map((trace) => trace.yValue)));
   }
 };
 
@@ -1415,15 +1767,17 @@ const removeTrace = (plotIndex: number, traceIndex: number) => {
     // additional traces, just clear the main trace.
 
     if (plot.additionalTraces && plot.additionalTraces.length > 0) {
-      const firstAdditionalTrace = plot.additionalTraces.shift() as locApi.IUiJsonOutputPlot;
+      const firstAdditionalTrace = plot.additionalTraces.shift() as locApi.UiJsonOutputPlot;
 
       plot.name = firstAdditionalTrace.name || undefined;
       plot.xValue = firstAdditionalTrace.xValue;
       plot.yValue = firstAdditionalTrace.yValue;
     } else {
+      const { xValue, yValue } = newTraceValues([]);
+
       plot.name = undefined;
-      plot.xValue = props.voiId;
-      plot.yValue = 'y_id';
+      plot.xValue = xValue;
+      plot.yValue = yValue;
     }
 
     return;
@@ -1434,10 +1788,21 @@ const removeTrace = (plotIndex: number, traceIndex: number) => {
   }
 };
 
+// Note: a model parameter is normally set to the value of a simulation input, so a new model parameter is set to the
+//       first simulation input that isn't already used as is by a model parameter.
+
 const addParameter = () => {
-  localSettings.value.interactive.uiJson.parameters.push({
-    name: 'component/variable',
-    value: 'input_id'
+  const uiJson = localSettings.value.interactive.uiJson;
+
+  uiJson.parameters.push({
+    name: firstUnusedOption(
+      props.editableModelParameters,
+      uiJson.parameters.map((parameter) => parameter.name)
+    ),
+    value: firstUnusedOption(
+      uiJson.input.map((input) => input.id).filter(Boolean),
+      uiJson.parameters.map((parameter) => parameter.value)
+    )
   });
 };
 
@@ -1500,26 +1865,54 @@ const onOk = () => {
 };
 
 const onCancel = () => {
-  // Reset our local settings to the original settings and close the dialog.
-  // Note: we need to do a deep copy here to make sure that any changes made to nested objects in our local settings are
-  //       not reflected in the original settings while preserving any typed arrays in the UI JSON.
+  emit('close');
+};
 
-  localSettings.value = deepCloneSettings(props.settings);
+const onHidden = () => {
+  // Reset our local settings to the original settings, be it because our settings have been accepted (in which case the
+  // original settings are our updated settings) or dismissed (in which case any changes are discarded).
+
+  resetLocalSettings();
+
+  // Cancel the import of some external data from our URL, if any, and clear our URL, so that neither ends up in our
+  // next session.
+
+  cancelExternalDataUrlImport();
+
+  externalDataUrl.value = '';
 
   // Reset our UX settings.
 
   resetUxSettings();
-
-  // Close the dialog.
-
-  emit('close');
 };
+
+vue.onBeforeUnmount(() => {
+  cancelExternalDataUrlImport();
+});
 
 const toggleIssues = (event: Event) => {
   // Note: whether our issues popover is visible is tracked using its show and hide events, so that it is also correct
   //       when the popover gets hidden by clicking outside of it.
 
   issuesPopoverRef.value?.toggle(event);
+};
+
+// Give the keyboard focus back to our issues button once our issues popover has been hidden, if the keyboard focus was
+// in our issues popover (which gets it when it is shown, see its autofocus attribute) and hasn't gone somewhere else
+// (e.g., to a navigation item that was clicked).
+
+const issuesButtonRef = vue.useTemplateRef<{ $el: HTMLElement }>('issuesButtonRef');
+
+const onIssuesPopoverHide = (): void => {
+  issuesPopoverVisible.value = false;
+
+  void vue.nextTick().then(() => {
+    const activeElement = document.activeElement;
+
+    if (!activeElement || activeElement === document.body || activeElement.closest('.issues-popover-content')) {
+      issuesButtonRef.value?.$el.focus();
+    }
+  });
 };
 </script>
 
@@ -1585,7 +1978,7 @@ const toggleIssues = (event: Event) => {
  */
 
 .settings-nav-item:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--p-primary-color);
+  outline-offset: calc(-1 * var(--opencor-focus-ring-width));
 }
 
 .settings-nav-item-active,
@@ -1693,6 +2086,19 @@ const toggleIssues = (event: Event) => {
 }
 
 /**
+ * Note: a field may not be wide enough for its floating label (e.g., "CVODE's maximum step (dimensionless)" when our
+ *       dialog is not very wide), in which case its label is truncated rather than wrapped over its value. The full
+ *       label is still available to assistive technologies since it is (part of) the accessible name of the field.
+ */
+
+.settings-content :deep(.p-floatlabel > label) {
+  max-width: calc(100% - 1.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/**
  * Hint, which is vertically centred next to the field it is about, and whose icon is aligned with its first line (in
  * case it spans several lines).
  */
@@ -1715,16 +2121,35 @@ const toggleIssues = (event: Event) => {
  * Lists, cards, and entries.
  */
 
+/**
+ * Our scroll panels clip their contents, so their contents have some padding, which our scroll panels take from around
+ * them (using negative margins), for the focus ring of an element at their edges (e.g., a remove button) to be fully
+ * visible (see --opencor-focus-ring-extent in app.css).
+ */
+
+.settings-section > .p-scrollpanel {
+  margin: calc(-1 * var(--opencor-focus-ring-extent));
+}
+
+.settings-section > .p-scrollpanel :deep(.p-scrollpanel-content > *) {
+  padding: var(--opencor-focus-ring-extent);
+}
+
 .items-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
+/**
+ * Note: a card doesn't clip its contents since some of them may extend beyond it (e.g., the reason why the value of a
+ *       number field in the last row of a card was corrected or rejected, see InputScientificNumberWidget.vue), so its
+ *       header has rounded top corners of its own (so that its background doesn't go beyond the card's rounded border).
+ */
+
 .card-item {
   border: 1px solid var(--p-content-border-color);
   border-radius: 0.5rem;
-  overflow: hidden;
 }
 
 .card-header {
@@ -1734,6 +2159,7 @@ const toggleIssues = (event: Event) => {
   gap: 0.75rem;
   padding: 0.375rem 0.5rem 0.375rem 0.75rem;
   border-bottom: 1px solid var(--p-content-border-color);
+  border-radius: calc(0.5rem - 1px) calc(0.5rem - 1px) 0 0;
   background-color: color-mix(in srgb, var(--p-text-color) 3%, transparent);
 }
 
@@ -1920,6 +2346,7 @@ const toggleIssues = (event: Event) => {
   max-height: 30rem;
   max-width: 50rem;
   overflow-y: auto;
+  outline: none;
 }
 
 /**
@@ -1944,8 +2371,10 @@ const toggleIssues = (event: Event) => {
  * the room it can, our navigation becomes a row of tabs (above our sections) that can be scrolled horizontally, our
  * form fields are stacked rather than shown side by side, and our URL field for external data (and its Import button)
  * is shown on its own line.
- * Note: the labels of our navigation groups are not shown since our navigation is a single row of tabs. The issues of a
- *       navigation group are still shown, i.e. next to the navigation items that have issues.
+ * Note #1: the label of a navigation group is only shown if the group itself has issues (i.e. issues that are not about
+ *          any of its navigation items), so that those issues can still be seen. Otherwise, our navigation is a single
+ *          row of tabs.
+ * Note #2: the label of a navigation item is not truncated since our navigation can be scrolled.
  */
 
 @container opencor-dialog (width < 40rem) {
@@ -1977,6 +2406,13 @@ const toggleIssues = (event: Event) => {
   }
 
   .settings-nav-group-label {
+    flex: none;
+    align-self: center;
+    padding: 0 0.375rem;
+    white-space: nowrap;
+  }
+
+  .settings-nav-group-label:not(:has(.settings-nav-issues)) {
     display: none;
   }
 
@@ -1984,6 +2420,11 @@ const toggleIssues = (event: Event) => {
     flex: none;
     width: auto;
     white-space: nowrap;
+  }
+
+  .settings-nav-item > .truncate {
+    flex: none;
+    overflow: visible;
   }
 
   .section-header {

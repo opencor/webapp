@@ -4,26 +4,51 @@
     <template v-else>
       <Toolbar v-if="!simulationOnly" class="shrink-0">
         <template #start>
-          <div class="flex gap-1 invisible">
-            <ToolbarButtonWidget icon="pi pi-play-circle" />
-            <ToolbarButtonWidget icon="pi pi-stop-circle" />
+          <div class="flex items-center gap-1">
+            <!--
+            Note: our Stop button is only shown while a slow simulation is running (see slowSimulation), i.e. while our
+                  run status is shown as running.
+            -->
+            <ToolbarButtonWidget v-if="slowSimulation" ref="stopButtonRef"
+              icon="pi pi-stop-circle"
+              accent="danger"
+              label="Stop simulation"
+              @focus="onStopButtonFocus"
+              @click="onStopSimulation"
+            />
+            <span v-if="runStatus" class="run-status" :class="`run-status-${runStatus.type}`" aria-hidden="true">
+              <i :class="runStatus.icon"></i>
+              <span>{{ runStatus.label }}</span>
+            </span>
           </div>
         </template>
         <template #end>
           <div class="flex gap-1">
             <ToolbarButtonWidget
               icon="pi pi-download"
-              label="Export COMBINE archive"
-              @click="onDownloadCombineArchive"
+              label="Export OMEX file"
+              @click="onDownloadOmexFile"
             />
             <ToolbarButtonWidget
               icon="pi pi-cog"
-              label="Settings"
+              label="Simulation settings"
               @click="settingsVisible = true"
             />
           </div>
         </template>
       </Toolbar>
+      <!--
+      Note: our run status is announced by assistive technologies through a visually hidden live region (see runStatus),
+            which must exist before its contents change for them to get announced and which we also need when our
+            toolbar is not shown (i.e. in simulation-only mode).
+      -->
+      <span class="sr-only" role="status">{{ runStatusAnnouncement }}</span>
+      <ProgressBar class="run-progress"
+        :class="{ 'run-progress-visible': progressShown && progress > 0, 'run-progress-no-toolbar': simulationOnly }"
+        aria-label="Simulation progress"
+        :showValue="false"
+        :value="progress"
+      />
       <div class="grow min-h-0">
         <div class="flex h-full">
           <div v-if="uiJsonEmpty" class="empty-view">
@@ -38,9 +63,22 @@
               <Button icon="pi pi-cog" label="Open settings" size="small" @mousedown.prevent @click="settingsVisible = true" />
             </template>
           </div>
-          <IssuesView v-else-if="uiJsonIssues.length" class="w-full m-4" :issues="uiJsonIssues" />
-          <div v-else class="panels flex grow min-h-0" :class="{ 'narrow-layout': narrowLayout }">
-            <div class="side-panel-column">
+          <IssuesView v-else-if="uiJsonIssues.length" class="w-full m-4" :issues="uiJsonIssues">
+            <template v-if="!simulationOnly" #footer>
+              <Button icon="pi pi-cog" label="Open settings" size="small" @mousedown.prevent @click="settingsVisible = true" />
+            </template>
+          </IssuesView>
+          <Splitter v-else
+            class="border-none! rounded-none! grow min-w-0 min-h-0"
+            :layout="narrowLayout ? 'vertical' : 'horizontal'"
+            @resizeend="onSidePanelResizeEnd"
+          >
+            <!--
+            Note: as in the Standard view, our side panel is stacked above our plots when we use a narrow layout (see
+                  narrowLayout), in which case we use a vertical splitter. Our splitter is not remounted when our layout
+                  changes, and its panels have the sizes of our current layout (see useSidePanelSplitter()).
+            -->
+            <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="sidePanelSizes[0]">
               <ScrollPanel class="h-full">
                 <div class="side-panel">
                   <!-- Simulation inputs -->
@@ -58,7 +96,7 @@
                         @click="onResetInputs($event)"
                       />
                     </div>
-                    <div ref="simulationInputsRef" class="side-panel-fields">
+                    <div ref="simulationInputsRef" class="side-panel-fields side-panel-fields-with-sliders">
                       <InputWidget ref="inputWidgetsRef"
                         v-for="(input, index) in actualUiJson.input"
                         v-model="inputValues[index]!"
@@ -96,39 +134,44 @@
                       label="Track run"
                       outlined
                       size="small"
-                      :disabled="isSimulating || simulationIssues.length > 0"
+                      :disabled="!liveRunTrackable"
                       @click="onTrackRun"
                     />
                     <div ref="runsListRef" class="runs-list">
                       <div v-for="(run, index) in runs"
                         :key="run.id"
-                        class="run-row"
+                        class="run-row opencor-hint-anchor"
                         :class="{ 'run-row-hidden': !run.isVisible }"
                       >
                         <ToolbarButtonWidget class="run-color-button"
                           icon="pi pi-circle-fill"
-                          :label="`Change ${runName(run, index)} colour`"
+                          :label="`Change ${runName(run)} colour`"
                           small
                           :style="{ '--toolbar-button-color': run.color, '--toolbar-button-hover-color': run.color }"
                           @click="onToggleRunColorPopover(index, $event)"
                         />
-                        <div v-hint.html="run.isLiveRun ? '' : run.tooltip"
+                        <!--
+                        Note: the name of a tracked run can get the keyboard focus, so that its details (i.e. its hint)
+                              can also be seen using the keyboard and are read by assistive technologies (see hint.ts).
+                        -->
+                        <div v-hint.html.side="run.isLiveRun ? '' : run.tooltip"
                           class="run-name grow min-w-0"
                           :class="{ 'cursor-help': !run.isLiveRun }"
+                          :tabindex="run.isLiveRun ? undefined : 0"
                         >
-                          {{ runName(run, index, true) }}
+                          {{ runName(run, true) }}
                         </div>
                         <div class="run-actions">
                           <ToolbarButtonWidget class="run-visibility-button"
                             :icon="run.isVisible ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                            :label="`${run.isVisible ? 'Hide' : 'Show'} ${runName(run, index)}`"
+                            :label="`${run.isVisible ? 'Hide' : 'Show'} ${runName(run)}`"
                             small
                             tooltipAlign="end"
                             @click="onToggleRun(index)"
                           />
                           <ToolbarButtonWidget v-if="!run.isLiveRun" class="run-remove-button"
                             icon="pi pi-times"
-                            :label="`Remove ${runName(run, index)}`"
+                            :label="`Remove ${runName(run)}`"
                             small
                             tooltipAlign="end"
                             @click="onRemoveRun(index)"
@@ -146,26 +189,48 @@
 
                   <p v-if="preSimulationDuration" class="side-panel-hint">
                     <i class="pi pi-info-circle"></i>
-                    <span>The simulation was run for <strong>{{ preSimulationDuration }} {{ voiUnit }}</strong> prior to plotting.</span>
+                    <span>The simulation was run for <strong>{{ preSimulationDurationText }}</strong> prior to plotting.</span>
                   </p>
                 </div>
               </ScrollPanel>
-            </div>
-            <div class="plots-column relative flex flex-col grow h-full min-h-0">
-              <div class="flex flex-col grow gap-2 min-h-0" :class="{ 'invisible pointer-events-none': simulationIssues.length }">
+            </SplitterPanel>
+            <SplitterPanel class="plots-column relative flex flex-col min-h-0" :size="sidePanelSizes[1]">
+              <!--
+              Note: our plots share the height of our plots column, but they cannot get smaller than a minimum height
+                    (e.g., when there are many of them, or in our narrow layout), in which case our plots column
+                    scrolls.
+              -->
+              <div class="flex flex-col grow gap-2 min-h-0 overflow-y-auto" :class="{ 'invisible pointer-events-none': simulationIssues.length }">
                 <GraphPanelWidget
                   v-for="(_plot, index) in actualUiJson.output.plots"
                   :ref="(element: any) => graphPanelRefs[index] = element"
                   :key="`plot_${index}`"
-                  class="w-full min-h-0"
+                  class="w-full min-h-40"
                   :margins="compMargins"
                   :data="compData[index] || { traces: [] }"
-                  @marginsUpdated="(newMargins: IGraphPanelMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
+                  @marginsUpdated="(newMargins: PlotMargins) => onMarginsUpdated(`plot_${index}`, newMargins)"
                 />
               </div>
-              <IssuesView v-show="simulationIssues.length" class="absolute inset-0 m-4" :issues="simulationIssues" />
-            </div>
-          </div>
+              <!--
+              Note: in simulation-only mode, we have no toolbar, so our Stop button is shown above our plots instead
+                    (see the Stop button in our toolbar).
+              -->
+              <ToolbarButtonWidget v-if="simulationOnly && slowSimulation" ref="stopButtonRef"
+                class="floating-stop-button"
+                icon="pi pi-stop-circle"
+                accent="danger"
+                label="Stop simulation"
+                tooltipAlign="end"
+                @focus="onStopButtonFocus"
+                @click="onStopSimulation"
+              />
+              <IssuesView v-show="simulationIssues.length" class="absolute inset-0 m-4" :issues="simulationIssues">
+                <template v-if="!simulationOnly" #footer>
+                  <Button icon="pi pi-cog" label="Open settings" size="small" @mousedown.prevent @click="settingsVisible = true" />
+                </template>
+              </IssuesView>
+            </SplitterPanel>
+          </Splitter>
         </div>
       </div>
       <Teleport :to="opencorElement" :disabled="!opencorElement">
@@ -187,7 +252,7 @@
         @hide="runColorPopoverVisible = false"
       >
         <div class="flex p-2 gap-2" tabindex="-1" :autofocus="!runColorPopoverOpenedUsingKeyboard" @keydown="onColorSwatchesKeyDown">
-          <button class="color-swatch cursor-pointer w-6 h-6 outline-2 outline-transparent rounded-md"
+          <button class="color-swatch cursor-pointer w-6 h-6 rounded-md"
             v-for="(name, color) in colors.PALETTE" :key="color"
             type="button"
             :style="`background-color: ${color};`"
@@ -204,18 +269,16 @@
 </template>
 
 <script setup lang="ts">
+import type { PlotData, PlotMargins, PlotTrace } from '@opencor/plot';
 import * as vueusecore from '@vueuse/core';
 import Popover from 'primevue/popover';
 import * as vue from 'vue';
 
-import type {
-  IOpenCORExternalDataEvent,
-  IOpenCORSimulationDataEvent,
-  IOpenCORSimulationDataValue
-} from '../../../index';
+import type { OpenCORExternalDataEvent, OpenCORSimulationDataEvent, OpenCORSimulationDataValue } from '../../../index';
 
 import * as colors from '../../common/colors';
 import * as common from '../../common/common';
+import { LONG_DELAY, MEDIUM_DELAY, TOAST_LIFE } from '../../common/constants';
 import * as dependencies from '../../common/dependencies';
 import * as externalData from '../../common/externalData';
 import { vHint } from '../../common/hint';
@@ -226,40 +289,41 @@ import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
 import * as locUiJsonApi from '../../libopencor/locUiJsonApi';
 
-import type { ISimulationExperimentInteractiveViewSettingsDialog } from '../dialogs/SimulationExperimentInteractiveViewSettingsDialog.vue';
+import type { SimulationExperimentInteractiveViewSettings } from '../dialogs/SimulationExperimentInteractiveViewSettingsDialog.vue';
 import { useOpenCORContext } from '../OpenCORContext';
+import { toastIssueDetail, useOpenCORToast } from '../OpenCORToast';
 import GraphPanelWidget from '../widgets/GraphPanelWidget.vue';
 import InputWidget from '../widgets/InputWidget.vue';
-import type { IGraphPanelData, IGraphPanelMargins, IGraphPanelPlotTrace } from '../widgets/GraphPanelWidget.vue';
 
 import './simulation-experiment-view.css';
 
-interface ISimulationRun {
+interface SimulationRun {
   id: string;
   inputParameters: Record<string, number>;
   isVisible: boolean;
-  data: IGraphPanelData[];
+  data: PlotData[];
   color: string;
   tooltip: string;
   isLiveRun: boolean;
+  number?: number;
 }
 
-interface IExternalDataValues {
+interface ExternalDataValues {
   x: math.FloatArray;
   y: math.FloatArray;
 }
 
 const props = defineProps<{
   file: locApi.File;
-  uiJson?: locApi.IUiJson;
+  uiJson?: locApi.UiJson;
 }>();
 
 const emit = defineEmits<{
-  error: [message: string];
   simulationData: [];
 }>();
 
 const { simulationOnly } = useOpenCORContext();
+const addToast = useOpenCORToast();
 
 const opencorElement = vue.shallowRef<HTMLElement | null>(null);
 const fileTabElement = vue.shallowRef<HTMLElement | null>(null);
@@ -280,21 +344,22 @@ const model = isDocumentValid ? document.model(0) : null;
 // Whether we use a narrow layout, i.e. whether our side panel is stacked above our plots (see .narrow-layout below).
 
 const narrowLayout = vueCommon.useNarrowLayout(rootRef);
+const { sizes: sidePanelSizes, onResizeEnd: onSidePanelResizeEnd } = vueCommon.useSidePanelSplitter(narrowLayout);
 
 // Some helper functions to evaluate and apply the model changes resulting from the given parameters and scope.
 
-interface IModelChange {
+interface ModelChange {
   componentName: string;
   variableName: string;
   newValue: string;
 }
 
 const evaluateModelChanges = (
-  parameters: locApi.IUiJsonParameter[],
+  parameters: locApi.UiJsonParameter[],
   modelScope: math.ExpressionScope,
-  issues: locApi.IIssue[]
-): IModelChange[] => {
-  const res: IModelChange[] = [];
+  issues: locApi.Issue[]
+): ModelChange[] => {
+  const res: ModelChange[] = [];
 
   for (const parameter of parameters) {
     const componentVariableNames = parameter.name.split('/');
@@ -308,8 +373,8 @@ const evaluateModelChanges = (
         });
       } catch (error: unknown) {
         issues.push({
-          type: locApi.EIssueType.ERROR,
-          description: `An error occurred while applying parameter change for '${parameter.name}' (${common.formatMessage(common.formatError(error), false)}).`
+          type: locApi.IssueType.ERROR,
+          description: `An error occurred while applying model parameter '${parameter.name}' (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
     }
@@ -318,7 +383,7 @@ const evaluateModelChanges = (
   return res;
 };
 
-const applyModelChanges = (modelChanges: IModelChange[]): void => {
+const applyModelChanges = (modelChanges: ModelChange[]): void => {
   if (!model) {
     return;
   }
@@ -408,11 +473,11 @@ const voiName = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const voiId = vue.ref(instanceTask ? (voiName.value.split('/')[1] ?? '') : '');
 const voiUnit = vue.ref(instanceTask ? instanceTask.voiUnit() : '');
 
-const actualUiJson = vue.ref<locApi.IUiJson>(
-  // Note: we deep clone our UI JSON, sharing its external data values rather than copying them (see cloneUiJson()),
-  //       and normalise it to make sure that its external data values are Float64Arrays rather than plain arrays.
-  //       Indeed, plain arrays would be deeply tracked by Vue (i.e. element by element), which would be both slow and
-  //       memory hungry for large external data.
+const actualUiJson = vue.ref<locApi.UiJson>(
+  // Note: we deep clone our UI JSON, sharing its external data values rather than copying them (see cloneUiJson()), and
+  //       normalise it to make sure that its external data values are Float64Arrays rather than plain arrays. Indeed,
+  //       plain arrays would be deeply tracked by Vue (i.e. element by element), which would be both slow and memory
+  //       hungry for large external data.
 
   uiJsonWithExpectedStructure
     ? locApi.normaliseUiJson(locApi.cloneUiJson(uiJsonWithExpectedStructure.uiJson))
@@ -462,11 +527,149 @@ const isSimulating = vue.ref<boolean>(false);
 // Note: whether a simulation is running, including in between the simulation runs of an input simulation update (see
 //       updateSimulation()). It is used, among other things, to prevent the current run from being tracked while a
 //       simulation is running (see onTrackRun()).
-const liveData = vue.ref<IGraphPanelData[]>([]);
-let margins: Record<string, IGraphPanelMargins> = {};
-const compMargins = vue.ref<IGraphPanelMargins>();
+const liveData = vue.ref<PlotData[]>([]);
 
-const uiJsonIssues = vue.ref<locApi.IIssue[]>(
+// The progress and status of our simulation, which we show in our toolbar, as in the Standard view.
+// Note #1: a simulation run is usually quick, in which case its plots get updated straightaway and showing its progress
+//          and status would just be distracting (e.g., while dragging a slider), so we only show them if we have been
+//          simulating for a while (see onIsSimulatingChanged()).
+// Note #2: our status is announced by assistive technologies through a visually hidden live region, which doesn't
+//          include the progress of our simulation since it would otherwise get announced every time it changes (our
+//          progress bar already exposes it).
+
+interface LastRun {
+  outcome: 'completed' | 'stopped' | 'failed';
+  time?: number;
+}
+
+const progress = vue.ref<number>(0);
+const progressShown = vue.ref<boolean>(false);
+const slowSimulation = vue.ref<boolean>(false);
+const lastRun = vue.ref<LastRun | null>(null);
+let lastSimulationTime: number | undefined;
+let slowSimulationTimer: ReturnType<typeof setTimeout> | undefined;
+let progressResetTimer: ReturnType<typeof setTimeout> | undefined;
+let progressReset = 0;
+let runStatusTimer: ReturnType<typeof setTimeout> | undefined;
+
+// Why our last simulation run was cancelled, if it was (see cancelSimulation()).
+
+let simulationCancellation: 'stopped' | 'cancelled' | null = null;
+
+const runStatus = vue.computed<{ type: string; icon: string; label: string } | null>(() => {
+  if (slowSimulation.value) {
+    return { type: 'running', icon: 'pi pi-hourglass', label: `Running... ${Math.round(progress.value)}%` };
+  }
+
+  switch (lastRun.value?.outcome) {
+    case 'completed':
+      return {
+        type: 'completed',
+        icon: 'pi pi-check-circle',
+        label: lastRun.value.time !== undefined ? `Completed in ${common.formatTime(lastRun.value.time)}` : 'Completed'
+      };
+    case 'stopped':
+      return { type: 'stopped', icon: 'pi pi-stop-circle', label: 'Stopped' };
+    case 'failed':
+      return { type: 'failed', icon: 'pi pi-times-circle', label: 'Failed' };
+    default:
+      return null;
+  }
+});
+
+const runStatusAnnouncement = vue.computed<string>(() => {
+  return runStatus.value?.type === 'running' ? 'Running...' : (runStatus.value?.label ?? '');
+});
+
+const onIsSimulatingChanged = (simulating: boolean): void => {
+  clearTimeout(slowSimulationTimer);
+
+  slowSimulationTimer = undefined;
+
+  if (simulating) {
+    // We have started simulating, so forget about our previous status (unless our previous run failed, in which case
+    // our issues are still shown) and only show our progress and status if we are still simulating after a while.
+
+    clearTimeout(runStatusTimer);
+    clearTimeout(progressResetTimer);
+
+    ++progressReset;
+
+    if (lastRun.value?.outcome !== 'failed') {
+      lastRun.value = null;
+    }
+
+    progress.value = 0;
+    progressShown.value = false;
+
+    slowSimulationTimer = setTimeout(() => {
+      slowSimulationTimer = undefined;
+
+      progressShown.value = true;
+      slowSimulation.value = true;
+    }, LONG_DELAY);
+
+    return;
+  }
+
+  // We have stopped simulating, so report whether our simulation failed, was stopped or, if it was slow, completed. If
+  // our progress bar is shown, then we show it at 100% (now that our results have been plotted), unless our simulation
+  // was stopped or cancelled, before resetting it after a short delay (as in the Standard view). A completed status
+  // only confirms what can be seen, so we hide it after a while, unlike a stopped status since our plots then don't
+  // reflect our simulation inputs anymore.
+  // Note: a cancelled simulation (e.g., because our settings have changed) is neither completed nor stopped, so we
+  //       don't report anything for it (see cancelSimulation()).
+
+  const wasSlow = slowSimulation.value;
+  const cancellation = simulationCancellation;
+
+  slowSimulation.value = false;
+  simulationCancellation = null;
+
+  // Note: we only start the delay once our UI has been painted since plotting our results may take longer than it.
+
+  if (progressShown.value) {
+    const currentProgressReset = ++progressReset;
+
+    if (!cancellation) {
+      progress.value = 100;
+    }
+
+    void common.waitForNextPaint().then(() => {
+      if (currentProgressReset === progressReset) {
+        progressResetTimer = setTimeout(() => {
+          progressResetTimer = undefined;
+
+          progress.value = 0;
+        }, MEDIUM_DELAY);
+      }
+    });
+  }
+
+  if (cancellation === 'stopped') {
+    lastRun.value = { outcome: 'stopped' };
+  } else if (cancellation) {
+    lastRun.value = null;
+  } else if (simulationIssues.value.length) {
+    lastRun.value = { outcome: 'failed' };
+  } else if (wasSlow) {
+    lastRun.value = { outcome: 'completed', time: lastSimulationTime };
+
+    runStatusTimer = setTimeout(() => {
+      runStatusTimer = undefined;
+
+      lastRun.value = null;
+    }, TOAST_LIFE);
+  } else {
+    lastRun.value = null;
+  }
+};
+
+vue.watch(isSimulating, onIsSimulatingChanged);
+let margins: Record<string, PlotMargins> = {};
+const compMargins = vue.ref<PlotMargins>();
+
+const uiJsonIssues = vue.ref<locApi.Issue[]>(
   locApi.validateUiJson(uiJsonStructureRepaired.value ? props.uiJson : actualUiJson.value, {
     allModelParameters: allModelParameters.value,
     editableModelParameters: editableModelParameters.value
@@ -476,7 +679,7 @@ const uiJsonIssues = vue.ref<locApi.IIssue[]>(
 // Remove the model changes resulting from our default input values if our UI JSON is invalid.
 // Note: we applied them before validating our UI JSON (see above), but we don't run any simulation with an invalid UI
 //       JSON, so they would otherwise be left in our document and, therefore, be exported with it (see
-//       onDownloadCombineArchive()). Our instance was, however, built with them, so it must not be reused by our next
+//       onDownloadOmexFile()). Our instance was, however, built with them, so it must not be reused by our next
 //       simulation run (e.g., if our UI JSON gets fixed through our settings dialog).
 
 if (uiJsonIssues.value.length && instanceModelChangesKey !== NO_MODEL_CHANGES_KEY) {
@@ -485,27 +688,17 @@ if (uiJsonIssues.value.length && instanceModelChangesKey !== NO_MODEL_CHANGES_KE
   instanceIsPristine = false;
 }
 
-const simulationIssues = vue.ref<locApi.IIssue[]>([]);
+const simulationIssues = vue.ref<locApi.Issue[]>([]);
 const inputValues = vue.ref<number[]>([]);
 const showInput = vue.ref<boolean[]>([]);
 const inputsShownAtDefaultValues = vue.ref<(boolean | undefined)[]>([]);
 const inputWidgetsRef = vue.ref<InstanceType<typeof InputWidget>[]>([]);
-const idToInfo = new Map<string, locCommon.ISimulationDataInfo>();
+const idToInfo = new Map<string, locCommon.SimulationDataInfo>();
 
-// A helper function to retrieve the simulation data information for the given name.
-// Note: we build (and cache) the simulation data information of all our simulation data the first time we need it.
-//       Indeed, it is much faster than looking up simulation data information by name every time (see
-//       locCommon.simulationDataInfos()). Also, the names of our simulation data don't change when we reinstantiate our
-//       document (since our model changes and settings only affect values), so our cache remains valid for as long as
-//       our document is used.
+// A helper function to retrieve the simulation data information for the given name (see
+// locCommon.simulationDataInfoLookup()).
 
-let simulationDataInfosCache: Map<string, locCommon.ISimulationDataInfo> | null = null;
-
-const simulationDataInfo = (task: locSedApi.SedInstanceTask, name: string): locCommon.ISimulationDataInfo => {
-  simulationDataInfosCache ??= locCommon.simulationDataInfos(task);
-
-  return simulationDataInfosCache.get(name) ?? locCommon.NoSimulationDataInfo;
-};
+const simulationDataInfo = locCommon.simulationDataInfoLookup();
 
 // A helper function to retrieve the simulation data value for the given simulation data information.
 // Note: with the WASM version of libOpenCOR, the simulation data may be a view of the WASM heap, so we need to copy it.
@@ -516,14 +709,14 @@ const simulationDataInfo = (task: locSedApi.SedInstanceTask, name: string): locC
 
 const simulationDataValue = (
   task: locSedApi.SedInstanceTask,
-  info: locCommon.ISimulationDataInfo
-): IOpenCORSimulationDataValue => {
+  info: locCommon.SimulationDataInfo
+): OpenCORSimulationDataValue => {
   const res = locCommon.simulationDataValue(task, info);
 
   return locApi.cppVersion() ? res : { ...res, data: new Float64Array(res.data) };
 };
 
-const runs = vue.ref<ISimulationRun[]>([
+const runs = vue.ref<SimulationRun[]>([
   {
     id: 'live',
     inputParameters: {},
@@ -535,6 +728,10 @@ const runs = vue.ref<ISimulationRun[]>([
   }
 ]);
 
+// The number of our last tracked run, which a tracked run keeps (rather than being numbered after its position), so
+// that removing a run doesn't renumber the other ones. Our numbering starts again once there are no tracked runs
+// anymore.
+
 let trackedRunId = 0;
 let simulationGeneration = 0;
 const runColorPopoverIndex = vue.ref<number>(-1);
@@ -544,17 +741,17 @@ const runColorPopoverRef = vue.ref<InstanceType<typeof Popover> | undefined>();
 const graphPanelRefs = vue.ref<Record<number, InstanceType<typeof GraphPanelWidget> | undefined>>({});
 const appendTarget = vueCommon.useAppendTarget(rootRef as unknown as vue.Ref<HTMLElement | null>);
 
-const compData = vue.computed<IGraphPanelData[]>(() => {
+const compData = vue.computed<PlotData[]>(() => {
   // Combine the live data with the data from the tracked runs.
 
   const liveDataVal = liveData.value;
   const runsVal = runs.value;
   const runsCount = runsVal.length;
-  const res: IGraphPanelData[] = [];
+  const res: PlotData[] = [];
   const paletteColors = colors.PALETTE_COLORS;
   const paletteColorsLength = paletteColors.length;
 
-  const addRunTraces = (traces: IGraphPanelPlotTrace[], plotIndex: number, runIndex: number): void => {
+  const addRunTraces = (traces: PlotTrace[], plotIndex: number, runIndex: number): void => {
     const run = runsVal[runIndex];
 
     if (!run) {
@@ -574,7 +771,8 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
       return;
     }
 
-    const suffix = runsCount === 1 ? '' : run.isLiveRun ? ' [Live]' : ` [#${runIndex}]`;
+    const runLabel = runsCount === 1 ? undefined : run.isLiveRun ? 'Live' : `#${run.number}`;
+    const suffix = runLabel ? ` [${runLabel}]` : '';
 
     for (let k = 0; k < dataTraces.length; ++k) {
       const dataTrace = dataTraces[k];
@@ -587,6 +785,7 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
         ...dataTrace,
         traceId: `${run.id}::${dataTrace.traceId ?? `${dataTrace.xValue}::${dataTrace.yValue}::${k}`}`,
         name: dataTrace.name + suffix,
+        runLabel,
         color: paletteColors[(baseColorIndex + k) % paletteColorsLength] ?? colors.DEFAULT_COLOR,
         legendRank: run.isLiveRun ? 1 : undefined
       });
@@ -594,7 +793,7 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
   };
 
   for (let i = 0; i < liveDataVal.length; ++i) {
-    const traces: IGraphPanelPlotTrace[] = [];
+    const traces: PlotTrace[] = [];
 
     // Add the traces for the tracked runs first and then the live run, so that the live run is always drawn on top of
     // the tracked runs (GraphPanelWidget draws traces in the order in which they are given).
@@ -617,7 +816,7 @@ const compData = vue.computed<IGraphPanelData[]>(() => {
   return res;
 });
 
-const settings = vue.computed<ISimulationExperimentInteractiveViewSettingsDialog>(() => {
+const settings = vue.computed<SimulationExperimentInteractiveViewSettings>(() => {
   const actualUiJsonVal = actualUiJson.value;
 
   return {
@@ -626,7 +825,10 @@ const settings = vue.computed<ISimulationExperimentInteractiveViewSettingsDialog
       startingPoint: uniformTimeCourse?.outputStartTime() ?? 0,
       endingPoint: uniformTimeCourse?.outputEndTime() ?? 0,
       pointInterval: uniformTimeCourse
-        ? (uniformTimeCourse.outputEndTime() - uniformTimeCourse.outputStartTime()) / uniformTimeCourse.numberOfSteps()
+        ? common.divideNumbers(
+            common.subtractNumbers(uniformTimeCourse.outputEndTime(), uniformTimeCourse.outputStartTime()),
+            uniformTimeCourse.numberOfSteps()
+          )
         : 1
     },
     solvers: {
@@ -641,14 +843,19 @@ const settings = vue.computed<ISimulationExperimentInteractiveViewSettingsDialog
 const preSimulationDuration = vue.computed<number>(() => {
   const settingsVal = settings.value;
 
-  return settingsVal.simulation.startingPoint - settingsVal.simulation.initialPoint;
+  return common.subtractNumbers(settingsVal.simulation.startingPoint, settingsVal.simulation.initialPoint);
+});
+const preSimulationDurationText = vue.computed<string>(() => {
+  const duration = common.formatNumber(preSimulationDuration.value);
+
+  return voiUnit.value ? `${duration} ${voiUnit.value}` : duration;
 });
 
 // A helper function to serialise some settings so that they can be compared with some other settings.
 // Note: our settings dialog adds an empty list of external data to a UI JSON that doesn't have any, so we ignore an
 //       empty list of external data to avoid detecting changes where there are none.
 
-const serialisedSettings = (settingsToSerialise: ISimulationExperimentInteractiveViewSettingsDialog): string => {
+const serialisedSettings = (settingsToSerialise: SimulationExperimentInteractiveViewSettings): string => {
   return JSON.stringify(vue.toRaw(settingsToSerialise), (key: string, value: unknown): unknown => {
     if (key === 'externalData' && Array.isArray(value) && !value.length) {
       return undefined;
@@ -660,17 +867,17 @@ const serialisedSettings = (settingsToSerialise: ISimulationExperimentInteractiv
 
 const oldSettings = vue.ref<string>(serialisedSettings(settings.value));
 
-// Add an information issue to some simulation issues, telling the user to check our settings.
+// Add an information issue to some simulation issues, telling the user to check our settings (which can be opened using
+// the Open settings button below our issues, see our template).
 // Note: our settings cannot be accessed in simulation-only mode (since our toolbar is hidden), so there is no point in
 //       telling the user to check them.
 
-const informationIssue: locApi.IIssue = {
-  type: locApi.EIssueType.INFORMATION,
-  description:
-    'Please check the settings (click on the <i class="pi pi-cog"></i> icon in the top-right corner) and try again.'
+const informationIssue: locApi.Issue = {
+  type: locApi.IssueType.INFORMATION,
+  description: 'Please check the simulation settings and try again.'
 };
 
-const addInformationIssue = (issues: locApi.IIssue[]): void => {
+const addInformationIssue = (issues: locApi.Issue[]): void => {
   if (!simulationOnly.value) {
     issues.push(informationIssue);
   }
@@ -679,10 +886,10 @@ const addInformationIssue = (issues: locApi.IIssue[]): void => {
 // Update (initialise) our UI from the current actualUiJson.
 
 const updateUi = (): void => {
-  inputValues.value = actualUiJson.value.input.map((input: locApi.IUiJsonInput) => {
+  inputValues.value = actualUiJson.value.input.map((input: locApi.UiJsonInput) => {
     return input.defaultValue;
   });
-  showInput.value = actualUiJson.value.input.map((input: locApi.IUiJsonInput) => {
+  showInput.value = actualUiJson.value.input.map((input: locApi.UiJsonInput) => {
     return (input.visible ?? 'true') !== 'false';
   });
   inputsShownAtDefaultValues.value = [];
@@ -718,8 +925,8 @@ const replaceWithExternalDataIds = (expression: string, mapping: Map<string, str
 
     while (i < res.length) {
       if (res.startsWith(dataId, i)) {
-        const prevChar = i === 0 ? '' : res[i - 1];
-        const nextChar = i + dataId.length >= res.length ? '' : res[i + dataId.length];
+        const prevChar = i === 0 ? '' : res.charAt(i - 1);
+        const nextChar = i + dataId.length >= res.length ? '' : res.charAt(i + dataId.length);
 
         if (!/[A-Za-z0-9_]/.test(prevChar) && !/[A-Za-z0-9_]/.test(nextChar)) {
           newRes += externalDataId;
@@ -747,16 +954,17 @@ const inFlightExternalDataHashes = new Set<string>();
 const addExternalData = async (
   csv: string,
   voiExpression: string | undefined,
-  modelParameters: string[]
-): Promise<IOpenCORExternalDataEvent> => {
-  const addedEvent = (): IOpenCORExternalDataEvent => {
+  modelParameters: string[],
+  signal?: AbortSignal
+): Promise<OpenCORExternalDataEvent> => {
+  const addedEvent = (): OpenCORExternalDataEvent => {
     return {
       type: 'added',
       csv,
       issues: []
     };
   };
-  const issueEvent = (issueMessages: string[]): IOpenCORExternalDataEvent => {
+  const issueEvent = (issueMessages: string[]): OpenCORExternalDataEvent => {
     return {
       type: 'issue',
       csv,
@@ -778,7 +986,7 @@ const addExternalData = async (
 
   if (common.isUrl(csv)) {
     try {
-      const response = await common.fetchThroughCorsProxy(csv);
+      const response = await common.fetchThroughCorsProxy(csv, 'csv', signal);
 
       if (!response.ok) {
         return Promise.resolve(
@@ -790,7 +998,9 @@ const addExternalData = async (
     } catch (error: unknown) {
       return Promise.resolve(
         issueEvent([
-          `Could not retrieve the CSV file from ${csv} (${common.formatMessage(common.formatError(error), false)}).`
+          signal?.aborted
+            ? `The retrieval of the CSV file from ${csv} was cancelled.`
+            : `Could not retrieve the CSV file from ${csv} (${common.formatMessage(common.formatError(error), false)}).`
         ])
       );
     }
@@ -799,7 +1009,9 @@ const addExternalData = async (
   }
 
   if (!csvContents) {
-    return Promise.resolve(addedEvent());
+    return Promise.resolve(
+      issueEvent([common.isUrl(csv) ? `The CSV file from ${csv} is empty.` : 'The external CSV data is empty.'])
+    );
   }
 
   // Make sure that we haven't already added this CSV data (based on a hash of the CSV contents) to avoid accidentally
@@ -816,7 +1028,7 @@ const addExternalData = async (
   try {
     // Make sure that we can parse the CSV data.
 
-    let parsedCsv: externalData.IExternalCsvData;
+    let parsedCsv: externalData.ExternalCsvData;
 
     try {
       parsedCsv = externalData.parseExternalCsvData(csvContents);
@@ -878,17 +1090,17 @@ const addExternalData = async (
     // Add the external data to our UI JSON, making sure that we generate unique output data IDs for the new data
     // entries.
 
-    const dataSeries: locApi.IUiJsonOutputExternalDataSeries[] = [];
-    const data: locApi.IUiJsonOutputData[] = [];
+    const dataSeries: locApi.UiJsonOutputExternalDataSeries[] = [];
+    const data: locApi.UiJsonOutputData[] = [];
     const dataIdToExternalDataId = new Map<string, string>();
 
     for (let columnIndex = 1; columnIndex < parsedCsv.headers.length; ++columnIndex) {
-      const name = parsedCsv.headers[columnIndex];
+      const name = parsedCsv.headers[columnIndex] as string;
       const id = uniqueOutputDataId(name, usedOutputIds);
 
       dataSeries.push({
         name,
-        values: new Float64Array(parsedCsv.columns[columnIndex])
+        values: new Float64Array(parsedCsv.columns[columnIndex] as number[])
       });
       data.push({
         id,
@@ -917,7 +1129,7 @@ const addExternalData = async (
       dataSeries,
       description: `External data ${csvHash}`,
       voiExpression: voiExpression?.trim() || 'voi',
-      voiValues: new Float64Array(parsedCsv.columns[0])
+      voiValues: new Float64Array(parsedCsv.columns[0] as number[])
     });
 
     // Go through the plots' main trace and additional traces and add a corresponding trace where the original model
@@ -1022,7 +1234,7 @@ const addExternalData = async (
 
 // A helper function to retrieve simulation data for one or more model parameters.
 
-const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDataEvent> => {
+const simulationData = (modelParameters: string[]): Promise<OpenCORSimulationDataEvent> => {
   const simulationDataResult = common.emptySimulationData(modelParameters);
 
   if (!simulationOnly.value) {
@@ -1048,7 +1260,7 @@ const simulationData = (modelParameters: string[]): Promise<IOpenCORSimulationDa
           ? [
               'The last simulation run did not complete successfully.',
               ...simulationIssues.value
-                .filter((issue) => issue.type !== locApi.EIssueType.INFORMATION)
+                .filter((issue) => issue.type !== locApi.IssueType.INFORMATION)
                 .map((issue) => issue.description)
             ]
           : ['No simulation data is available yet.']
@@ -1120,18 +1332,16 @@ vue.watch(
   () => {
     mathEval.resetCompiledExpressions();
 
-    nbOfOriginalAdditionalTracesInPlots = actualUiJson.value.output.plots.map(
-      (plot: locUiJsonApi.IUiJsonOutputPlot) => {
-        return plot.additionalTraces?.length ?? 0;
-      }
-    );
+    nbOfOriginalAdditionalTracesInPlots = actualUiJson.value.output.plots.map((plot: locUiJsonApi.UiJsonOutputPlot) => {
+      return plot.additionalTraces?.length ?? 0;
+    });
   },
   { deep: true, immediate: true }
 );
 
 // A helper function to interpolate external data values at the VOI values of our simulation.
 
-const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternalDataValues): math.FloatArray => {
+const externalDataValues = (voi: math.FloatArray, externalDataMapping: ExternalDataValues): math.FloatArray => {
   const voiLength = voi.length;
   const res = new Float64Array(voiLength);
   const { x, y } = externalDataMapping;
@@ -1151,7 +1361,7 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
   let useInputAsIs = true;
 
   for (let i = 1; i < inputLength && useInputAsIs; ++i) {
-    useInputAsIs = x[i] > x[i - 1];
+    useInputAsIs = (x[i] as number) > (x[i - 1] as number);
   }
 
   let normalisedX: math.FloatArray;
@@ -1169,7 +1379,7 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
     }
 
     sortedIndices.sort((index1, index2) => {
-      return x[index1] - x[index2];
+      return (x[index1] as number) - (x[index2] as number);
     });
 
     const sortedX = new Float64Array(sortedIndices.length);
@@ -1177,8 +1387,9 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
     let count = 0;
 
     for (let i = 0; i < sortedIndices.length; ++i) {
-      const xValue = x[sortedIndices[i]];
-      const yValue = y[sortedIndices[i]];
+      const index = sortedIndices[i] as number;
+      const xValue = x[index] as number;
+      const yValue = y[index] as number;
 
       if (count === 0 || xValue !== sortedX[count - 1]) {
         sortedX[count] = xValue;
@@ -1211,9 +1422,9 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
   const segmentSlope = new Float64Array(segmentCount);
 
   for (let i = 0; i < segmentCount; ++i) {
-    const deltaX = normalisedX[i + 1] - normalisedX[i];
+    const deltaX = (normalisedX[i + 1] as number) - (normalisedX[i] as number);
 
-    segmentSlope[i] = deltaX > 0 ? (normalisedY[i + 1] - normalisedY[i]) / deltaX : Number.NaN;
+    segmentSlope[i] = deltaX > 0 ? ((normalisedY[i + 1] as number) - (normalisedY[i] as number)) / deltaX : Number.NaN;
     // Note: deltaX should always be greater than zero due to the checks above, but we add a safeguard against division
     //       by zero just in case.
   }
@@ -1221,21 +1432,21 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
   let isVoiIncreasing = true;
 
   for (let i = 1; i < voiLength; ++i) {
-    if (voi[i] < voi[i - 1]) {
+    if ((voi[i] as number) < (voi[i - 1] as number)) {
       isVoiIncreasing = false;
 
       break;
     }
   }
 
-  const xFirst = normalisedX[0];
-  const xLast = normalisedX[normalisedLength - 1];
+  const xFirst = normalisedX[0] as number;
+  const xLast = normalisedX[normalisedLength - 1] as number;
 
   if (isVoiIncreasing) {
     let j = 0;
 
     for (let i = 0; i < voiLength; ++i) {
-      const voiValue = voi[i];
+      const voiValue = voi[i] as number;
 
       if (voiValue < xFirst || voiValue > xLast) {
         res[i] = Number.NaN;
@@ -1243,11 +1454,11 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
         continue;
       }
 
-      while (j + 1 < normalisedLength && normalisedX[j + 1] < voiValue) {
+      while (j + 1 < normalisedLength && (normalisedX[j + 1] as number) < voiValue) {
         ++j;
       }
 
-      const slope = segmentSlope[j];
+      const slope = segmentSlope[j] as number;
 
       if (!Number.isFinite(slope)) {
         res[i] = Number.NaN;
@@ -1255,11 +1466,11 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
         continue;
       }
 
-      res[i] = normalisedY[j] + (voiValue - normalisedX[j]) * slope;
+      res[i] = (normalisedY[j] as number) + (voiValue - (normalisedX[j] as number)) * slope;
     }
   } else {
     for (let i = 0; i < voiLength; ++i) {
-      const voiValue = voi[i];
+      const voiValue = voi[i] as number;
 
       if (voiValue < xFirst || voiValue > xLast) {
         res[i] = Number.NaN;
@@ -1275,14 +1486,14 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
       while (low + 1 < high) {
         const mid = Math.floor(0.5 * (low + high));
 
-        if (normalisedX[mid] <= voiValue) {
+        if ((normalisedX[mid] as number) <= voiValue) {
           low = mid;
         } else {
           high = mid;
         }
       }
 
-      const slope = segmentSlope[low];
+      const slope = segmentSlope[low] as number;
 
       if (!Number.isFinite(slope)) {
         res[i] = Number.NaN;
@@ -1290,7 +1501,7 @@ const externalDataValues = (voi: math.FloatArray, externalDataMapping: IExternal
         continue;
       }
 
-      res[i] = normalisedY[low] + (voiValue - normalisedX[low]) * slope;
+      res[i] = (normalisedY[low] as number) + (voiValue - (normalisedX[low] as number)) * slope;
     }
   }
 
@@ -1312,7 +1523,7 @@ const disposeInstance = (oldInstance: locApi.SedInstance): void => {
     return;
   }
 
-  if (oldInstance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+  if (oldInstance.status() !== locSedApi.SedInstanceStatus.IDLE) {
     oldInstance.stopRun();
   }
 };
@@ -1378,7 +1589,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 
   // Stop the current simulation if it is still running or paused.
 
-  if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+  if (instance.status() !== locSedApi.SedInstanceStatus.IDLE) {
     instance.stopRun();
   }
 
@@ -1396,13 +1607,15 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     const input = actualUiJson.value.input[i];
 
     if (input) {
-      modelScope[input.id] = inputValues.value[i];
+      modelScope[input.id] = inputValues.value[i] as number;
     }
   }
 
-  // Reset our issues.
+  // The issues of this simulation run, if any.
+  // Note: we only replace our current issues once we know the outcome of this simulation run, so that they don't get
+  //       cleared and then shown again (and our plots shown and then hidden again) every time an input is changed.
 
-  simulationIssues.value = [];
+  const issues: locApi.Issue[] = [];
 
   // Show/hide the input widgets.
 
@@ -1415,9 +1628,9 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
       } catch (error: unknown) {
         showInput.value[i] = false;
 
-        simulationIssues.value.push({
-          type: locApi.EIssueType.ERROR,
-          description: `An error occurred while evaluating visibility for input '${input.name}' (${common.formatMessage(common.formatError(error), false)}).`
+        issues.push({
+          type: locApi.IssueType.ERROR,
+          description: `An error occurred while evaluating the visible condition of simulation input '${input.name}' (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
     }
@@ -1425,12 +1638,14 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 
   // Evaluate the model changes.
 
-  const modelChanges = evaluateModelChanges(actualUiJson.value.parameters, modelScope, simulationIssues.value);
+  const modelChanges = evaluateModelChanges(actualUiJson.value.parameters, modelScope, issues);
 
   // Make sure that we haven't come across any issues so far.
 
-  if (simulationIssues.value.length) {
-    addInformationIssue(simulationIssues.value);
+  if (issues.length) {
+    addInformationIssue(issues);
+
+    simulationIssues.value = issues;
 
     return;
   }
@@ -1461,6 +1676,15 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
   // Start the simulation in a background thread and yield to the UI to keep it responsive while the simulation runs.
 
   if (!crtInstance.startRun()) {
+    simulationIssues.value = crtInstance.hasIssues()
+      ? crtInstance.issues()
+      : [
+          {
+            type: locApi.IssueType.ERROR,
+            description: 'The simulation could not be started.'
+          }
+        ];
+
     return;
   }
 
@@ -1474,7 +1698,15 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
   let instanceReplaced = false;
 
   try {
-    await vueCommon.waitWhileRunning(crtInstance).promise;
+    // Note: we only keep track of the progress of our simulation while it is running, i.e. we ignore the progress of
+    //       100% that is reported once it is over and the (delayed) reset of the progress bar since our results have
+    //       yet to be retrieved and plotted at that point (see onIsSimulatingChanged()).
+
+    await vueCommon.waitWhileRunning(crtInstance, (newProgress: number) => {
+      if (currentSimulationGeneration === simulationGeneration && newProgress > 0 && newProgress < 100) {
+        progress.value = newProgress;
+      }
+    }).promise;
   } finally {
     runningInstances.delete(crtInstance);
 
@@ -1501,6 +1733,16 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     simulationIssues.value = crtInstance.issues();
 
     return;
+  }
+
+  // Keep track of how long the simulation took, so that we can report it (see runStatus).
+  // Note: retrieving it may fail (e.g., if libOpenCOR throws an exception), but this must not prevent our results from
+  //       being plotted.
+
+  try {
+    lastSimulationTime = crtInstance.waitForRun();
+  } catch {
+    lastSimulationTime = undefined;
   }
 
   // A helper function to evaluate an expression within the given scope.
@@ -1556,9 +1798,9 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
           }
         }
       } catch (error: unknown) {
-        simulationIssues.value.push({
-          type: locApi.EIssueType.ERROR,
-          description: `An error occurred while evaluating the VOI expression '${externalDataItem.voiExpression}' (${common.formatMessage(common.formatError(error), false)}).`
+        issues.push({
+          type: locApi.IssueType.ERROR,
+          description: `An error occurred while evaluating the VOI expression '${externalDataItem.voiExpression}' of an external data file (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
     }
@@ -1566,8 +1808,10 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 
   // Make sure that we haven't come across any issues so far.
 
-  if (simulationIssues.value.length) {
-    addInformationIssue(simulationIssues.value);
+  if (issues.length) {
+    addInformationIssue(issues);
+
+    simulationIssues.value = issues;
 
     return;
   }
@@ -1576,7 +1820,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 
   idToInfo.clear();
 
-  actualUiJson.value.output.data.forEach((data: locApi.IUiJsonOutputData) => {
+  actualUiJson.value.output.data.forEach((data: locApi.UiJsonOutputData) => {
     if (data.id && instanceTask) {
       idToInfo.set(data.id, simulationDataInfo(instanceTask, data.name));
     }
@@ -1630,7 +1874,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     // If one of the arrays is of length 1, broadcast it to the length of the other array.
 
     if (x.length === 1 && y.length > 1) {
-      const value = x[0];
+      const value = x[0] as number;
       const broadcastX = new Float64Array(y.length);
 
       broadcastX.fill(value);
@@ -1642,7 +1886,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     }
 
     if (y.length === 1 && x.length > 1) {
-      const value = y[0];
+      const value = y[0] as number;
       const broadcastY = new Float64Array(x.length);
 
       broadcastY.fill(value);
@@ -1664,7 +1908,7 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     };
   };
 
-  const newLiveData: IGraphPanelData[] = [];
+  const newLiveData: PlotData[] = [];
 
   for (let i = 0; i < actualUiJson.value.output.plots.length; ++i) {
     const plot = actualUiJson.value.output.plots[i];
@@ -1684,9 +1928,9 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     try {
       xMain = evaluateExpression(plot.xValue, modelScope);
     } catch (error: unknown) {
-      simulationIssues.value.push({
-        type: locApi.EIssueType.ERROR,
-        description: `An error occurred while evaluating the X value expression for plot '${plot.name}' (${common.formatMessage(common.formatError(error), false)}).`
+      issues.push({
+        type: locApi.IssueType.ERROR,
+        description: `An error occurred while evaluating the X value of trace 1 of plot ${i + 1} (${common.formatMessage(common.formatError(error), false)}).`
       });
     }
 
@@ -1695,15 +1939,15 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
     try {
       yMain = evaluateExpression(plot.yValue, modelScope);
     } catch (error: unknown) {
-      simulationIssues.value.push({
-        type: locApi.EIssueType.ERROR,
-        description: `An error occurred while evaluating the Y value expression for plot '${plot.name}' (${common.formatMessage(common.formatError(error), false)}).`
+      issues.push({
+        type: locApi.IssueType.ERROR,
+        description: `An error occurred while evaluating the Y value of trace 1 of plot ${i + 1} (${common.formatMessage(common.formatError(error), false)}).`
       });
     }
 
     const normalisedMain = normaliseFloat64Arrays(xMain, yMain);
 
-    const traces: IGraphPanelPlotTrace[] = [
+    const traces: PlotTrace[] = [
       {
         traceId: `plot_${i}::trace_0`,
         name: vueCommon.traceName(plot.name, plot.xValue, plot.yValue),
@@ -1731,9 +1975,9 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
       try {
         xAdditional = evaluateExpression(additionalTrace.xValue, modelScope);
       } catch (error: unknown) {
-        simulationIssues.value.push({
-          type: locApi.EIssueType.ERROR,
-          description: `An error occurred while evaluating the X value expression for additional trace #${additionalTraceIndex + 1} of plot '${plot.name}' (${common.formatMessage(common.formatError(error), false)}).`
+        issues.push({
+          type: locApi.IssueType.ERROR,
+          description: `An error occurred while evaluating the X value of trace ${additionalTraceIndex + 2} of plot ${i + 1} (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
 
@@ -1742,9 +1986,9 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
       try {
         yAdditional = evaluateExpression(additionalTrace.yValue, modelScope);
       } catch (error: unknown) {
-        simulationIssues.value.push({
-          type: locApi.EIssueType.ERROR,
-          description: `An error occurred while evaluating the Y value expression for additional trace #${additionalTraceIndex + 1} of plot '${plot.name}' (${common.formatMessage(common.formatError(error), false)}).`
+        issues.push({
+          type: locApi.IssueType.ERROR,
+          description: `An error occurred while evaluating the Y value of trace ${additionalTraceIndex + 2} of plot ${i + 1} (${common.formatMessage(common.formatError(error), false)}).`
         });
       }
 
@@ -1772,14 +2016,17 @@ const runSimulation = async (currentSimulationGeneration: number): Promise<void>
 
   // Make sure that we haven't come across any issues so far.
 
-  if (simulationIssues.value.length) {
-    addInformationIssue(simulationIssues.value);
+  if (issues.length) {
+    addInformationIssue(issues);
+
+    simulationIssues.value = issues;
 
     return;
   }
 
-  // Let people know that the simulation data has been updated.
+  // We have no issues, so let people know that the simulation data has been updated.
 
+  simulationIssues.value = [];
   simulationDataAvailable = true;
 
   emit('simulationData');
@@ -1809,7 +2056,11 @@ const updateSimulation = async (): Promise<void> => {
   //          an older one has been superseded and the latest one is still in charge.
   // Note #2: if an input has changed while we were running (see onInputChange()), then another simulation run is about
   //          to start (see startInputSimulationUpdate()), so we are still simulating.
+  // Note #3: a previous run may have just been cancelled (see cancelSimulation()), in which case we may still be
+  //          considered as simulating by onIsSimulatingChanged() (since it is only called once our state has settled),
+  //          so we make sure that our run doesn't get reported as having been cancelled.
 
+  simulationCancellation = null;
   isSimulating.value = true;
 
   try {
@@ -1818,7 +2069,7 @@ const updateSimulation = async (): Promise<void> => {
     if (currentSimulationGeneration === simulationGeneration) {
       simulationIssues.value = [
         {
-          type: locApi.EIssueType.ERROR,
+          type: locApi.IssueType.ERROR,
           description: `An unexpected error occurred while running the simulation (${common.formatMessage(common.formatError(error), false)}).`
         }
       ];
@@ -1832,24 +2083,79 @@ const updateSimulation = async (): Promise<void> => {
   }
 };
 
-// Cancel any simulation run that is in progress, as well as any pending input simulation update.
-// Note: the cancelled simulation run will see that it has been superseded (see runSimulation()), so it won't report its
-//       results nor say that we are no longer simulating (see updateSimulation()), hence we do the latter here.
+// Cancel any simulation run that is in progress, as well as any pending input simulation update, either because it has
+// been stopped by the user (see onStopSimulation()) or because its results would be stale anyway (e.g., because our
+// settings have changed).
+// Note #1: the cancelled simulation run will see that it has been superseded (see runSimulation()), so it won't report
+//          its results nor say that we are no longer simulating (see updateSimulation()), hence we do the latter here.
+// Note #2: we let onIsSimulatingChanged() know why we are no longer simulating, so that it doesn't report our
+//          simulation as having completed (or failed), see simulationCancellation.
 
-const cancelSimulation = (): void => {
+const cancelSimulation = (reason: 'stopped' | 'cancelled' = 'cancelled'): void => {
   ++simulationGeneration;
+
+  if (isSimulating.value) {
+    simulationCancellation = reason;
+  }
 
   inputSimulationUpdatePending = false;
   isSimulating.value = false;
 
-  if (instance && instance.status() !== locSedApi.ESedInstanceStatus.IDLE) {
+  if (instance && instance.status() !== locSedApi.SedInstanceStatus.IDLE) {
     instance.stopRun();
   }
 };
 
+// Stop our simulation, giving the keyboard focus back to the element that had it before our Stop button got it (or, if
+// that element is not available anymore, to our first simulation input), should our Stop button have it when it gets
+// removed (i.e. once our simulation is not slow anymore, whether it has been stopped or has completed).
+
+const stopButtonRef = vue.useTemplateRef<{ $el: HTMLElement }>('stopButtonRef');
+let elementFocusedBeforeStopButton: HTMLElement | null = null;
+
+const onStopButtonFocus = (event: FocusEvent): void => {
+  const relatedTarget = event.relatedTarget;
+
+  if (relatedTarget instanceof HTMLElement && rootRef.value?.contains(relatedTarget)) {
+    elementFocusedBeforeStopButton = relatedTarget;
+  }
+};
+
+const onStopSimulation = (): void => {
+  cancelSimulation('stopped');
+};
+
+vue.watch(
+  slowSimulation,
+  (slow: boolean) => {
+    if (slow || stopButtonRef.value?.$el !== window.document.activeElement) {
+      return;
+    }
+
+    const element = elementFocusedBeforeStopButton;
+
+    elementFocusedBeforeStopButton = null;
+
+    void vue.nextTick().then(() => {
+      const activeElement = window.document.activeElement;
+
+      if (activeElement && activeElement !== window.document.body) {
+        return;
+      }
+
+      if (element?.isConnected && element.getClientRects().length && !element.matches(':disabled')) {
+        element.focus();
+      } else {
+        simulationInputsRef.value?.querySelector<HTMLElement>('input, [tabindex="0"]')?.focus();
+      }
+    });
+  },
+  { flush: 'sync' }
+);
+
 // Margins-related event handlers.
 
-const onMarginsUpdated = (plotId: string, newMargins: IGraphPanelMargins): void => {
+const onMarginsUpdated = (plotId: string, newMargins: PlotMargins): void => {
   margins[plotId] = newMargins;
 
   let marginCount = 0;
@@ -1903,12 +2209,20 @@ const onResetMargins = (): void => {
 
 // Runs-related event handlers
 
+// Whether our live run can be tracked, i.e. whether its data matches our simulation inputs, which is not the case while
+// our simulation is running, if it has issues, or if it was stopped (in which case our plots show the data of our
+// previous run, see onIsSimulatingChanged()).
+
+const liveRunTrackable = vue.computed<boolean>(() => {
+  return !isSimulating.value && !simulationIssues.value.length && lastRun.value?.outcome !== 'stopped';
+});
+
 const onTrackRun = (): void => {
   // Make sure that there is no simulation in progress or any issue with the current simulation data. Indeed, if we were
   // to track the current run while a simulation is still running, then we would end up tracking the data of the
   // previous run while using the input values of the new run, which would result in a mismatch between the two.
 
-  if (isSimulating.value || simulationIssues.value.length) {
+  if (!liveRunTrackable.value) {
     return;
   }
 
@@ -1964,7 +2278,7 @@ const onTrackRun = (): void => {
     }
 
     tooltipRows.push(
-      `<tr><th>${common.escapeHtml(input.name)}:</th><td>${common.escapeHtml(String(inputValue ?? ''))}</td></tr>`
+      `<tr><th>${common.escapeHtml(input.name)}:</th><td>${common.escapeHtml(typeof inputValue === 'number' ? common.formatNumber(inputValue) : (inputValue ?? ''))}</td></tr>`
     );
   }
 
@@ -1999,8 +2313,15 @@ const onTrackRun = (): void => {
 
   // Add the new run.
 
+  if (runs.value.length === 1) {
+    trackedRunId = 0;
+  }
+
+  ++trackedRunId;
+
   runs.value.push({
-    id: `run_${++trackedRunId}`,
+    id: `run_${trackedRunId}`,
+    number: trackedRunId,
     inputParameters,
     isVisible: true,
     data: liveData.value,
@@ -2014,8 +2335,8 @@ const onTrackRun = (): void => {
 // that they say which run they are for (e.g., when read by a screen reader), and, capitalised, as the name of the run
 // itself.
 
-const runName = (run: ISimulationRun, index: number, capitalised = false): string => {
-  const res = run.isLiveRun ? 'live run' : `run #${index}`;
+const runName = (run: SimulationRun, capitalised = false): string => {
+  const res = run.isLiveRun ? 'live run' : `run #${run.number}`;
 
   return capitalised ? res.charAt(0).toUpperCase() + res.slice(1) : res;
 };
@@ -2204,22 +2525,76 @@ const onColorSwatchesKeyDown = (event: KeyboardEvent): void => {
   swatches[newIndex]?.focus();
 };
 
-// Download COMBINE archive.
+// Return the given SED-ML, but with its model referring to the model file in our OMEX file.
+// Note #1: libOpenCOR uses the file name or URL of our model as its source, e.g., "file:///some/path/model.cellml" for
+//          a local file (and with some characters percent-encoded), so we cannot simply replace the file name of our
+//          model with the name of the model file in our OMEX file (we would, for instance, get "file://model.cellml",
+//          which is an absolute URL rather than a reference to a file in our OMEX file).
+// Note #2: a model which source starts with "#" is derived from another model in the SED-ML, so we leave its source as
+//          is.
 
-const onDownloadCombineArchive = (): void => {
-  const jsZip = new dependencies._jsZip();
-  const baseFileName = common.baseFileName(common.fileName(props.file.canonicalPath()));
-  const modelFile = model?.file();
+const archiveSedml = (sedml: string): string => {
+  const sedmlDocument = new DOMParser().parseFromString(sedml, 'application/xml');
 
-  if (!modelFile) {
-    emit('error', 'Cannot create COMBINE archive: no model file available.');
+  if (sedmlDocument.getElementsByTagName('parsererror').length) {
+    throw new Error('The SED-ML could not be parsed.');
+  }
+
+  for (const sedmlModel of Array.from(sedmlDocument.getElementsByTagNameNS('*', 'model'))) {
+    if (!sedmlModel.getAttribute('source')?.startsWith('#')) {
+      sedmlModel.setAttribute('source', 'model.cellml');
+    }
+  }
+
+  // Note: XMLSerializer may or may not include an XML declaration (and, if it does, it doesn't follow it with a new
+  //       line) and it doesn't end its output with a new line, unlike libOpenCOR, so we use our own XML declaration and
+  //       new lines.
+
+  const root = new XMLSerializer()
+    .serializeToString(sedmlDocument)
+    .replace(/^<\?xml[^>]*\?>\s*/, '')
+    .trimEnd();
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${root}\n`;
+};
+
+// Download OMEX file.
+// Note: creating our OMEX file may fail (e.g., if libOpenCOR throws an exception while retrieving the contents of our
+//       model file or serialising our document, or if our OMEX file cannot be generated), in which case we let people
+//       know about it (as in the CellDL Editor view) rather than silently not download anything.
+
+const reportOmexFileExportIssue = (issue: unknown): void => {
+  addToast({
+    severity: 'error',
+    summary: 'Cannot Export OMEX File',
+    detail: toastIssueDetail(props.file.canonicalPath(), common.formatMessage(common.formatError(issue)))
+  });
+};
+
+const onDownloadOmexFile = async (): Promise<void> => {
+  let modelFile: locApi.File | null | undefined;
+
+  try {
+    modelFile = model?.file();
+  } catch (error: unknown) {
+    reportOmexFileExportIssue(error);
 
     return;
   }
 
-  jsZip.file(
-    'manifest.xml',
-    `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+  if (!modelFile) {
+    reportOmexFileExportIssue('No model file is available.');
+
+    return;
+  }
+
+  try {
+    const jsZip = new dependencies._jsZip();
+    const baseFileName = common.baseFileName(common.fileName(props.file.canonicalPath()));
+
+    jsZip.file(
+      'manifest.xml',
+      `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
 <omexManifest xmlns="http://identifiers.org/combine.specifications/omex-manifest">
   <content location="." format="http://identifiers.org/combine.specifications/omex"/>
   <content location="document.sedml" format="http://identifiers.org/combine.specifications/sed-ml" master="true"/>
@@ -2227,36 +2602,36 @@ const onDownloadCombineArchive = (): void => {
   <content location="simulation.json" format="http://purl.org/NET/mediatypes/application/json"/>
 </omexManifest>
 `
-  );
+    );
 
-  try {
     // Note: we release our model file even if something goes wrong while retrieving its contents or serialising our
     //       document.
 
-    jsZip.file('model.cellml', modelFile.contents());
-    jsZip.file('document.sedml', document.serialise().replace(modelFile.path(), 'model.cellml'));
-  } finally {
-    modelFile.release();
+    try {
+      jsZip.file('model.cellml', modelFile.contents());
+      jsZip.file('document.sedml', archiveSedml(document.serialise()));
+    } finally {
+      modelFile.release();
+    }
+
+    jsZip.file('simulation.json', JSON.stringify(actualUiJson.value, locApi.uiJsonReplacer, 2));
+
+    common.downloadFile(
+      `${baseFileName}.omex`,
+      await jsZip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE'
+      }),
+      'application/zip'
+    );
+  } catch (error: unknown) {
+    reportOmexFileExportIssue(error);
   }
-
-  jsZip.file('simulation.json', JSON.stringify(actualUiJson.value, locApi.uiJsonReplacer, 2));
-
-  jsZip
-    .generateAsync({
-      type: 'blob',
-      compression: 'DEFLATE'
-    })
-    .then((content: Blob) => {
-      common.downloadFile(`${baseFileName}.omex`, content, 'application/zip');
-    })
-    .catch((error: unknown) => {
-      console.warn('OpenCOR: failed to generate COMBINE archive:', common.formatError(error));
-    });
 };
 
 // Settings dialog event handler.
 
-const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSettingsDialog): void => {
+const onSettingsOk = (updatedSettings: SimulationExperimentInteractiveViewSettings): void => {
   if (!uniformTimeCourse) {
     settingsVisible.value = false;
 
@@ -2285,13 +2660,12 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
 
   // Update our settings and hide the dialog.
   // Note: our settings may have been confirmed even though they have some issues (so that they can, for instance, be
-  //       saved as a COMBINE archive and fixed later), in which case we must not silently run our simulation with some
-  //       other settings, but let libOpenCOR report those issues. So, our number of steps is such that our point
-  //       interval can be retrieved from it (e.g., a negative point interval gives a negative number of steps), unless
-  //       our point interval is zero, not finite, or so small that our number of steps cannot be handled by libOpenCOR,
-  //       in which case we use zero steps. Either way, libOpenCOR will report an invalid number of steps. If our
-  //       settings are valid, then we use at least one step (i.e. if our point interval is greater than our simulation
-  //       range).
+  //       saved as an OMEX file and fixed later), in which case we must not silently run our simulation with some other
+  //       settings, but let libOpenCOR report those issues. So, our number of steps is such that our point interval can
+  //       be retrieved from it (e.g., a negative point interval gives a negative number of steps), unless our point
+  //       interval is zero, not finite, or so small that our number of steps cannot be handled by libOpenCOR, in which
+  //       case we use zero steps. Either way, libOpenCOR will report an invalid number of steps. If our settings are
+  //       valid, then we use at least one step (i.e. if our point interval is greater than our simulation range).
 
   const { initialPoint, startingPoint, endingPoint, pointInterval } = updatedSettings.simulation;
 
@@ -2333,8 +2707,8 @@ const onSettingsOk = (updatedSettings: ISimulationExperimentInteractiveViewSetti
 
   // Remove the model changes from our previous simulation run if our new UI JSON is invalid.
   // Note: we don't run any simulation with an invalid UI JSON, so those model changes would otherwise be left in our
-  //       document and, therefore, be exported with it (see onDownloadCombineArchive()) even though they don't match
-  //       our new UI JSON.
+  //       document and, therefore, be exported with it (see onDownloadOmexFile()) even though they don't match our new
+  //       UI JSON.
 
   if (uiJsonIssues.value.length > 0) {
     applyModelChanges([]);
@@ -2432,7 +2806,7 @@ const onInputAtDefaultValueChange = (index: number, atDefaultValue: boolean): vo
 };
 
 const allSimulationInputsAtDefaultValues = vue.computed<boolean>(() => {
-  return actualUiJson.value.input.every((input: locApi.IUiJsonInput, index: number) => {
+  return actualUiJson.value.input.every((input: locApi.UiJsonInput, index: number) => {
     return inputValues.value[index] === input.defaultValue && inputsShownAtDefaultValues.value[index] !== false;
   });
 });
@@ -2483,7 +2857,7 @@ const onResetInputs = (event: Event): void => {
   // Reset our input values and rerun our simulation, but only if needed (i.e. if there was only a value being edited
   // then there is nothing else to do).
 
-  const defaultInputValues = actualUiJson.value.input.map((input: locApi.IUiJsonInput) => {
+  const defaultInputValues = actualUiJson.value.input.map((input: locApi.UiJsonInput) => {
     return input.defaultValue;
   });
 
@@ -2513,6 +2887,10 @@ const onResetInputs = (event: Event): void => {
 
 vue.onBeforeUnmount(() => {
   ++simulationGeneration;
+
+  clearTimeout(slowSimulationTimer);
+  clearTimeout(runStatusTimer);
+  clearTimeout(progressResetTimer);
 
   inputSimulationUpdatePending = false;
 
@@ -2560,6 +2938,20 @@ vue.onMounted(() => {
 </script>
 
 <style scoped>
+/**
+ * Stop button, in simulation-only mode (see our template).
+ */
+
+.floating-stop-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  border-radius: var(--p-border-radius-md);
+  background-color: var(--p-content-background);
+  box-shadow: var(--opencor-overlay-shadow);
+}
+
 .color-swatch:hover {
   box-shadow: 0 2px 8px var(--p-shadow-color, rgba(0, 0, 0, 0.15));
 }
@@ -2569,30 +2961,26 @@ vue.onMounted(() => {
 }
 
 /**
- * Note: focus outlines are removed (see app.css), which would also remove the outline of the selected swatch when it
- *       gets the focus, so we restore it.
+ * Selected swatch, which has a ring in our text colour around it.
+ * Note: our ring is a box shadow (rather than an outline), so that our focus ring, which is an outline that is offset
+ *       by the width of our ring (see app.css), is drawn right outside it. So, our ring must also be combined with the
+ *       box shadow of a hovered swatch (in both light and dark modes).
  */
 
 .color-swatch-selected {
-  outline-color: var(--p-text-color);
+  box-shadow: 0 0 0 var(--opencor-focus-ring-width) var(--p-text-color);
 }
 
-.color-swatch-selected:focus {
-  outline: 2px solid var(--p-text-color) !important;
-}
-
-/**
- * Focus ring of a swatch, which is like that of our other buttons (see app.css), i.e. a ring in the primary colour that
- * is offset from the swatch (or, for the selected swatch, that is right outside its outline).
- * Note: it is also shown when the swatch is hovered, hence the :hover variant, which takes precedence over the box
- *       shadow of a hovered swatch (in both light and dark modes).
- */
-
-.color-swatch:focus-visible,
-.color-swatch:focus-visible:hover {
+.color-swatch-selected:hover {
   box-shadow:
-    0 0 0 2px var(--p-content-background),
-    0 0 0 4px var(--p-primary-color);
+    0 0 0 var(--opencor-focus-ring-width) var(--p-text-color),
+    0 2px 8px var(--p-shadow-color, rgba(0, 0, 0, 0.15));
+}
+
+.opencor-dark-mode .color-swatch-selected:hover {
+  box-shadow:
+    0 0 0 var(--opencor-focus-ring-width) var(--p-text-color),
+    0 2px 8px var(--p-shadow-color-dark, rgba(255, 255, 255, 0.15));
 }
 
 /**
@@ -2626,90 +3014,6 @@ vue.onMounted(() => {
   margin: 0 0 0.5rem;
   color: var(--p-text-muted-color);
   font-size: 0.875rem;
-}
-
-/**
- * Side panel, i.e. our simulation inputs and runs.
- * Note: an input field has an intrinsic width (of about 20 characters), which would otherwise make our side panel wider
- *       than we want, so we let our number fields shrink to the width of our side panel. This means that a number field
- *       with a reset button doesn't need the negative margin that keeps its intrinsic width the same (see
- *       InputScientificNumberWidget.vue), and which would otherwise make it overflow our side panel.
- */
-
-.side-panel-column {
-  flex-shrink: 0;
-  width: 16rem;
-  border-right: 1px solid var(--p-content-border-color);
-}
-
-/**
- * Narrow layout (see useNarrowLayout() in vueCommon.ts), i.e. our side panel is stacked above our plots (rather than
- * shown to their left), so that our plots remain usable (e.g., on a phone or when OpenCOR is embedded in a small
- * container). Our side panel then takes the whole width and part of the height of our view, and can be scrolled.
- */
-
-.panels.narrow-layout {
-  flex-direction: column;
-}
-
-.narrow-layout .side-panel-column {
-  width: auto;
-  height: 40%;
-  border-right: none;
-  border-bottom: 1px solid var(--p-content-border-color);
-}
-
-.narrow-layout .plots-column {
-  flex: 1 1 0;
-  height: auto;
-}
-
-.side-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1rem;
-}
-
-.side-panel :deep(.p-inputnumber .p-inputnumber-input) {
-  flex: 1 1 auto;
-  width: 0;
-  min-width: 0;
-  margin-right: 0;
-}
-
-.side-panel-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.side-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 1.5rem;
-}
-
-.side-panel-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding-top: 0.375rem;
-}
-
-.side-panel-hint {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin: 0;
-  color: var(--p-text-muted-color);
-  font-size: 0.8125rem;
-  line-height: 1.25rem;
-}
-
-.side-panel-hint .pi {
-  line-height: inherit;
 }
 
 /**

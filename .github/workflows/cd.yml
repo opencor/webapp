@@ -10,8 +10,36 @@ permissions:
   id-token: write
 
 jobs:
+  version:
+    if: ${{ github.repository == 'opencor/webapp' }}
+    name: Version
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Check out OpenCOR
+        uses: actions/checkout@v7
+      - name: Check the version
+        # Make sure that our tag is our version number (i.e. vX.YYYYMMDD.Z for version X.YYYYMMDD.Z), both for OpenCOR
+        # and for OpenCOR as a component, so that we never release or publish a version that is not the one we tagged.
+        # Note: there is no tag to check if we are run manually from a branch.
+        run: |
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            echo "::notice::Not run from a tag, so not checking the version."
+
+            exit 0
+          fi
+
+          for PACKAGE_JSON in package.json src/renderer/package.json; do
+            VERSION=$(jq -r .version "${PACKAGE_JSON}")
+
+            if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} doesn't match version ${VERSION} in ${PACKAGE_JSON} (expected v${VERSION})."
+
+              exit 1
+            fi
+          done
   releases:
     if: ${{ github.repository == 'opencor/webapp' }}
+    needs: version
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -23,9 +51,9 @@ jobs:
           - name: Windows (ARM)
             os: windows-11-arm
           - name: Linux (Intel)
-            os: ubuntu-22.04
+            os: ubuntu-26.04
           - name: Linux (ARM)
-            os: ubuntu-22.04-arm
+            os: ubuntu-26.04-arm
           - name: macOS (Intel)
             os: macos-15-intel
           - name: macOS (ARM)
@@ -67,23 +95,13 @@ jobs:
           echo -n $DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 | base64 -d > $MACOS_CSC_LINK
       - name: Install bun
         uses: oven-sh/setup-bun@v2
-      - name: Install GCC 16
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          sudo apt-get update
-          sudo apt-get install -y gcc-16 g++-16
-          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-16 100
-          sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-16 100
-          echo "CC=gcc-16" >> "$GITHUB_ENV"
-          echo "CXX=g++-16" >> "$GITHUB_ENV"
       - name: Install libopenjp2-tools (Linux ARM only)
         if: ${{ matrix.name == 'Linux (ARM)' }}
         run: |
           sudo apt update
           sudo apt install libopenjp2-tools
       - name: OpenCOR dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: Build OpenCOR
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
@@ -95,8 +113,9 @@ jobs:
         run: bun release
   web_app:
     if: ${{ github.repository == 'opencor/webapp' }}
+    needs: version
     name: Web app
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     concurrency:
       group: web-app-deployment-app
       cancel-in-progress: false
@@ -110,7 +129,7 @@ jobs:
       - name: Install bun
         uses: oven-sh/setup-bun@v2
       - name: OpenCOR dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: Build OpenCOR's Web app
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
@@ -168,7 +187,9 @@ jobs:
         #       src/renderer/scripts/prune.web.ts).
   npm:
     if: ${{ github.repository == 'opencor/webapp' }}
-    runs-on: ubuntu-22.04
+    needs: version
+    name: npm
+    runs-on: ubuntu-26.04
     steps:
       - name: Set the timezone to New Zealand
         run: sudo timedatectl set-timezone Pacific/Auckland
@@ -188,7 +209,7 @@ jobs:
       - name: OpenCOR dependencies
         run: |
           cd src/renderer
-          bun install
+          bun install --frozen-lockfile
       - name: Build OpenCOR as a component
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}

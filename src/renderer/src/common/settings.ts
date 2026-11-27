@@ -1,9 +1,9 @@
-import { formatError, type ISettings, type ISettingsGeneral, isObject } from './common';
+import { formatError, formatMessage, type Settings, type SettingsGeneral, isObject } from './common';
 import { electronApi } from './electronApi';
 
 // Our default settings.
 
-const defaultSettings = (): ISettings => {
+const defaultSettings = (): Settings => {
   return {
     general: {
       checkForUpdatesAtStartup: true,
@@ -19,9 +19,9 @@ const defaultSettings = (): ISettings => {
 // Note #2: we keep the settings, and settings sections, for which we don't have a default value (e.g., settings saved
 //          by a newer version of OpenCOR).
 
-const withDefaultSettings = (settings: unknown): ISettings => {
+const withDefaultSettings = (settings: unknown): Settings => {
   const loadedSettings = isObject(settings) ? settings : {};
-  const res = { ...loadedSettings, ...defaultSettings() } as ISettings;
+  const res = { ...loadedSettings, ...defaultSettings() } as Settings;
   const general = loadedSettings.general;
 
   // Note: we use Object.hasOwn() and Object.fromEntries() rather than look up and assign each key since the loaded
@@ -36,33 +36,34 @@ const withDefaultSettings = (settings: unknown): ISettings => {
       ...Object.entries(general).filter(([key, value]) => {
         return !Object.hasOwn(defaultGeneral, key) || typeof value === typeof defaultGeneral[key];
       })
-    ]) as unknown as ISettingsGeneral;
+    ]) as unknown as SettingsGeneral;
   }
 
   return res;
 };
 
-class Settings {
-  protected static _instance: Settings | null = null;
-  private _settings!: ISettings;
+class SettingsManager {
+  protected static _instance: SettingsManager | null = null;
+  private _settings!: Settings;
   private _oldRawSettings: string | null = null;
   private _isInitialised = false;
   private _initialisationListeners: (() => void)[] = [];
+  private _saveIssueListeners = new Set<(issue: string) => void>();
 
   private constructor() {
     // Start with some default settings and then load them.
     // Note: to have default settings is critical when running the desktop version of OpenCOR since they are loaded
-    //       asynchronously, so we need to ensure that our settings are always defined. This is not the case for the
-    //       Web version of OpenCOR, where we can load our settings directly from the cookies.
+    //       asynchronously, so we need to ensure that our settings are always defined. This is not the case for the Web
+    //       version of OpenCOR, where we can load our settings directly from the cookies.
 
     this.reset();
     this.load();
   }
 
-  static instance(): Settings {
-    Settings._instance ??= new Settings();
+  static instance(): SettingsManager {
+    SettingsManager._instance ??= new SettingsManager();
 
-    return Settings._instance;
+    return SettingsManager._instance;
   }
 
   private emitInitialised(): void {
@@ -90,7 +91,7 @@ class Settings {
 
       electronApi
         .loadSettings()
-        .then((settings: ISettings) => {
+        .then((settings: Settings) => {
           this._settings = withDefaultSettings(settings);
           this._oldRawSettings = JSON.stringify(settings);
         })
@@ -121,6 +122,19 @@ class Settings {
     }
   }
 
+  // Let the given callback know whether our settings could not be saved, and return a function to stop doing so.
+
+  onSaveIssue(callback: (issue: string) => void): () => void {
+    this._saveIssueListeners.add(callback);
+
+    return () => {
+      this._saveIssueListeners.delete(callback);
+    };
+  }
+
+  // Save our settings, letting our save issue listeners know if they could not be saved (e.g., if the local storage is
+  // not available), so that people can be told about it (see OpenCOR.vue).
+
   save(): void {
     const rawSettings = JSON.stringify(this._settings);
 
@@ -139,6 +153,12 @@ class Settings {
         this._oldRawSettings = rawSettings;
       } catch (error: unknown) {
         console.warn('OpenCOR: failed to save the settings to the local storage:', formatError(error));
+
+        const issue = formatMessage(formatError(error));
+
+        this._saveIssueListeners.forEach((callback) => {
+          callback(issue);
+        });
       }
     }
   }
@@ -153,9 +173,9 @@ class Settings {
     return JSON.stringify(this._settings, null, 2);
   }
 
-  get general(): ISettingsGeneral {
+  get general(): SettingsGeneral {
     return this._settings.general;
   }
 }
 
-export const settings = Settings.instance();
+export const settings = SettingsManager.instance();

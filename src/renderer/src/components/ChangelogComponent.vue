@@ -2,7 +2,7 @@
   <div class="changelog">
     <section v-for="entry in entries" :key="entry.version" class="changelog-entry">
       <div class="changelog-entry-header">
-        <span class="changelog-entry-version">Version {{ entry.version }}</span>
+        <h3 class="changelog-entry-version">Version {{ entry.version }}</h3>
         <span v-if="entry.version === currentVersion" class="changelog-entry-current">Current</span>
         <span v-if="releaseDate(entry.version)" class="changelog-entry-date">{{ releaseDate(entry.version) }}</span>
       </div>
@@ -19,13 +19,13 @@
 </template>
 
 <script setup lang="ts">
-import type { IOpenCORChangelogEntry, OpenCORChangelogChangeType } from '../../index';
+import type { OpenCORChangelogEntry, OpenCORChangelogChangeType } from '../../index';
 
 import { vHint } from '../common/hint';
 import { currentVersion } from '../common/version';
 
 defineProps<{
-  entries: IOpenCORChangelogEntry[];
+  entries: OpenCORChangelogEntry[];
 }>();
 
 const CHANGE_TYPE_LABELS: Record<OpenCORChangelogChangeType, string> = {
@@ -69,6 +69,10 @@ const releaseDate = (version: string): string => {
 </script>
 
 <style scoped>
+/**
+ * Note: our entries are separated by a line, so that each version can easily be told apart from the next one.
+ */
+
 .changelog {
   display: flex;
   flex-direction: column;
@@ -78,7 +82,12 @@ const releaseDate = (version: string): string => {
 .changelog-entry {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
+}
+
+.changelog-entry + .changelog-entry {
+  padding-top: 1rem;
+  border-top: 1px solid var(--p-content-border-color);
 }
 
 .changelog-entry-header {
@@ -88,8 +97,15 @@ const releaseDate = (version: string): string => {
   gap: 0.25rem 0.5rem;
 }
 
+/**
+ * Note: our version is a heading (so that assistive technologies can navigate between our versions), which stands out
+ *       from our changes.
+ */
+
 .changelog-entry-version {
+  margin: 0;
   color: var(--p-text-color);
+  font-size: 1rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -105,8 +121,14 @@ const releaseDate = (version: string): string => {
   line-height: 1.125rem;
 }
 
+/**
+ * Note: our date is right aligned, i.e. away from our version (and our Current badge, if any).
+ */
+
 .changelog-entry-date {
+  margin-left: auto;
   color: var(--p-text-muted-color);
+  font-style: italic;
   font-size: 0.8125rem;
 }
 

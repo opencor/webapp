@@ -32,7 +32,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
-import type { IToolbarButtonProps } from '../../common/vueCommon';
+import type { ToolbarButtonProps } from '../../common/vueCommon';
 
 // A toolbar button, which shows an icon and, when hovered or focused using the keyboard, a tooltip with the button's
 // label and, if any, keyboard shortcut.
@@ -60,14 +60,14 @@ import type { IToolbarButtonProps } from '../../common/vueCommon';
 //          SimulationExperimentInteractiveView.vue), in which case it is shown above it (if there is enough room
 //          there).
 // Note #7: like a hint (see hint.ts), a tooltip can be dismissed by pressing Escape, be it shown or about to be shown
-//          (including when it gives some feedback, see Note #5), in which case it isn't shown again until its button
-//          is hovered, focused, or pressed anew (so that it can, for instance, give some feedback again). Escape is
+//          (including when it gives some feedback, see Note #5), in which case it isn't shown again until its button is
+//          hovered, focused, or pressed anew (so that it can, for instance, give some feedback again). Escape is
 //          otherwise left to do what it normally does (e.g., remove the keyboard focus, see OpenCOR.vue).
 
 const TOOLTIP_OFFSET = 6; // Distance between our button and our tooltip (see .toolbar-button-tooltip below).
 const TOOLTIP_MARGIN = 4; // Minimum distance between our tooltip and the edges of the window.
 
-const props = defineProps<IToolbarButtonProps>();
+const props = defineProps<ToolbarButtonProps>();
 
 const buttonRef = vue.useTemplateRef<HTMLButtonElement>('buttonRef');
 const tooltipSuppressed = vue.ref<boolean>(false);
@@ -199,12 +199,18 @@ const updateTooltipPosition = (event: Event): void => {
   background-color: color-mix(in srgb, var(--toolbar-button-color) 12%, transparent);
 }
 
-.toolbar-button:not(:disabled):active {
-  transform: scale(0.92);
+/**
+ * Note: a pressed button is scaled down a bit, unless people prefer reduced motion.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .toolbar-button:not(:disabled):active {
+    transform: scale(0.92);
+  }
 }
 
 .toolbar-button:focus-visible {
-  box-shadow: 0 0 0 2px var(--p-primary-color);
+  outline-offset: 0;
 }
 
 /**
@@ -256,7 +262,7 @@ const updateTooltipPosition = (event: Event): void => {
   transition: visibility 0s 0.5s;
 }
 
-.toolbar-button:focus-visible .toolbar-button-tooltip {
+:where(.opencor:not(.opencor-focus-ring-hidden)) .toolbar-button:focus-visible .toolbar-button-tooltip {
   visibility: visible;
   transition: none;
 }

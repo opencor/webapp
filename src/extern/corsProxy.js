@@ -1,7 +1,13 @@
 // A simple CORS proxy handler for Cloudflare Workers (see https://workers.cloudflare.com/).
-// Note: the proxy accepts any target URL, but it only returns content that is a CellML file, a SED-ML file, an OMEX
-//       file, or a CSV file (see isCsvFile()), and that is not too large (see MAX_SIZE). Such content is returned as an
-//       opaque, sandboxed download, so that a browser never renders or executes it.
+// Note #1: the proxy accepts any target URL, but it only returns content that is a file that the app can open (i.e. a
+//          CellML file, a SED-ML file, an OMEX file, or a CellDL file, see isCelldlFile()) or a CSV file (which the app
+//          can use as external data in its Interactive view, see csvFileIssue()), and that is not too large (see
+//          MAX_SIZE). Such content is returned as an opaque, sandboxed download, so that a browser never renders or
+//          executes it.
+// Note #2: the app tells us which kind of content it expects (see CONTENT_KINDS), so that we only return that kind of
+//          content and, if we get something else, tell it what we expected (e.g., not mention CSV files when a file is
+//          to be opened). The kind of content may not be given (e.g., by an older version of the app), in which case we
+//          accept any of them.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -17,11 +23,20 @@ const CONTENT_HEADERS = {
   'X-Content-Type-Options': 'nosniff'
 };
 
+const CONTENT_KINDS = {
+  file: 'a CellML file, a SED-ML file, an OMEX file, or a CellDL file',
+  csv: 'a CSV file'
+};
+const ANY_CONTENT = 'a CellML file, a SED-ML file, an OMEX file, a CellDL file, or a CSV file';
+
 const SNIFF_SIZE = 64 * 1024; // 64 KB.
 const MAX_XML_PROLOG_SIZE = 1024 * 1024; // 1 MB.
 // Note: the prolog of an XML file (i.e. its XML declaration, processing instructions, comments, and document type
 //       declaration) may be longer than SNIFF_SIZE (e.g., because of a long licence comment), in which case we read up
 //       to MAX_XML_PROLOG_SIZE of it to find its root element (see forwardRequest()).
+const MAX_CSV_HEAD_SIZE = 1024 * 1024; // 1 MB.
+// Note: the header and first row of data of a CSV file may be longer than SNIFF_SIZE (e.g., because it has thousands of
+//       columns), in which case we read up to MAX_CSV_HEAD_SIZE of it to check them (see forwardRequest()).
 const MAX_SIZE = 32 * 1024 * 1024; // 32 MB.
 // Note: an OMEX file, as well as some content which size we don't know in advance, needs to be fully read (see
 //       forwardRequest()), which means holding two copies of it (i.e. the chunks we read and their concatenation, see
@@ -36,6 +51,10 @@ const ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR_SIGNATURE = 0x07064b50;
 
 const extractTargetUrl = (url) => {
   return url.searchParams.get('url');
+};
+
+const extractContentKind = (url) => {
+  return url.searchParams.get('kind');
 };
 
 const isValidTargetUrl = (targetUrl) => {
@@ -59,6 +78,53 @@ const concatenate = (chunks, length) => {
   return bytes;
 };
 
+// Give up on the server of the target URL if it stalls, i.e. if it doesn't send us the headers of its response or the
+// next chunk of its content within STALL_TIMEOUT.
+// Note: the app gives us much more time to respond than it gives a server it fetches a URL from directly since we may
+//       need to fully read some content before responding (see fetchThroughCorsProxy() in
+//       src/renderer/src/common/common.ts). So, without this, a server that stalls would keep the app waiting for a
+//       long time before it tries to fetch the target URL directly. With it, the app can only be kept waiting that long
+//       by a server that is slow, but still sending us its content.
+
+const STALL_TIMEOUT = 30 * 1000; // 30 seconds.
+const STALLED_MESSAGE = 'The server took too long to respond.';
+
+class StalledError extends Error {
+  constructor() {
+    super(STALLED_MESSAGE);
+  }
+}
+
+const withStallTimeout = async (promise, onStall) => {
+  // Return what the given promise resolves to, unless it takes longer than STALL_TIMEOUT, in which case reject with a
+  // StalledError and call the given function (to stop whatever the promise is waiting for).
+  // Note: stopping what the promise is waiting for settles it (e.g., a cancelled read resolves as if the content had
+  //       ended), so we must reject before doing so. Otherwise, the promise would win the race.
+
+  let stallTimer;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_resolve, reject) => {
+        stallTimer = setTimeout(() => {
+          reject(new StalledError());
+
+          onStall();
+        }, STALL_TIMEOUT);
+      })
+    ]);
+  } finally {
+    clearTimeout(stallTimer);
+  }
+};
+
+const read = (reader) => {
+  return withStallTimeout(reader.read(), () => {
+    reader.cancel().catch(() => {});
+  });
+};
+
 const readChunks = async (reader, maxSize, initialChunks = []) => {
   // Read chunks until (roughly) the given number of bytes, including those of the given initial chunks, has been
   // reached and let the caller know whether the end of the stream was reached.
@@ -70,7 +136,7 @@ const readChunks = async (reader, maxSize, initialChunks = []) => {
   let done = false;
 
   while (length < maxSize) {
-    const result = await reader.read();
+    const result = await read(reader);
 
     if (result.done) {
       done = true;
@@ -94,6 +160,15 @@ const readBytes = async (reader, maxSize) => {
   return { bytes: concatenate(chunks, length), done };
 };
 
+const readMoreBytes = async (reader, head, maxSize) => {
+  // Read more of some content, the start of which we have already read, i.e. up to (roughly) twice as many bytes (but
+  // no more than the given number of bytes), and let the caller know whether the end of the stream was reached.
+
+  const more = await readChunks(reader, Math.min(2 * head.length, maxSize), [head]);
+
+  return { bytes: concatenate(more.chunks, more.length), done: more.done };
+};
+
 const readRest = async (reader, head) => {
   // Read the rest of some content, the start of which we have already read, and return all of it, unless it is too
   // large, in which case return null.
@@ -104,7 +179,7 @@ const readRest = async (reader, head) => {
   const all = await readChunks(reader, MAX_SIZE + 1, [head]);
 
   if (all.length > MAX_SIZE) {
-    await reader.cancel();
+    await reader.cancel().catch(() => {});
 
     return null;
   }
@@ -123,7 +198,20 @@ const replayStream = (bytes, reader) => {
       controller.enqueue(bytes);
     },
     async pull(controller) {
-      const { done, value } = await reader.read();
+      // Note: we have already responded, so if the server stalls, all we can do is error our stream, which the app sees
+      //       as a network error, in which case it fetches the target URL directly (see fetchThroughCorsProxy() in
+      //       src/renderer/src/common/common.ts).
+
+      let done;
+      let value;
+
+      try {
+        ({ done, value } = await read(reader));
+      } catch (error) {
+        controller.error(error);
+
+        return;
+      }
 
       if (done) {
         controller.close();
@@ -134,9 +222,9 @@ const replayStream = (bytes, reader) => {
       size += value.length;
 
       if (size > MAX_SIZE) {
-        await reader.cancel();
+        await reader.cancel().catch(() => {});
 
-        controller.error(new Error('The target content is too large.'));
+        controller.error(new Error(TOO_LARGE_MESSAGE));
 
         return;
       }
@@ -232,10 +320,10 @@ const isOmexFile = (bytes) => {
 };
 
 const xmlRootElement = (text) => {
-  // Return the local name and namespace of the root element of the given XML text, skipping its prolog (i.e. its XML
-  // declaration, processing instructions, comments, and document type declaration), or null if there is no such root
-  // element. If the given XML text ends before the start tag of its root element does, i.e. if it is only the start of
-  // some XML text, then let the caller know that it is incomplete.
+  // Return the prefix, local name, and namespace of the root element of the given XML text, skipping its prolog (i.e.
+  // its XML declaration, processing instructions, comments, and document type declaration), or null if there is no such
+  // root element. If the given XML text ends before the start tag of its root element does, i.e. if it is only the
+  // start of some XML text, then let the caller know that it is incomplete.
 
   const INCOMPLETE = { incomplete: true };
 
@@ -290,11 +378,11 @@ const xmlRootElement = (text) => {
     /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
   )) {
     if (attribute === namespaceAttribute) {
-      return { name, namespace: doubleQuotedValue ?? singleQuotedValue };
+      return { prefix, name, namespace: doubleQuotedValue ?? singleQuotedValue };
     }
   }
 
-  return { name, namespace: null };
+  return { prefix, name, namespace: null };
 };
 
 const xmlEncoding = (bytes) => {
@@ -338,34 +426,51 @@ const isCellmlOrSedmlFile = (bytes) => {
   );
 };
 
-const hasCsvExtension = (url) => {
-  try {
-    return new URL(url).pathname.toLowerCase().endsWith('.csv');
-  } catch {
-    return false;
-  }
+const isSvgFile = (bytes) => {
+  // Check that the given bytes are an SVG file, i.e. that their root element is an unprefixed svg element, as the app
+  // requires (see isCellDLFile() in src/renderer/src/common/locCommon.ts).
+  // Note: an SVG file could have a prefixed root element (e.g., <svg:svg xmlns:svg="http://www.w3.org/2000/svg">), but
+  //       the app would then not recognise it as a CellDL file, so we would return a file that it cannot open in its
+  //       CellDL Editor.
+
+  const rootElement = xmlRootElement(xmlText(bytes));
+
+  return rootElement?.name === 'svg' && !rootElement.prefix;
 };
 
-const isCsvFile = (bytes, complete, csvExtension) => {
-  // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks).
-  // If the URL we ended up at (i.e. after following redirects) has a .csv extension, then that is all we check since
-  // the app can tell the user why the CSV file cannot be used, if needed (see parseExternalCsvData()). Otherwise, the
-  // content is all we have to go by, so we also check that the text looks like a CSV file as expected by the app, i.e.
-  // lines are separated by line breaks and values by commas, there are at least two lines (i.e. a header and some
-  // data), and every line has the same number of values, which must be at least two (i.e. a VOI column and a data
-  // column). Like the app, we decode the text as UTF-8 (replacing invalid byte sequences, like Response.text() does),
-  // trim lines, and skip blank lines.
-  // Note: if we only have the start of the CSV file, then we ignore its last (and likely incomplete) line.
+const hasCelldlMetadata = (bytes) => {
+  return /\bid\s*=\s*["']celldl-rdf-metadata["']/.test(xmlText(bytes));
+};
+
+const isCelldlFile = (bytes) => {
+  // Check that the given bytes are a CellDL file, i.e. an SVG file with some CellDL metadata, as the app does (see
+  // isCellDLFile() in src/renderer/src/common/locCommon.ts).
+  // Note: the CellDL metadata is normally at the start of a CellDL file (i.e. it is the first child of its root
+  //       element), but it may not be, in which case we may only find it once we have read the whole file (see
+  //       forwardRequest()).
+
+  return isSvgFile(bytes) && hasCelldlMetadata(bytes);
+};
+
+const csvFileIssue = (bytes, complete) => {
+  // Check that the given bytes are a CSV file, i.e. text (without control characters other than tabs and line breaks)
+  // that looks like a CSV file as expected by the app, i.e. lines are separated by line breaks and values by commas,
+  // there are at least two lines (i.e. a header and some data), and every line has the same number of values, which
+  // must be at least two (i.e. a VOI column and a data column). Like the app, we decode the text as UTF-8 (replacing
+  // invalid byte sequences, like Response.text() does), trim lines, and skip blank lines. If the given bytes are a CSV
+  // file, then return null. Otherwise, return why they are not (worded like in parseExternalCsvData(), so that the user
+  // gets told the same thing whether the app or we find the issue) and whether more bytes are needed to tell.
+  // Note #1: if we only have the start of the CSV file, then we ignore its last (and likely incomplete) line.
+  // Note #2: we check the text even if the URL has a .csv extension. Indeed, we accept any target URL, so we would
+  //          otherwise return almost any text from anywhere (e.g., https://example.com/anything.csv), i.e. act as a
+  //          general CORS proxy for text. The app can still tell the user why a CSV file cannot be used if the issue is
+  //          with its values (e.g., a non-numeric value, see parseExternalCsvData()) since we don't check them.
 
   const text = new TextDecoder().decode(bytes, { stream: !complete });
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: we are looking for control characters.
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) {
-    return false;
-  }
-
-  if (csvExtension) {
-    return true;
+    return { message: 'it is not a text file', incomplete: false };
   }
 
   const lines = text.split(/\r?\n/);
@@ -374,8 +479,8 @@ const isCsvFile = (bytes, complete, csvExtension) => {
     lines.pop();
   }
 
-  let nbOfLines = 0;
-  let nbOfValuesPerLine = -1;
+  let nbOfRows = 0;
+  let nbOfColumns = 0;
 
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -386,16 +491,29 @@ const isCsvFile = (bytes, complete, csvExtension) => {
 
     const nbOfValues = trimmedLine.split(',').length;
 
-    if (nbOfValues < 2 || (nbOfValuesPerLine !== -1 && nbOfValues !== nbOfValuesPerLine)) {
-      return false;
+    ++nbOfRows;
+
+    if (nbOfRows === 1) {
+      if (nbOfValues < 2) {
+        return { message: 'its header does not have at least two columns', incomplete: false };
+      }
+
+      nbOfColumns = nbOfValues;
+    } else if (nbOfValues !== nbOfColumns) {
+      return {
+        message: `its row #${nbOfRows} does not have the same number of columns as its header, i.e. ${nbOfColumns}, not ${nbOfValues}`,
+        incomplete: false
+      };
     }
-
-    nbOfValuesPerLine = nbOfValues;
-
-    ++nbOfLines;
   }
 
-  return nbOfLines >= 2;
+  if (nbOfRows < 2) {
+    return complete
+      ? { message: 'it does not have a header and at least one row of data', incomplete: false }
+      : { message: 'its header and first row of data are too long', incomplete: true };
+  }
+
+  return null;
 };
 
 const errorResponse = (message, status) => {
@@ -411,8 +529,13 @@ const errorMessage = (error) => {
   return (error instanceof Error ? error.message : String(error)).replace(/\.+$/, '');
 };
 
-const rejectedResponse = (reason) => {
-  return errorResponse(`Target content is not allowed (${reason}).`, 403);
+// Note: our messages may be shown as is to people (e.g., in a toast, when a file cannot be opened), so they are about
+//       the file that people asked for rather than about our "target" content or URL.
+
+const TOO_LARGE_MESSAGE = `The file is too large (more than ${MAX_SIZE / (1024 * 1024)} MB).`;
+
+const rejectedResponse = (message) => {
+  return errorResponse(message, 403);
 };
 
 const hasKnownSize = (response) => {
@@ -429,7 +552,10 @@ const hasKnownSize = (response) => {
   );
 };
 
-const forwardRequest = async (targetUrl, request) => {
+const forwardRequest = async (targetUrl, contentKind, request) => {
+  const filesAccepted = contentKind !== 'csv';
+  const csvFilesAccepted = contentKind !== 'file';
+
   const forwardHeaders = new Headers(request.headers);
 
   for (const header of [
@@ -449,20 +575,33 @@ const forwardRequest = async (targetUrl, request) => {
     forwardHeaders.delete(header);
   }
 
-  const response = await fetch(targetUrl, {
-    method: 'GET',
-    headers: forwardHeaders
-  });
+  const fetchAbortController = new AbortController();
+  const response = await withStallTimeout(
+    fetch(targetUrl, {
+      method: 'GET',
+      headers: forwardHeaders,
+      signal: fetchAbortController.signal
+    }),
+    () => {
+      fetchAbortController.abort();
+    }
+  );
 
-  // Note: we don't return the body of an error response since it is likely to be an HTML page.
+  // Note: we don't return the body of an error response since it is likely to be an HTML page, so we cancel it rather
+  //       than leave it unread. We ignore any issue with cancelling it since we can still let the app know about the
+  //       error.
 
-  if (!response.ok || !response.body) {
-    return response.ok
-      ? rejectedResponse('no content')
-      : new Response(null, {
-          status: response.status,
-          headers: CONTENT_HEADERS
-        });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+
+    return new Response(null, {
+      status: response.status,
+      headers: CONTENT_HEADERS
+    });
+  }
+
+  if (!response.body) {
+    return rejectedResponse('The file is empty.');
   }
 
   // Reject content that we know is too large.
@@ -470,15 +609,15 @@ const forwardRequest = async (targetUrl, request) => {
   //       of the content, so we also check the size of the content as we read it.
 
   if (Number(response.headers.get('content-length')) > MAX_SIZE) {
-    await response.body.cancel();
+    await response.body.cancel().catch(() => {});
 
-    return rejectedResponse('too large');
+    return rejectedResponse(TOO_LARGE_MESSAGE);
   }
 
-  // A CellML, SED-ML, or CSV file only needs its start to be checked, after which it can be streamed, but only if we
-  // know that it isn't too large (see above). Otherwise, we need to fully read it first, so that we can reject it if it
-  // is too large. Indeed, once we have started streaming it, all we could do is abort it, which the app would see as a
-  // network error rather than as a rejection, so it wouldn't try to fetch the target URL directly instead (see
+  // A CellML, SED-ML, CellDL, or CSV file only needs its start to be checked, after which it can be streamed, but only
+  // if we know that it isn't too large (see above). Otherwise, we need to fully read it first, so that we can reject it
+  // if it is too large. Indeed, once we have started streaming it, all we could do is abort it, which the app would see
+  // as a network error rather than as a rejection, so it wouldn't try to fetch the target URL directly instead (see
   // fetchThroughCorsProxy() in src/renderer/src/common/common.ts).
   // Note: when streaming, we still check the size of the content as we read it, in case the content length is wrong
   //       (see replayStream()).
@@ -486,21 +625,36 @@ const forwardRequest = async (targetUrl, request) => {
   const reader = response.body.getReader();
   let { bytes: head, done } = await readBytes(reader, SNIFF_SIZE);
 
+  // Reject empty content, i.e. a response that has a body, but one that turns out to be empty (see above).
+
+  if (done && !head.length) {
+    return rejectedResponse('The file is empty.');
+  }
+
   // Read more of the content if it is an XML file which prolog is longer than what we have read so far (see
   // MAX_XML_PROLOG_SIZE).
 
   while (!done && head.length < MAX_XML_PROLOG_SIZE && isIncompleteXmlProlog(head)) {
-    const more = await readChunks(reader, Math.min(2 * head.length, MAX_XML_PROLOG_SIZE), [head]);
-
-    head = concatenate(more.chunks, more.length);
-    done = more.done;
+    ({ bytes: head, done } = await readMoreBytes(reader, head, MAX_XML_PROLOG_SIZE));
   }
 
-  // Note: the URL of the response is the one we ended up at, i.e. after following redirects (e.g., a figshare download
-  //       URL redirects to the actual file). We only check its extension, not that of the target URL, since the latter
-  //       could otherwise be used to proxy any text (e.g., https://example.com/file.csv redirecting to any Web page).
+  const isAcceptedFile = filesAccepted && (isCellmlOrSedmlFile(head) || isCelldlFile(head));
+  let csvIssue = null;
 
-  if (isCellmlOrSedmlFile(head) || isCsvFile(head, done, hasCsvExtension(response.url))) {
+  if (!isAcceptedFile && csvFilesAccepted) {
+    csvIssue = csvFileIssue(head, done);
+
+    // Read more of the content if it may be a CSV file which header and first row of data are longer than what we have
+    // read so far (see MAX_CSV_HEAD_SIZE).
+
+    while (csvIssue?.incomplete && !done && head.length < MAX_CSV_HEAD_SIZE) {
+      ({ bytes: head, done } = await readMoreBytes(reader, head, MAX_CSV_HEAD_SIZE));
+
+      csvIssue = csvFileIssue(head, done);
+    }
+  }
+
+  if (isAcceptedFile || (csvFilesAccepted && !csvIssue)) {
     if (done || hasKnownSize(response)) {
       return new Response(done ? head : replayStream(head, reader), {
         status: response.status,
@@ -511,7 +665,27 @@ const forwardRequest = async (targetUrl, request) => {
     const bytes = await readRest(reader, head);
 
     if (!bytes) {
-      return rejectedResponse('too large');
+      return rejectedResponse(TOO_LARGE_MESSAGE);
+    }
+
+    return new Response(bytes, {
+      status: response.status,
+      headers: CONTENT_HEADERS
+    });
+  }
+
+  // An SVG file which CellDL metadata, if any, is not at its start needs to be fully read to know whether it is a
+  // CellDL file (see isCelldlFile()).
+
+  if (filesAccepted && isSvgFile(head)) {
+    const bytes = done ? head : await readRest(reader, head);
+
+    if (!bytes) {
+      return rejectedResponse(TOO_LARGE_MESSAGE);
+    }
+
+    if (!hasCelldlMetadata(bytes)) {
+      return rejectedResponse('The file is an SVG file, but not a CellDL file.');
     }
 
     return new Response(bytes, {
@@ -522,20 +696,25 @@ const forwardRequest = async (targetUrl, request) => {
 
   // An OMEX file needs to be fully read since we need its central directory, which is at the end of the file.
 
-  if (!isZipFile(head)) {
-    await reader.cancel();
+  if (!filesAccepted || !isZipFile(head)) {
+    await reader.cancel().catch(() => {});
 
-    return rejectedResponse('not a CellML, SED-ML, OMEX, or CSV file');
+    // Note: we only say why the content is not a CSV file if a CSV file is all that the app expects. Otherwise, the
+    //       content is likely meant to be some other kind of file, so why it is not a CSV file would be confusing.
+
+    const csvIssueMessage = contentKind === 'csv' && csvIssue ? ` (${csvIssue.message})` : '';
+
+    return rejectedResponse(`The file is not ${CONTENT_KINDS[contentKind] ?? ANY_CONTENT}${csvIssueMessage}.`);
   }
 
   const bytes = done ? head : await readRest(reader, head);
 
   if (!bytes) {
-    return rejectedResponse('too large');
+    return rejectedResponse(TOO_LARGE_MESSAGE);
   }
 
   if (!isOmexFile(bytes)) {
-    return rejectedResponse('OMEX file without a manifest.xml file');
+    return rejectedResponse('The file is a ZIP file, but not an OMEX file (it has no manifest.xml file).');
   }
 
   return new Response(bytes, {
@@ -563,23 +742,34 @@ export default {
       }
 
       if (!isValidTargetUrl(targetUrl)) {
-        return errorResponse('Target URL is not allowed.', 403);
+        return errorResponse('The URL is not an HTTP or HTTPS URL.', 403);
+      }
+
+      const contentKind = extractContentKind(url);
+
+      if (contentKind !== null && !Object.hasOwn(CONTENT_KINDS, contentKind)) {
+        return errorResponse('Invalid "kind" query parameter.', 400);
       }
 
       if (request.method !== 'GET') {
         return errorResponse('Method not allowed.', 405);
       }
 
-      // Note: we may not be able to fetch the target URL (e.g., it is only reachable from the user's network), in which
-      //       case the app may still be able to fetch it directly, so we let it know using an HTTP 502 error.
+      // Note: we may not be able to fetch the target URL (e.g., it is only reachable from the user's network) or its
+      //       server may stall (see STALL_TIMEOUT), in which case the app may still be able to fetch it directly, so we
+      //       let it know using an HTTP 502 or 504 error, respectively.
 
       try {
-        return await forwardRequest(targetUrl, request);
+        return await forwardRequest(targetUrl, contentKind, request);
       } catch (error) {
-        return errorResponse(`Target URL could not be fetched (${errorMessage(error)}).`, 502);
+        if (error instanceof StalledError) {
+          return errorResponse(STALLED_MESSAGE, 504);
+        }
+
+        return errorResponse(`The file could not be retrieved (${errorMessage(error)}).`, 502);
       }
     } catch (error) {
-      return errorResponse(`An error occurred (${errorMessage(error)}).`, 500);
+      return errorResponse(`An unexpected error occurred (${errorMessage(error)}).`, 500);
     }
   }
 };

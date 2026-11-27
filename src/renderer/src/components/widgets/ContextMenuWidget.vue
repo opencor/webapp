@@ -1,9 +1,11 @@
 <template>
-  <ContextMenu ref="contextMenuRef" :model="model" :appendTo="appendTo" :pt="CONTEXT_MENU_PT">
+  <ContextMenu ref="contextMenuRef" :model="model" :appendTo="appendTo" :pt="CONTEXT_MENU_PT" @focus="onFocus">
     <template #item="{ item, props: itemProps, hasSubmenu }">
-      <a v-bind="itemProps.action">
+      <div v-if="item.header !== undefined" class="context-menu-header" v-html="common.sanitiseHtml(item.header)" />
+      <a v-else v-bind="itemProps.action">
+        <i v-if="itemsWithCheckColumn.has(item)" :class="{ 'pi pi-check': item.checked }" class="context-menu-item-check" />
         <i :class="item.icon" class="context-menu-item-icon" />
-        <span>{{ item.label }}</span>
+        <span class="context-menu-item-label">{{ item.label }}</span>
         <i v-if="hasSubmenu" class="context-menu-item-chevron pi pi-angle-right" />
       </a>
     </template>
@@ -15,20 +17,79 @@ import ContextMenu from 'primevue/contextmenu';
 import type { MenuItem } from 'primevue/menuitem';
 import * as vue from 'vue';
 
+import * as common from '../../common/common';
+
 // A context menu, which looks like the menus of our main menu (see MainMenu.vue) and, like them, is shown without any
 // animation (see .opencor-context-menu and the anchored overlays in app.css).
 // Note: only one context menu should be shown at any given time, but PrimeVue only hides a context menu when the user
 //       clicks outside of it, so we let our other context menus know when we are about to be shown, and we hide
-//       ourselves when another context menu is about to be shown.
+//       ourselves when another context menu is about to be shown. Similarly, we hide ourselves when our window loses
+//       the focus (e.g., when switching to another tab or application), like a native context menu.
 
-defineProps<{
+const props = defineProps<{
   model: MenuItem[];
   appendTo?: HTMLElement | string;
 }>();
 
+// Note: an item with a (boolean) checked property is a checkable item (e.g., to make an axis logarithmic), in which
+//       case it has a check mark to the left of its icon when it is checked, and it is described as such to assistive
+//       technologies (PrimeVue would otherwise describe it as a plain menu item). All the items of a menu (or submenu)
+//       that has a checked item have room for a check mark, so that their icons and labels remain aligned, while the
+//       items of a menu that has no checked item don't (so that no space is wasted).
+
+interface ContextMenuItemPtOptions {
+  context: {
+    item?: MenuItem & { item?: MenuItem };
+  };
+}
+
+// The items that have room for a check mark, i.e. the items of a menu (or submenu) that has a checked item.
+
+const itemsWithCheckColumn = vue.computed<WeakSet<MenuItem>>(() => {
+  const res = new WeakSet<MenuItem>();
+  const addItems = (items: MenuItem[]): void => {
+    const hasCheckedItem = items.some((item: MenuItem) => item.checked === true);
+
+    for (const item of items) {
+      if (hasCheckedItem) {
+        res.add(item);
+      }
+
+      if (item.items) {
+        addItems(item.items as MenuItem[]);
+      }
+    }
+  };
+
+  addItems(props.model);
+
+  return res;
+});
+
 const CONTEXT_MENU_PT = {
   root: {
     class: 'opencor-context-menu'
+  },
+  item: ({ context }: ContextMenuItemPtOptions) => {
+    const item = context.item?.item ?? context.item;
+
+    // Note: a header (e.g., the name of a trace) is some (disabled) text that can't be chosen, so it is not a menu item
+    //       as far as assistive technologies are concerned, like a header of the context menu of our plots.
+
+    if (item?.header !== undefined) {
+      return {
+        class: 'context-menu-header-item',
+        role: 'presentation',
+        'aria-hidden': true
+      };
+    }
+
+    return item?.checked === undefined
+      ? {}
+      : {
+          role: 'menuitemcheckbox',
+          'aria-checked': !!item.checked
+        };
   }
 };
 
@@ -37,7 +98,17 @@ const CONTEXT_MENU_SHOW_EVENT = 'opencor-context-menu-show';
 const contextMenuId = Symbol('ContextMenuWidget');
 const contextMenuRef = vue.ref<InstanceType<typeof ContextMenu> | null>(null);
 
-const show = (event: MouseEvent): void => {
+// Show ourselves where the given event happened, focusing our first item if we are shown using the keyboard (e.g.,
+// using Shift+F10 or the context menu key), like a native context menu, so that we can be used with the keyboard
+// straightaway.
+// Note: PrimeVue gives the keyboard focus to our menu once we are shown, but without focusing any of our items, so we
+//       then do what PrimeVue does when ArrowDown is pressed, i.e. focus our first item (see onFocus()).
+
+let focusFirstItem = false;
+
+const show = (event: MouseEvent, usingKeyboard = false): void => {
+  focusFirstItem = usingKeyboard;
+
   window.dispatchEvent(
     new CustomEvent(CONTEXT_MENU_SHOW_EVENT, {
       detail: {
@@ -50,7 +121,17 @@ const show = (event: MouseEvent): void => {
 };
 
 const hide = (): void => {
+  focusFirstItem = false;
+
   contextMenuRef.value?.hide();
+};
+
+const onFocus = (event: Event): void => {
+  if (focusFirstItem) {
+    focusFirstItem = false;
+
+    event.target?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+  }
 };
 
 const onContextMenuShow = (event: Event): void => {
@@ -61,10 +142,12 @@ const onContextMenuShow = (event: Event): void => {
 
 vue.onMounted(() => {
   window.addEventListener(CONTEXT_MENU_SHOW_EVENT, onContextMenuShow);
+  window.addEventListener('blur', hide);
 });
 
 vue.onUnmounted(() => {
   window.removeEventListener(CONTEXT_MENU_SHOW_EVENT, onContextMenuShow);
+  window.removeEventListener('blur', hide);
 });
 
 defineExpose({ hide, show });

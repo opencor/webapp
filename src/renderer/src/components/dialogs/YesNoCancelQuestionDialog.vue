@@ -1,36 +1,35 @@
 <template>
-  <BaseDialog :header="title" class="w-120">
-    <div class="message-dialog" :class="`message-dialog-${severity}`">
-      <span class="message-dialog-icon">
-        <i :class="ICONS[severity]" />
-      </span>
-      <div class="message-dialog-text" v-html="question"></div>
-    </div>
+  <MessageDialog kind="question" :title="title" :text="question" :severity="severity">
     <template #footer>
-      <Button autofocus
-        :label="yesLabel"
-        :severity="severity === 'danger' ? 'danger' : undefined"
-        @click="$emit('yes')"
-      />
-      <Button :label="noLabel" severity="secondary" @click="$emit('no')" />
-      <Button :label="cancelLabel" severity="secondary" @click="$emit('cancel')" />
+      <DialogButtons>
+        <Button :autofocus="severity !== 'danger'"
+          :label="yesLabel"
+          :severity="severity === 'danger' ? 'danger' : undefined"
+          @click="$emit('yes')"
+        />
+        <Button :label="noLabel" severity="secondary" @click="$emit('no')" />
+        <Button :autofocus="severity === 'danger'"
+          :label="cancelLabel"
+          severity="secondary"
+          @click="$emit('cancel')"
+        />
+      </DialogButtons>
     </template>
-  </BaseDialog>
+  </MessageDialog>
 </template>
 
 <script setup lang="ts">
-import './message-dialog.css';
+import type { QuestionDialogSeverity } from './MessageDialog.vue';
 
-type Severity = 'danger' | 'warning' | 'info';
-
-// Note: same as for YesNoQuestionDialog.vue when it comes to the labels of our buttons and the colour of our yes
-//       button.
+// Note: same as for YesNoQuestionDialog.vue when it comes to the labels of our buttons, the colour of our yes button,
+//       and which button has the focus by default, except that it is our cancel button (rather than our no button) that
+//       has the focus by default if our question is about something dangerous, since it is the safest option.
 
 withDefaults(
   defineProps<{
     title: string;
     question: string;
-    severity?: Severity;
+    severity?: QuestionDialogSeverity;
     yesLabel?: string;
     noLabel?: string;
     cancelLabel?: string;
@@ -48,10 +47,4 @@ defineEmits<{
   no: [];
   cancel: [];
 }>();
-
-const ICONS: Record<Severity, string> = {
-  danger: 'pi pi-exclamation-triangle',
-  warning: 'pi pi-exclamation-triangle',
-  info: 'pi pi-question-circle'
-};
 </script>

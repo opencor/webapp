@@ -1,10 +1,11 @@
 <template>
-  <PropertyEditor name="Simulation" :properties="properties" :disabled="disabled" :isValid="isValid" @propertyUpdated="onPropertyUpdated" />
+  <PropertyEditor name="Simulation" :properties="properties" :disabled="disabled" :validate="validate" @propertyUpdated="onPropertyUpdated" />
 </template>
 
 <script setup lang="ts">
 import * as vue from 'vue';
 
+import * as common from '../../common/common';
 import * as locApi from '../../libopencor/locApi';
 
 const props = defineProps<{
@@ -13,9 +14,25 @@ const props = defineProps<{
   disabled?: boolean;
 }>();
 
+const emit = defineEmits<{
+  updated: [];
+}>();
+
+// The index of our properties.
+
+const INITIAL_POINT = 0;
+const STARTING_POINT = 1;
+const ENDING_POINT = 2;
+const POINT_INTERVAL = 3;
+
 const voiUnit = props.instanceTask.voiUnit();
 
 const properties = vue.ref([
+  {
+    property: 'Initial point',
+    value: props.uniformTimeCourse.initialTime(),
+    unit: voiUnit
+  },
   {
     property: 'Starting point',
     value: props.uniformTimeCourse.outputStartTime(),
@@ -28,9 +45,10 @@ const properties = vue.ref([
   },
   {
     property: 'Point interval',
-    value:
-      (props.uniformTimeCourse.outputEndTime() - props.uniformTimeCourse.outputStartTime()) /
-      props.uniformTimeCourse.numberOfSteps(),
+    value: common.divideNumbers(
+      common.subtractNumbers(props.uniformTimeCourse.outputEndTime(), props.uniformTimeCourse.outputStartTime()),
+      props.uniformTimeCourse.numberOfSteps()
+    ),
     unit: voiUnit
   }
 ]);
@@ -54,9 +72,10 @@ const numberOfSteps = (startingPoint: number, endingPoint: number, pointInterval
   return Math.max(1, Math.round((endingPoint - startingPoint) / pointInterval));
 };
 
-const isValid = (index: number, newValue: number): boolean => {
+const validate = (index: number, newValue: number): string | undefined => {
   // Make sure that a new value would give a valid point interval and a number of steps that libOpenCOR can handle (it
-  // would otherwise get silently wrapped).
+  // would otherwise get silently wrapped), and say why it doesn't otherwise (using the same wording as the settings
+  // dialog of the Interactive Simulation Experiment view).
   // Note: if our point interval is not valid, then we still allow our starting and ending points to be updated (see
   //       onPropertyUpdated()).
 
@@ -64,27 +83,52 @@ const isValid = (index: number, newValue: number): boolean => {
 
   values[index] = newValue;
 
-  const [startingPoint, endingPoint, pointInterval] = values as [number, number, number];
+  const [, startingPoint, endingPoint, pointInterval] = values as [number, number, number, number];
 
   if (!isValidPointInterval(pointInterval)) {
-    return index !== 2;
+    return index === POINT_INTERVAL ? 'The point interval must be a positive number.' : undefined;
   }
 
-  return numberOfSteps(startingPoint, endingPoint, pointInterval) <= locApi.MAXIMUM_NUMBER_OF_STEPS;
+  if (numberOfSteps(startingPoint, endingPoint, pointInterval) <= locApi.MAXIMUM_NUMBER_OF_STEPS) {
+    return undefined;
+  }
+
+  // Our number of steps would be too big, which is either because our point interval would be too small (if it is what
+  // is being updated) or because our simulation range would be too big for our point interval.
+
+  const maximumNumberOfSteps = common.formatCount(locApi.MAXIMUM_NUMBER_OF_STEPS);
+
+  return index === POINT_INTERVAL
+    ? `The point interval is too small (the number of steps must not exceed ${maximumNumberOfSteps}).`
+    : `The simulation range is too big for the point interval (the number of steps must not exceed ${maximumNumberOfSteps}).`;
 };
 
 const onPropertyUpdated = (index: number, newValue: number): void => {
   // Update our simulation and its number of steps, keeping our point interval, if valid (i.e. like when changing the
   // simulation settings in the Interactive Simulation Experiment view).
+  // Note: as in the Interactive Simulation Experiment view, our initial and starting points are independent of each
+  //       other (the simulation is run from our initial point, but only plotted from our starting point). An initial
+  //       point that is greater than our starting point is, like a starting point that is greater than our ending
+  //       point, reported by libOpenCOR when running the simulation.
 
-  if (index === 0) {
+  const property = properties.value[index];
+
+  if (!property) {
+    return;
+  }
+
+  property.value = newValue;
+
+  if (index === INITIAL_POINT) {
     props.uniformTimeCourse.setInitialTime(newValue);
+  } else if (index === STARTING_POINT) {
     props.uniformTimeCourse.setOutputStartTime(newValue);
-  } else if (index === 1) {
+  } else if (index === ENDING_POINT) {
     props.uniformTimeCourse.setOutputEndTime(newValue);
   }
 
-  const [startingPoint, endingPoint, pointInterval] = properties.value.map((property) => property.value) as [
+  const [, startingPoint, endingPoint, pointInterval] = properties.value.map((property) => property.value) as [
+    number,
     number,
     number,
     number
@@ -93,5 +137,7 @@ const onPropertyUpdated = (index: number, newValue: number): void => {
   if (isValidPointInterval(pointInterval)) {
     props.uniformTimeCourse.setNumberOfSteps(numberOfSteps(startingPoint, endingPoint, pointInterval));
   }
+
+  emit('updated');
 };
 </script>

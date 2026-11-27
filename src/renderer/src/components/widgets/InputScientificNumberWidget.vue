@@ -3,7 +3,12 @@
     <span :class="rootClass">
       <InputText ref="inputElement" :model-value="internalValue" class="p-inputnumber-input w-full"
         :aria-label="label"
+        role="spinbutton"
+        :aria-valuenow="modelValue"
+        :aria-valuemin="min"
+        :aria-valuemax="max"
         v-bind="inputAttrs"
+        :invalid="invalid || !!correction"
         v-keyfilter="{ pattern: /^[+-]?(\d*(\.\d*)?|\.\d*)([eE][+-]?\d*)?$/ }"
         @update:model-value="onUpdateModelValue"
         @focus="onFocus"
@@ -57,6 +62,7 @@
           </svg>
         </button>
       </span>
+      <span class="input-correction" role="status">{{ correction }}</span>
     </span>
     <label>{{ label }}</label>
   </FloatLabel>
@@ -65,6 +71,7 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
+import * as common from '../../common/common';
 import * as constants from '../../common/constants';
 import { vHint } from '../../common/hint';
 
@@ -146,16 +153,19 @@ const rootClass = vue.computed<Array<string | Record<string, boolean>>>(() => {
     'w-full',
     {
       'p-inputnumber-resettable': props.defaultValue !== undefined,
-      'p-invalid': invalid.value,
+      'p-invalid': invalid.value || !!correction.value,
       'p-inputwrapper-filled': hasValue.value,
       'p-inputwrapper-focus': isFocused.value
     }
   ];
 });
-const inferredNumericValue = vue.computed<number>(() => {
+const shownValue = (): number => {
   const source = internalValue.value === '' ? (props.modelValue ?? props.min ?? 0) : parseFloat(internalValue.value);
 
   return Number.isFinite(source) ? source : (props.modelValue ?? 0);
+};
+const inferredNumericValue = vue.computed<number>(() => {
+  return shownValue();
 });
 const activeButton = vue.ref<'increment' | 'decrement' | null>(null);
 const minBoundary = vue.computed<boolean>(() => {
@@ -207,7 +217,7 @@ const decrementButtonClass = vue.computed<Array<string | Record<string, boolean>
 });
 
 const updateInternalValue = (value: number | undefined) => {
-  internalValue.value = value !== undefined ? String(value) : '';
+  internalValue.value = value !== undefined ? common.formatNumber(value) : '';
 };
 
 vue.watch(
@@ -231,7 +241,32 @@ vue.watch(
   { immediate: true }
 );
 
+// Let the user know when a value that they have entered gets corrected (e.g., clamped to our minimum or maximum value)
+// or rejected (e.g., by our owner, see discardEdit()), rather than doing it silently. Our input field is then shown as
+// invalid, and the reason is shown below it (for a short while or until the user enters something else), as well as
+// announced by assistive technologies (since it is in a status element, which is always rendered so that its changes
+// are announced).
+
+const correction = vue.ref<string>('');
+let correctionTimeout: number | undefined;
+
+const clearCorrection = (): void => {
+  window.clearTimeout(correctionTimeout);
+
+  correctionTimeout = undefined;
+  correction.value = '';
+};
+
+const showCorrection = (reason: string): void => {
+  clearCorrection();
+
+  correction.value = reason;
+  correctionTimeout = window.setTimeout(clearCorrection, constants.TOAST_LIFE);
+};
+
 const onUpdateModelValue = (value: string | undefined) => {
+  clearCorrection();
+
   isEditing.value = true;
   internalValue.value = value ?? '';
 };
@@ -303,20 +338,36 @@ const onBlur = () => {
 
     if (props.allowEmpty) {
       emit('update:modelValue', undefined);
+    } else if (props.modelValue !== undefined) {
+      showCorrection('A value is required.');
     }
 
     return;
   }
 
+  // Note: a number may be too large (in magnitude) to be represented (e.g., 1e999), in which case it gets parsed as
+  //       Infinity (or -Infinity), which we reject, whether or not we have a minimum and/or maximum value.
+
   const parsedValue = parseFloat(internalValue.value);
 
-  if (Number.isNaN(parsedValue)) {
+  if (!Number.isFinite(parsedValue)) {
     updateInternalValue(props.modelValue);
+    showCorrection(
+      Number.isNaN(parsedValue) ? 'This is not a valid number.' : 'This number is too large (in magnitude).'
+    );
 
     return;
   }
 
   const clampedValue = validateValue(parsedValue);
+
+  if (clampedValue !== parsedValue) {
+    showCorrection(
+      props.min !== undefined && parsedValue < props.min
+        ? `The minimum value is ${props.min}.`
+        : `The maximum value is ${props.max}.`
+    );
+  }
 
   updateInternalValue(clampedValue);
 
@@ -361,30 +412,6 @@ const onInputKeydown = (event: KeyboardEvent) => {
       }
 
       break;
-    case 'Home':
-      if (props.min !== undefined) {
-        isEditing.value = false;
-
-        updateInternalValue(props.min);
-
-        emit('update:modelValue', props.min);
-
-        event.preventDefault();
-      }
-
-      break;
-    case 'End':
-      if (props.max !== undefined) {
-        isEditing.value = false;
-
-        updateInternalValue(props.max);
-
-        emit('update:modelValue', props.max);
-
-        event.preventDefault();
-      }
-
-      break;
     default:
       break;
   }
@@ -404,10 +431,14 @@ const onResetButtonClick = () => {
 
 // Discard the value that is being edited, if any, i.e. show our current value again.
 
-const discardEdit = () => {
+const discardEdit = (reason?: string) => {
   isEditing.value = false;
 
   updateInternalValue(props.modelValue);
+
+  if (reason) {
+    showCorrection(reason);
+  }
 };
 
 defineExpose({
@@ -426,39 +457,6 @@ const validateValue = (value: number) => {
   return value;
 };
 
-const getFractionDigits = (value: number) => {
-  const [coefficient, exponentString] = value.toString().toLowerCase().split('e');
-  const exponent = exponentString ? Number(exponentString) : 0;
-  const coefficientFractionDigits = coefficient.includes('.') ? (coefficient.split('.')[1]?.length ?? 0) : 0;
-
-  return Math.max(0, coefficientFractionDigits - exponent);
-};
-
-const addWithPrecision = (base: number, increment: number) => {
-  const precisionDigits = Math.max(getFractionDigits(base), getFractionDigits(increment), 0);
-  const maxPrecisionDigits = 15;
-  const safePrecisionDigits = Math.min(precisionDigits, maxPrecisionDigits);
-  let precision = 10 ** safePrecisionDigits;
-
-  if (!Number.isFinite(precision) || precision === 0) {
-    precision = 10 ** maxPrecisionDigits;
-  }
-
-  const rawValue = (base + increment) * precision;
-
-  if (!Number.isFinite(rawValue)) {
-    return base + increment;
-  }
-
-  const rounded = Math.round(rawValue) / precision;
-
-  if (!Number.isFinite(rounded)) {
-    return base + increment;
-  }
-
-  return rounded;
-};
-
 const spinTimer = vue.ref<number | undefined>(undefined);
 
 const spin = (direction: 1 | -1, factor: number): boolean => {
@@ -468,10 +466,8 @@ const spin = (direction: 1 | -1, factor: number): boolean => {
     return false;
   }
 
-  const inferredBaseValue =
-    internalValue.value === '' ? (props.modelValue ?? props.min ?? 0) : parseFloat(internalValue.value);
-  const safeCurrentValue = Number.isFinite(inferredBaseValue) ? inferredBaseValue : (props.modelValue ?? 0);
-  const nextValue = validateValue(addWithPrecision(safeCurrentValue, step * direction));
+  const safeCurrentValue = shownValue();
+  const nextValue = validateValue(common.addNumbers(safeCurrentValue, step * direction));
 
   if (!Number.isFinite(nextValue) || nextValue === safeCurrentValue) {
     return false;
@@ -574,10 +570,41 @@ const onWheel = (event: WheelEvent) => {
 
 vue.onBeforeUnmount(() => {
   clearSpinTimerAndRemoveEventListeners();
+  clearCorrection();
 });
 </script>
 
 <style scoped>
+/**
+ * The reason why a value has been corrected or rejected (see showCorrection()), which is shown below our input field
+ * (without affecting the layout), like a hint, but in our error colour.
+ * Note: our status element is always rendered (so that its changes are announced by assistive technologies), but it
+ *       takes no room when it is empty.
+ */
+
+.input-correction {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 10;
+  max-width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--opencor-error-border-color);
+  border-radius: var(--p-border-radius-sm);
+  background-color: var(--opencor-hint-background);
+  box-shadow: var(--opencor-overlay-shadow);
+  color: var(--opencor-error-color);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  pointer-events: none;
+}
+
+.input-correction:empty {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
 .p-inputnumber {
   display: inline-flex;
   position: relative;
@@ -653,8 +680,8 @@ vue.onBeforeUnmount(() => {
 }
 
 /**
- * Make room for our reset button without making us any wider than when we don't have one, i.e. compensate for its
- * extra padding with a negative margin so that our intrinsic width remains the same.
+ * Make room for our reset button without making us any wider than when we don't have one, i.e. compensate for its extra
+ * padding with a negative margin so that our intrinsic width remains the same.
  */
 
 .p-inputnumber-resettable .p-inputnumber-input {

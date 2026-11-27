@@ -60,12 +60,17 @@
 | `format`              | Format the code                                                            |
 | `format:check`        | Check code's formatting                                                    |
 | `lint`                | Lint and automatically fix issues                                          |
+| `lint:check`          | Check the code for linting issues                                          |
 | `release`             | Release OpenCOR for the current platform                                   |
 | `release:local`       | Release OpenCOR for the current platform without code signing              |
 | `start`               | (Build and) start the production version of OpenCOR                        |
 | `start:web`           | (Build and) start the production version of OpenCOR's Web app              |
 | `typecheck`           | Check the code for type errors                                             |
 | `version:new`         | Update the version of OpenCOR                                              |
+
+# Releasing
+
+To release a new version of OpenCOR, update its version (`bun version:new`), commit it, and create a [GitHub release](https://github.com/opencor/webapp/releases) with a tag named after it (i.e. `vX.YYYYMMDD.Z` for version `X.YYYYMMDD.Z`). Our [CD workflow](.github/workflows/cd.yml) then builds and releases OpenCOR for all our platforms, deploys its Web app, and publishes it as a component to [npm](https://www.npmjs.com/package/@opencor/opencor). It fails if the tag doesn't match the version in `package.json` and `src/renderer/package.json`.
 
 # Notes
 

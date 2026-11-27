@@ -1,9 +1,9 @@
-export interface IExternalCsvData {
+export interface ExternalCsvData {
   headers: string[];
   columns: number[][];
 }
 
-export const parseExternalCsvData = (externalCsvData: string): IExternalCsvData => {
+export const parseExternalCsvData = (externalCsvData: string): ExternalCsvData => {
   const lines = externalCsvData
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -69,9 +69,7 @@ export const parseExternalCsvData = (externalCsvData: string): IExternalCsvData 
       };
     });
 
-    for (let columnIndex = 0; columnIndex < values.length; ++columnIndex) {
-      const value = values[columnIndex];
-
+    for (const [columnIndex, value] of values.entries()) {
       if (!Number.isFinite(value.number)) {
         throw new Error(
           `The external CSV data row #${String(rowIndex + 1)} contains a non-numeric value ('${value.string}').`

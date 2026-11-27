@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog header="Settings" class="w-120" @hide="onHide">
+  <BaseDialog header="Settings" @hide="onHide">
     <div class="settings">
       <!-- Appearance -->
 
@@ -36,8 +36,10 @@
       </section>
     </div>
     <template #footer>
-      <Button autofocus label="OK" @click="onOk" />
-      <Button label="Cancel" severity="secondary" @click="$emit('close')" />
+      <DialogButtons>
+        <Button autofocus label="OK" @click="onOk" />
+        <Button label="Cancel" severity="secondary" @click="$emit('close')" />
+      </DialogButtons>
     </template>
   </BaseDialog>
 </template>
@@ -206,8 +208,7 @@ label.settings-row {
 }
 
 .theme-option:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--p-primary-color);
+  outline-offset: 0;
 }
 
 .theme-option-selected {
@@ -218,12 +219,6 @@ label.settings-row {
 
 .theme-option-selected .pi {
   color: var(--p-primary-color);
-}
-
-.theme-option-selected:focus-visible {
-  box-shadow:
-    0 0 0 2px var(--p-primary-color),
-    0 1px 2px color-mix(in srgb, #000 15%, transparent);
 }
 
 /**

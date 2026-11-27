@@ -1,6 +1,7 @@
 <template>
-  <SafeBlockUIWidget ref="safeBlockUiRef" class="opencor" :class="isFullWebApp ? 'with-main-menu' : ''"
+  <SafeBlockUIWidget ref="safeBlockUiRef" class="opencor" :class="{ 'with-main-menu': isFullWebApp, [FOCUS_RING_HIDDEN_CLASS]: focusRingHidden }"
     :blocked="compBlockUiEnabled"
+    aria-busy="false"
     @click="activateInstance"
     @focus="activateInstance"
     @focusin="activateInstance"
@@ -10,8 +11,6 @@
     <Toast :id="toastId" :class="compIsActiveApp ? 'visible' : 'invisible'"
       :group="toastId"
       :pt="TOAST_PT"
-      :onMouseEnter="onToastHover"
-      :onMouseLeave="onToastHover"
     >
       <template #container="{ message, closeCallback }">
         <ToastMessageWidget :message="message" @close="closeCallback" />
@@ -28,6 +27,7 @@
       <DragNDropComponent v-if="dragAndDropVisible" :fileCount="dragAndDropFileCount" @leave="dragAndDropVisible = false" />
       <MainMenu ref="mainMenuRef" v-if="isFullWebApp"
         :hasFiles="hasFiles"
+        :hasSeveralFiles="hasSeveralFiles"
         :canSave="canSave"
         :canSaveAs="canSaveAs"
         :recentFilePaths="recentFilePaths"
@@ -41,6 +41,8 @@
         @save="onSaveMenu"
         @saveAs="onSaveAsMenu"
         @download="onDownloadMenu"
+        @nextFile="onNextFileMenu"
+        @previousFile="onPreviousFileMenu"
         @close="onCloseMenu"
         @closeAll="onCloseAllMenu"
         @settings="onSettingsMenu"
@@ -64,7 +66,6 @@
       </div>
       -->
       <ContentsComponent ref="contentsRef" class="grow min-h-0"
-        @error="onError"
         @fileClosed="onFileClosed"
         @fileOpened="onFileOpened"
         :recentFilePaths="startScreenRecentFilePaths"
@@ -76,8 +77,8 @@
         @simulationData="emitSimulationData"
       />
       <BlockingMessageComponent class="app-blocking-message initialising-opencor-message" v-show="initialisingOpencorMessageVisible" message="Initialising OpenCOR..." :progress="initialisation.progress.value" />
-      <BlockingMessageComponent class="app-blocking-message" v-if="loadingModelMessageVisible" message="Loading model..." />
-      <BlockingMessageComponent class="app-blocking-message" v-show="loadingExternalDataVisible" message="Loading external data..." />
+      <BlockingMessageComponent class="app-blocking-message" v-if="loadingModelMessageVisible" message="Loading model..." cancellable :cancelFocused="!omex" @cancel="cancelRemoteModelLoads" />
+      <BlockingMessageComponent class="app-blocking-message" v-if="loadingExternalDataVisible" message="Loading external data..." cancellable @cancel="cancelExternalDataLoads" />
       <BlockingMessageComponent class="app-blocking-message" v-show="opencorMessageVisible" :message="opencorMessageMessage" :progress="opencorMessageProgress" />
       <OkMessageDialog v-model:visible="updateErrorVisible"
         :title="updateErrorTitle"
@@ -98,6 +99,7 @@
         :transferred="updateDownloadTransferred"
         :total="updateDownloadTotal"
         :installing="updateInstalling"
+        @cancel="onCancelUpdateDownload"
       />
       <OkMessageDialog v-model:visible="updateNotAvailableVisible"
         title="Check for Updates"
@@ -145,15 +147,23 @@ import primeVueToastService from 'primevue/toastservice';
 import { useToast } from 'primevue/usetoast';
 import * as vue from 'vue';
 
-import type { IOpenCOREmits, IOpenCORExternalDataEvent, IOpenCORProps, IOpenCORSimulationDataEvent } from '../../index';
+import type { OpenCOREmits, OpenCORExternalDataEvent, OpenCORProps, OpenCORSimulationDataEvent } from '../../index';
 
 import '../assets/app.css';
 import celldlIcon from '../assets/celldl.svg?inline';
 import '../assets/primeicons-assets';
 import * as changelog from '../common/changelog';
 import * as common from '../common/common';
-import { FULL_URI_SCHEME, LONG_DELAY, MAX_RECENT_FILES, SHORT_DELAY, TOAST_LIFE } from '../common/constants';
+import {
+  ESCAPE_KEY_OVERLAYS,
+  ESCAPE_KEY_TOOLTIPS,
+  FULL_URI_SCHEME,
+  LONG_DELAY,
+  MAX_RECENT_FILES,
+  SHORT_DELAY
+} from '../common/constants';
 import { electronApi } from '../common/electronApi';
+import { FOCUS_RING_HIDDEN_CLASS, hasFocusRing, isTextEntry } from '../common/focusRing';
 /* TODO: enable once our GitHub integration is fully ready.
 import firebaseConfig, { missingFirebaseKeys } from '../common/firebaseConfig';
 */
@@ -166,7 +176,7 @@ import * as vueCommon from '../common/vueCommon';
 import ContentsComponent from '../components/ContentsComponent.vue';
 import { provideOpenCORContext } from '../components/OpenCORContext';
 import { provideOpenCORMessage } from '../components/OpenCORMessage';
-import { provideOpenCORToast } from '../components/OpenCORToast';
+import { provideOpenCORToast, toastIssueDetail } from '../components/OpenCORToast';
 import * as locApi from '../libopencor/locApi';
 
 import { provideDialogState } from './dialogs/BaseDialog.vue';
@@ -176,9 +186,9 @@ import SimulationExperimentStandardView from './views/SimulationExperimentStanda
 import SafeBlockUIWidget from './widgets/SafeBlockUIWidget.vue';
 import MainMenu from './MainMenu.vue';
 
-const props = defineProps<IOpenCORProps>();
+const props = defineProps<OpenCORProps>();
 
-const emit = defineEmits<IOpenCOREmits>();
+const emit = defineEmits<OpenCOREmits>();
 
 const contentsRef = vue.ref<InstanceType<typeof ContentsComponent> | null>(null);
 
@@ -206,8 +216,13 @@ const addExternalData = (csv: string, voiExpression: string | undefined, modelPa
   }
 
   contents
-    .addExternalData(csv, voiExpression, modelParameters)
-    .then((res: IOpenCORExternalDataEvent) => {
+    .addExternalData(
+      csv,
+      voiExpression,
+      modelParameters,
+      isRemoteExternalData ? externalDataLoadsAbortController.signal : undefined
+    )
+    .then((res: OpenCORExternalDataEvent) => {
       emit('externalData', res);
     })
     .finally(() => {
@@ -270,7 +285,7 @@ const emitSimulationData = (): void => {
     return;
   }
 
-  contents.simulationData(trackedSimulationData.value).then((res: IOpenCORSimulationDataEvent) => {
+  contents.simulationData(trackedSimulationData.value).then((res: OpenCORSimulationDataEvent) => {
     emit('simulationData', res);
   });
 };
@@ -311,8 +326,8 @@ const { isDialogActive } = provideDialogState();
 const safeBlockUiRef = vue.ref<InstanceType<typeof SafeBlockUIWidget> | null>(null);
 const mainMenuRef = vue.ref<InstanceType<typeof MainMenu> | null>(null);
 const filesRef = vue.shallowRef<HTMLElement | null>(null);
-const issues = vue.ref<locApi.IIssue[]>([]);
-const compIssues = vue.computed<locApi.IIssue[]>(() => {
+const issues = vue.ref<locApi.Issue[]>([]);
+const compIssues = vue.computed<locApi.Issue[]>(() => {
   return [...initialisation.issues.value, ...issues.value];
 });
 const activeInstanceUid = vueCommon.activeInstanceUid();
@@ -323,8 +338,10 @@ const octokit = vue.ref<Octokit | null>(null);
 const initialisingOpencorMessageVisible = vue.ref<boolean>(true);
 const loadingModelMessageVisible = vue.ref<boolean>(false);
 const remoteModelLoadsCount = vue.ref<number>(0);
+let remoteModelLoadsAbortController = new AbortController();
 const loadingExternalDataVisible = vue.ref<boolean>(false);
 const externalDataLoadsCount = vue.ref<number>(0);
+let externalDataLoadsAbortController = new AbortController();
 
 // Keep track of which instance of OpenCOR is currently active.
 
@@ -356,7 +373,31 @@ const setTrackedTimeout = (callback: () => void, delay: number): void => {
   });
 };
 
+// Cancel the loading of the remote models that are being loaded, if any (e.g., if their server is not responding).
+// Note: we use a new abort controller for the remote models that will be loaded next, so that they don't get cancelled
+//       straightaway.
+
+const cancelRemoteModelLoads = (): void => {
+  remoteModelLoadsAbortController.abort();
+
+  remoteModelLoadsAbortController = new AbortController();
+};
+
+// Cancel the loading of the remote external data that is being loaded, if any (see cancelRemoteModelLoads()).
+// Note: unlike our Cancel button for remote models, our Cancel button for remote external data never gets the keyboard
+//       focus since external data can only be added when OpenCOR is embedded in a page (i.e. in simulation-only mode),
+//       from which we don't want to take the keyboard focus.
+
+const cancelExternalDataLoads = (): void => {
+  externalDataLoadsAbortController.abort();
+
+  externalDataLoadsAbortController = new AbortController();
+};
+
 vue.onUnmounted(() => {
+  remoteModelLoadsAbortController.abort();
+  externalDataLoadsAbortController.abort();
+
   for (const cleanup of cleanups) {
     cleanup();
   }
@@ -392,13 +433,13 @@ const {
 // Block the user's input once the user has confirmed that OpenCOR can be quit (or restarted), until it actually is.
 // Note #1: our main process doesn't quit OpenCOR straight away (e.g., on macOS, an update gets fetched by Squirrel.Mac
 //          before being installed), and the user might otherwise modify a file in the meantime (e.g., by undoing
-//          something in a CellDL file), in which case the modification would be lost without the user having been
-//          asked whether to save it.
+//          something in a CellDL file), in which case the modification would be lost without the user having been asked
+//          whether to save it.
 // Note #2: we intercept the user's input before anything else can handle it, i.e. during the capture phase of our
 //          window, using listeners that are added before anything else gets a chance to add its own (since the
-//          listeners of a given target and phase are called in the order in which they were added), e.g., before
-//          CellDL Editor gets loaded. We also disable our main menu (see compUiEnabled below), so that the user cannot,
-//          for instance, paste something using it.
+//          listeners of a given target and phase are called in the order in which they were added), e.g., before CellDL
+//          Editor gets loaded. We also disable our main menu (see compUiEnabled below), so that the user cannot, for
+//          instance, paste something using it.
 // Note #3: our main process may not quit OpenCOR after all (e.g., if an update couldn't be installed), in which case we
 //          unblock the user's input.
 
@@ -453,9 +494,9 @@ if (electronApi) {
 // Note: compBlockUiEnabled is used to determine whether PrimeVue's BlockUI component should be enabled, whereas
 //       compUiEnabled is used to determine whether the UI should be enabled (it checks whether various dialogs are
 //       visible since those dialogs block the UI). Whether a dialog is visible or not is tracked in compUiEnabled
-//       rather than compBlockUiEnabled because we don't want to show the BlockUI's overlay when a dialog is open
-//       since a dialog already has some overlaying effect and the BlockUI's overlay would just make things look darker
-//       and worse.
+//       rather than compBlockUiEnabled because we don't want to show the BlockUI's overlay when a dialog is open since
+//       a dialog already has some overlaying effect and the BlockUI's overlay would just make things look darker and
+//       worse.
 
 const compBlockUiEnabled = vue.computed<boolean>(() => {
   return (
@@ -475,7 +516,9 @@ const compUiEnabled = vue.computed<boolean>(() => {
 // Make our main menu and our contents inert while our UI is blocked, so that they cannot be reached using the keyboard
 // (e.g., using Tab) since our BlockUI's overlay only blocks the mouse.
 // Note #1: our blocking messages are not made inert since they must remain visible to assistive technologies (so that
-//          they can get announced, see BlockingMessageComponent.vue), but they cannot be interacted with anyway.
+//          they can get announced, see BlockingMessageComponent.vue), but they cannot be interacted with anyway. For
+//          the same reason, our BlockUI is never marked as busy (see aria-busy in our template), since it contains our
+//          blocking messages and assistive technologies may not announce the contents of a busy element.
 // Note #2: a dialog may be shown while our UI is blocked, in which case our main menu and our contents are not inert
 //          since a dialog may be rendered within our contents (see BaseDialog.vue) and the descendants of an inert
 //          element cannot be interacted with. A dialog is modal, so it keeps the keyboard focus within itself anyway.
@@ -484,7 +527,8 @@ const compUiEnabled = vue.computed<boolean>(() => {
 // Note #4: an element that gets inert loses the keyboard focus, so we give it back to the element that had it before
 //          our UI got blocked (if that element is still there and visible, and the keyboard focus hasn't gone somewhere
 //          else in the meantime) once our UI is unblocked, unless a dialog is shown (since it then has the keyboard
-//          focus).
+//          focus). The keyboard focus may also have gone to a blocking message (i.e. to its Cancel button, see
+//          BlockingMessageComponent.vue), which may not have been removed yet, so we take the keyboard focus from it.
 
 let elementFocusedBeforeUiBlocked: HTMLElement | null = null;
 
@@ -500,7 +544,7 @@ const restoreFocusAfterUiUnblocked = async (element: HTMLElement): Promise<void>
   const activeElement = document.activeElement;
 
   if (
-    (!activeElement || activeElement === document.body) &&
+    (!activeElement || activeElement === document.body || activeElement.closest('.blocking-message')) &&
     element.isConnected &&
     element.getClientRects().length > 0 &&
     !element.matches(':disabled')
@@ -644,6 +688,8 @@ provideOpenCORContext({
 
 // Get ready to show toasts and provide a helper to show them that ensures that the proper group id is used and that the
 // instance becomes active before the message is pushed.
+// Note: the life of a toast depends on its severity and is handled by the toast itself (see ToastMessageWidget.vue), so
+//       PrimeVue mustn't handle it.
 
 const toast = useToast();
 const toastId = vue.ref(`opencorToast${crtInstanceUid}`);
@@ -651,27 +697,75 @@ const toastId = vue.ref(`opencorToast${crtInstanceUid}`);
 const addToast = (options: Parameters<typeof toast.add>[0]) => {
   activateInstance();
 
-  toast.add({ ...options, group: toastId.value });
+  toast.add({ ...options, group: toastId.value, life: undefined });
+
+  // Make sure that our new toast can be seen, should our toasts not all fit (see TOAST_PT).
+
+  void vue.nextTick().then(() => {
+    const toastsElement = document.getElementById(toastId.value);
+
+    toastsElement?.scrollTo({ top: toastsElement.scrollHeight });
+  });
 };
 
 provideOpenCORToast(addToast);
 
-// Note: PrimeVue only pauses the life of a toast while it is hovered if it has some mouse enter and leave handlers, so
-//       we give it some (that don't need to do anything), so that the user has time to read a toast that they hover.
+// Let people know if our settings could not be saved, in which case they only apply until OpenCOR gets reloaded.
+// Note #1: this is a warning rather than an error since our settings still apply.
+// Note #2: our settings are shared by all our instances, but only the active one (i.e. the one in which our settings
+//          were changed) reports the issue.
 
-const onToastHover = (): void => {};
+trackCleanup(
+  settings.onSaveIssue((issue: string) => {
+    if (compIsActiveApp.value) {
+      addToast({
+        severity: 'warn',
+        summary: 'Cannot Save Settings',
+        detail: `${issue} The settings will only apply until OpenCOR is reloaded.`
+      });
+    }
+  })
+);
 
-// Our toasts are positioned within OpenCOR (rather than within the page) and shown/hidden without any animation, and
-// their messages are rendered by ToastMessageWidget.vue, hence we remove the styling of PrimeVue's messages.
+// Our toasts are positioned within OpenCOR (rather than within the page), below our main menu (if any) so that they
+// don't cover it, and shown/hidden without any animation, and their messages are rendered by ToastMessageWidget.vue,
+// hence we remove the styling of PrimeVue's messages. Also, our toasts may not all fit within OpenCOR (e.g., if several
+// files could not be opened), in which case they can be scrolled (and a new toast is scrolled into view, see
+// addToast()), rather than go off the bottom of OpenCOR.
 // Note: we must use a pt object (rather than some pt: attributes) since PrimeVue's Toast component only passes its pt
 //       object to its messages.
 
+// Note: our toasts are 0.75rem away from the edges of OpenCOR, which we achieve using some padding rather than some
+//       offsets so that their shadow doesn't get clipped when they can be scrolled. That padding must, however, not
+//       block the mouse, hence only our toasts handle pointer events, which means that a scrollbar couldn't be dragged,
+//       so we don't show one (our toasts can still be scrolled using the mouse wheel, a trackpad, or the keyboard, and
+//       a toast that is partly cut off shows that there are more of them).
+
 const TOAST_PT = {
   root: {
-    style: { position: 'absolute', top: '0.75rem', right: '0.75rem', width: 'min(24rem, calc(100% - 1.5rem))' }
+    style: {
+      position: 'absolute',
+      top: 'var(--main-menu-height, 0px)',
+      right: '0',
+      boxSizing: 'border-box',
+      width: 'min(25.5rem, 100%)',
+      maxHeight: 'calc(100% - var(--main-menu-height, 0px))',
+      padding: '0.75rem 0.75rem 0.25rem',
+      overflowY: 'auto',
+      overscrollBehavior: 'contain',
+      scrollbarWidth: 'none',
+      pointerEvents: 'none'
+    }
   },
   message: {
-    style: { margin: '0 0 0.5rem', border: 'none', background: 'none', boxShadow: 'none', backdropFilter: 'none' }
+    style: {
+      margin: '0 0 0.5rem',
+      border: 'none',
+      background: 'none',
+      boxShadow: 'none',
+      backdropFilter: 'none',
+      pointerEvents: 'auto'
+    }
   },
   transition: {
     css: false
@@ -714,7 +808,7 @@ vue.watch(
       initialisingOpencorMessageVisible.value = false;
 
       // We are all done, so let's start checking for a newer version of OpenCOR, but only if we are running the Web app
-      // and not in isolation mode (i.e. with a COMBINE archive) since in those cases we don't want to let the user know
+      // and not in isolation mode (i.e. with an OMEX file) since in those cases we don't want to let the user know
       // about a newer version of OpenCOR.
 
       if (isFullWebApp.value) {
@@ -831,7 +925,37 @@ const handleAction = (action: string): void => {
   } else if (isAction(actionName, 'openSettingsDialog')) {
     onSettingsMenu();
   } else {
-    const filePaths = actionArguments.split('%7C');
+    // Note: the file paths are separated by an encoded "|", which may be in upper or lower case. We don't decode the
+    //       arguments first since the file paths may be URLs that contain other encoded characters, which must remain
+    //       encoded. This means that a URL may itself contain an encoded "|" (e.g., in its query), so we only consider
+    //       an encoded "|" to be a separator if it is followed by the start of a file path, i.e. a URL (with any
+    //       scheme, in any case, so that a URL that we cannot open still gets reported as such), an absolute path, or a
+    //       data URL (see zipDataFromDataUrl() in src/renderer/src/common/locCommon.ts). A relative path is not
+    //       supported.
+
+    const isFilePathStart = (text: string): boolean => {
+      return (
+        /^[A-Za-z][A-Za-z\d+.-]*:\/\//.test(text) ||
+        common.isAbsoluteFilePath(text) ||
+        text.startsWith('data:') ||
+        text.startsWith('#data:')
+      );
+    };
+
+    const filePaths: string[] = [];
+    let filePathStart = 0;
+
+    for (const separator of actionArguments.matchAll(/%7C/gi)) {
+      const separatorEnd = separator.index + separator[0].length;
+
+      if (isFilePathStart(actionArguments.substring(separatorEnd))) {
+        filePaths.push(actionArguments.substring(filePathStart, separator.index));
+
+        filePathStart = separatorEnd;
+      }
+    }
+
+    filePaths.push(actionArguments.substring(filePathStart));
 
     if (
       (isAction(actionName, 'openFile') && filePaths.length === 1) ||
@@ -841,9 +965,8 @@ const handleAction = (action: string): void => {
     } else {
       addToast({
         severity: 'error',
-        summary: 'Handling an action',
-        detail: `${action}\n\nThe action could not be handled.`,
-        life: TOAST_LIFE
+        summary: 'Cannot Handle Action',
+        detail: toastIssueDetail(`${FULL_URI_SCHEME}${action}`, 'The action is not supported.')
       });
     }
   }
@@ -861,6 +984,18 @@ vue.watch(
   hasFiles,
   (newHasFiles: boolean) => {
     electronApi?.enableDisableFileCloseAndCloseAllMenuItems(newHasFiles);
+  },
+  { immediate: true }
+);
+
+const hasSeveralFiles = vue.computed<boolean>(() => {
+  return contentsRef.value?.hasSeveralFiles() ?? false;
+});
+
+vue.watch(
+  hasSeveralFiles,
+  (newHasSeveralFiles: boolean) => {
+    electronApi?.enableDisableFileNextAndPreviousMenuItems(newHasSeveralFiles);
   },
   { immediate: true }
 );
@@ -973,27 +1108,65 @@ if (!electronApi) {
   });
 }
 
-// Remove the keyboard focus when the user presses the Escape key, so that whatever has it no longer looks focused
-// (e.g., with a focus ring), unless something is open (e.g., a menu or a popover), in which case the Escape key is for
-// closing it.
-// Note #1: we only do this for our instance of OpenCOR, and only if it is active and its UI is enabled (i.e. our UI is
-//          neither blocked nor showing a dialog, see compUiEnabled).
-// Note #2: we listen to the Escape key during the capture phase of our window, i.e. before PrimeVue components get it,
-//          since some of them (e.g., a select) stop its propagation even when they have nothing to close.
-// Note #3: a text entry (e.g., the input of an input widget or the range editor of a graph panel) and CellDL Editor may
-//          use the Escape key themselves (e.g., to discard a value being edited or to cancel what the user is doing),
-//          so we leave the keyboard focus alone if it is within one of them. Otherwise, blurring a text entry could,
-//          for instance, commit the value being edited rather than discard it.
-// Note #4: an open element may have a fixed position (in which case its offsetParent is null), so we check whether it
-//          is rendered using its client rects.
+// Hide our focus ring when the user uses their pointing device, and show it again when they press a key (other than
+// Escape or a modifier key), so that our focus ring is only shown when the keyboard is being used (see focusRing.ts).
+// Similarly, hide our focus ring when the user presses Escape with nothing to close or dismiss (e.g., a menu, a
+// popover, or a tooltip), so that whatever has the keyboard focus no longer looks focused.
+// Note #1: we hide our focus ring rather than remove the keyboard focus (i.e. blur the focused element), since the
+//          keyboard focus would otherwise go back to the top of the page (e.g., pressing Tab would then focus the first
+//          focusable element of the page rather than the element after the one that had the keyboard focus), and screen
+//          readers would lose their place.
+// Note #2: Escape doesn't show our focus ring again, so that a dialog that was opened using the pointing device and
+//          closed using Escape doesn't give the keyboard focus back to where it was with a focus ring.
+// Note #3: we only handle Escape for our instance of OpenCOR, and only if it is active and its UI is enabled (i.e. our
+//          UI is neither blocked nor showing a dialog, see compUiEnabled).
+// Note #4: we listen to keys during the capture phase of our window, i.e. before PrimeVue components get them, since
+//          some of them (e.g., a select) stop the propagation of Escape even when they have nothing to close.
+// Note #5: a text entry (e.g., the input of an input widget or the range editor of a graph panel) and CellDL Editor may
+//          use Escape themselves (e.g., to discard a value being edited or to cancel what the user is doing), so we
+//          leave our focus ring alone if the keyboard focus is within one of them. A text entry also shows that it has
+//          the keyboard focus, whether or not it has our focus ring (e.g., with a highlighted border).
+// Note #6: an open element may have a fixed position (in which case its offsetParent is null), so we check whether it
+//          is rendered using its client rects. A tooltip is also checked for its visibility since the tooltip of a
+//          toolbar button is always rendered, but only visible when needed (see ToolbarButtonWidget.vue). Our listener
+//          is added before those of our tooltips, so they are still shown when we check them.
+// Note #7: our main menu handles Escape itself, so that it can return the keyboard focus to where it was before it got
+//          it using its keyboard shortcut (see MainMenu.vue).
 
-const ESCAPE_KEY_OPEN_ELEMENTS = '.p-popover, .p-select-overlay, .p-contextmenu, .p-menubar-submenu';
-const ESCAPE_KEY_TEXT_ENTRIES =
-  'textarea, input:not([type="button"], [type="checkbox"], [type="color"], [type="file"], [type="radio"], [type="range"], [type="reset"], [type="submit"])';
+const focusRingHidden = vue.ref<boolean>(false);
+
+const MODIFIER_KEYS = ['Alt', 'AltGraph', 'Control', 'Meta', 'Shift'];
 
 const onEscapeKeyDown = (event: KeyboardEvent): void => {
+  // Cancel the loading of remote models or external data, if any, as if their Cancel button had been pressed (see our
+  // template).
+  // Note: no dialog can normally be shown while remote models or external data are being loaded, but we make sure of it
+  //       since Escape would then be for the dialog.
+
   if (
-    event.key !== 'Escape' ||
+    (loadingModelMessageVisible.value || loadingExternalDataVisible.value) &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey &&
+    !event.isComposing &&
+    compIsActiveApp.value &&
+    !isDialogActive.value
+  ) {
+    event.preventDefault();
+
+    if (loadingModelMessageVisible.value) {
+      cancelRemoteModelLoads();
+    }
+
+    if (loadingExternalDataVisible.value) {
+      cancelExternalDataLoads();
+    }
+
+    return;
+  }
+
+  if (
     event.altKey ||
     event.ctrlKey ||
     event.metaKey ||
@@ -1011,24 +1184,41 @@ const onEscapeKeyDown = (event: KeyboardEvent): void => {
     !root ||
     !(focusedElement instanceof HTMLElement) ||
     !root.contains(focusedElement) ||
-    !focusedElement.matches(':focus-visible') ||
-    focusedElement.isContentEditable ||
-    focusedElement.matches(ESCAPE_KEY_TEXT_ENTRIES) ||
+    !hasFocusRing(focusedElement) ||
+    isTextEntry(focusedElement) ||
     focusedElement.closest('.celldl-editor-container') ||
-    Array.from(root.querySelectorAll<HTMLElement>(ESCAPE_KEY_OPEN_ELEMENTS)).some(
+    focusedElement.matches('.p-menubar-root-list') ||
+    Array.from(root.querySelectorAll<HTMLElement>(ESCAPE_KEY_OVERLAYS)).some(
       (element) => element.getClientRects().length
+    ) ||
+    Array.from(root.querySelectorAll<HTMLElement>(ESCAPE_KEY_TOOLTIPS)).some(
+      (element) => element.getClientRects().length && getComputedStyle(element).visibility === 'visible'
     )
   ) {
     return;
   }
 
-  focusedElement.blur();
+  focusRingHidden.value = true;
 };
 
-window.addEventListener('keydown', onEscapeKeyDown, { capture: true });
+const onKeyDown = (event: KeyboardEvent): void => {
+  if (event.key === 'Escape') {
+    onEscapeKeyDown(event);
+  } else if (!MODIFIER_KEYS.includes(event.key)) {
+    focusRingHidden.value = false;
+  }
+};
+
+const onPointerDown = (): void => {
+  focusRingHidden.value = true;
+};
+
+window.addEventListener('keydown', onKeyDown, { capture: true });
+window.addEventListener('pointerdown', onPointerDown, { capture: true });
 
 trackCleanup(() => {
-  window.removeEventListener('keydown', onEscapeKeyDown, { capture: true });
+  window.removeEventListener('keydown', onKeyDown, { capture: true });
+  window.removeEventListener('pointerdown', onPointerDown, { capture: true });
 });
 
 // Auto update.
@@ -1080,6 +1270,17 @@ const onDownloadAndInstall = (): void => {
   electronApi?.downloadAndInstallUpdate();
 };
 
+// Cancel the download of an update.
+// Note: our main process doesn't let us know about the cancellation (or about the update if it got fully downloaded in
+//       the meantime, see cancelUpdateDownload() in MainWindow.ts), so we close our update download progress dialog
+//       ourselves.
+
+const onCancelUpdateDownload = (): void => {
+  electronApi?.cancelUpdateDownload();
+
+  updateDownloadProgressVisible.value = false;
+};
+
 trackCleanup(
   electronApi?.onUpdateDownloadError((issue: string) => {
     // Note: our update download progress dialog can't be closed by the user, so we must close it ourselves.
@@ -1087,7 +1288,7 @@ trackCleanup(
     updateDownloadProgressVisible.value = false;
 
     updateErrorTitle.value = 'Downloading Update';
-    updateErrorIssue.value = `An error occurred while downloading the update (${common.formatMessage(issue, false)}).`;
+    updateErrorIssue.value = `An error occurred while downloading the update (${common.escapeHtml(common.formatMessage(issue, false))}).`;
     updateErrorVisible.value = true;
   })
 );
@@ -1099,7 +1300,7 @@ trackCleanup(
     updateDownloadProgressVisible.value = false;
 
     updateErrorTitle.value = 'Installing Update';
-    updateErrorIssue.value = `An error occurred while installing the update (${common.formatMessage(issue, false)}).`;
+    updateErrorIssue.value = `An error occurred while installing the update (${common.escapeHtml(common.formatMessage(issue, false))}).`;
     updateErrorVisible.value = true;
   })
 );
@@ -1126,7 +1327,8 @@ trackCleanup(
 
     // Installing the update restarts OpenCOR, so ask the user whether to save the files that have been modified first.
     // If the user cancels, then the update will be installed when OpenCOR gets quit (see autoInstallOnAppQuit in
-    // electron-updater) or once the user has checked for updates again (see checkForUpdates() in MainWindow.ts).
+    // electron-updater) or once the user has checked for updates again (see checkForUpdates() in MainWindow.ts), which
+    // we let them know about (since our download progress dialog otherwise just disappears).
 
     if ((await saveModifiedFiles('Install Update')) !== null) {
       userInputBlocked.value = true;
@@ -1139,6 +1341,12 @@ trackCleanup(
       }
     } else {
       updateDownloadProgressVisible.value = false;
+
+      addToast({
+        severity: 'info',
+        summary: 'Update Postponed',
+        detail: `${updateVersion.value ? `OpenCOR ${updateVersion.value}` : 'The update'} will be installed when OpenCOR is quit.`
+      });
     }
   })
 );
@@ -1168,21 +1376,10 @@ trackCleanup(
 trackCleanup(
   electronApi?.onUpdateCheckError((issue: string) => {
     updateErrorTitle.value = 'Check for Updates';
-    updateErrorIssue.value = `An error occurred while checking for updates (${common.formatMessage(issue, false)}).`;
+    updateErrorIssue.value = `An error occurred while checking for updates (${common.escapeHtml(common.formatMessage(issue, false))}).`;
     updateErrorVisible.value = true;
   })
 );
-
-// Handle errors.
-
-const onError = (message: string): void => {
-  addToast({
-    severity: 'error',
-    summary: 'Error',
-    detail: message,
-    life: TOAST_LIFE
-  });
-};
 
 // Changelog dialog.
 
@@ -1296,12 +1493,12 @@ const onReload = async (): Promise<void> => {
 // The files that are being opened, keyed by their canonical path, each with a promise that gets resolved once the file
 // has been opened (or not).
 
-interface IFileBeingOpened {
+interface FileBeingOpened {
   promise: Promise<void>;
   resolve: () => void;
 }
 
-const filesBeingOpened = new Map<string, IFileBeingOpened>();
+const filesBeingOpened = new Map<string, FileBeingOpened>();
 
 const fileBeingOpened = (canonicalFilePath: string): void => {
   let resolve: () => void = () => {};
@@ -1317,7 +1514,7 @@ const fileNoLongerBeingOpened = (canonicalFilePath: string): void => {
   filesBeingOpened.delete(canonicalFilePath);
 };
 
-interface IFileInfo {
+interface FileInfo {
   alreadyOpen: boolean;
   beingOpened?: Promise<void>;
   // Note: if the file is already being opened (i.e. it doesn't have a file tab yet), then a promise that gets resolved
@@ -1343,28 +1540,48 @@ const fileDescription = (fileFilePathOrFileContents: string | Uint8Array | File)
 
 // A helper function to report an issue with a file that couldn't be opened.
 
-const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePath: string = ''): void => {
+const reportFileIssue = (
+  filePath: string,
+  issueMessage: string,
+  canonicalFilePath: string = '',
+  toastShown: boolean = true,
+  fileOpened: boolean = false
+): void => {
   // Let our main process know about the issue first since it may be waiting for the file (e.g., if the file is being
   // reopened at startup, see MainWindow.fileOpenedOrNot()), so that it doesn't wait forever should reporting the issue
   // to the user fail.
-  // Note: the canonical path of the file may not be known (e.g., if libOpenCOR couldn't determine it), in which case we
-  //       use the path that was used to (try to) open the file.
+  // Note #1: the canonical path of the file may not be known (e.g., if libOpenCOR couldn't determine it), in which case
+  //          we use the path that was used to (try to) open the file.
+  // Note #2: we don't show a toast if the issue is the result of something that people did (e.g., they cancelled the
+  //          loading of a remote file), unless we are in simulation-only mode since our issues are then all that is
+  //          shown.
+  // Note #3: the file may have got opened before the issue occurred (e.g., if selecting it failed, see
+  //          openFileInContents() and fileAlreadyOpen()), in which case our main process has already been told that it
+  //          is open (see ContentsComponent.openFile() and fileAlreadyOpen()). So, we don't tell it otherwise since it
+  //          would then stop letting us save the file (see canSaveFile() in src/main/MainWindow.ts) and forget it as a
+  //          recent file, even though it is still open. Only our caller knows whether our main process has been told
+  //          that the file is open, though. Indeed, the file may have a file tab that has nothing to do with the issue,
+  //          in which case our main process must still be told about the issue.
 
-  electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
+  if (!fileOpened) {
+    electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
+  }
 
   if (props.omex) {
     void vue.nextTick().then(() => {
-      issues.value.push({ type: locApi.EIssueType.ERROR, description: issueMessage });
+      issues.value.push({ type: locApi.IssueType.ERROR, description: issueMessage });
     });
-  } else {
-    // Note: a data URL can be very long, so we don't show it (the issue message says that it is a data URL anyway).
+  } else if (toastShown) {
+    // Note: a data URL can be very long and is meaningless to people, so we don't show it (the issue message says that
+    //       it is a data URL anyway).
 
     addToast({
       severity: 'error',
-      summary: 'Opening a file',
-      detail:
-        filePath.startsWith('data:') || filePath.startsWith('#data:') ? issueMessage : `${filePath}\n\n${issueMessage}`,
-      life: TOAST_LIFE
+      summary: 'Cannot Open File',
+      detail: toastIssueDetail(
+        filePath.startsWith('data:') || filePath.startsWith('#data:') ? undefined : filePath,
+        issueMessage
+      )
     });
   }
 
@@ -1374,7 +1591,14 @@ const reportFileIssue = (filePath: string, issueMessage: string, canonicalFilePa
 const processFile = async (
   fileFilePathOrFileContents: string | Uint8Array | File,
   dataUrlFileName: string = ''
-): Promise<IFileInfo | null> => {
+): Promise<FileInfo | null> => {
+  // Keep track of the signal that tells us whether the loading of remote models, including ours if we are one, has been
+  // cancelled (see cancelRemoteModelLoads()).
+  // Note: we do this before anything else since it is the remote models that were being loaded when the loading got
+  //       cancelled that are to be cancelled, i.e. including us even if we haven't started loading our model yet.
+
+  const remoteModelLoadsSignal = remoteModelLoadsAbortController.signal;
+
   // Check whether we were passed a ZIP-CellML data URL.
   // Note: we may also have been passed the contents of a file that was opened using a data URL and then closed, along
   //       with its name, so that it can be reopened under that name (see onReopenMenu() and electronApi.onOpenFile()).
@@ -1400,33 +1624,50 @@ const processFile = async (
     dataUrlFileName = `${common.CELLML_PREFIX}${common.nextCellmlDataUrlNumber()}/${common.fileName(zipCellmlFileName) || zipCellmlFileName}`;
     fileFilePathOrFileContents = zipCellmlDataUriInfo.data as Uint8Array;
   } else {
-    // Check whether we were passed a COMBINE archive data URL.
+    // Check whether we were passed an OMEX file data URL.
 
-    const combineArchiveDataUriInfo = locCommon.combineArchiveDataUrl(fileFilePathOrFileContents);
+    const omexDataUriInfo = locCommon.omexDataUrl(fileFilePathOrFileContents);
 
-    if (combineArchiveDataUriInfo.res) {
-      if (combineArchiveDataUriInfo.error) {
-        reportFileIssue(fileDescription(fileFilePathOrFileContents), combineArchiveDataUriInfo.error);
+    if (omexDataUriInfo.res) {
+      if (omexDataUriInfo.error) {
+        reportFileIssue(fileDescription(fileFilePathOrFileContents), omexDataUriInfo.error);
 
         return null;
       }
 
       omexDataUrlCounter = common.nextOmexDataUrlNumber();
-      fileFilePathOrFileContents = combineArchiveDataUriInfo.data as Uint8Array;
+      fileFilePathOrFileContents = omexDataUriInfo.data as Uint8Array;
     }
   }
 
+  // Give a made-up name to a file that, in OpenCOR, was dropped but has no path (see common.DROPPED_FILE_PREFIX), unless
+  // it is being reopened, in which case we were given the name it was opened under (see electronApi.onOpenFile()).
+  // Note: such a file is otherwise only known by its name, so two different files with the same name would be mistaken
+  //       for one another (i.e. the second one would not get opened and only one of them could be reopened).
+
+  if (
+    !dataUrlFileName &&
+    electronApi &&
+    fileFilePathOrFileContents instanceof File &&
+    !electronApi.filePath(fileFilePathOrFileContents)
+  ) {
+    dataUrlFileName = `${common.DROPPED_FILE_PREFIX}${common.nextDroppedFileNumber()}/${fileFilePathOrFileContents.name}`;
+  }
+
   // Check whether the file is already open or being opened and if so then select it.
-  // Note: a file may be opened more than once at the same time (e.g., by dropping the same file twice or by selecting
-  //       the same sample file twice). Since a file is only considered open once it has a file tab, we also need to
-  //       keep track of the files that are being opened, so that we don't end up with several file tabs for the same
-  //       file (and, with the C++ version of libOpenCOR, several File objects sharing, and therefore releasing, the
-  //       same native file). Also, a file may be referred to using different paths (e.g., through a symbolic link),
-  //       hence we keep track of the canonical path of the files that are being opened (our contents component does
-  //       the same for the files that are open, see ContentsComponent.findFileTab()).
-  // Note: this may fail (e.g., if the file path cannot be determined), in which case we report the issue so that the
-  //       user knows about it and our main process doesn't wait for the file forever (e.g., if the file is being
-  //       reopened at startup, see MainWindow.fileOpenedOrNot()).
+  // Note #1: a file may be opened more than once at the same time (e.g., by dropping the same file twice or by
+  //          selecting the same sample file twice). Since a file is only considered open once it has a file tab, we
+  //          also need to keep track of the files that are being opened, so that we don't end up with several file tabs
+  //          for the same file (and, with the C++ version of libOpenCOR, several File objects sharing, and therefore
+  //          releasing, the same native file). Also, a file may be referred to using different paths (e.g., through a
+  //          symbolic link), hence we keep track of the canonical path of the files that are being opened (our contents
+  //          component does the same for the files that are open, see ContentsComponent.findFileTab()).
+  //          This doesn't apply to a dropped file that has no path, though. Indeed, it is given a new made-up name each
+  //          time it is dropped (see above), since we cannot tell whether two such files are the same file (each drop
+  //          gives us a new File object), so dropping it twice results in two file tabs.
+  // Note #2: this may fail (e.g., if the file path cannot be determined), in which case we report the issue so that the
+  //          user knows about it and our main process doesn't wait for the file forever (e.g., if the file is being
+  //          reopened at startup, see MainWindow.fileOpenedOrNot()).
 
   let filePath = '';
   let canonicalFilePath = '';
@@ -1473,21 +1714,34 @@ const processFile = async (
   let fileToBeOpened = false;
 
   try {
-    file = await locCommon.file(fileFilePathOrFileContents, dataUrlFileName, omexDataUrlCounter);
+    file = await locCommon.file(
+      fileFilePathOrFileContents,
+      dataUrlFileName,
+      omexDataUrlCounter,
+      isRemoteFilePath ? remoteModelLoadsSignal : undefined
+    );
+
+    // Make sure that the loading of our model hasn't been cancelled while it was being loaded (in which case, our file
+    // gets released below).
+
+    if (isRemoteFilePath) {
+      remoteModelLoadsSignal.throwIfAborted();
+    }
+
     // Note: to retrieve the type of the file may fail (e.g., if libOpenCOR throws an exception), in which case we must
     //       release the file since nothing else would (see the catch block below).
 
     const fileType = file.type();
 
     if (
-      fileType === locApi.EFileType.IRRETRIEVABLE_FILE ||
-      (props.omex && fileType !== locApi.EFileType.COMBINE_ARCHIVE)
+      fileType === locApi.FileType.IRRETRIEVABLE_FILE ||
+      (props.omex && fileType !== locApi.FileType.COMBINE_ARCHIVE)
     ) {
       reportFileIssue(
         filePath,
-        fileType === locApi.EFileType.IRRETRIEVABLE_FILE
+        fileType === locApi.FileType.IRRETRIEVABLE_FILE
           ? 'The file could not be retrieved.'
-          : 'Only COMBINE archives are supported.',
+          : 'Only OMEX files are supported.',
         canonicalFilePath
       );
 
@@ -1515,7 +1769,17 @@ const processFile = async (
       console.warn(`OpenCOR: failed to release file (${filePath}):`, common.formatError(error));
     }
 
-    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
+    // Note: if the loading of our model was cancelled, then people know about it, so we don't show a toast (see
+    //       reportFileIssue()).
+
+    const loadingCancelled = isRemoteFilePath && remoteModelLoadsSignal.aborted;
+
+    reportFileIssue(
+      filePath,
+      loadingCancelled ? 'The loading of the file was cancelled.' : common.formatMessage(common.formatError(error)),
+      canonicalFilePath,
+      !loadingCancelled
+    );
 
     return null;
   } finally {
@@ -1560,17 +1824,23 @@ const openFileInContents = async (
 
     await contentsRef.value.openFile(file, wait, fileHandle);
   } catch (error: unknown) {
-    if (!contentsRef.value?.hasFile(filePath)) {
+    // Note: if the file has a file tab, then it is the one that we have just added and our main process has been told
+    //       that the file is open (see ContentsComponent.openFile()). Indeed, the file wasn't open before (see
+    //       processFile()) and it couldn't have been opened in the meantime since it was being opened.
+
+    const fileOpened = contentsRef.value?.hasFile(filePath) ?? false;
+
+    if (!fileOpened) {
       file.release();
     }
 
-    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
+    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath, true, fileOpened);
   } finally {
     fileNoLongerBeingOpened(canonicalFilePath);
   }
 };
 
-const fileAlreadyOpen = async (fileInfo: IFileInfo, wait: boolean = false): Promise<void> => {
+const fileAlreadyOpen = async (fileInfo: FileInfo, wait: boolean = false): Promise<void> => {
   // Let our main process know whether the file is open since it may be waiting for it (e.g., if the file is being
   // reopened at startup, see MainWindow.fileOpenedOrNot()), and select it.
   // Note: if the file is being opened, then we can only let our main process know once it has been opened (or not), in
@@ -1599,7 +1869,7 @@ const fileAlreadyOpen = async (fileInfo: IFileInfo, wait: boolean = false): Prom
 
 const openProcessedFile = async (
   fileFilePathOrFileContents: string | Uint8Array | File,
-  fileInfoPromise: Promise<IFileInfo | null>,
+  fileInfoPromise: Promise<FileInfo | null>,
   wait: boolean
 ): Promise<void> => {
   // Open the given processed file (see processFile()) or select it if it is already open.
@@ -1608,7 +1878,7 @@ const openProcessedFile = async (
   //       main process doesn't wait for the file forever (e.g., if the file is being reopened at startup, see
   //       MainWindow.fileOpenedOrNot()), and the next files can still be opened (see openFiles()).
 
-  let fileInfo: IFileInfo | null = null;
+  let fileInfo: FileInfo | null = null;
 
   try {
     fileInfo = await fileInfoPromise;
@@ -1642,10 +1912,15 @@ const openProcessedFile = async (
   } catch (error: unknown) {
     console.error('OpenCOR: an unexpected error occurred while opening a file:', common.formatError(error));
 
+    // Note: if the file has a file tab, then our main process has been told that the file is open, be it by
+    //       fileAlreadyOpen() (before selecting it) or by ContentsComponent.openFile().
+
     reportFileIssue(
       fileInfo?.filePath || fileDescription(fileFilePathOrFileContents),
       common.formatMessage(common.formatError(error)),
-      fileInfo?.canonicalFilePath
+      fileInfo?.canonicalFilePath,
+      true,
+      !!fileInfo && (contentsRef.value?.hasFile(fileInfo.filePath) ?? false)
     );
   }
 };
@@ -1798,14 +2073,14 @@ const onDragOver = (event: DragEvent): void => {
 // Note #2: DataTransferItem.getAsFileSystemHandle() is part of the File System Access API, which is only supported by
 //          Chromium-based Web browsers, and it may return the handle of a directory.
 
-interface IDataTransferItemWithFileSystemHandle {
+interface DataTransferItemWithFileSystemHandle {
   getAsFileSystemHandle?: () => Promise<FileSystemHandle | null>;
 }
 
 const fileHandles = new WeakMap<File, FileSystemFileHandle>();
 
 const droppedFileHandle = (item: DataTransferItem): Promise<FileSystemFileHandle | null> => {
-  const getAsFileSystemHandle = (item as unknown as IDataTransferItemWithFileSystemHandle).getAsFileSystemHandle;
+  const getAsFileSystemHandle = (item as unknown as DataTransferItemWithFileSystemHandle).getAsFileSystemHandle;
 
   if (electronApi || !getAsFileSystemHandle) {
     return Promise.resolve(null);
@@ -1832,8 +2107,8 @@ const onDrop = async (event: DragEvent): Promise<void> => {
   dragAndDropVisible.value = false;
 
   // Retrieve the dropped files and their file handle.
-  // Note: this must be done before we await anything since the dropped items can only be accessed while the drop
-  //       event is being handled.
+  // Note: this must be done before we await anything since the dropped items can only be accessed while the drop event
+  //       is being handled.
 
   const droppedFiles = Array.from(event.dataTransfer?.items ?? [])
     .filter((item) => item.kind === 'file')
@@ -1865,15 +2140,15 @@ const onDrop = async (event: DragEvent): Promise<void> => {
 trackCleanup(
   electronApi?.onOpenFile((filePath: string) => {
     handleExternalRequest(() => {
-      // Note: our main process may ask us to reopen a file that was opened using a data URL (through its File|Reopen
-      //       menu), in which case we reopen it using the contents that we kept for it (see addRecentFile()).
+      // Note: our main process may ask us to reopen a file that only existed in memory (through its File|Reopen menu),
+      //       in which case we reopen it using the contents that we kept for it (see addRecentFile()).
 
-      const closedDataUrlFile = closedDataUrlFiles.get(filePath);
+      const closedInMemoryFile = closedInMemoryFiles.get(filePath);
 
-      if (closedDataUrlFile) {
-        closedDataUrlFiles.delete(filePath);
+      if (closedInMemoryFile) {
+        closedInMemoryFiles.delete(filePath);
 
-        openFile(closedDataUrlFile.contents, closedDataUrlFile.filePath);
+        openFile(closedInMemoryFile.contents, closedInMemoryFile.filePath);
       } else {
         openFile(filePath);
       }
@@ -1973,23 +2248,25 @@ const onOpenSampleLorenzMenu = (): void => {
 //          object. Similarly, a file opened using a data URL only exists in memory (see common.isDataUrlFileName()), so
 //          we keep track of its contents, so that it can be reopened under the same name, but only for the current
 //          session, including in OpenCOR where we keep them for the main process to ask us to reopen the file (see
-//          closedDataUrlFiles). A file opened using some contents cannot be reopened.
+//          closedInMemoryFiles). A file opened using some contents cannot be reopened.
+// Note #3: in OpenCOR, a dropped file that has no path also only exists in memory (see common.isInMemoryFilePath()),
+//          so we keep track of its File object, as for a file opened using a data URL.
 
-interface IRecentFile {
+interface RecentFile {
   filePath: string;
   source: string | File | FileSystemFileHandle | Uint8Array;
 }
 
-interface IClosedDataUrlFile {
+interface ClosedInMemoryFile {
   filePath: string;
-  contents: Uint8Array;
+  contents: Uint8Array | File;
 }
 
 const openedFiles = new Map<string, File | Uint8Array>();
-const closedDataUrlFiles = new Map<string, IClosedDataUrlFile>();
+const closedInMemoryFiles = new Map<string, ClosedInMemoryFile>();
 // Note: keyed by the canonical path of the file since that is what our main process refers to it by. It only lists up
 //       to MAX_RECENT_FILES files, so we never need to keep more than that.
-const recentFiles = vue.shallowRef<IRecentFile[]>([]);
+const recentFiles = vue.shallowRef<RecentFile[]>([]);
 const recentFilePaths = vue.computed<string[]>(() => {
   return recentFiles.value.map((recentFile) => recentFile.filePath);
 });
@@ -2006,7 +2283,7 @@ const addRecentFile = (filePath: string, fileHandle?: FileSystemFileHandle): voi
   openedFiles.delete(filePath);
 
   if (electronApi) {
-    if (!(file instanceof Uint8Array)) {
+    if (!(file instanceof Uint8Array) && !(file instanceof File && common.isInMemoryFilePath(filePath))) {
       return;
     }
 
@@ -2020,15 +2297,15 @@ const addRecentFile = (filePath: string, fileHandle?: FileSystemFileHandle): voi
       return;
     }
 
-    closedDataUrlFiles.delete(canonicalFilePath);
-    closedDataUrlFiles.set(canonicalFilePath, { filePath, contents: file });
+    closedInMemoryFiles.delete(canonicalFilePath);
+    closedInMemoryFiles.set(canonicalFilePath, { filePath, contents: file });
 
-    for (const oldCanonicalFilePath of closedDataUrlFiles.keys()) {
-      if (closedDataUrlFiles.size <= MAX_RECENT_FILES) {
+    for (const oldCanonicalFilePath of closedInMemoryFiles.keys()) {
+      if (closedInMemoryFiles.size <= MAX_RECENT_FILES) {
         break;
       }
 
-      closedDataUrlFiles.delete(oldCanonicalFilePath);
+      closedInMemoryFiles.delete(oldCanonicalFilePath);
     }
 
     return;
@@ -2090,11 +2367,11 @@ const onReopenMenu = async (filePath: string): Promise<void> => {
 };
 
 // Note: in OpenCOR, our main process clears its recent files itself, but it lets us know about it so that we can
-//       release the contents of the files that were opened using a data URL and then closed (see addRecentFile()).
+//       release the contents of the files that only existed in memory and were then closed (see addRecentFile()).
 
 trackCleanup(
   electronApi?.onClearRecentFiles(() => {
-    closedDataUrlFiles.clear();
+    closedInMemoryFiles.clear();
   })
 );
 
@@ -2188,6 +2465,28 @@ const onDownloadMenu = (): void => {
   }
 
   contentsRef.value?.saveCurrentFileAs();
+};
+
+// Next file and previous file.
+
+trackCleanup(
+  electronApi?.onNextFile(() => {
+    onNextFileMenu();
+  })
+);
+
+const onNextFileMenu = (): void => {
+  void contentsRef.value?.selectNextFile();
+};
+
+trackCleanup(
+  electronApi?.onPreviousFile(() => {
+    onPreviousFileMenu();
+  })
+);
+
+const onPreviousFileMenu = (): void => {
+  void contentsRef.value?.selectPreviousFile();
 };
 
 // Close.
@@ -2288,7 +2587,7 @@ vue.onMounted(() => {
     label: 'CellDL Editor',
     icon: { url: celldlIcon },
     component: vue.defineAsyncComponent(() => import('./views/CellDLEditorView.vue')),
-    fileTypes: [locApi.EFileType.UNKNOWN_FILE],
+    fileTypes: [locApi.FileType.UNKNOWN_FILE],
     supportsFile: locCommon.isCellDLFile
   });
 
@@ -2298,7 +2597,7 @@ vue.onMounted(() => {
     label: 'Standard Simulation Experiment',
     icon: 'pi pi-chart-line',
     component: SimulationExperimentStandardView,
-    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.SEDML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+    fileTypes: [locApi.FileType.CELLML_FILE, locApi.FileType.SEDML_FILE, locApi.FileType.COMBINE_ARCHIVE]
   });
 
   viewRegistry.register({
@@ -2307,7 +2606,7 @@ vue.onMounted(() => {
     label: 'Interactive Simulation Experiment',
     icon: 'pi pi-sliders-h',
     component: SimulationExperimentInteractiveView,
-    fileTypes: [locApi.EFileType.CELLML_FILE, locApi.EFileType.SEDML_FILE, locApi.EFileType.COMBINE_ARCHIVE]
+    fileTypes: [locApi.FileType.CELLML_FILE, locApi.FileType.SEDML_FILE, locApi.FileType.COMBINE_ARCHIVE]
   });
 });
 
@@ -2342,7 +2641,7 @@ vue.onBeforeUnmount(() => {
   }
 });
 
-// If a COMBINE archive is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
+// If an OMEX file is provided then open it (and then the Simulation Experiment view will be shown in isolation) or
 // carry on as normal (i.e. the whole OpenCOR UI will be shown).
 
 if (props.omex) {
@@ -2371,7 +2670,11 @@ if (props.omex) {
 
         trackCleanup(
           vue.watch(initialisingOpencorMessageVisible, (newInitialisingOpencorMessageVisible: boolean) => {
-            if (!newInitialisingOpencorMessageVisible && window.location.search) {
+            // Note: a query string that is not an action (e.g., some tracking parameters such as "?fbclid=..." or
+            //       "?utm_source=..." added by the site that linked to us, or the query string of the page in which we
+            //       are embedded) is none of our business, so we leave it (and the URL) alone.
+
+            if (!newInitialisingOpencorMessageVisible && window.location.search.startsWith(`?${FULL_URI_SCHEME}`)) {
               // Retrieve the action from the URL.
               // Note: we also include the hash since it is used to pass a model that is encoded as a data URL.
 
@@ -2385,16 +2688,7 @@ if (props.omex) {
 
               window.history.replaceState({}, document.title, window.location.pathname);
 
-              if (action.startsWith(FULL_URI_SCHEME)) {
-                handleAction(action.slice(FULL_URI_SCHEME.length));
-              } else {
-                addToast({
-                  severity: 'error',
-                  summary: 'Handling an action',
-                  detail: `${action}\n\nThe action could not be handled.`,
-                  life: TOAST_LIFE
-                });
-              }
+              handleAction(action.slice(FULL_URI_SCHEME.length));
             }
           })
         );
@@ -2419,12 +2713,10 @@ const deleteGitHubAccessToken = async (silent: boolean = false): Promise<void> =
     if (silent) {
       console.warn('OpenCOR: failed to remove the stored GitHub access token:', common.formatError(error));
     } else {
-      toast.add({
+      addToast({
         severity: 'warn',
-        group: toastId.value,
-        summary: 'Removing GitHub access token',
-        detail: common.formatMessage(common.formatError(error)),
-        life: TOAST_LIFE
+        summary: 'Cannot Remove GitHub Access Token',
+        detail: common.formatMessage(common.formatError(error))
       });
     }
   }
@@ -2473,17 +2765,15 @@ const saveGitHubAccessToken = async (accessToken: string): Promise<void> => {
     if (!stored) {
       addToast({
         severity: 'warn',
-        summary: 'Remembering GitHub access token',
-        detail: 'The token could not be stored securely, so you will need to sign in again next time.',
-        life: TOAST_LIFE
+        summary: 'Cannot Remember GitHub Access Token',
+        detail: 'The token could not be stored securely, so you will need to sign in again next time.'
       });
     }
   } catch (error: unknown) {
     addToast({
       severity: 'warn',
-      summary: 'Remembering GitHub access token',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      summary: 'Cannot Remember GitHub Access Token',
+      detail: common.formatMessage(common.formatError(error))
     });
   }
 };
@@ -2525,9 +2815,8 @@ const onDisconnectFromGitHub = async (): Promise<void> => {
   } catch (error: unknown) {
     addToast({
       severity: 'error',
-      summary: 'GitHub sign-out',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      summary: 'Cannot Sign Out of GitHub',
+      detail: common.formatMessage(common.formatError(error))
     });
   } finally {
     disconnectFromGitHubVisible.value = false;
@@ -2567,9 +2856,8 @@ const onGitHubButtonClick = async (): Promise<void> => {
   } catch (error: unknown) {
     addToast({
       severity: 'error',
-      summary: 'GitHub sign-in',
-      detail: common.formatMessage(common.formatError(error)),
-      life: TOAST_LIFE
+      summary: 'Cannot Sign In to GitHub',
+      detail: common.formatMessage(common.formatError(error))
     });
   } finally {
     connectingToGitHub.value = false;
@@ -2579,6 +2867,7 @@ const onGitHubButtonClick = async (): Promise<void> => {
 </script>
 
 <style scoped>
+/* TODO: enable once our GitHub integration is fully ready (see the GitHub button in our template).
 .connected-to-github,
 :deep(.connected-to-github .pi-github) {
   background-color: var(--p-green-100);
@@ -2634,6 +2923,7 @@ const onGitHubButtonClick = async (): Promise<void> => {
   border-color: var(--p-red-700) !important;
   color: var(--p-red-200);
 }
+*/
 
 .opencor {
   height: 100%;

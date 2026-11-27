@@ -83,12 +83,12 @@ export const initialiseConverter = async (progress: (percent: number) => void): 
 
 // Generate CellML from the given CellDL file.
 
-export interface ICellmlFromCelldl {
+export interface CellmlFromCelldl {
   cellml?: string;
   issues: string[];
 }
 
-export const cellmlFromCelldl = async (celldl: string, celldlFileName: string): Promise<ICellmlFromCelldl> => {
+export const cellmlFromCelldl = async (celldl: string, celldlFileName: string): Promise<CellmlFromCelldl> => {
   const converter = await initialisedConverter();
 
   // Note: the source URI must be a valid IRI, hence we encode our file name (which may, for instance, contain spaces).
@@ -122,10 +122,10 @@ export const cellmlFromCelldl = async (celldl: string, celldlFileName: string): 
   };
 };
 
-// Create a COMBINE archive for the given CellML file, i.e. with the CellML file itself, a SED-ML file (which we get
+// Create an OMEX file for the given CellML file, i.e. with the CellML file itself, a SED-ML file (which we get
 // libOpenCOR to create for us), and the CellDL file from which the CellML file was generated.
 
-export const combineArchive = (cellml: string, celldl: string): dependencies.Module => {
+export const omexFile = (cellml: string, celldl: string): dependencies.Module => {
   const cellmlFile = new locApi.File(
     `${common.CELLML_PREFIX}${common.nextCellmlDataUrlNumber()}/model.cellml`,
     new TextEncoder().encode(cellml)
@@ -136,7 +136,7 @@ export const combineArchive = (cellml: string, celldl: string): dependencies.Mod
     const document = cellmlFile.document();
 
     // Note: our SED-ML file references our CellML file using its (URL-encoded) path, which we replace with the location
-    //       of our CellML file in our COMBINE archive.
+    //       of our CellML file in our OMEX file.
 
     try {
       sedml = document.serialise().replace(/(<model\b[^>]*\bsource=")[^"]*"/, '$1model.cellml"');

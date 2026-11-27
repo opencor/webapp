@@ -14,7 +14,7 @@ const latestVersion = vue.ref<string>('');
 
 // Check if a new version is available.
 
-interface IVersionInfo {
+interface VersionInfo {
   version: string;
 }
 
@@ -36,7 +36,7 @@ const checkForUpdates = async (): Promise<boolean> => {
       return false;
     }
 
-    const versionInfo: IVersionInfo = await response.json();
+    const versionInfo: VersionInfo = await response.json();
 
     latestVersion.value = versionInfo.version;
 
@@ -105,8 +105,8 @@ const startCheck = (): void => {
 //          version of the page references new assets, which cannot be stale.) We do this within a given amount of time
 //          after which we reload the page anyway, so that the user is never left waiting forever.
 // Note #2: refreshing the page may take a while, during which things may change (e.g., a file may get edited), so the
-//          caller may provide a function that determines, right before we reload the page, whether we can reload it.
-//          We return whether we are reloading the page.
+//          caller may provide a function that determines, right before we reload the page, whether we can reload it. We
+//          return whether we are reloading the page.
 
 const FORCE_RELOAD_TIMEOUT = 30 * 1000; // 30 seconds.
 

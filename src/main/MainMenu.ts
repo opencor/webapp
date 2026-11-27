@@ -10,10 +10,18 @@ let enabledMenu: electron.Menu | null = null;
 let disabledMenu: electron.Menu | null = null;
 let recentFilePaths: string[] = [];
 let hasFiles = false;
+let hasSeveralFiles = false;
 let canSave = false;
 let canSaveAs = false;
 let menuEnabled = false;
 // Note: our main menu is disabled until our renderer enables it (see MainWindow's constructor).
+
+const menuLabel = (label: string): string => {
+  // Return the given label of a top-level menu with a mnemonic (i.e. its first letter, e.g., Alt+F for the File menu)
+  // on Windows and Linux (macOS doesn't have mnemonics).
+
+  return isMacOs() ? label : `&${label}`;
+};
 
 export const enableDisableMainMenu = (enable: boolean): void => {
   // Keep track of whether our menu is enabled (see updateReopenMenu()).
@@ -91,7 +99,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
 
     const fileSubMenu: electron.MenuItemConstructorOptions[] = [];
     const fileMenu: electron.MenuItemConstructorOptions = {
-      label: 'File',
+      label: menuLabel('File'),
       submenu: fileSubMenu
     };
 
@@ -185,6 +193,25 @@ export const enableDisableMainMenu = (enable: boolean): void => {
     });
     fileSubMenu.push({ type: 'separator' });
     fileSubMenu.push({
+      id: 'fileNext',
+      label: 'Next File',
+      accelerator: 'Ctrl+Tab',
+      click: () => {
+        mainWindow?.send('next-file');
+      },
+      enabled: hasSeveralFiles
+    });
+    fileSubMenu.push({
+      id: 'filePrevious',
+      label: 'Previous File',
+      accelerator: 'Ctrl+Shift+Tab',
+      click: () => {
+        mainWindow?.send('previous-file');
+      },
+      enabled: hasSeveralFiles
+    });
+    fileSubMenu.push({ type: 'separator' });
+    fileSubMenu.push({
       id: 'fileClose',
       label: 'Close',
       accelerator: 'CmdOrCtrl+W',
@@ -210,7 +237,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
     // Edit menu.
 
     const editMenu: electron.MenuItemConstructorOptions = {
-      label: 'Edit',
+      label: menuLabel('Edit'),
       submenu: [
         { role: 'undo' },
         { role: 'redo' },
@@ -227,7 +254,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
     // View menu.
 
     const viewMenu: electron.MenuItemConstructorOptions = {
-      label: 'View',
+      label: menuLabel('View'),
       submenu: [
         { role: 'resetZoom' },
         { role: 'zoomIn' },
@@ -241,7 +268,7 @@ export const enableDisableMainMenu = (enable: boolean): void => {
 
     const toolsSubMenu: electron.MenuItemConstructorOptions[] = [];
     const toolsMenu: electron.MenuItemConstructorOptions = {
-      label: 'Tools',
+      label: menuLabel('Tools'),
       submenu: toolsSubMenu
     };
 
@@ -257,11 +284,23 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       }
     });
 
+    // Window menu (macOS only), which allows our window to be minimised (using Cmd+M), zoomed, and brought to the
+    // front, as is customary on macOS.
+    // Note: it is also part of our disabled menu (e.g., while a dialog is open), so that our window can always be
+    //       minimised.
+
+    const windowMenu: electron.MenuItemConstructorOptions = {
+      role: 'windowMenu'
+    };
+
     // Help menu.
 
     const helpSubMenu: electron.MenuItemConstructorOptions[] = [];
+    // Note: on macOS, the help role gives our Help menu its search field.
+
     const helpMenu: electron.MenuItemConstructorOptions = {
-      label: 'Help',
+      role: 'help',
+      label: menuLabel('Help'),
       submenu: helpSubMenu
     };
 
@@ -273,14 +312,12 @@ export const enableDisableMainMenu = (enable: boolean): void => {
         });
       }
     });
-    helpSubMenu.push({ type: 'separator' });
     helpSubMenu.push({
       label: 'Changelog',
       click: () => {
         mainWindow?.send('changelog');
       }
     });
-    helpSubMenu.push({ type: 'separator' });
     helpSubMenu.push({
       label: 'Report Issue',
       click: () => {
@@ -289,6 +326,8 @@ export const enableDisableMainMenu = (enable: boolean): void => {
         });
       }
     });
+
+    // Note: on macOS, our Check for Updates... and About OpenCOR menu items are in our app menu (see above).
 
     if (!isMacOs()) {
       if (checkForUpdatesMenuItem) {
@@ -313,6 +352,11 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       menu.push(editMenu);
       menu.push(viewMenu);
       menu.push(toolsMenu);
+
+      if (isMacOs()) {
+        menu.push(windowMenu);
+      }
+
       menu.push(helpMenu);
 
       enabledMenu = electron.Menu.buildFromTemplate(menu);
@@ -322,6 +366,10 @@ export const enableDisableMainMenu = (enable: boolean): void => {
       }
 
       menu.push(editMenu);
+
+      if (isMacOs()) {
+        menu.push(windowMenu);
+      }
 
       disabledMenu = electron.Menu.buildFromTemplate(menu);
     }
@@ -343,6 +391,23 @@ export const enableDisableFileCloseAndCloseAllMenuItems = (enable: boolean): voi
     if (fileCloseMenu && fileCloseAllMenu) {
       fileCloseMenu.enabled = hasFiles;
       fileCloseAllMenu.enabled = hasFiles;
+    }
+  }
+};
+
+export const enableDisableFileNextAndPreviousMenuItems = (enable: boolean): void => {
+  // Note: same as for enableDisableFileCloseAndCloseAllMenuItems(), except that we need several files (i.e. at least
+  //       two) to switch between them.
+
+  hasSeveralFiles = enable;
+
+  if (enabledMenu) {
+    const fileNextMenu = enabledMenu.getMenuItemById('fileNext');
+    const filePreviousMenu = enabledMenu.getMenuItemById('filePrevious');
+
+    if (fileNextMenu && filePreviousMenu) {
+      fileNextMenu.enabled = hasSeveralFiles;
+      filePreviousMenu.enabled = hasSeveralFiles;
     }
   }
 };

@@ -1,5 +1,9 @@
 <template>
-  <BaseDialog header="Changelog" class="w-169">
+  <!--
+  Note: our changelog is scrolled with the rest of our contents (rather than on its own), so that we never have nested
+        scrollbars (e.g., when OpenCOR is embedded in a short container), hence we limit our height instead.
+  -->
+  <BaseDialog header="Changelog" size="md" class="max-h-[min(90%,40rem)]!">
     <ChangelogComponent v-if="entries.length" class="changelog-list" :entries="entries" />
     <div v-else class="changelog-empty">
       <i class="pi pi-info-circle" />
@@ -23,11 +27,7 @@ const entries = changelog();
 
 <style scoped>
 .changelog-list {
-  max-height: 60vh;
-  overflow-y: auto;
   font-size: 0.875rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--opencor-scrollbar-color) transparent;
 }
 
 .changelog-empty {

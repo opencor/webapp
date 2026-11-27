@@ -172,7 +172,7 @@ import '@opencor/opencor/style.css';
 
   OpenCOR always exposes the following method:
 
-  - `changelog()`: returns the changes for all the versions of OpenCOR up to the current one, as an array of `{ version: string; changes: { type: 'added' | 'removed' | 'improved' | 'fixed'; description: string }[] }` objects (see `IOpenCORChangelogEntry`), from the newest version to the oldest one.
+  - `changelog()`: returns the changes for all the versions of OpenCOR up to the current one, as an array of `{ version: string; changes: { type: 'added' | 'removed' | 'improved' | 'fixed'; description: string }[] }` objects (see `OpenCORChangelogEntry`), from the newest version to the oldest one.
 
   OpenCOR also always exposes the following methods, which only have an effect when an `omex` prop is provided:
 
@@ -181,5 +181,3 @@ import '@opencor/opencor/style.css';
   - `untrackAllSimulationData()`: clears the list of tracked simulation data.
 
   A parameter name is a string that identifies a parameter in the model and consists of the component in which the parameter is located and the name of the parameter itself, separated by a slash. For instance, `main/x` identifies the `x` parameter in the `main` component.
-
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/opencor/webapp)

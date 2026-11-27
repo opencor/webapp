@@ -1,6 +1,6 @@
 <template>
   <div class="relative h-full shrink-0">
-    <nav ref="navRef" class="view-switcher relative w-12 h-full flex flex-col items-center gap-1 overflow-y-auto py-1.5"
+    <nav ref="navRef" aria-label="Views" class="view-switcher relative w-12 h-full flex flex-col items-center gap-1 overflow-y-auto py-1.5"
       @keydown="onKeyDown"
       @scroll="hideTooltip"
       @wheel.prevent="onWheel"
@@ -16,7 +16,7 @@
           ]"
           :style="{ '--view-category-color': category.color }"
           :aria-label="view.label"
-          :aria-pressed="view.id === activeViewId"
+          :aria-current="view.id === activeViewId ? 'true' : undefined"
           @mousedown.prevent
           @mouseenter="onMouseEnter(view.label, $event)"
           @mouseleave="onMouseLeave"
@@ -42,8 +42,9 @@
 import * as vue from 'vue';
 
 import { HINT_DELAY } from '../common/constants';
+import { hasFocusRing } from '../common/focusRing';
 import {
-  type IViewDescriptor,
+  type ViewDescriptor,
   useViewRegistry,
   ViewCategory,
   type ViewCategory as ViewCategoryType
@@ -61,8 +62,8 @@ const viewRegistry = useViewRegistry();
 
 // Compute the list of view categories that have at least one view, along with their corresponding views.
 
-const categoriesWithViews = vue.computed<Array<[ViewCategoryType, IViewDescriptor[]]>>(() => {
-  const res: Array<[ViewCategoryType, IViewDescriptor[]]> = [];
+const categoriesWithViews = vue.computed<Array<[ViewCategoryType, ViewDescriptor[]]>>(() => {
+  const res: Array<[ViewCategoryType, ViewDescriptor[]]> = [];
 
   for (const category of Object.values(ViewCategory)) {
     const views = viewRegistry.descriptors(category);
@@ -155,7 +156,8 @@ const viewButtonWithFocusRing = (): HTMLElement | null => {
 
   return activeElement instanceof HTMLElement &&
     navRef.value?.contains(activeElement) &&
-    activeElement.matches('.view-icon:focus-visible')
+    activeElement.matches('.view-icon') &&
+    hasFocusRing(activeElement)
     ? activeElement
     : null;
 };
@@ -182,7 +184,7 @@ const onMouseLeave = (): void => {
 const onFocus = (label: string, event: FocusEvent): void => {
   const element = event.currentTarget as HTMLElement;
 
-  if (element.matches(':focus-visible')) {
+  if (hasFocusRing(element)) {
     tooltipDismissed = false;
 
     showTooltip(label, element, true);
@@ -271,7 +273,7 @@ const selectViewByOffset = (offset: number): void => {
   const newViewIndex = Math.min(Math.max(activeViewIndex + offset, 0), viewIds.value.length - 1);
 
   if (newViewIndex !== activeViewIndex) {
-    emit('selectView', viewIds.value[newViewIndex]);
+    emit('selectView', viewIds.value[newViewIndex] as string);
   }
 };
 
@@ -336,7 +338,7 @@ vue.watch(
 }
 
 .view-icon:focus-visible {
-  box-shadow: 0 0 0 2px var(--p-primary-color);
+  outline-offset: 0;
 }
 
 .view-icon-active,

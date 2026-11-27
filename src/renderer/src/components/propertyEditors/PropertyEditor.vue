@@ -1,11 +1,15 @@
 <template>
-  <section class="property-editor">
+  <section class="property-editor side-panel-section">
+    <!--
+    Note: a property editor is shown in the side panel of a simulation experiment view, so it uses the styles of the
+          sections and fields of that side panel (see simulation-experiment-view.css).
+    -->
     <h3 class="opencor-section-title opencor-section-title-small">{{ name }}</h3>
-    <div class="property-editor-fields">
+    <div class="side-panel-fields">
       <InputScientificNumberWidget v-for="(property, index) in properties" :key="property.property"
-        :ref="(element: unknown) => (fieldRefs[index] = element as IInputScientificNumberWidget | null)"
+        :ref="(element: unknown) => (fieldRefs[index] = element as InputScientificNumberWidgetInstance | null)"
         :modelValue="property.value"
-        :label="hasUnits && property.unit ? `${property.property} (${property.unit})` : property.property"
+        :label="common.labelWithUnit(property.property, hasUnits ? property.unit : undefined)"
         :disabled="disabled"
         size="small"
         @update:modelValue="(newValue: number | undefined) => onValueUpdated(index, newValue)"
@@ -15,6 +19,8 @@
 </template>
 
 <script setup lang="ts">
+import * as common from '../../common/common';
+
 const props = withDefaults(
   defineProps<{
     name: string;
@@ -25,7 +31,7 @@ const props = withDefaults(
       value: number;
       unit?: string;
     }[];
-    isValid?: (index: number, newValue: number) => boolean;
+    validate?: (index: number, newValue: number) => string | undefined;
   }>(),
   {
     hasUnits: true
@@ -42,15 +48,17 @@ const emit = defineEmits<{
 //       ask it to show the current value of its property again, which it does without losing the keyboard focus (so
 //       that, for instance, the user can keep spinning its value).
 
-interface IInputScientificNumberWidget {
-  discardEdit: () => void;
+interface InputScientificNumberWidgetInstance {
+  discardEdit: (reason?: string) => void;
 }
 
-const fieldRefs: (IInputScientificNumberWidget | null)[] = [];
+const fieldRefs: (InputScientificNumberWidgetInstance | null)[] = [];
 
 const onValueUpdated = (index: number, newValue: number | undefined): void => {
-  // Ignore an invalid new value for the property, i.e. keep its current value. A new value is invalid if it is not a
-  // finite number or if it is deemed invalid by our owner.
+  // Ignore an invalid new value for the property, i.e. keep its current value, and let the user know why (see
+  // discardEdit() in InputScientificNumberWidget.vue). A new value is invalid if it is not a finite number or if our
+  // owner says why it is invalid. A valid new value is emitted, and it is then up to our owner to update its property
+  // (and therefore ours).
 
   const property = props.properties[index];
 
@@ -58,33 +66,20 @@ const onValueUpdated = (index: number, newValue: number | undefined): void => {
     return;
   }
 
-  if (
-    typeof newValue !== 'number' ||
-    !Number.isFinite(newValue) ||
-    (props.isValid && !props.isValid(index, newValue))
-  ) {
-    fieldRefs[index]?.discardEdit();
+  if (typeof newValue !== 'number' || !Number.isFinite(newValue)) {
+    fieldRefs[index]?.discardEdit('This is not a valid number.');
 
     return;
   }
 
-  property.value = newValue;
+  const invalidReason = props.validate?.(index, newValue);
+
+  if (invalidReason) {
+    fieldRefs[index]?.discardEdit(invalidReason);
+
+    return;
+  }
 
   emit('propertyUpdated', index, newValue);
 };
 </script>
-
-<style scoped>
-.property-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.property-editor-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding-top: 0.375rem;
-}
-</style>

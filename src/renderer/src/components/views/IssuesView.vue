@@ -37,10 +37,16 @@
           <div v-for="(issue, index) in issues" :key="`issue_${index}`" class="issue" :class="ISSUE_TYPES[issue.type].class">
             <i :class="ISSUE_TYPES[issue.type].icon" class="issue-icon" aria-hidden="true" />
             <span class="sr-only">{{ ISSUE_TYPES[issue.type].label }}: </span>
-            <span class="issue-description" v-html="issue.description" />
+            <span class="issue-description" v-html="common.sanitiseHtml(issue.description)" />
           </div>
         </div>
       </ScrollPanel>
+    </div>
+
+    <!-- Footer, if any (e.g., an action to fix our issues) -->
+
+    <div v-if="$slots.footer" class="issues-footer">
+      <slot name="footer" />
     </div>
   </div>
 </template>
@@ -48,12 +54,13 @@
 <script setup lang="ts">
 import * as vue from 'vue';
 
+import * as common from '../../common/common';
 import * as vueCommon from '../../common/vueCommon';
 import * as locApi from '../../libopencor/locApi';
 
 const props = withDefaults(
   defineProps<{
-    issues: locApi.IIssue[];
+    issues: locApi.Issue[];
     extraSpace?: boolean;
   }>(),
   {
@@ -63,26 +70,26 @@ const props = withDefaults(
 
 // Our issue types, in order of severity.
 
-const ISSUE_TYPES: Record<locApi.EIssueType, { label: string; icon: string; class: string }> = {
-  [locApi.EIssueType.ERROR]: { label: 'Error', icon: 'pi pi-times-circle', class: 'issue-error' },
-  [locApi.EIssueType.WARNING]: { label: 'Warning', icon: 'pi pi-exclamation-triangle', class: 'issue-warning' },
-  [locApi.EIssueType.INFORMATION]: { label: 'Information', icon: 'pi pi-info-circle', class: 'issue-information' }
+const ISSUE_TYPES: Record<locApi.IssueType, { label: string; icon: string; class: string }> = {
+  [locApi.IssueType.ERROR]: { label: 'Error', icon: 'pi pi-times-circle', class: 'issue-error' },
+  [locApi.IssueType.WARNING]: { label: 'Warning', icon: 'pi pi-exclamation-triangle', class: 'issue-warning' },
+  [locApi.IssueType.INFORMATION]: { label: 'Information', icon: 'pi pi-info-circle', class: 'issue-information' }
 };
 
 // The number of issues of each type, if any.
 // Note: the icon of a type is not visible to assistive technologies, so we use a visually hidden label instead (so
 //       that, for instance, "Errors: 2" rather than just "2" gets announced).
 
-const SUMMARY_LABELS: Record<locApi.EIssueType, string> = {
-  [locApi.EIssueType.ERROR]: 'Errors',
-  [locApi.EIssueType.WARNING]: 'Warnings',
-  [locApi.EIssueType.INFORMATION]: 'Information'
+const SUMMARY_LABELS: Record<locApi.IssueType, string> = {
+  [locApi.IssueType.ERROR]: 'Errors',
+  [locApi.IssueType.WARNING]: 'Warnings',
+  [locApi.IssueType.INFORMATION]: 'Information'
 };
 
 const summaryItems = vue.computed<
-  { type: locApi.EIssueType; icon: string; class: string; label: string; count: number }[]
+  { type: locApi.IssueType; icon: string; class: string; label: string; count: number }[]
 >(() => {
-  return [locApi.EIssueType.ERROR, locApi.EIssueType.WARNING, locApi.EIssueType.INFORMATION]
+  return [locApi.IssueType.ERROR, locApi.IssueType.WARNING, locApi.IssueType.INFORMATION]
     .map((type) => {
       return {
         type,
@@ -138,6 +145,19 @@ vue.watch(issuesText, () => {
   display: flex;
   flex-direction: column;
   container-type: inline-size;
+}
+
+/**
+ * Footer.
+ */
+
+.issues-footer {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-top: 1px solid var(--p-content-border-color);
 }
 
 /**

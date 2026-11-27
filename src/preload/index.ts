@@ -5,7 +5,7 @@ import os from 'node:os';
 import loc from '../../dist/libOpenCOR/Release/libOpenCOR.node';
 
 import type { OpenCORTheme } from '../renderer/index';
-import type { ISettings, ISystemDetails } from '../renderer/src/common/common';
+import type { Settings, SystemDetails } from '../renderer/src/common/common';
 
 // A helper function to listen to a channel from the main process.
 // Note: it returns a function to stop listening to that channel so that a listener can be removed (e.g., when the
@@ -83,7 +83,7 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
 
     return _operatingSystem || defaultOperatingSystem;
   },
-  systemDetails: (): ISystemDetails => {
+  systemDetails: (): SystemDetails => {
     // Return some details about our system (see AboutDialog.vue).
     // Note: os.cpus() may return an empty array (e.g., on some Linux systems where /proc is not available).
 
@@ -102,6 +102,7 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
 
   applyTheme: (theme: OpenCORTheme) => electron.ipcRenderer.invoke('apply-theme', theme),
   canSaveFile: (filePath: string): Promise<boolean> => electron.ipcRenderer.invoke('can-save-file', filePath),
+  cancelUpdateDownload: () => electron.ipcRenderer.invoke('cancel-update-download'),
   checkForUpdates: (atStartup: boolean) => electron.ipcRenderer.invoke('check-for-updates', atStartup),
   closeConfirmed: () => electron.ipcRenderer.invoke('close-confirmed'),
   closeRequestReceived: () => electron.ipcRenderer.invoke('close-request-received'),
@@ -112,9 +113,11 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   enableDisableMainMenu: (enable: boolean) => electron.ipcRenderer.invoke('enable-disable-main-menu', enable),
   enableDisableFileCloseAndCloseAllMenuItems: (enable: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-close-and-close-all-menu-items', enable),
+  enableDisableFileNextAndPreviousMenuItems: (enable: boolean) =>
+    electron.ipcRenderer.invoke('enable-disable-file-next-and-previous-menu-items', enable),
   enableDisableFileSaveAndSaveAsMenuItems: (enableSave: boolean, enableSaveAs: boolean) =>
     electron.ipcRenderer.invoke('enable-disable-file-save-and-save-as-menu-items', enableSave, enableSaveAs),
-  fileClosed: (filePath: string) => electron.ipcRenderer.invoke('file-closed', filePath),
+  fileClosed: (filePath: string, replaced?: boolean) => electron.ipcRenderer.invoke('file-closed', filePath, replaced),
   fileIssue: (filePath: string, canonicalFilePath: string) =>
     electron.ipcRenderer.invoke('file-issue', filePath, canonicalFilePath),
   fileOpened: (filePath: string, canonicalFilePath: string) =>
@@ -138,7 +141,7 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   filesOpened: (filePaths: string[]) => electron.ipcRenderer.invoke('files-opened', filePaths),
   installUpdateAndRestart: (): Promise<boolean> => electron.ipcRenderer.invoke('install-update-and-restart'),
   loadGitHubAccessToken: (): Promise<string | null> => electron.ipcRenderer.invoke('load-github-access-token'),
-  loadSettings: (): Promise<ISettings> => electron.ipcRenderer.invoke('load-settings'),
+  loadSettings: (): Promise<Settings> => electron.ipcRenderer.invoke('load-settings'),
   recentFilePathCanonicalised: (filePath: string, canonicalFilePath: string) =>
     electron.ipcRenderer.invoke('recent-file-path-canonicalised', filePath, canonicalFilePath),
   rendererReady: () => electron.ipcRenderer.invoke('renderer-ready'),
@@ -150,7 +153,7 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
     electron.ipcRenderer.invoke('save-file-as', defaultFilePath),
   saveGitHubAccessToken: (token: string): Promise<boolean> =>
     electron.ipcRenderer.invoke('save-github-access-token', token),
-  saveSettings: (settings: ISettings) => electron.ipcRenderer.invoke('save-settings', settings),
+  saveSettings: (settings: Settings) => electron.ipcRenderer.invoke('save-settings', settings),
   showOpenDialog: () => electron.ipcRenderer.invoke('show-open-dialog'),
 
   // Renderer process listening to the main process.
@@ -169,6 +172,8 @@ electron.contextBridge.exposeInMainWorld('electronApi', {
   onRecentFiles: (callback: (filePaths: string[]) => void) => onIpc('recent-files', callback),
   onClose: (callback: () => void) => onIpc('close', callback),
   onCloseAll: (callback: () => void) => onIpc('close-all', callback),
+  onNextFile: (callback: () => void) => onIpc('next-file', callback),
+  onPreviousFile: (callback: () => void) => onIpc('previous-file', callback),
   onConfirmClose: (callback: () => void) => onIpc('confirm-close', callback),
   onResetAll: (callback: () => void) => onIpc('reset-all', callback),
   onSave: (callback: () => void) => onIpc('save', callback),
@@ -258,6 +263,8 @@ electron.contextBridge.exposeInMainWorld('locApi', {
   sedInstanceHasIssues: (instanceId: number) => loc.sedInstanceHasIssues(instanceId),
   sedInstanceIssues: (instanceId: number) => loc.sedInstanceIssues(instanceId),
   sedInstanceStatus: (instanceId: number) => loc.sedInstanceStatus(instanceId),
+  sedInstanceDelay: (instanceId: number) => loc.sedInstanceDelay(instanceId),
+  sedInstanceSetDelay: (instanceId: number, delay: number) => loc.sedInstanceSetDelay(instanceId, delay),
   sedInstanceProgress: (instanceId: number) => loc.sedInstanceProgress(instanceId),
   sedInstanceStartRun: (instanceId: number) => loc.sedInstanceStartRun(instanceId),
   sedInstanceWaitForRun: (instanceId: number) => loc.sedInstanceWaitForRun(instanceId),

@@ -45,9 +45,9 @@ libOpenCOR::SedInstanceTaskPtr toSedInstanceTask(const Napi::CallbackInfo &pInfo
     return task;
 }
 
-// Retrieve the index, within values of the given size, that corresponds to the given start or end of a slice, using
-// the same semantics as JavaScript's TypedArray.prototype.subarray() (e.g., a negative index is relative to the end of
-// the values and a non-finite index is clamped), so that we behave the same way as the WASM version of libOpenCOR (see
+// Retrieve the index, within values of the given size, that corresponds to the given start or end of a slice, using the
+// same semantics as JavaScript's TypedArray.prototype.subarray() (e.g., a negative index is relative to the end of the
+// values and a non-finite index is clamped), so that we behave the same way as the WASM version of libOpenCOR (see
 // sliceValues() in src/renderer/src/libopencor/locSedApi.ts).
 
 size_t sliceIndex(const Napi::Value &pValue, size_t pSize, size_t pDefaultIndex)
@@ -323,6 +323,20 @@ napi_value sedInstanceStatus(const Napi::CallbackInfo &pInfo)
     auto sedInstance = toSedInstance(pInfo[0]);
 
     return Napi::Number::New(pInfo.Env(), static_cast<int>(sedInstance->status()));
+}
+
+napi_value sedInstanceDelay(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = toSedInstance(pInfo[0]);
+
+    return Napi::Number::New(pInfo.Env(), sedInstance->delay());
+}
+
+void sedInstanceSetDelay(const Napi::CallbackInfo &pInfo)
+{
+    auto sedInstance = toSedInstance(pInfo[0]);
+
+    sedInstance->setDelay(toDouble(pInfo[1]));
 }
 
 napi_value sedInstanceProgress(const Napi::CallbackInfo &pInfo)

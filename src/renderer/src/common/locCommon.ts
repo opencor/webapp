@@ -1,4 +1,4 @@
-import type { IOpenCORSimulationDataValue } from '../../index';
+import type { OpenCORSimulationDataValue } from '../../index';
 
 import * as locApi from '../libopencor/locApi';
 
@@ -8,14 +8,14 @@ import { electronApi } from './electronApi';
 
 // Some file-related methods.
 
-export interface IDataUriInfo {
+export interface DataUriInfo {
   res: boolean;
   fileName?: string;
   data?: Uint8Array;
   error?: string;
 }
 
-const zipDataFromDataUrl = (dataUrl: string | Uint8Array | File, mimeType: string): IDataUriInfo => {
+const zipDataFromDataUrl = (dataUrl: string | Uint8Array | File, mimeType: string): DataUriInfo => {
   // Make sure that we have a string data URL.
 
   if (dataUrl instanceof Uint8Array || dataUrl instanceof File) {
@@ -67,7 +67,7 @@ const zipDataFromDataUrl = (dataUrl: string | Uint8Array | File, mimeType: strin
   };
 };
 
-export const zipCellmlDataUrl = async (dataUrl: string | Uint8Array | File): Promise<IDataUriInfo> => {
+export const zipCellmlDataUrl = async (dataUrl: string | Uint8Array | File): Promise<DataUriInfo> => {
   // Try to retrieve a CellML file from the given data URL.
 
   const mimeType = 'application/x.vnd.zip-cellml+zip';
@@ -129,8 +129,8 @@ export const zipCellmlDataUrl = async (dataUrl: string | Uint8Array | File): Pro
   };
 };
 
-export const combineArchiveDataUrl = (dataUrl: string | Uint8Array | File): IDataUriInfo => {
-  // Try to retrieve a COMBINE archive from the given data URL.
+export const omexDataUrl = (dataUrl: string | Uint8Array | File): DataUriInfo => {
+  // Try to retrieve an OMEX file from the given data URL.
 
   const mimeType = 'application/zip';
   const zipDataUrl = zipDataFromDataUrl(dataUrl, mimeType);
@@ -146,7 +146,7 @@ export const combineArchiveDataUrl = (dataUrl: string | Uint8Array | File): IDat
     };
   }
 
-  // Not a data URL for a COMBINE archive.
+  // Not a data URL for an OMEX file.
 
   return {
     res: false
@@ -163,7 +163,7 @@ export const isCellDLFile = (file: locApi.File): boolean => {
   let res = isCellDLFileCache.get(file);
 
   if (res === undefined) {
-    if (file.type() === locApi.EFileType.UNKNOWN_FILE) {
+    if (file.type() === locApi.FileType.UNKNOWN_FILE) {
       const contents = new TextDecoder().decode(file.contents());
 
       res = /<svg[\s>]/.test(contents) && /\bid\s*=\s*["']celldl-rdf-metadata["']/.test(contents);
@@ -177,6 +177,11 @@ export const isCellDLFile = (file: locApi.File): boolean => {
   return res;
 };
 
+// Determine the path of the given file.
+// Note: in OpenCOR, a dropped file normally has a path, but it may not (e.g., if it was dragged from a Web browser or
+//       from a ZIP file viewer), in which case it is given a made-up name (see common.DROPPED_FILE_PREFIX), which we
+//       get as dataUrlFileName. Such a file then only exists in memory (see common.isInMemoryFilePath()).
+
 export const filePath = (
   fileFilePathOrFileContents: string | Uint8Array | File,
   dataUrlFileName: string,
@@ -187,9 +192,7 @@ export const filePath = (
     : dataUrlCounter
       ? `${common.OMEX_PREFIX}${dataUrlCounter}`
       : fileFilePathOrFileContents instanceof File
-        ? electronApi
-          ? electronApi.filePath(fileFilePathOrFileContents)
-          : fileFilePathOrFileContents.name
+        ? electronApi?.filePath(fileFilePathOrFileContents) || fileFilePathOrFileContents.name
         : typeof fileFilePathOrFileContents === 'string'
           ? fileFilePathOrFileContents
           : common.xxh64(fileFilePathOrFileContents);
@@ -198,15 +201,18 @@ export const filePath = (
 export const file = (
   fileFilePathOrFileContents: string | Uint8Array | File,
   dataUrlFileName: string,
-  dataUrlCounter: number
+  dataUrlCounter: number,
+  signal?: AbortSignal
 ): Promise<locApi.File> => {
   if (typeof fileFilePathOrFileContents === 'string') {
     if (common.isUrl(fileFilePathOrFileContents)) {
       return new Promise((resolve, reject) => {
-        // Fetch the URL through OpenCOR's CORS proxy or, if that fails, directly (see common.fetchThroughCorsProxy()).
+        // Fetch the URL through OpenCOR's CORS proxy or, if that fails, directly (see common.fetchThroughCorsProxy()),
+        // unless the given signal gets aborted (e.g., if people cancel the loading of the file), in which case we give
+        // up straightaway.
 
         common
-          .fetchThroughCorsProxy(fileFilePathOrFileContents)
+          .fetchThroughCorsProxy(fileFilePathOrFileContents, 'file', signal)
           .then((response) => {
             if (response.ok) {
               return response.arrayBuffer();
@@ -265,7 +271,7 @@ export const file = (
 
 // A method to retrieve the simulation data information for a given name from an instance task.
 
-export enum ESimulationDataInfoType {
+export enum SimulationDataInfoType {
   UNKNOWN,
   VOI,
   STATE,
@@ -275,180 +281,130 @@ export enum ESimulationDataInfoType {
   ALGEBRAIC
 }
 
-export interface ISimulationDataInfo {
-  type: ESimulationDataInfoType;
+export interface SimulationDataInfo {
+  type: SimulationDataInfoType;
   index: number;
 }
 
 // A sentinel value to represent the absence of simulation data information.
 
-export const NoSimulationDataInfo: ISimulationDataInfo = {
-  type: ESimulationDataInfoType.UNKNOWN,
+export const NoSimulationDataInfo: SimulationDataInfo = {
+  type: SimulationDataInfoType.UNKNOWN,
   index: -1
 };
 
 // A method to check whether the given simulation data information is the sentinel value.
 
-export const isNoSimulationDataInfo = (info: ISimulationDataInfo): boolean => {
+export const isNoSimulationDataInfo = (info: SimulationDataInfo): boolean => {
   return info === NoSimulationDataInfo;
 };
 
-export const simulationDataInfo = (instanceTask: locApi.SedInstanceTask, name: string): ISimulationDataInfo => {
-  if (!name) {
-    return NoSimulationDataInfo;
-  }
-
-  if (name === instanceTask.voiName()) {
-    return {
-      type: ESimulationDataInfoType.VOI,
-      index: -1
-    };
-  }
-
-  const stateCount = instanceTask.stateCount();
-
-  for (let i = 0; i < stateCount; ++i) {
-    if (name === instanceTask.stateName(i)) {
-      return {
-        type: ESimulationDataInfoType.STATE,
-        index: i
-      };
-    }
-  }
-
-  const rateCount = instanceTask.rateCount();
-
-  for (let i = 0; i < rateCount; ++i) {
-    if (name === instanceTask.rateName(i)) {
-      return {
-        type: ESimulationDataInfoType.RATE,
-        index: i
-      };
-    }
-  }
-
-  const constantCount = instanceTask.constantCount();
-
-  for (let i = 0; i < constantCount; ++i) {
-    if (name === instanceTask.constantName(i)) {
-      return {
-        type: ESimulationDataInfoType.CONSTANT,
-        index: i
-      };
-    }
-  }
-
-  const computedConstantCount = instanceTask.computedConstantCount();
-
-  for (let i = 0; i < computedConstantCount; ++i) {
-    if (name === instanceTask.computedConstantName(i)) {
-      return {
-        type: ESimulationDataInfoType.COMPUTED_CONSTANT,
-        index: i
-      };
-    }
-  }
-
-  const algebraicVariableCount = instanceTask.algebraicVariableCount();
-
-  for (let i = 0; i < algebraicVariableCount; ++i) {
-    if (name === instanceTask.algebraicVariableName(i)) {
-      return {
-        type: ESimulationDataInfoType.ALGEBRAIC,
-        index: i
-      };
-    }
-  }
-
-  return NoSimulationDataInfo;
-};
-
 // A method to retrieve the simulation data information of all the simulation data of an instance task, indexed by name.
-// Note: this is much faster than calling simulationDataInfo() for several names since retrieving a name requires a call
-//       to libOpenCOR (and, with the C++ version of libOpenCOR, a round trip through our preload script). Also, should
-//       several simulation data share the same name, the first one wins, as with simulationDataInfo().
+// Note: this is much faster than looking up the simulation data information of several names one by one since
+//       retrieving a name requires a call to libOpenCOR (and, with the C++ version of libOpenCOR, a round trip through
+//       our preload script). Also, should several simulation data share the same name, the first one wins.
 
-export const simulationDataInfos = (instanceTask: locApi.SedInstanceTask): Map<string, ISimulationDataInfo> => {
-  const res = new Map<string, ISimulationDataInfo>();
-  const addSimulationDataInfo = (name: string, type: ESimulationDataInfoType, index: number): void => {
+export const simulationDataInfos = (instanceTask: locApi.SedInstanceTask): Map<string, SimulationDataInfo> => {
+  const res = new Map<string, SimulationDataInfo>();
+  const addSimulationDataInfo = (name: string, type: SimulationDataInfoType, index: number): void => {
     if (name && !res.has(name)) {
       res.set(name, { type, index });
     }
   };
 
-  addSimulationDataInfo(instanceTask.voiName(), ESimulationDataInfoType.VOI, -1);
+  addSimulationDataInfo(instanceTask.voiName(), SimulationDataInfoType.VOI, -1);
 
   const stateCount = instanceTask.stateCount();
 
   for (let i = 0; i < stateCount; ++i) {
-    addSimulationDataInfo(instanceTask.stateName(i), ESimulationDataInfoType.STATE, i);
+    addSimulationDataInfo(instanceTask.stateName(i), SimulationDataInfoType.STATE, i);
   }
 
   const rateCount = instanceTask.rateCount();
 
   for (let i = 0; i < rateCount; ++i) {
-    addSimulationDataInfo(instanceTask.rateName(i), ESimulationDataInfoType.RATE, i);
+    addSimulationDataInfo(instanceTask.rateName(i), SimulationDataInfoType.RATE, i);
   }
 
   const constantCount = instanceTask.constantCount();
 
   for (let i = 0; i < constantCount; ++i) {
-    addSimulationDataInfo(instanceTask.constantName(i), ESimulationDataInfoType.CONSTANT, i);
+    addSimulationDataInfo(instanceTask.constantName(i), SimulationDataInfoType.CONSTANT, i);
   }
 
   const computedConstantCount = instanceTask.computedConstantCount();
 
   for (let i = 0; i < computedConstantCount; ++i) {
-    addSimulationDataInfo(instanceTask.computedConstantName(i), ESimulationDataInfoType.COMPUTED_CONSTANT, i);
+    addSimulationDataInfo(instanceTask.computedConstantName(i), SimulationDataInfoType.COMPUTED_CONSTANT, i);
   }
 
   const algebraicVariableCount = instanceTask.algebraicVariableCount();
 
   for (let i = 0; i < algebraicVariableCount; ++i) {
-    addSimulationDataInfo(instanceTask.algebraicVariableName(i), ESimulationDataInfoType.ALGEBRAIC, i);
+    addSimulationDataInfo(instanceTask.algebraicVariableName(i), SimulationDataInfoType.ALGEBRAIC, i);
   }
 
   return res;
+};
+
+// A method to create a function that retrieves the simulation data information for a given name from an instance task.
+// Note: the function builds (and caches) the simulation data information of all the simulation data of the instance
+//       task the first time it is called (see simulationDataInfos()), after which looking up a name doesn't involve
+//       libOpenCOR anymore. The names of simulation data don't change when a document gets reinstantiated (since model
+//       changes and simulation settings only affect values), so the cache remains valid for as long as the document is
+//       used, even if the function is then called with the instance task of a new instance.
+
+export const simulationDataInfoLookup = (): ((
+  instanceTask: locApi.SedInstanceTask,
+  name: string
+) => SimulationDataInfo) => {
+  let cache: Map<string, SimulationDataInfo> | null = null;
+
+  return (instanceTask: locApi.SedInstanceTask, name: string): SimulationDataInfo => {
+    cache ??= simulationDataInfos(instanceTask);
+
+    return cache.get(name) ?? NoSimulationDataInfo;
+  };
 };
 
 // A method to retrieve the simulation data value for a given name from an instance task.
 
 export const simulationDataValue = (
   instanceTask: locApi.SedInstanceTask,
-  info: ISimulationDataInfo,
+  info: SimulationDataInfo,
   start?: number,
   end?: number
-): IOpenCORSimulationDataValue => {
+): OpenCORSimulationDataValue => {
   // Note: start and end allow us to retrieve only some of the values (e.g., those that have been computed since we last
   //       retrieved some while a simulation is running), see locApi.SedInstanceTask.voi() for instance.
 
   switch (info.type) {
-    case ESimulationDataInfoType.VOI:
+    case SimulationDataInfoType.VOI:
       return {
         data: instanceTask.voi(start, end),
         unit: instanceTask.voiUnit()
       };
-    case ESimulationDataInfoType.STATE:
+    case SimulationDataInfoType.STATE:
       return {
         data: instanceTask.state(info.index, start, end),
         unit: instanceTask.stateUnit(info.index)
       };
-    case ESimulationDataInfoType.RATE:
+    case SimulationDataInfoType.RATE:
       return {
         data: instanceTask.rate(info.index, start, end),
         unit: instanceTask.rateUnit(info.index)
       };
-    case ESimulationDataInfoType.CONSTANT:
+    case SimulationDataInfoType.CONSTANT:
       return {
         data: instanceTask.constant(info.index, start, end),
         unit: instanceTask.constantUnit(info.index)
       };
-    case ESimulationDataInfoType.COMPUTED_CONSTANT:
+    case SimulationDataInfoType.COMPUTED_CONSTANT:
       return {
         data: instanceTask.computedConstant(info.index, start, end),
         unit: instanceTask.computedConstantUnit(info.index)
       };
-    case ESimulationDataInfoType.ALGEBRAIC:
+    case SimulationDataInfoType.ALGEBRAIC:
       return {
         data: instanceTask.algebraicVariable(info.index, start, end),
         unit: instanceTask.algebraicVariableUnit(info.index)

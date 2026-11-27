@@ -4,11 +4,16 @@
     <template v-else>
       <Toolbar class="shrink-0">
         <template #start>
-          <div class="flex gap-1">
+          <!--
+          Note: our toolbar wraps its contents when there is not enough room for them on one line (e.g., on a phone),
+                rather than having them overflow (and be cut off). In that case, the separator before our delay is
+                hidden if our delay has been wrapped (see delayWrapped).
+          -->
+          <div ref="toolbarStartRef" class="flex flex-wrap gap-1">
             <ToolbarButtonWidget ref="runPauseButtonRef"
-              :icon="simulationStatus !== locSedApi.ESedInstanceStatus.RUNNING ? 'pi pi-play-circle' : 'pi pi-pause-circle'"
-              :accent="simulationStatus !== locSedApi.ESedInstanceStatus.RUNNING ? 'primary' : 'warning'"
-              :label="(simulationStatus === locSedApi.ESedInstanceStatus.IDLE ? 'Run' : simulationStatus === locSedApi.ESedInstanceStatus.RUNNING ? 'Pause' : 'Resume') + ' simulation'"
+              :icon="simulationStatus !== locSedApi.SedInstanceStatus.RUNNING ? 'pi pi-play-circle' : 'pi pi-pause-circle'"
+              :accent="simulationStatus !== locSedApi.SedInstanceStatus.RUNNING ? 'primary' : 'warning'"
+              :label="(simulationStatus === locSedApi.SedInstanceStatus.IDLE ? 'Run' : simulationStatus === locSedApi.SedInstanceStatus.RUNNING ? 'Pause' : 'Resume') + ' simulation'"
               shortcut="F9"
               :disabled="isFinishing"
               @click="onRunPause"
@@ -17,14 +22,39 @@
               icon="pi pi-stop-circle"
               accent="danger"
               label="Stop simulation"
-              :disabled="isFinishing || simulationStatus === locSedApi.ESedInstanceStatus.IDLE"
+              :disabled="isFinishing || simulationStatus === locSedApi.SedInstanceStatus.IDLE"
               @click="onStop"
             />
+            <span class="toolbar-separator" role="separator" aria-orientation="vertical"></span>
+            <ToolbarButtonWidget
+              icon="pi pi-undo"
+              label="Reset simulation settings"
+              :disabled="simulationSettingsDisabled || !simulationSettingsChanged"
+              @click="onResetSimulationSettings"
+            />
+            <span class="toolbar-separator" role="separator" aria-orientation="vertical"></span>
+            <ToolbarButtonWidget
+              icon="pi pi-eraser"
+              label="Clear simulation data"
+              :disabled="isFinishing || simulationStatus !== locSedApi.SedInstanceStatus.IDLE || !hasSimulationData"
+              @click="onClearSimulationData"
+            />
+            <span class="toolbar-separator" :class="{ invisible: delayWrapped }" role="separator" aria-orientation="vertical"></span>
+            <div ref="delayRef" class="delay">
+              <span class="delay-label" aria-hidden="true">Delay</span>
+              <WheelWidget v-model="delayPosition"
+                :steps="DELAY_STEPS"
+                :majorSteps="DELAY_MAJOR_STEPS"
+                ariaLabel="Delay between two output points"
+                :ariaValueText="delayText"
+              />
+              <span class="delay-value" aria-hidden="true">{{ delayText }}</span>
+            </div>
             <!--
             Note: our run status is announced by assistive technologies through a visually hidden live region (which
-                  must exist before its contents change for them to get announced, and which doesn't affect our
-                  layout). That live region doesn't include the progress of a running simulation since it would
-                  otherwise get announced every time it changes (our progress bar already exposes it).
+                  must exist before its contents change for them to get announced, and which doesn't affect our layout).
+                  That live region doesn't include the progress of a running simulation since it would otherwise get
+                  announced every time it changes (our progress bar already exposes it).
             -->
             <span v-if="runStatus" class="run-status" :class="`run-status-${runStatus.type}`" aria-hidden="true">
               <i :class="runStatus.icon"></i>
@@ -34,7 +64,11 @@
           </div>
         </template>
         <template #end>
-          <div class="flex gap-1 invisible">
+          <!--
+          Note: our placeholder buttons are not needed when we use a narrow layout, in which case they would only take
+                some room (or even a line of their own, if our toolbar's contents were to be wrapped).
+          -->
+          <div class="flex gap-1 invisible" :class="{ hidden: narrowLayout }">
             <ToolbarButtonWidget icon="pi pi-download" />
             <ToolbarButtonWidget icon="pi pi-cog" />
           </div>
@@ -46,14 +80,14 @@
           <SplitterPanel :size="simulationOnly ? 100 : 89">
             <!--
             Note: our side panel is stacked above our plot when we use a narrow layout (see narrowLayout), in which case
-                  we use a vertical splitter. A splitter only sizes its panels when it is mounted, hence we remount it
-                  when our layout changes.
+                  we use a vertical splitter. Our splitter is not remounted when our layout changes, and its panels have
+                  the sizes of our current layout (see useSidePanelSplitter()).
             -->
-            <Splitter :key="narrowLayout ? 'narrow' : 'wide'" :layout="narrowLayout ? 'vertical' : 'horizontal'">
-              <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="narrowLayout ? 40 : 17">
+            <Splitter :layout="narrowLayout ? 'vertical' : 'horizontal'" @resizeend="onSidePanelResizeEnd">
+              <SplitterPanel :class="narrowLayout ? 'min-h-24' : 'min-w-56'" :size="sidePanelSizes[0]">
                 <ScrollPanel class="h-full">
-                  <div class="side-panel">
-                    <SimulationPropertyEditor v-if="instanceTask && uniformTimeCourse" :uniformTimeCourse="uniformTimeCourse" :instanceTask="instanceTask" :disabled="simulationSettingsDisabled" />
+                  <div ref="sidePanelRef" class="side-panel">
+                    <SimulationPropertyEditor v-if="instanceTask && uniformTimeCourse" :key="simulationSettingsKey" :uniformTimeCourse="uniformTimeCourse" :instanceTask="instanceTask" :disabled="simulationSettingsDisabled" @updated="onSimulationSettingsUpdated" />
                     <!-- <SolversPropertyEditor />
                     <GraphsPropertyEditor />
                     <ParametersPropertyEditor /> -->
@@ -64,7 +98,6 @@
                           <Select
                             v-model="xParameter"
                             ariaLabel="X axis"
-                            editable
                             filter
                             filterMode="lenient"
                             :options="parameters"
@@ -79,7 +112,6 @@
                           <Select
                             v-model="yParameter"
                             ariaLabel="Y axis"
-                            editable
                             filter
                             filterMode="lenient"
                             :options="parameters"
@@ -95,12 +127,20 @@
                   </div>
                 </ScrollPanel>
               </SplitterPanel>
-              <SplitterPanel :size="narrowLayout ? 60 : 83">
+              <SplitterPanel class="relative" :size="sidePanelSizes[1]">
                 <GraphPanelWidget
                   :key="'standard-graph-panel'"
+                  :class="{ 'invisible pointer-events-none': runIssuesShown }"
                   :data="data"
                   :showLegend="false"
+                  :live="runStatus?.type === 'running' || runStatus?.type === 'paused'"
                 />
+                <!--
+                Note: our console is not shown in simulation-only mode, so the issues of a failed run are shown instead
+                      of our plot (as in the Interactive view), until our next run or until our simulation data gets
+                      cleared (see runIssuesShown).
+                -->
+                <IssuesView v-if="runIssuesShown" class="absolute inset-0 m-4" :issues="runIssues" />
               </SplitterPanel>
             </Splitter>
           </SplitterPanel>
@@ -123,7 +163,10 @@
                 />
               </div>
             </div>
-            <div ref="editorRef" class="grow min-h-0 console overflow-y-auto px-3 pb-1.5 leading-[1.42] text-[13px] select-text" v-html="consoleContents"></div>
+            <div ref="editorRef" class="grow min-h-0 console overflow-y-auto px-3 pb-1.5 leading-[1.42] text-[13px] select-text">
+              <div v-html="consoleHeader"></div>
+              <div v-for="consoleEntry in consoleEntries" :key="consoleEntry.id" v-html="consoleEntry.html"></div>
+            </div>
           </SplitterPanel>
         </Splitter>
       </div>
@@ -132,6 +175,9 @@
 </template>
 
 <script setup lang="ts">
+import type { PlotData } from '@opencor/plot';
+import * as vueusecore from '@vueuse/core';
+
 import * as vue from 'vue';
 
 import * as colors from '../../common/colors';
@@ -143,7 +189,6 @@ import * as locApi from '../../libopencor/locApi';
 import * as locSedApi from '../../libopencor/locSedApi';
 
 import { useOpenCORContext, useOpenCORKeyStroke } from '../OpenCORContext';
-import type { IGraphPanelData } from '../widgets/GraphPanelWidget.vue';
 
 import './simulation-experiment-view.css';
 
@@ -173,29 +218,55 @@ const parameters = vue.ref<string[]>([]);
 const xParameter = vue.ref(instanceTask ? instanceTask.voiName() : '');
 const yParameter = vue.ref(instanceTask ? instanceTask.stateName(0) : '');
 
-const data = vue.ref<IGraphPanelData>({
-  xAxisTitle: instanceTask ? xParameter.value : undefined,
-  yAxisTitle: instanceTask ? yParameter.value : undefined,
+const data = vue.ref<PlotData>({
+  xAxisTitle: instanceTask ? common.escapeHtml(xParameter.value) : undefined,
+  yAxisTitle: instanceTask ? common.escapeHtml(yParameter.value) : undefined,
   traces: []
 });
 
-const initialConsoleContents = `<b>${props.file.path()}</b>`;
-const consoleContents = vue.ref<string>(initialConsoleContents);
+// Our console, i.e. a header (the path of our file) followed by some entries (e.g., the issues of a simulation run or
+// its simulation time), each of which is some HTML (indented using non-breaking spaces, so that it is also indented
+// when copied as plain text, see copyConsole()).
+// Note: each entry is rendered on its own (rather than as part of a single HTML string), so that adding an entry
+//       doesn't re-render our whole console, and we only keep our most recent entries, so that our console doesn't keep
+//       growing (e.g., when running many simulations).
+
+interface ConsoleEntry {
+  id: number;
+  html: string;
+}
+
+const MAX_CONSOLE_ENTRIES = 1000;
+
+const consoleHeader = `<b>${common.escapeHtml(props.file.path())}</b>`;
+const consoleEntries = vue.shallowReactive<ConsoleEntry[]>([]);
+let nextConsoleEntryId = 0;
+
+const addConsoleEntry = (html: string): void => {
+  consoleEntries.push({ id: nextConsoleEntryId++, html: `&nbsp;&nbsp;${html}` });
+
+  if (consoleEntries.length > MAX_CONSOLE_ENTRIES) {
+    consoleEntries.splice(0, consoleEntries.length - MAX_CONSOLE_ENTRIES);
+  }
+};
+
 const progress = vue.ref<number>(0);
-const simulationStatus = vue.ref<locSedApi.ESedInstanceStatus>(instance?.status() ?? locSedApi.ESedInstanceStatus.IDLE);
+const simulationStatus = vue.ref<locSedApi.SedInstanceStatus>(instance?.status() ?? locSedApi.SedInstanceStatus.IDLE);
 
 // Whether we use a narrow layout, i.e. whether our side panel is stacked above our plot (see our template).
 
 const narrowLayout = vueCommon.useNarrowLayout(rootRef);
+const { sizes: sidePanelSizes, onResizeEnd: onSidePanelResizeEnd } = vueCommon.useSidePanelSplitter(narrowLayout);
 
 // The outcome of our last simulation run, if any, and the status of our simulation, which we show in our toolbar.
 
-interface ILastRun {
+interface LastRun {
   outcome: 'completed' | 'issues' | 'stopped' | 'failed';
   time?: number;
+  delayed?: boolean; // Whether a delay was used at some point during the run (see runDelayed).
 }
 
-const lastRun = vue.ref<ILastRun | null>(null);
+const lastRun = vue.ref<LastRun | null>(null);
 
 // Whether our simulation run is finishing, i.e. whether its run is over, but its results have yet to be plotted and our
 // UI to be painted with them (or, if it failed, while we try to stop our instance, for up to STOP_RUN_TIMEOUT, see
@@ -213,7 +284,7 @@ let stopButtonHadFocus = false;
 vue.watch(
   simulationStatus,
   (status) => {
-    if (status === locSedApi.ESedInstanceStatus.IDLE && stopButtonRef.value?.$el === window.document.activeElement) {
+    if (status === locSedApi.SedInstanceStatus.IDLE && stopButtonRef.value?.$el === window.document.activeElement) {
       stopButtonHadFocus = true;
     }
   },
@@ -285,11 +356,11 @@ const seeConsole = vue.computed<string>(() => {
 const runStatus = vue.computed<{ type: string; icon: string; label: string } | null>(() => {
   const percentage = Math.round(progress.value);
 
-  if (simulationStatus.value === locSedApi.ESedInstanceStatus.RUNNING || isFinishing.value) {
+  if (simulationStatus.value === locSedApi.SedInstanceStatus.RUNNING || isFinishing.value) {
     return { type: 'running', icon: 'pi pi-hourglass', label: `Running... ${percentage}%` };
   }
 
-  if (simulationStatus.value === locSedApi.ESedInstanceStatus.PAUSED) {
+  if (simulationStatus.value === locSedApi.SedInstanceStatus.PAUSED) {
     return { type: 'paused', icon: 'pi pi-pause', label: `Paused at ${percentage}%` };
   }
 
@@ -298,7 +369,7 @@ const runStatus = vue.computed<{ type: string; icon: string; label: string } | n
       return {
         type: 'completed',
         icon: 'pi pi-check-circle',
-        label: `Completed in ${common.formatTime(lastRun.value.time ?? 0)}`
+        label: `Completed in ${common.formatTime(lastRun.value.time ?? 0)}${lastRun.value.delayed ? ' (with a delay)' : ''}`
       };
     case 'issues':
       return {
@@ -373,8 +444,167 @@ vue.watch(
 );
 
 const simulationSettingsDisabled = vue.computed<boolean>(() => {
-  return simulationStatus.value !== locSedApi.ESedInstanceStatus.IDLE;
+  return simulationStatus.value !== locSedApi.SedInstanceStatus.IDLE;
 });
+
+// Our simulation settings, as they were when we were created, so that they can be reset (see
+// onResetSimulationSettings()), and whether they have been changed since.
+// Note: our simulation settings are edited by SimulationPropertyEditor, which reads them when it gets created, so we
+//       recreate it (by changing its key) when we reset them.
+
+interface SimulationSettings {
+  initialTime: number;
+  outputStartTime: number;
+  outputEndTime: number;
+  numberOfSteps: number;
+}
+
+const currentSimulationSettings = (timeCourse: locApi.SedUniformTimeCourse): SimulationSettings => {
+  return {
+    initialTime: timeCourse.initialTime(),
+    outputStartTime: timeCourse.outputStartTime(),
+    outputEndTime: timeCourse.outputEndTime(),
+    numberOfSteps: timeCourse.numberOfSteps()
+  };
+};
+
+const initialSimulationSettings = uniformTimeCourse ? currentSimulationSettings(uniformTimeCourse) : null;
+const simulationSettingsChanged = vue.ref<boolean>(false);
+const simulationSettingsKey = vue.ref<number>(0);
+
+const onSimulationSettingsUpdated = (): void => {
+  if (!uniformTimeCourse || !initialSimulationSettings) {
+    return;
+  }
+
+  const settings = currentSimulationSettings(uniformTimeCourse);
+
+  simulationSettingsChanged.value = (Object.keys(settings) as (keyof SimulationSettings)[]).some(
+    (key) => settings[key] !== initialSimulationSettings[key]
+  );
+};
+
+// Note: our reset button gets disabled once our simulation settings have been reset, so if it had the keyboard focus
+//       (i.e. it was used with the keyboard, since a toolbar button doesn't get the keyboard focus when clicked, see
+//       ToolbarButtonWidget.vue), then we give it to our first simulation setting, which would otherwise be lost.
+
+const sidePanelRef = vue.useTemplateRef<HTMLElement>('sidePanelRef');
+
+const onResetSimulationSettings = (event: MouseEvent): void => {
+  if (!uniformTimeCourse || !initialSimulationSettings || simulationSettingsDisabled.value) {
+    return;
+  }
+
+  const resetButtonHadFocus =
+    event.currentTarget instanceof HTMLElement && event.currentTarget === window.document.activeElement;
+
+  uniformTimeCourse.setInitialTime(initialSimulationSettings.initialTime);
+  uniformTimeCourse.setOutputStartTime(initialSimulationSettings.outputStartTime);
+  uniformTimeCourse.setOutputEndTime(initialSimulationSettings.outputEndTime);
+  uniformTimeCourse.setNumberOfSteps(initialSimulationSettings.numberOfSteps);
+
+  simulationSettingsChanged.value = false;
+
+  ++simulationSettingsKey.value;
+
+  if (resetButtonHadFocus) {
+    void vue.nextTick().then(() => {
+      sidePanelRef.value?.querySelector<HTMLElement>('.property-editor input')?.focus();
+    });
+  }
+};
+
+// The delay between two output points of a run, which can be used to slow down a run (e.g., to watch its results being
+// plotted progressively) and which can be changed while running. It is set using a wheel, but our delays are round
+// numbers, i.e. no delay, and then 1 to 9 times a power of ten, from 1 µs to 1 s (i.e. 1 to 9 µs, 10 to 90 µs, ..., 100
+// to 900 ms, and 1 s). Each decade takes up (roughly) a sixth of our wheel, so that very short delays (useful for runs
+// with many output points), as well as long ones (useful for runs with few output points, e.g., to go through them one
+// by one), can easily be set, and starts with a major step (i.e. 1 µs, 10 µs, 100 µs, 1 ms, 10 ms, 100 ms, and 1 s), so
+// that it is easy to see on our wheel.
+// Note: our delays are in microseconds, but libOpenCOR expects them in milliseconds.
+
+const DELAY_DECADES = [1, 10, 100, 1000, 10000, 100000];
+const DELAYS = [
+  0,
+  ...DELAY_DECADES.flatMap((decade) => Array.from({ length: 9 }, (_, i) => decade * (i + 1))),
+  1000000
+];
+const DELAY_STEPS = DELAYS.length - 1;
+const DELAY_MAJOR_STEPS = DELAYS.flatMap((delay, index) =>
+  [...DELAY_DECADES, 1000000].includes(delay) ? [index] : []
+);
+
+const delayPosition = vue.ref<number>(0);
+const delay = vue.computed<number>(() => DELAYS[Math.round(DELAY_STEPS * delayPosition.value)] ?? 0);
+const delayText = vue.computed<string>(() => {
+  if (delay.value === 0) {
+    return 'None';
+  }
+
+  if (delay.value < 1000) {
+    return `${delay.value} µs`;
+  }
+
+  return delay.value < 1000000 ? `${delay.value / 1000} ms` : `${delay.value / 1000000} s`;
+});
+
+// Whether a delay was used at some point during our current (or last) run, be it from its start or because a delay was
+// set while it was running or paused.
+// Note: the time reported for a run excludes the time spent waiting for our delay, but a delay still slows down the
+//       computation itself (each output point is computed after the CPU was given up for the duration of our delay, so
+//       caches get cold, the thread may resume on another core, etc.), hence we let people know when a delay was used.
+
+let runDelayed = false;
+
+vue.watch(delay, (newDelay: number) => {
+  instance?.setDelay(newDelay / 1000);
+
+  if (newDelay !== 0 && simulationStatus.value !== locSedApi.SedInstanceStatus.IDLE) {
+    runDelayed = true;
+  }
+});
+
+// Whether our delay has been wrapped to another line of our toolbar (see the template above).
+// Note: our separator is made invisible rather than removed, so that hiding it doesn't change our toolbar's layout
+//       (which could otherwise unwrap our delay, show our separator again, wrap our delay again, and so on).
+
+const toolbarStartRef = vue.useTemplateRef<HTMLElement>('toolbarStartRef');
+const delayRef = vue.useTemplateRef<HTMLElement>('delayRef');
+const delayWrapped = vue.ref<boolean>(false);
+
+vueusecore.useResizeObserver(toolbarStartRef, () => {
+  const firstElement = toolbarStartRef.value?.firstElementChild as HTMLElement | null | undefined;
+
+  delayWrapped.value = !!firstElement && !!delayRef.value && delayRef.value.offsetTop > firstElement.offsetTop;
+});
+
+// Whether we have some simulation data, i.e. whether a simulation has been run and its data hasn't been cleared since
+// (see onClearSimulationData()).
+// Note: our simulation data is that of our instance, which we cannot clear, so we just stop plotting it (see
+//       updatePlot()) until our simulation is run again.
+
+const hasSimulationData = vue.ref<boolean>(false);
+
+// Note: our clear button gets disabled once our simulation data has been cleared, so if it had the keyboard focus (see
+//       onResetSimulationSettings()), then we give it to our run button, which would otherwise be lost.
+
+const onClearSimulationData = (event: MouseEvent): void => {
+  if (isFinishing.value || simulationStatus.value !== locSedApi.SedInstanceStatus.IDLE) {
+    return;
+  }
+
+  const clearButtonHadFocus =
+    event.currentTarget instanceof HTMLElement && event.currentTarget === window.document.activeElement;
+
+  hasSimulationData.value = false;
+  lastRun.value = null;
+
+  updatePlot();
+
+  if (clearButtonHadFocus) {
+    runPauseButtonRef.value?.$el?.focus();
+  }
+};
 
 const runAborted = vue.ref(false);
 let cancelRunPolling: (() => void) | undefined;
@@ -385,12 +615,16 @@ if (instanceTask) {
   vueCommon.populateParameters(parameters, instanceTask);
 }
 
-const xInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
-  return instanceTask ? locCommon.simulationDataInfo(instanceTask, xParameter.value) : locCommon.NoSimulationDataInfo;
+// The simulation data information of our X and Y parameters (see locCommon.simulationDataInfoLookup()).
+
+const simulationDataInfo = locCommon.simulationDataInfoLookup();
+
+const xInfo = vue.computed<locCommon.SimulationDataInfo>(() => {
+  return instanceTask ? simulationDataInfo(instanceTask, xParameter.value) : locCommon.NoSimulationDataInfo;
 });
 
-const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
-  return instanceTask ? locCommon.simulationDataInfo(instanceTask, yParameter.value) : locCommon.NoSimulationDataInfo;
+const yInfo = vue.computed<locCommon.SimulationDataInfo>(() => {
+  return instanceTask ? simulationDataInfo(instanceTask, yParameter.value) : locCommon.NoSimulationDataInfo;
 });
 
 // Our live data, i.e. the data that we have retrieved so far while a simulation is running.
@@ -400,18 +634,18 @@ const yInfo = vue.computed<locCommon.ISimulationDataInfo>(() => {
 //       counts a step as completed just before storing its results, so the last point that we retrieved may not have
 //       been stored at the time, which is why we always retrieve it again.
 
-interface ILiveData {
+interface LiveData {
   task: locSedApi.SedInstanceTask;
-  xInfo: locCommon.ISimulationDataInfo;
-  yInfo: locCommon.ISimulationDataInfo;
+  xInfo: locCommon.SimulationDataInfo;
+  yInfo: locCommon.SimulationDataInfo;
   x: Float64Array;
   y: Float64Array;
   size: number;
 }
 
-let liveData: ILiveData | null = null;
+let liveData: LiveData | null = null;
 
-const retrieveLiveData = (task: locSedApi.SedInstanceTask, dataSize: number): ILiveData => {
+const retrieveLiveData = (task: locSedApi.SedInstanceTask, dataSize: number): LiveData => {
   // (Re)create our buffers if needed (e.g., at the start of a simulation run or if the X or Y parameter has changed) or
   // grow them if they are too small.
 
@@ -469,12 +703,12 @@ const updatePlot = (dataSize: number = 0): void => {
   // so that GraphPanelWidget can automatically determine the range based on the data.
 
   const xAxisRange: [number, number] | undefined =
-    uniformTimeCourse && xInfo.value.type === locCommon.ESimulationDataInfoType.VOI
+    uniformTimeCourse && xInfo.value.type === locCommon.SimulationDataInfoType.VOI
       ? [uniformTimeCourse.outputStartTime(), uniformTimeCourse.outputEndTime()]
       : undefined;
 
   const yAxisRange: [number, number] | undefined =
-    uniformTimeCourse && yInfo.value.type === locCommon.ESimulationDataInfoType.VOI
+    uniformTimeCourse && yInfo.value.type === locCommon.SimulationDataInfoType.VOI
       ? [uniformTimeCourse.outputStartTime(), uniformTimeCourse.outputEndTime()]
       : undefined;
 
@@ -498,13 +732,19 @@ const updatePlot = (dataSize: number = 0): void => {
       return locApi.cppVersion() ? values : values.slice();
     };
 
-    xData = ownData(locCommon.simulationDataValue(instanceTask, xInfo.value).data);
-    yData = ownData(locCommon.simulationDataValue(instanceTask, yInfo.value).data);
+    // Note: we don't plot any data if our simulation data has been cleared (see onClearSimulationData()).
+
+    xData = hasSimulationData.value
+      ? ownData(locCommon.simulationDataValue(instanceTask, xInfo.value).data)
+      : common.EMPTY_FLOAT64_ARRAY;
+    yData = hasSimulationData.value
+      ? ownData(locCommon.simulationDataValue(instanceTask, yInfo.value).data)
+      : common.EMPTY_FLOAT64_ARRAY;
   }
 
   data.value = {
-    xAxisTitle: xParameter.value,
-    yAxisTitle: yParameter.value,
+    xAxisTitle: common.escapeHtml(xParameter.value),
+    yAxisTitle: common.escapeHtml(yParameter.value),
     xAxisRange,
     yAxisRange,
     traces: [
@@ -520,16 +760,119 @@ const updatePlot = (dataSize: number = 0): void => {
   };
 };
 
+// Whether we are the currently active view, for keyboard shortcut handling (see useOpenCORKeyStroke() below) and live
+// plotting (see plotLiveRun() below).
+
+let isActiveView = true;
+
+// The number of data points that have been computed, given the progress of our simulation.
+
+const computedDataSize = (progress: number): number => {
+  return Math.round(progress * (uniformTimeCourse?.numberOfSteps() ?? 0)) + 1;
+};
+
+// Plot our simulation while it is running, i.e. plot the data that has been computed so far every frame.
+// Note #1: we use requestAnimationFrame() rather than a timer, since a timer isn't in step with frames, meaning that
+//          some frames wouldn't get any new data and our trace would therefore grow in chunks rather than smoothly.
+//          Retrieving the progress of our simulation and its new data is cheap (with both the C++ and WASM versions of
+//          libOpenCOR, the former being called directly from our preload script, i.e. without any IPC) and our plot
+//          only processes the new data (see retrieveLiveData()), so doing this every frame is fine.
+// Note #2: we only plot while our simulation is running, i.e. not while it is paused (since no new data is computed
+//          then), and while we are the active view (since our plot cannot be seen otherwise). Otherwise, our loop stops
+//          and gets resumed once our simulation is running again (see the watcher below) or once we are the active view
+//          again (see onActivated() below), at which point we plot all the data computed in the meantime.
+// Note #3: our loop gets stopped (see stopLivePlotting()) when our run is over (in which case our results get plotted
+//          by onRunPause(), unless our run was stopped or failed, in which case our plot is kept as is), when a new run
+//          is started, and when we get unmounted. A frame that has already been requested then does nothing since our
+//          live run is gone.
+// Note #4: retrieving the progress of our simulation or its data may fail (e.g., if libOpenCOR throws an exception), in
+//          which case we stop plotting our simulation (and let waitWhileRunning() report the error, if any, see
+//          onRunPause()).
+
+interface LiveRun {
+  instance: locSedApi.SedInstance;
+  dataSize: number;
+}
+
+let liveRun: LiveRun | null = null;
+let livePlottingFrame: number | undefined;
+
+const stopLivePlotting = (): void => {
+  liveRun = null;
+
+  if (livePlottingFrame !== undefined) {
+    cancelAnimationFrame(livePlottingFrame);
+
+    livePlottingFrame = undefined;
+  }
+};
+
+const plotLiveRun = (): void => {
+  livePlottingFrame = undefined;
+
+  const run = liveRun;
+
+  if (!run || !isActiveView || simulationStatus.value !== locSedApi.SedInstanceStatus.RUNNING) {
+    return;
+  }
+
+  livePlottingFrame = requestAnimationFrame(plotLiveRun);
+
+  try {
+    const progress = run.instance.progress();
+
+    if (progress <= 0) {
+      return;
+    }
+
+    const dataSize = computedDataSize(progress);
+
+    if (dataSize !== run.dataSize) {
+      run.dataSize = dataSize;
+
+      updatePlot(dataSize);
+    }
+  } catch (error: unknown) {
+    stopLivePlotting();
+
+    console.error('OpenCOR: an error occurred while plotting a simulation run:', error);
+  }
+};
+
+const resumeLivePlotting = (): void => {
+  if (
+    liveRun &&
+    livePlottingFrame === undefined &&
+    isActiveView &&
+    simulationStatus.value === locSedApi.SedInstanceStatus.RUNNING
+  ) {
+    livePlottingFrame = requestAnimationFrame(plotLiveRun);
+  }
+};
+
+const startLivePlotting = (sedInstance: locSedApi.SedInstance): void => {
+  stopLivePlotting();
+
+  liveRun = {
+    instance: sedInstance,
+    dataSize: 0
+  };
+
+  resumeLivePlotting();
+};
+
+vue.watch(simulationStatus, resumeLivePlotting);
+
 // Update the plot after the X or Y parameter has changed.
 // Note #1: while a simulation is running or paused, only part of its data has been computed (the rest is either zeros
 //          or the data of a previous run), so we only plot the data that has been computed so far (as we do while
-//          running, see onRunPause()).
+//          running, see plotLiveRun()).
 // Note #2: retrieving the progress of our simulation may fail (e.g., if libOpenCOR throws an exception while a failed
 //          run is being stopped, see onRunPause()), in which case we plot all of our data, as if our simulation was
 //          idle.
 
 const onParameterChange = (): void => {
-  if (instance && simulationStatus.value !== locSedApi.ESedInstanceStatus.IDLE) {
+  if (instance && simulationStatus.value !== locSedApi.SedInstanceStatus.IDLE) {
     let progress: number | undefined;
 
     try {
@@ -539,7 +882,7 @@ const onParameterChange = (): void => {
     }
 
     if (progress !== undefined) {
-      updatePlot(Math.round(progress * (uniformTimeCourse?.numberOfSteps() ?? 0)) + 1);
+      updatePlot(computedDataSize(progress));
 
       return;
     }
@@ -586,7 +929,7 @@ const releaseResources = async (): Promise<void> => {
 
   try {
     if (instance) {
-      if (instance.status() !== locSedApi.ESedInstanceStatus.IDLE && !(await stopRunAndWait(instance))) {
+      if (instance.status() !== locSedApi.SedInstanceStatus.IDLE && !(await stopRunAndWait(instance))) {
         console.error('OpenCOR: a simulation instance could not be stopped, so it could not be released.');
 
         return;
@@ -605,8 +948,8 @@ const releaseResources = async (): Promise<void> => {
 // report, for instance.
 // Note #1: our console uses non-breaking spaces to indent its messages, so we replace them with normal spaces.
 // Note #2: our console may change while our copy button lets people know whether it was copied (e.g., if it gets
-//          cleared or if a simulation run reports something), in which case we reset our copy button since its
-//          feedback would no longer be about our (current) console.
+//          cleared or if a simulation run reports something), in which case we reset our copy button since its feedback
+//          would no longer be about our (current) console.
 
 const copyToClipboard = vueCommon.useCopyToClipboard();
 
@@ -615,16 +958,16 @@ const copyConsole = (): void => {
   void copyToClipboard.copy((editorRef.value?.innerText ?? '').replace(/\u00a0/g, ' '));
 };
 
-vue.watch(consoleContents, () => {
+vue.watch(consoleEntries, () => {
   copyToClipboard.reset();
 });
 
-// Clear our console, i.e. only keep its initial contents (i.e. the path of our file).
+// Clear our console, i.e. only keep its header (i.e. the path of our file).
 // Note: the status of our last run may refer to our console (i.e. if our simulation has issues or has failed), in which
 //       case we also hide it since our console doesn't contain the details of our last run anymore.
 
 const clearConsole = (): void => {
-  consoleContents.value = initialConsoleContents;
+  consoleEntries.splice(0);
 
   if (lastRun.value?.outcome === 'issues' || lastRun.value?.outcome === 'failed') {
     lastRun.value = null;
@@ -639,30 +982,51 @@ const scrollConsoleToBottom = (): void => {
   });
 };
 
+// The issues of our current (or last) run, i.e. the errors and issues that we report in our console (see
+// addConsoleError() and addConsoleIssues()), which we show instead of our plot if our run failed while we are in
+// simulation-only mode, i.e. while our console is not shown (see our template).
+
+const runIssues = vue.shallowRef<locApi.Issue[]>([]);
+
+const runIssuesShown = vue.computed<boolean>(() => {
+  return simulationOnly.value && lastRun.value?.outcome === 'failed' && runIssues.value.length > 0;
+});
+
 // A helper function to report an error in our console.
 
 const addConsoleError = (error: unknown): void => {
-  consoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${colors.REVERTED_PALETTE.Red};"><strong>Error:</strong> ${common.formatMessage(common.formatError(error))}</span>`;
+  const description = common.escapeHtml(common.formatMessage(common.formatError(error)));
+
+  addConsoleEntry(`<span style="color: ${colors.REVERTED_PALETTE.Red};"><strong>Error:</strong> ${description}</span>`);
+
+  runIssues.value = [...runIssues.value, { type: locApi.IssueType.ERROR, description }];
 
   scrollConsoleToBottom();
 };
 
 // A helper function to report the given issues (of our instance) in our console.
 
-const addConsoleIssues = (issues: locApi.IIssue[]): void => {
-  issues.forEach((issue: locApi.IIssue) => {
+const addConsoleIssues = (issues: locApi.Issue[]): void => {
+  issues.forEach((issue: locApi.Issue) => {
     const color =
-      issue.type === locApi.EIssueType.ERROR
+      issue.type === locApi.IssueType.ERROR
         ? colors.REVERTED_PALETTE.Red
-        : issue.type === locApi.EIssueType.WARNING
+        : issue.type === locApi.IssueType.WARNING
           ? colors.REVERTED_PALETTE.Orange
           : colors.REVERTED_PALETTE.Blue;
     const issueType =
-      issue.type === locApi.EIssueType.ERROR ? 'Error' : issue.type === locApi.EIssueType.WARNING ? 'Warning' : 'Info';
-    const issueDescription = issue.description.replace('Task | ', '');
+      issue.type === locApi.IssueType.ERROR ? 'Error' : issue.type === locApi.IssueType.WARNING ? 'Warning' : 'Info';
+    const issueDescription = common.sanitiseHtml(issue.description.replace('Task | ', ''));
 
-    consoleContents.value += `<br />&nbsp;&nbsp;<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`;
+    addConsoleEntry(`<span style="color: ${color};"><strong>${issueType}:</strong> ${issueDescription}</span>`);
   });
+
+  runIssues.value = [
+    ...runIssues.value,
+    ...issues.map((issue: locApi.Issue) => {
+      return { type: issue.type, description: issue.description.replace('Task | ', '') };
+    })
+  ];
 
   scrollConsoleToBottom();
 };
@@ -681,7 +1045,7 @@ const onRunPause = async (): Promise<void> => {
   // Note: this may fail (e.g., if libOpenCOR throws an exception, see the handling of a run error below), in which case
   //       we report the error rather than let it go unnoticed.
 
-  let status: locSedApi.ESedInstanceStatus;
+  let status: locSedApi.SedInstanceStatus;
 
   try {
     status = instance.status();
@@ -698,7 +1062,7 @@ const onRunPause = async (): Promise<void> => {
   // Note: as for a run error, we consider our run as finishing while we wait for our simulation to be idle (see Note #3
   //       of the handling of a run error below), and we let people know if it still cannot be stopped.
 
-  if (status !== locSedApi.ESedInstanceStatus.IDLE && !isWaitingOnRun) {
+  if (status !== locSedApi.SedInstanceStatus.IDLE && !isWaitingOnRun) {
     const runPauseButtonHadFocus = runPauseButtonRef.value?.$el === window.document.activeElement;
     let simulationStopped = false;
 
@@ -734,28 +1098,28 @@ const onRunPause = async (): Promise<void> => {
       return;
     }
 
-    status = locSedApi.ESedInstanceStatus.IDLE;
+    status = locSedApi.SedInstanceStatus.IDLE;
   }
 
   switch (status) {
-    case locSedApi.ESedInstanceStatus.RUNNING:
+    case locSedApi.SedInstanceStatus.RUNNING:
       // Pause the simulation.
 
       instance.pauseRun();
 
-      simulationStatus.value = locSedApi.ESedInstanceStatus.PAUSED;
+      simulationStatus.value = locSedApi.SedInstanceStatus.PAUSED;
 
       break;
-    case locSedApi.ESedInstanceStatus.PAUSED:
+    case locSedApi.SedInstanceStatus.PAUSED:
       // Resume the simulation.
 
       instance.resumeRun();
 
-      simulationStatus.value = locSedApi.ESedInstanceStatus.RUNNING;
+      simulationStatus.value = locSedApi.SedInstanceStatus.RUNNING;
 
       break;
     default: {
-      // locSedApi.ESedInstanceStatus.IDLE.
+      // locSedApi.SedInstanceStatus.IDLE.
 
       // Make sure that we are not still waiting on our previous run, if any.
       // Note: our instance may be idle before waitWhileRunning() has noticed it (it polls our instance), in which case
@@ -792,14 +1156,17 @@ const onRunPause = async (): Promise<void> => {
         activeElement.blur();
       }
 
-      // Reset our abort flag, our live data, the outcome of our last run, and whether our Stop button had the keyboard
-      // focus.
+      // Stop plotting our previous run, if any, and reset our abort flag, our live data, the outcome (and issues) of
+      // our last run, and whether our Stop button had the keyboard focus.
       // Note: our live data is normally reset at the end of a simulation run (see updatePlot()), but not if the run was
       //       aborted or failed, in which case we would otherwise end up plotting (some of) the data of that run.
+
+      stopLivePlotting();
 
       runAborted.value = false;
       liveData = null;
       lastRun.value = null;
+      runIssues.value = [];
       stopButtonHadFocus = false;
 
       // Cancel the reset of our progress bar by our previous run, if any, so that it doesn't reset the progress bar of
@@ -817,10 +1184,12 @@ const onRunPause = async (): Promise<void> => {
       //       without any explanation.
 
       try {
+        runDelayed = delay.value !== 0;
+
         if (!instance.startRun()) {
           const instanceIssues = instance.hasIssues() ? instance.issues() : [];
 
-          simulationStatus.value = locSedApi.ESedInstanceStatus.IDLE;
+          simulationStatus.value = locSedApi.SedInstanceStatus.IDLE;
 
           markRunAsFailed();
 
@@ -835,7 +1204,7 @@ const onRunPause = async (): Promise<void> => {
           return;
         }
       } catch (error: unknown) {
-        simulationStatus.value = locSedApi.ESedInstanceStatus.IDLE;
+        simulationStatus.value = locSedApi.SedInstanceStatus.IDLE;
 
         markRunAsFailed();
 
@@ -846,6 +1215,10 @@ const onRunPause = async (): Promise<void> => {
         return;
       }
 
+      // Our simulation has been started, so we have some simulation data (again).
+
+      hasSimulationData.value = true;
+
       // Retrieve the status of our simulation.
       // Note: this may fail (e.g., if libOpenCOR throws an exception), in which case we consider our simulation as
       //       running since it has been started, and let waitWhileRunning() retrieve its status (and the error get
@@ -854,14 +1227,14 @@ const onRunPause = async (): Promise<void> => {
       try {
         simulationStatus.value = instance.status();
       } catch {
-        simulationStatus.value = locSedApi.ESedInstanceStatus.RUNNING;
+        simulationStatus.value = locSedApi.SedInstanceStatus.RUNNING;
       }
 
       // Wait for the simulation to finish, handling pause/resume cycles asynchronously so that the UI remains
-      // responsive.
+      // responsive, and plot it while it is running (see plotLiveRun()).
+      // Note: waitWhileRunning() polls our instance, so we only use it to keep track of the status and progress of our
+      //       simulation, and of when it is over, not to plot it (since its polling isn't in step with frames).
 
-      const numberOfSteps = uniformTimeCourse?.numberOfSteps() ?? 0;
-      let lastPlottingAreaUpdateTime = Date.now();
       let runIsOver = false;
 
       const { promise: runPromise, cancel: runCancel } = vueCommon.waitWhileRunning(
@@ -871,25 +1244,8 @@ const onRunPause = async (): Promise<void> => {
           // ignore the (delayed) reset of the progress bar by waitWhileRunning(), which could otherwise reset the
           // progress bar of our next run.
 
-          if (runIsOver) {
-            return;
-          }
-
-          progress.value = newProgress;
-
-          // Update the plotting area only if the progress has changed and a certain amount of time has passed since the
-          // last update (to avoid excessive updates).
-
-          if (newProgress === 0) {
-            return;
-          }
-
-          const now = Date.now();
-
-          if (now - lastPlottingAreaUpdateTime >= MEDIUM_DELAY) {
-            updatePlot(Math.round(0.01 * newProgress * numberOfSteps) + 1);
-
-            lastPlottingAreaUpdateTime = now;
+          if (!runIsOver) {
+            progress.value = newProgress;
           }
         },
         (status) => {
@@ -907,6 +1263,8 @@ const onRunPause = async (): Promise<void> => {
 
       isWaitingOnRun = true;
 
+      startLivePlotting(instance);
+
       let runError: unknown = null;
 
       try {
@@ -914,6 +1272,8 @@ const onRunPause = async (): Promise<void> => {
       } catch (error: unknown) {
         runError = error;
       } finally {
+        stopLivePlotting();
+
         runIsOver = true;
         isWaitingOnRun = false;
 
@@ -932,8 +1292,8 @@ const onRunPause = async (): Promise<void> => {
       // exception), in which case we cannot rely on our instance anymore.
       // Note #1: we only know that we couldn't retrieve the status (or progress) of the simulation, which may therefore
       //          still be running (or be paused). So, we try to stop it and wait for it to be idle. Otherwise, our next
-      //          run would, for instance, end up pausing the simulation rather than starting a new one (see the
-      //          RUNNING case above). If this fails too, then there is nothing more that we can do.
+      //          run would, for instance, end up pausing the simulation rather than starting a new one (see the RUNNING
+      //          case above). If this fails too, then there is nothing more that we can do.
       // Note #2: the run is over either way, so we reset our progress bar and live data, but we keep our plot as is (as
       //          when a run is aborted) so that the user can see how far the simulation went.
       // Note #3: we consider our run as finishing while we wait for our instance to be idle, so that our Run/Pause
@@ -979,7 +1339,7 @@ const onRunPause = async (): Promise<void> => {
         }
 
         isFinishing.value = false;
-        simulationStatus.value = locSedApi.ESedInstanceStatus.IDLE;
+        simulationStatus.value = locSedApi.SedInstanceStatus.IDLE;
         progress.value = 0;
         liveData = null;
         lastRun.value = { outcome: 'failed' };
@@ -1035,7 +1395,7 @@ const onRunPause = async (): Promise<void> => {
           const instanceIssues = instance.issues();
 
           lastRun.value = {
-            outcome: instanceIssues.some((issue: locApi.IIssue) => issue.type === locApi.EIssueType.ERROR)
+            outcome: instanceIssues.some((issue: locApi.Issue) => issue.type === locApi.IssueType.ERROR)
               ? 'failed'
               : runAborted.value
                 ? 'stopped'
@@ -1046,9 +1406,13 @@ const onRunPause = async (): Promise<void> => {
         } else {
           const simulationTime = instance.waitForRun();
 
-          lastRun.value = runAborted.value ? { outcome: 'stopped' } : { outcome: 'completed', time: simulationTime };
+          lastRun.value = runAborted.value
+            ? { outcome: 'stopped' }
+            : { outcome: 'completed', time: simulationTime, delayed: runDelayed };
 
-          consoleContents.value += `<br />&nbsp;&nbsp;<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>`;
+          addConsoleEntry(
+            `<strong>Simulation time:</strong> <span style="color: ${colors.REVERTED_PALETTE.Blue};">${common.formatTime(simulationTime)}</span>${runDelayed ? ' (with a delay, which slows down the simulation even when excluded)' : ''}`
+          );
         }
 
         if (runAborted.value) {
@@ -1141,13 +1505,14 @@ vue.onMounted(() => {
   updatePlot();
 });
 
-// Stop polling our simulation run, if any, cancel our pending timers (progress reset and run status), and release our
-// resources (unless a simulation run is still waiting on our instance, see below).
+// Stop polling and plotting our simulation run, if any, cancel our pending timers (progress reset and run status), and
+// release our resources (unless a simulation run is still waiting on our instance, see below).
 
 vue.onUnmounted(() => {
   isUnmounted = true;
 
   cancelRunPolling?.();
+  stopLivePlotting();
 
   clearTimeout(progressResetTimer);
   clearTimeout(runStatusTimer);
@@ -1161,12 +1526,12 @@ vue.onUnmounted(() => {
   }
 });
 
-// Track whether the view is the currently active view for keyboard shortcut handling.
-
-let isActiveView = true;
+// Track whether the view is the currently active view (see isActiveView).
 
 vue.onActivated(() => {
   isActiveView = true;
+
+  resumeLivePlotting();
 });
 
 vue.onDeactivated(() => {
@@ -1197,6 +1562,35 @@ useOpenCORKeyStroke((event: KeyboardEvent) => {
 
 <style scoped>
 /**
+ * Toolbar, which doesn't wrap its start and end parts (unlike a PrimeVue toolbar), since it is our start part that
+ * wraps its contents when there is not enough room for them on one line (see the template above). Otherwise, our end
+ * part would get its own line (even when empty) as soon as our start part needs the whole width of our toolbar.
+ */
+
+.standard-view > .p-toolbar {
+  flex-wrap: nowrap;
+}
+
+/**
+ * Delay wheel, with its label and its value, the latter being just wide enough for its longest values (e.g., "100 µs"
+ * or "900 ms"), so that our toolbar doesn't move when our delay changes, while still fitting on a narrow phone.
+ */
+
+.delay {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-inline: 0.25rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.8125rem;
+}
+
+.delay-value {
+  min-width: 3.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/**
  * Console, which always shows a few lines (e.g., when our view is not very tall, like on a phone in landscape mode),
  * and which wraps long lines (e.g., the URL of our file), so that it never needs to be scrolled horizontally.
  */
@@ -1210,91 +1604,6 @@ useOpenCORKeyStroke((event: KeyboardEvent) => {
 }
 
 /**
- * Side panel, i.e. our simulation settings and the parameters to plot.
- * Note: an input field has an intrinsic width (of about 20 characters), which would otherwise prevent our side panel
- *       from being narrower than that, so we let our number fields shrink to the width of our side panel.
- */
-
-.side-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1rem;
-}
-
-.side-panel :deep(.p-inputnumber-input) {
-  flex: 1 1 auto;
-  width: 0;
-  min-width: 0;
-}
-
-.side-panel-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.side-panel-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding-top: 0.375rem;
-}
-
-/**
- * Status of our simulation, which is shown next to our run/pause and stop buttons.
- */
-
-.run-status {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  margin-left: 0.5rem;
-  color: var(--p-text-muted-color);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.run-status .pi {
-  font-size: 0.8125rem;
-}
-
-.run-status-running .pi,
-.run-status-completed .pi {
-  color: var(--p-primary-color);
-}
-
-.run-status-paused .pi,
-.run-status-issues .pi {
-  color: var(--opencor-warn-color);
-}
-
-.run-status-stopped .pi,
-.run-status-failed .pi {
-  color: var(--opencor-error-color);
-}
-
-/**
- * Progress of our simulation, which is shown as a thin line over the bottom border of our toolbar.
- */
-
-.run-progress {
-  position: relative;
-  z-index: 11;
-  flex-shrink: 0;
-  height: 2px !important;
-  margin-top: -2px;
-  border-radius: 0;
-  background: transparent;
-  visibility: hidden;
-}
-
-.run-progress-visible {
-  visibility: visible;
-}
-
-/**
  * Console.
  */
 
@@ -1304,43 +1613,5 @@ useOpenCORKeyStroke((event: KeyboardEvent) => {
   justify-content: space-between;
   flex-shrink: 0;
   padding: 0.25rem 0.375rem 0.125rem 0.75rem;
-}
-
-/**
- * Splitters, which gutters are shown as thin lines that get highlighted when hovered or dragged.
- */
-
-.standard-view :deep(.p-splitter-gutter) {
-  position: relative;
-  background-color: var(--p-content-border-color);
-  transition: background-color 0.15s ease;
-}
-
-.standard-view :deep(.p-splitter-horizontal > .p-splitter-gutter) {
-  width: 1px !important;
-}
-
-.standard-view :deep(.p-splitter-vertical > .p-splitter-gutter) {
-  height: 1px !important;
-}
-
-.standard-view :deep(.p-splitter-gutter-handle) {
-  opacity: 0;
-}
-
-/**
- * Note: a gutter is only 1px wide/high, so we make it easier to grab by extending its hit area.
- */
-
-.standard-view :deep(.p-splitter-gutter)::after {
-  position: absolute;
-  inset: -3px;
-  z-index: 1;
-  content: "";
-}
-
-.standard-view :deep(.p-splitter-gutter:hover),
-.standard-view :deep(.p-splitter-gutter[data-p-gutter-resizing="true"]) {
-  background-color: var(--p-primary-color);
 }
 </style>

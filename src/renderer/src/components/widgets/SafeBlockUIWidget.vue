@@ -40,8 +40,8 @@ export default vue.defineComponent({
 
     const block = (): void => {
       // Don't attempt to block if we are already blocked.
-      // Note: this can happen if the block event is emitted multiple times before the unblock event is emitted. In
-      //       that case, we want to ignore subsequent block events until the unblock event is emitted.
+      // Note: this can happen if the block event is emitted multiple times before the unblock event is emitted. In that
+      //       case, we want to ignore subsequent block events until the unblock event is emitted.
 
       if (self.isBlocked) {
         return;

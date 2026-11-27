@@ -5,9 +5,9 @@ import * as dependencies from './dependencies';
 import { electronApi } from './electronApi';
 
 import * as locApi from '../libopencor/locApi';
-import type { MainModule as IWasmLocApi } from '@opencor/libopencor-types';
+import type { MainModule as WasmLocApi } from '@opencor/libopencor-types';
 
-type WasmFactory = (options?: unknown) => Promise<IWasmLocApi>;
+type WasmFactory = (options?: unknown) => Promise<WasmLocApi>;
 
 // Our different external dependencies.
 
@@ -16,6 +16,61 @@ type ExternalDependency = {
   url: string;
   set: (module: dependencies.Module) => void;
   cssUrl?: string;
+  importModule?: (url: string, attempt: number) => Promise<dependencies.Module>;
+};
+
+// Import @opencor/plot from the given URL.
+// Note #1: @opencor/plot is a Vue component, so it must use our copy of Vue, which it cannot get using its bare `vue`
+//          imports (unless the host application uses an import map). Neither can it get it from jsDelivr's +esm build,
+//          which would make it use jsDelivr's copy of Vue. So, we fetch its (unbundled) ES module, replace its `vue`
+//          imports with a module that re-exports our copy of Vue (which we make available to it), and its `uplot`
+//          import with jsDelivr's +esm build of the version of uPlot that it uses, before importing it from a blob URL.
+// Note #2: this requires the Content Security Policy of the host application, if any, to allow importing a script from
+//          a blob URL (e.g., OpenCOR's Web app allows it, see index.html).
+// Note #3: the blob URL of our copy of Vue must remain valid, since a later attempt to import @opencor/plot (e.g., if
+//          the previous one failed) imports it again.
+
+const OPENCOR_PLOT_VUE_SYMBOL = Symbol.for('opencor.plot.vue');
+
+let sharedVueUrl: string | undefined;
+
+const importOpenCORPlot = async (url: string, attempt: number): Promise<dependencies.Module> => {
+  if (!sharedVueUrl) {
+    const vueExports = Object.keys(vue).filter((name: string) => {
+      return name !== 'default' && /^[A-Za-z_$][\w$]*$/.test(name);
+    });
+
+    (globalThis as Record<symbol, unknown>)[OPENCOR_PLOT_VUE_SYMBOL] = vue;
+
+    sharedVueUrl = URL.createObjectURL(
+      new Blob(
+        [
+          `const vue = globalThis[Symbol.for('opencor.plot.vue')];\n\nexport const { ${vueExports.join(', ')} } = vue;\n`
+        ],
+        { type: 'text/javascript' }
+      )
+    );
+  }
+
+  const response = await fetch(/* @vite-ignore */ url, { mode: 'cors' });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load OpenCOR Plot from ${url} (${response.status}: ${response.statusText}).`);
+  }
+
+  const uplotUrl = attemptUrl(`https://cdn.jsdelivr.net/npm/uplot@${__UPLOT_VERSION__}/+esm`, attempt);
+  const source = (await response.text())
+    .replace(/(\bfrom\s*)(["'])vue\2/g, `$1"${sharedVueUrl}"`)
+    .replace(/(\bfrom\s*)(["'])uplot\2/g, `$1"${uplotUrl}"`);
+  const moduleUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+
+  try {
+    return await import(/* @vite-ignore */ moduleUrl);
+  } finally {
+    // Our module has been imported (or it failed to be), so its blob URL is no longer needed and can be revoked.
+
+    URL.revokeObjectURL(moduleUrl);
+  }
 };
 
 const externalDependencies: ExternalDependency[] = [
@@ -35,14 +90,14 @@ const externalDependencies: ExternalDependency[] = [
     set: (m) => dependencies.setMathJs(m)
   },
   {
-    // Note: the version of uPlot must be the same as the one of our uplot devDependency (which we use for its types)
-    //       in both package.json files, hence we pin the latter (so that bun run dependencies:update doesn't update
-    //       it on its own).
+    // Note: the version of @opencor/plot (and of uPlot) is that of our @opencor/plot devDependency (which we use for
+    //       its types), see __OPENCOR_PLOT_VERSION__ and __UPLOT_VERSION__ in our Vite configs.
 
-    name: 'uPlot',
-    url: 'https://cdn.jsdelivr.net/npm/uplot@1.6.32/+esm',
-    set: (m) => dependencies.setUPlot(m),
-    cssUrl: 'https://cdn.jsdelivr.net/npm/uplot@1.6.32/dist/uPlot.min.css'
+    name: 'OpenCOR Plot',
+    url: `https://cdn.jsdelivr.net/npm/@opencor/plot@${__OPENCOR_PLOT_VERSION__}/dist/opencor-plot.es.js`,
+    set: (m) => dependencies.setOpenCORPlot(m),
+    cssUrl: `https://cdn.jsdelivr.net/npm/@opencor/plot@${__OPENCOR_PLOT_VERSION__}/dist/opencor-plot.css`,
+    importModule: importOpenCORPlot
   }
 ];
 
@@ -308,13 +363,18 @@ const createLazyInitialiser = (
   name: string,
   url: string,
   set: (module: dependencies.Module) => void,
-  cssUrl?: string
+  cssUrl?: string,
+  importModule?: (url: string, attempt: number) => Promise<dependencies.Module>
 ) => {
   return async (): Promise<void> => {
     try {
-      // Import the external dependency (retrying if needed) and set it.
+      // Import the external dependency (retrying if needed), using its own import method if it has one, and set it.
 
-      const module = await withRetries(name, (attempt) => import(/* @vite-ignore */ attemptUrl(url, attempt)));
+      const module = await withRetries(name, (attempt) =>
+        importModule
+          ? importModule(attemptUrl(url, attempt), attempt)
+          : import(/* @vite-ignore */ attemptUrl(url, attempt))
+      );
 
       set((module as dependencies.Module).default ?? module);
 
@@ -369,13 +429,13 @@ const createLazyInitialiser = (
 const initialisationError = (error: unknown): void => {
   if (!issues.value.length) {
     issues.value.push({
-      type: locApi.EIssueType.INFORMATION,
+      type: locApi.IssueType.INFORMATION,
       description: 'An error occurred while initialising OpenCOR. Please check your setup and reload the page.'
     });
   }
 
   issues.value.splice(Math.max(0, issues.value.length - 1), 0, {
-    type: locApi.EIssueType.ERROR,
+    type: locApi.IssueType.ERROR,
     description: common.formatMessage(common.formatError(error))
   });
 
@@ -393,7 +453,8 @@ for (const externalDependency of externalDependencies) {
     externalDependency.name,
     externalDependency.url,
     externalDependency.set,
-    externalDependency.cssUrl
+    externalDependency.cssUrl,
+    externalDependency.importModule
   )().catch((error: unknown) => {
     initialisationError(error);
   });
@@ -414,7 +475,7 @@ export const done = vue.computed<boolean>(() => {
   return progress.value >= 100;
 });
 export const failed = vue.ref<boolean>(false);
-export const issues = vue.ref<locApi.IIssue[]>([]);
+export const issues = vue.ref<locApi.Issue[]>([]);
 export const progress = vue.computed<number>(() => {
   return Math.round((100 * crtNbOfSteps.value) / totalNbOfSteps);
 });

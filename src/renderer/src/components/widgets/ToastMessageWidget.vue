@@ -1,5 +1,10 @@
 <template>
-  <div class="toast" :class="`toast-${severity}`">
+  <div class="toast" :class="`toast-${severity}`"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
+    @focusin="onFocusIn"
+    @focusout="onFocusOut"
+  >
     <span class="toast-icon">
       <i :class="ICONS[severity]" />
     </span>
@@ -20,6 +25,8 @@
 <script setup lang="ts">
 import type { ToastMessageOptions } from 'primevue/toast';
 import * as vue from 'vue';
+
+import { TOAST_LIFE, WARNING_TOAST_LIFE } from '../../common/constants';
 
 // A toast message, which is shown using the container slot of PrimeVue's Toast component (see OpenCOR.vue), and which
 // looks like our message dialogs (see dialogs/message-dialog.css), i.e. a severity icon next to some text.
@@ -47,6 +54,86 @@ const severity = vue.computed<Severity>(() => {
   const messageSeverity = props.message.severity;
 
   return messageSeverity && Object.hasOwn(ICONS, messageSeverity) ? (messageSeverity as Severity) : 'info';
+});
+
+// Close ourselves once our life is over, which depends on our severity, with an error being shown until it is closed
+// (so that the user has time to read it and, if needed, to copy it).
+// Note #1: our life is paused while we are hovered or have the keyboard focus (e.g., our close button), so that the
+//          user has time to read us.
+// Note #2: we handle our life ourselves (rather than letting PrimeVue do it) since PrimeVue only pauses it while a
+//          toast is hovered, not while it has the keyboard focus.
+
+const LIVES: Record<Severity, number | undefined> = {
+  info: TOAST_LIFE,
+  success: TOAST_LIFE,
+  warn: WARNING_TOAST_LIFE,
+  error: undefined
+};
+
+let lifeRemaining = LIVES[severity.value];
+let lifeStartedAt = 0;
+let lifeTimeout: number | undefined;
+let hovered = false;
+let focused = false;
+
+const resumeLife = (): void => {
+  if (lifeRemaining === undefined || lifeTimeout !== undefined || hovered || focused) {
+    return;
+  }
+
+  lifeStartedAt = Date.now();
+  lifeTimeout = window.setTimeout(() => {
+    lifeTimeout = undefined;
+
+    emit('close');
+  }, lifeRemaining);
+};
+
+const pauseLife = (): void => {
+  if (lifeRemaining === undefined || lifeTimeout === undefined) {
+    return;
+  }
+
+  window.clearTimeout(lifeTimeout);
+
+  lifeTimeout = undefined;
+  lifeRemaining = Math.max(lifeRemaining - (Date.now() - lifeStartedAt), 0);
+};
+
+const onMouseEnter = (): void => {
+  hovered = true;
+
+  pauseLife();
+};
+
+const onMouseLeave = (): void => {
+  hovered = false;
+
+  resumeLife();
+};
+
+const onFocusIn = (): void => {
+  focused = true;
+
+  pauseLife();
+};
+
+const onFocusOut = (event: FocusEvent): void => {
+  if (event.relatedTarget instanceof Node && (event.currentTarget as HTMLElement).contains(event.relatedTarget)) {
+    return;
+  }
+
+  focused = false;
+
+  resumeLife();
+};
+
+vue.onMounted(() => {
+  resumeLife();
+});
+
+vue.onBeforeUnmount(() => {
+  window.clearTimeout(lifeTimeout);
 });
 </script>
 
@@ -79,6 +166,10 @@ const severity = vue.computed<Severity>(() => {
  * Note: our text is vertically centred with our icon when our summary is on its own, hence its top padding.
  */
 
+/**
+ * Note: our text can be selected (e.g., to copy an error), unlike most of OpenCOR's text (see app.css).
+ */
+
 .toast-text {
   display: flex;
   flex-direction: column;
@@ -86,6 +177,7 @@ const severity = vue.computed<Severity>(() => {
   gap: 0.125rem;
   min-width: 0;
   padding-top: 0.25rem;
+  user-select: text;
 }
 
 .toast-summary {

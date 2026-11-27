@@ -8,7 +8,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import type { OpenCORTheme } from '../renderer/index';
-import { formatError, type ISettings, isObject } from '../renderer/src/common/common';
+import { formatError, type Settings, isObject } from '../renderer/src/common/common';
 import { SHORT_DELAY, URI_SCHEME } from '../renderer/src/common/constants';
 import { appImagePath, isLinux, isPackaged, isWindows } from '../renderer/src/common/electron';
 /* TODO: enable once our GitHub integration is fully ready.
@@ -23,12 +23,14 @@ import { startRendererServer, stopRendererServer } from '../renderer/src/common/
 
 import {
   enableDisableFileCloseAndCloseAllMenuItems,
+  enableDisableFileNextAndPreviousMenuItems,
   enableDisableFileSaveAndSaveAsMenuItems,
   enableDisableMainMenu
 } from './MainMenu';
 import {
   allowSavingFile,
   applyTheme,
+  cancelUpdateDownload,
   canSaveFile,
   checkForUpdates,
   closeConfirmed,
@@ -58,7 +60,7 @@ import { SplashScreenWindow } from './SplashScreenWindow';
 
 // Electron store.
 
-export interface IElectronConfState {
+export interface ElectronConfState {
   x: number;
   y: number;
   width: number;
@@ -67,7 +69,7 @@ export interface IElectronConfState {
   isFullScreen: boolean;
 }
 
-interface IElectronConf {
+interface ElectronConfContents {
   app: {
     files: {
       opened: string[];
@@ -75,15 +77,15 @@ interface IElectronConf {
       selected: string;
     };
     rendererServerPort: number;
-    state: IElectronConfState;
+    state: ElectronConfState;
   };
-  settings: ISettings;
+  settings: Settings;
 }
 
-export let electronConf: ElectronConf<IElectronConf>;
+export let electronConf: ElectronConf<ElectronConfContents>;
 
-// A helper function to sanitise a (loaded) configuration value against its default value, i.e. to use the default
-// value for whatever is missing or of the wrong type.
+// A helper function to sanitise a (loaded) configuration value against its default value, i.e. to use the default value
+// for whatever is missing or of the wrong type.
 // Note #1: electron-conf only merges our default configuration at the top level, so a configuration file that was saved
 //          by an older version of OpenCOR or edited by hand may lack some (nested) values or have values of the wrong
 //          type (e.g., a string rather than an array of file paths), which would otherwise prevent OpenCOR from
@@ -138,16 +140,16 @@ export const takeElectronConfBackupFileName = (): string | null => {
 //          our configuration file is most likely fine, so we must not reset it. Instead, we let the error through (so
 //          that OpenCOR reports it and quits), leaving our configuration file as is.
 
-const createElectronConf = (defaults: IElectronConf): ElectronConf<IElectronConf> => {
+const createElectronConf = (defaults: ElectronConfContents): ElectronConf<ElectronConfContents> => {
   const options = {
     dir: electron.app.getPath('userData'),
     name: 'config',
     defaults
   };
-  let res: ElectronConf<IElectronConf>;
+  let res: ElectronConf<ElectronConfContents>;
 
   try {
-    res = new ElectronConf<IElectronConf>(options);
+    res = new ElectronConf<ElectronConfContents>(options);
   } catch (error: unknown) {
     const fileName = path.join(options.dir, `${options.name}.json`);
 
@@ -163,7 +165,7 @@ const createElectronConf = (defaults: IElectronConf): ElectronConf<IElectronConf
       `OpenCOR: the configuration file (${fileName}) could not be loaded (${formatError(error)}), so it has been backed up (as ${backupFileName}) and the default configuration is used instead.`
     );
 
-    res = new ElectronConf<IElectronConf>(options);
+    res = new ElectronConf<ElectronConfContents>(options);
 
     electronConfBackupFileName = backupFileName;
   }
@@ -171,7 +173,7 @@ const createElectronConf = (defaults: IElectronConf): ElectronConf<IElectronConf
   // Sanitise our configuration and save it, if needed.
 
   const store = res.store;
-  const sanitisedStore = sanitisedConfValue(store, defaults) as IElectronConf;
+  const sanitisedStore = sanitisedConfValue(store, defaults) as ElectronConfContents;
 
   if (JSON.stringify(sanitisedStore) !== JSON.stringify(store)) {
     res.store = sanitisedStore;
@@ -353,8 +355,8 @@ electron.app
     }
 
     // Set process.env.NODE_ENV to 'production' if we are not the default app.
-    // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they
-    //       should run in development mode (default) or production mode.
+    // Note: we do this because some packages rely on the value of process.env.NODE_ENV to determine whether they should
+    //       run in development mode (default) or production mode.
 
     if (!process.defaultApp) {
       process.env.NODE_ENV = 'production';
@@ -365,7 +367,7 @@ electron.app
     const workAreaSize = electron.screen.getPrimaryDisplay().workAreaSize;
     const horizontalSpace = Math.round(workAreaSize.width / 13);
     const verticalSpace = Math.round(workAreaSize.height / 13);
-    const defaultState: IElectronConfState = {
+    const defaultState: ElectronConfState = {
       x: horizontalSpace,
       y: verticalSpace,
       width: workAreaSize.width - 2 * horizontalSpace,
@@ -399,7 +401,7 @@ electron.app
     // in full-screen mode).
 
     const MIN_VISIBLE_SIZE = 100;
-    const state: IElectronConfState = electronConf.get('app.state');
+    const state: ElectronConfState = electronConf.get('app.state');
     const stateIsVisible = electron.screen.getAllDisplays().some(({ workArea }) => {
       const visibleWidth = Math.min(state.x + state.width, workArea.x + workArea.width) - Math.max(state.x, workArea.x);
       const visibleHeight =
@@ -498,6 +500,9 @@ electron.app
         electron.ipcMain.handle('disallow-saving-file', (_event, filePath: string) => {
           disallowSavingFile(filePath);
         });
+        electron.ipcMain.handle('cancel-update-download', () => {
+          cancelUpdateDownload();
+        });
         electron.ipcMain.handle('download-and-install-update', () => {
           downloadAndInstallUpdate();
         });
@@ -507,18 +512,27 @@ electron.app
         electron.ipcMain.handle('enable-disable-file-close-and-close-all-menu-items', (_event, enable: boolean) => {
           enableDisableFileCloseAndCloseAllMenuItems(enable);
         });
+        electron.ipcMain.handle('enable-disable-file-next-and-previous-menu-items', (_event, enable: boolean) => {
+          enableDisableFileNextAndPreviousMenuItems(enable);
+        });
         electron.ipcMain.handle(
           'enable-disable-file-save-and-save-as-menu-items',
           (_event, enableSave: boolean, enableSaveAs: boolean) => {
             enableDisableFileSaveAndSaveAsMenuItems(enableSave, enableSaveAs);
           }
         );
-        electron.ipcMain.handle('file-closed', (_event, filePath: string) => {
+        electron.ipcMain.handle('file-closed', (_event, filePath: string, replaced?: boolean) => {
           if (isTrustedFilePath(filePath)) {
             fileClosed(filePath);
           }
 
-          disallowSavingFile(filePath);
+          // Note: a file that is being replaced by another file tab is about to be open again, so our renderer must
+          //       still be able to save it (see ContentsComponent.saveFileTo()). Letting our renderer tell us that
+          //       doesn't let it save more files since it could just as well not tell us that the file was closed.
+
+          if (!replaced) {
+            disallowSavingFile(filePath);
+          }
         });
         electron.ipcMain.handle('file-issue', (_event, filePath: string, canonicalFilePath: string) => {
           fileIssue(filePath, canonicalFilePath);
@@ -545,7 +559,7 @@ electron.app
           return loadGitHubAccessToken();
         });
 */
-        electron.ipcMain.handle('load-settings', (): ISettings => {
+        electron.ipcMain.handle('load-settings', (): Settings => {
           return loadSettings();
         });
         electron.ipcMain.handle(
@@ -572,7 +586,7 @@ electron.app
           return saveGitHubAccessToken(token);
         });
 */
-        electron.ipcMain.handle('save-settings', (_event, settings: ISettings) => {
+        electron.ipcMain.handle('save-settings', (_event, settings: Settings) => {
           saveSettings(settings);
         });
         electron.ipcMain.handle('show-open-dialog', () => {
@@ -586,8 +600,8 @@ electron.app
         try {
           mainWindow = new MainWindow(process.argv, splashScreenWindow, await rendererUrl);
 
-          // Forget about our main window once it has been closed (and therefore destroyed), so that we don't try to
-          // use it (e.g., from our main menu or when another instance of OpenCOR is started).
+          // Forget about our main window once it has been closed (and therefore destroyed), so that we don't try to use
+          // it (e.g., from our main menu or when another instance of OpenCOR is started).
 
           mainWindow.on('closed', () => {
             mainWindow = null;

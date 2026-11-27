@@ -1,10 +1,12 @@
 <template>
-  <BaseDialog header="Open Location" class="w-169" @cancel="reset">
+  <BaseDialog header="Open Location" size="md" @hidden="reset">
     <div class="flex flex-col gap-2 mt-1 mb-2">
-      <p class="description">Enter the {{ inputDescription }} of a CellML file, SED-ML file, or COMBINE archive.</p>
+      <p :id="descriptionId" class="description">Enter the {{ inputDescription }} of a CellML file, a SED-ML file, an OMEX file, or a CellDL file.</p>
       <IconField>
         <InputIcon class="pi pi-link" />
         <InputText ref="inputRef" v-model="url" autofocus fluid
+          :aria-label="inputDescription"
+          :aria-describedby="inputDescribedBy"
           :invalid="showIssue"
           placeholder="https://example.com/model.omex"
           spellcheck="false"
@@ -31,22 +33,24 @@
       -->
 
       <div class="message">
-        <p v-if="showIssue" class="issue" role="alert">
+        <p v-if="showIssue" :id="issueId" class="issue" role="alert">
           <i class="pi pi-exclamation-circle"></i>
           <span>Please enter a valid {{ validInputDescription }} (e.g., <code>https://example.com/model.omex</code>).</span>
         </p>
-        <p v-else-if="normalisedUrl && normalisedUrl !== url.trim() && !normalisedUrl.startsWith('data:')" class="hint"
+        <p v-else-if="willOpenMessageShown" class="hint"
           v-hint="willOpenMessageTruncated ? `This will open ${normalisedUrl}.` : ''"
           @pointerenter="onWillOpenMessagePointerEnter"
         >
           <i class="pi pi-info-circle"></i>
-          <span ref="willOpenMessageRef">This will open <code>{{ normalisedUrl }}</code>.</span>
+          <span ref="willOpenMessageRef" :id="willOpenMessageId">This will open <code>{{ normalisedUrl }}</code>.</span>
         </p>
       </div>
     </div>
     <template #footer>
-      <Button label="Open" :disabled="!normalisedUrl" @click="emitOpenLocation" />
-      <Button ref="cancelButtonRef" label="Cancel" severity="secondary" @click="emitClose" />
+      <DialogButtons>
+        <Button label="Open" :disabled="!normalisedUrl" @click="emitOpenLocation" />
+        <Button ref="cancelButtonRef" label="Cancel" severity="secondary" @click="emitClose" />
+      </DialogButtons>
     </template>
   </BaseDialog>
 </template>
@@ -85,8 +89,8 @@ const checked = vue.ref<boolean>(false);
 //          "192.168.010.001", which the URL parser would normalise to "192.168.8.1" since "010" is an octal number) is
 //          not considered as a valid URL. A URL with a scheme can have any host (e.g., an intranet host, such as
 //          "http://modelserver/model.omex").
-// Note #3: a data URL is also valid if it is a Base64-encoded COMBINE archive (i.e. "data:application/zip;base64,...")
-//          or zipped CellML file (i.e. "data:application/x.vnd.zip-cellml+zip;base64,..."), since it can then be opened
+// Note #3: a data URL is also valid if it is a Base64-encoded OMEX file (i.e. "data:application/zip;base64,...") or
+//          zipped CellML file (i.e. "data:application/x.vnd.zip-cellml+zip;base64,..."), since it can then be opened
 //          like any other file (see OpenCOR.openFile() and locCommon.zipDataFromDataUrl()). It is used as is, apart
 //          from its scheme, media type, and ";base64" which are lowercased (since locCommon.zipDataFromDataUrl()
 //          expects them to be), so, unlike for other URLs, we don't let people know which URL will be opened since it
@@ -167,6 +171,25 @@ const resolvedDotSegmentsUrl = (urlWithScheme: string, parsedUrl: URL): string =
 const localFilesSupported = !!electronApi;
 const inputDescription = localFilesSupported ? 'URL or path' : 'URL';
 const validInputDescription = localFilesSupported ? 'Web address or file path' : 'Web address';
+
+// What describes our input field (which accessible name is what can be entered since it only has a placeholder, i.e. an
+// example of what can be entered), i.e. our description and, if any, our issue or what will be opened.
+
+const descriptionId = vue.useId();
+const issueId = vue.useId();
+const willOpenMessageId = vue.useId();
+
+const inputDescribedBy = vue.computed<string>(() => {
+  const ids = [descriptionId];
+
+  if (showIssue.value) {
+    ids.push(issueId);
+  } else if (willOpenMessageShown.value) {
+    ids.push(willOpenMessageId);
+  }
+
+  return ids.join(' ');
+});
 
 // The local file to open, if any (see Note #5 above).
 
@@ -263,14 +286,14 @@ const normalisedUrl = vue.computed<string>(() => {
 //          considered as checked the next time our dialog is shown and people would be told off while typing it.
 // Note #3: our issue is an alert, so that it gets announced by assistive technologies when it is shown.
 // Note #4: we don't consider our URL as checked when leaving our input field for our Cancel button or the close button
-//          of our dialog, since our dialog is then about to be closed. Otherwise, our issue would briefly be shown
-//          (and announced) before our dialog gets closed. Our input field is left either when the keyboard focus moves
-//          to one of those buttons (e.g., using Tab or, in some browsers, when clicking it), in which case we know
-//          which button gets the keyboard focus, or when one of those buttons is pressed (in browsers where clicking a
-//          button doesn't give it the keyboard focus, e.g., Safari), in which case we need to know which button is
-//          being pressed, hence we keep track of it (in the capture phase, i.e. before our input field gets blurred)
-//          until it has been clicked (rather than released since, with touch input, a button is released before our
-//          input field gets blurred).
+//          of our dialog, since our dialog is then about to be closed. Otherwise, our issue would briefly be shown (and
+//          announced) before our dialog gets closed. Our input field is left either when the keyboard focus moves to
+//          one of those buttons (e.g., using Tab or, in some browsers, when clicking it), in which case we know which
+//          button gets the keyboard focus, or when one of those buttons is pressed (in browsers where clicking a button
+//          doesn't give it the keyboard focus, e.g., Safari), in which case we need to know which button is being
+//          pressed, hence we keep track of it (in the capture phase, i.e. before our input field gets blurred) until it
+//          has been clicked (rather than released since, with touch input, a button is released before our input field
+//          gets blurred).
 
 const showIssue = vue.computed<boolean>(() => {
   return checked.value && !!url.value.trim() && !normalisedUrl.value;
@@ -280,6 +303,13 @@ vue.watch([normalisedUrl, url], ([newNormalisedUrl, newUrl]) => {
   if (newNormalisedUrl || !newUrl.trim()) {
     checked.value = false;
   }
+});
+
+// Whether to let people know which URL will be opened, i.e. if it differs from what they entered (e.g., if they didn't
+// enter a scheme), unless it is a data URL (which can be very long).
+
+const willOpenMessageShown = vue.computed<boolean>(() => {
+  return !!normalisedUrl.value && normalisedUrl.value !== url.value.trim() && !normalisedUrl.value.startsWith('data:');
 });
 
 // Let people know which URL will be opened in full, using a hint, if our message about it is truncated (see .hint).
@@ -451,7 +481,7 @@ const emitClose = (): void => {
 }
 
 .clear-button:focus-visible {
-  box-shadow: 0 0 0 2px var(--p-primary-color);
+  outline-offset: 0;
   color: var(--p-text-color);
 }
 

@@ -9,7 +9,7 @@ jobs:
   web_app:
     if: ${{ github.repository == 'opencor/webapp' }}
     name: Web app
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     concurrency:
       group: web-app-deployment-appdev
       cancel-in-progress: false
@@ -23,7 +23,7 @@ jobs:
       - name: Install bun
         uses: oven-sh/setup-bun@v2
       - name: OpenCOR dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
       - name: Build OpenCOR's Web app
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}

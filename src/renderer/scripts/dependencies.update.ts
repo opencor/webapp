@@ -21,7 +21,7 @@ type Candidate = {
   latest: string;
 };
 
-// Run a command synchronously, inheriting stdio.  Exit on failure.
+// Run a command synchronously, inheriting stdio. Exit on failure.
 
 const run = (command: string, args: string[]): void => {
   const res = spawnSync({
@@ -64,8 +64,11 @@ const compareVersions = (v1: string, v2: string): number => {
   const v2List = v2.split('.').map(Number);
 
   for (let i = 0; i < 3; ++i) {
-    if (v1List[i] !== v2List[i]) {
-      return v1List[i] - v2List[i];
+    const v1Part = v1List[i] ?? 0;
+    const v2Part = v2List[i] ?? 0;
+
+    if (v1Part !== v2Part) {
+      return v1Part - v2Part;
     }
   }
 
@@ -77,7 +80,7 @@ const compareVersions = (v1: string, v2: string): number => {
 const extractVersion = (range: string): string | null => {
   const match = range.match(/(\d+\.\d+\.\d+)/);
 
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 };
 
 // Build a new version range keeping the original prefix but pointing at a newer version (e.g., ("^6.0.0", "6.0.3") ->
@@ -185,7 +188,6 @@ const updateDependencies = async (dir: string): Promise<void> => {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
-    peerDependencies?: Record<string, string>;
   };
   const allDependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
   const padEnd = Math.max(0, ...Object.keys(allDependencies).map((name) => name.length)) + 1;
@@ -243,7 +245,7 @@ const updateDependencies = async (dir: string): Promise<void> => {
     ];
 
     selected = indices.map((index) => {
-      return candidates[index - 1];
+      return candidates[index - 1] as Candidate;
     });
   }
 
@@ -266,20 +268,11 @@ const updateDependencies = async (dir: string): Promise<void> => {
     }
 
     console.log(`  ✓ ${item.name}: ${item.range} → ${newRange}`);
-
-    // Keep the peer dependency (e.g., vue) in sync, keeping its own range prefix.
-
-    const peerDependencies = packageJson.peerDependencies;
-    const peerRange = peerDependencies?.[item.name];
-
-    if (peerDependencies && peerRange !== undefined) {
-      const newPeerRange = buildRange(peerRange, item.latest);
-
-      peerDependencies[item.name] = newPeerRange;
-
-      console.log(`  ✓ ${item.name} (peer): ${peerRange} → ${newPeerRange}`);
-    }
   }
+
+  // Note: we don't update our peer dependencies (e.g., vue), since they are the oldest versions that we support (e.g.,
+  //       the oldest version of Vue that both runs our component and type checks against our type declarations), which
+  //       doesn't change when we update the version that we develop with.
 
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 

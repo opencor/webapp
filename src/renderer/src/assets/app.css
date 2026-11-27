@@ -19,6 +19,19 @@
 
 @custom-variant dark (&:where(.opencor-dark-mode, .opencor-dark-mode *));
 
+/**
+ * Don't transition anything while our theme is being changed, so that it gets changed instantaneously (see
+ * updateDocumentClasses() in vueCommon.ts).
+ * Note #1: animations (e.g., a spinner) are not affected, only transitions.
+ * Note #2: our rule has no specificity (thanks to :where()) since it relies on !important to override any transition.
+ */
+
+:where(.opencor-theme-changing) *,
+:where(.opencor-theme-changing) *::before,
+:where(.opencor-theme-changing) *::after {
+  transition: none !important;
+}
+
 body {
   *,
   ::before,
@@ -28,6 +41,17 @@ body {
 
   .opencor {
     --border-color: var(--p-content-border-color);
+
+    /**
+     * The colour scheme of the native parts of OpenCOR (e.g., its scrollbars and form controls), which is that of our
+     * theme rather than that of the system (see the color-scheme meta tag in index.html).
+     */
+
+    color-scheme: light;
+
+    :where(.opencor-dark-mode) & {
+      color-scheme: dark;
+    }
 
     /**
      * The background of our masks (e.g., behind a dialog or while our UI is blocked), which is lighter than PrimeVue's
@@ -82,6 +106,34 @@ body {
     --opencor-error-border-color: var(--p-red-200);
     --opencor-error-color: var(--p-red-600);
 
+    /**
+     * The width of our focus ring (see :focus-visible below), as well as how far our focus ring extends beyond its
+     * element (i.e. its width plus its offset), which is the room that a container that clips its contents (e.g., the
+     * contents of a dialog or a scroll panel) must leave around a focusable element for its focus ring to be fully
+     * visible.
+     * Note: our focus ring extent is not based on our focus ring width since the latter is set to 0px when our focus
+     *       ring is hidden (see below), and the room left for our focus ring must not change then.
+     */
+
+    --opencor-focus-ring-width: 2px;
+    --opencor-focus-ring-extent: 4px;
+
+    /**
+     * Hide our focus ring (but keep the keyboard focus where it is) when the user last used their pointing device
+     * rather than the keyboard, or pressed Escape with nothing to close (see focusRing.ts and OpenCOR.vue).
+     * Note: the root item of our main menu that has the keyboard focus is highlighted (see MainMenu.vue), unless our
+     *       focus ring is hidden, in which case it looks like the other root items.
+     */
+
+    &.opencor-focus-ring-hidden {
+      --opencor-focus-ring-width: 0px;
+
+      .p-menubar-root-list > .p-menubar-item.p-focus:not(.p-menubar-item-active) > .p-menubar-item-content:not(:hover) {
+        background-color: transparent;
+        color: var(--p-menubar-item-color);
+      }
+    }
+
     *,
     ::before,
     ::after {
@@ -108,29 +160,81 @@ body {
       color: var(--p-button-link-color);
     }
 
-    :focus {
-      outline: none !important;
+    /**
+     * Show a focus ring when an element gets the keyboard focus (or, more generally, when the browser considers that a
+     * focus ring should be shown, see :focus-visible).
+     * Note #1: our focus ring is an outline (rather than, say, a box shadow), so that it is still shown in forced
+     *          colours mode (e.g., Windows' high contrast mode), which removes box shadows. PrimeVue's focus rings are
+     *          also outlines.
+     * Note #2: our focus ring is offset from its element, so that it is visible on a filled element (e.g., a primary
+     *          button). An element in a container that would clip our focus ring (e.g., a file tab in our file tab bar)
+     *          draws it inside itself instead, i.e. with a negative offset.
+     * Note #3: our focus ring has no specificity (thanks to :where()), so that any element can override it (e.g., to
+     *          change its offset or not to show it), including a PrimeVue component, which may draw its own focus ring
+     *          on another element (e.g., the box of a checkbox).
+     * Note #4: an element that gets scrolled into view when it gets the keyboard focus (e.g., in a scroll panel) is
+     *          scrolled far enough for its focus ring to be fully visible (thanks to its scroll margin).
+     */
+
+    :where(:focus-visible) {
+      outline: var(--opencor-focus-ring-width) solid var(--opencor-focus-ring-color, var(--p-primary-color));
+      outline-offset: var(--opencor-focus-ring-width);
+      scroll-margin: var(--opencor-focus-ring-extent);
     }
 
     /**
-     * Show a focus ring when a PrimeVue component (or a link) gets the keyboard focus.
-     * Note #1: PrimeVue's focus rings are outlines, which we remove above (so that the browser's focus outline doesn't
-     *          get shown on top of the focus rings that we draw for our own controls), so we draw them using a box
-     *          shadow instead. This is not needed for the components that draw their focus ring on an element that
-     *          doesn't itself get the focus (e.g., a checkbox or a toggle switch).
-     * Note #2: our focus ring is offset from the component (like PrimeVue's), so that it is visible on a filled
-     *          button (e.g., a primary button).
-     * Note #3: our focus ring is shown without any animation (PrimeVue would otherwise transition it in).
+     * Only transition the properties of a float label that change when it floats.
+     * Note: PrimeVue transitions all the properties of a float label, including its visibility, which it inherits. So,
+     *       when an ancestor of a float label gets hidden or shown (e.g., the panel of a file tab when switching
+     *       between file tabs), the float label would remain visible for a split second after the rest of its input
+     *       field has been hidden, or become visible a frame after it.
+     */
+
+    .p-floatlabel label {
+      transition-property: top, transform, font-size, font-weight, color, background, border-radius, padding;
+    }
+
+    /**
+     * Use our focus ring for the PrimeVue components that draw their own (thinner) focus ring, be it on the element
+     * that gets the focus or on another one (e.g., the slider of a toggle switch, which input is invisible).
+     * Note: our focus ring is shown without any animation (PrimeVue would otherwise transition it in).
      */
 
     .p-button:focus-visible,
     .p-slider-handle:focus-visible,
     .p-splitter-gutter-handle:focus-visible,
-    a:focus-visible {
-      box-shadow:
-        0 0 0 2px var(--p-content-background),
-        0 0 0 4px var(--opencor-focus-ring-color, var(--p-primary-color));
+    .p-toggleswitch-input:focus-visible ~ .p-toggleswitch-slider {
+      outline: var(--opencor-focus-ring-width) solid var(--opencor-focus-ring-color, var(--p-primary-color));
+      outline-offset: var(--opencor-focus-ring-width);
       transition: none;
+    }
+
+    /**
+     * Don't show our focus ring on the PrimeVue elements that get the focus but show it otherwise, i.e. the list of a
+     * menu (which highlights its focused item instead) and the label of a select (which is within a box that gets
+     * highlighted instead).
+     */
+
+    .p-menubar-root-list:focus-visible,
+    .p-contextmenu-root-list:focus-visible,
+    .p-select-label:focus-visible {
+      outline: none;
+    }
+
+    /**
+     * Show the scroll bar of a scroll panel when it has the keyboard focus (PrimeVue only shows it when its scroll
+     * panel is hovered), so that it can be seen (and its focus ring with it) while it is used to scroll using the
+     * keyboard.
+     * Note: PrimeVue doesn't draw a focus ring for our scroll bar, so we draw ours, but inside our scroll bar. Indeed,
+     *       our scroll bar is at the edge of its scroll panel (and at its top/bottom when scrolled to the start/end),
+     *       so a focus ring drawn outside it would get clipped by whatever contains our scroll panel (e.g., a splitter
+     *       panel or a dialog).
+     */
+
+    .p-scrollpanel-bar:focus-visible {
+      opacity: 1;
+      outline: var(--opencor-focus-ring-width) solid var(--opencor-focus-ring-color, var(--p-primary-color));
+      outline-offset: calc(-1 * var(--opencor-focus-ring-width));
     }
 
     /**
@@ -209,7 +313,8 @@ body {
      * menu (see MainMenu.vue).
      * Note: our context menus use an item template (see ContextMenuWidget.vue), which shows an icon
      *       (.context-menu-item-icon), a label, and, for an item that has a submenu, a chevron
-     *       (.context-menu-item-chevron).
+     *       (.context-menu-item-chevron), with, in a menu that has a checked item, room for a check mark to the left of
+     *       the icon (.context-menu-item-check).
      */
 
     .opencor-context-menu {
@@ -232,10 +337,53 @@ body {
         margin: 0.125rem 0.5rem;
       }
 
+      /**
+       * A header (e.g., the name of a trace), which is disabled since it can't be chosen, but mustn't look disabled.
+       * Note: a header may be long, in which case it wraps rather than widens our context menu.
+       */
+
+      .context-menu-header-item {
+        opacity: 1;
+      }
+
+      .context-menu-header {
+        width: 0;
+        min-width: 100%;
+        padding: var(--p-contextmenu-item-padding);
+        color: var(--p-text-muted-color);
+        font-weight: 600;
+        overflow-wrap: anywhere;
+
+        sub,
+        sup {
+          position: static;
+          font-size: 70%;
+        }
+
+        sub {
+          vertical-align: sub;
+        }
+
+        sup {
+          vertical-align: super;
+        }
+      }
+
       .context-menu-item-icon {
         width: 1rem;
         color: var(--p-text-muted-color);
         font-size: 0.875rem;
+        text-align: center;
+      }
+
+      .context-menu-item-label {
+        white-space: nowrap;
+      }
+
+      .context-menu-item-check {
+        width: 1rem;
+        color: var(--p-text-muted-color);
+        font-size: 0.75rem;
         text-align: center;
       }
 
@@ -249,9 +397,19 @@ body {
       .p-contextmenu-item-active > .p-contextmenu-item-content,
       .p-contextmenu-item.p-focus > .p-contextmenu-item-content {
         .context-menu-item-icon,
-        .context-menu-item-chevron {
+        .context-menu-item-chevron,
+        .context-menu-item-check {
           color: var(--p-text-color);
         }
+      }
+
+      /**
+       * Show our focus ring around the item that has the keyboard focus, as for our main menu (see MainMenu.vue).
+       */
+
+      .p-contextmenu-root-list:focus-visible .p-contextmenu-item.p-focus > .p-contextmenu-item-content {
+        outline: var(--opencor-focus-ring-width) solid var(--opencor-focus-ring-color, var(--p-primary-color));
+        outline-offset: calc(-1 * var(--opencor-focus-ring-width));
       }
     }
 
@@ -304,6 +462,15 @@ body {
   border-top-color: var(--p-primary-color);
   border-radius: 50%;
   animation: opencor-spinner-spin 0.8s linear infinite;
+
+  /**
+   * Note: our spinner is slowed down (rather than stopped, which would make it look as if OpenCOR had frozen) for
+   *       people who prefer reduced motion.
+   */
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 2.4s;
+  }
 }
 
 @keyframes opencor-spinner-spin {

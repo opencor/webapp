@@ -1,14 +1,16 @@
 <template>
-  <BaseDialog :header="installing ? 'Installing Update' : 'Downloading Update'" class="w-120" :closable="false" :closeOnEscape="false">
-    <div class="download">
+  <BaseDialog :header="installing ? 'Installing Update' : 'Downloading Update'" :closable="false" :closeOnEscape="false">
+    <div ref="downloadRef" class="download" tabindex="-1">
       <div class="download-header">
         <span class="opencor-spinner" />
-        <span class="download-text">{{ text }}</span>
+        <span class="download-text" role="status">{{ text }}</span>
         <span v-if="!installing" class="download-percent">{{ Math.floor(percent) }}%</span>
       </div>
       <ProgressBar class="download-progress-bar"
+        :aria-label="installing ? 'Installation progress' : 'Download progress'"
+        :mode="installing ? 'indeterminate' : 'determinate'"
         :showValue="false"
-        :value="installing ? 100 : percent"
+        :value="percent"
         :pt="{
           value: {
             style: 'transition: none'
@@ -17,16 +19,29 @@
       />
       <div class="download-details">{{ details }}</div>
     </div>
+    <template v-if="!installing" #footer>
+      <Button autofocus label="Cancel" severity="secondary" @click="$emit('cancel')" />
+    </template>
   </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import * as vue from 'vue';
 
-// The progress of the download of an update and then of its installation.
-// Note: the version of the update is not known if OpenCOR has been reloaded while the update was being downloaded (see
-//       onUpdateDownloadProgress() in OpenCOR.vue), and the size of the update is not known until we get the first
-//       progress report. We only mention them once they are known.
+// The progress of the download of an update and then of its installation, with the download (but not the installation)
+// being cancellable (in which case our Cancel button has the keyboard focus, so that our dialog has the keyboard
+// focus).
+// Note #1: the progress of the installation is not known, so our progress bar is then indeterminate.
+// Note #2: our Cancel button gets removed once the update is being installed, so we then give the keyboard focus to our
+//          contents (rather than let it go to the body of the page, i.e. outside of our dialog), and our text being a
+//          status, the switch to the installation gets announced by assistive technologies.
+// Note #3: the version of the update is not known if OpenCOR has been reloaded while the update was being downloaded
+//          (see onUpdateDownloadProgress() in OpenCOR.vue), and the size of the update is not known until we get the
+//          first progress report. We only mention them once they are known.
+
+defineEmits<{
+  cancel: [];
+}>();
 
 const props = defineProps<{
   version: string;
@@ -35,6 +50,19 @@ const props = defineProps<{
   total: number;
   installing: boolean;
 }>();
+
+const downloadRef = vue.useTemplateRef<HTMLElement>('downloadRef');
+
+vue.watch(
+  () => props.installing,
+  async (installing: boolean) => {
+    if (installing) {
+      await vue.nextTick();
+
+      downloadRef.value?.focus({ preventScroll: true });
+    }
+  }
+);
 
 const update = vue.computed<string>(() => {
   return props.version ? `OpenCOR ${props.version}` : 'the update';
@@ -64,6 +92,7 @@ const details = vue.computed<string>(() => {
 
 <style scoped>
 .download {
+  outline: none;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
