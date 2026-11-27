@@ -179,7 +179,7 @@ const readRest = async (reader, head) => {
   const all = await readChunks(reader, MAX_SIZE + 1, [head]);
 
   if (all.length > MAX_SIZE) {
-    await reader.cancel();
+    await reader.cancel().catch(() => {});
 
     return null;
   }
@@ -222,7 +222,7 @@ const replayStream = (bytes, reader) => {
       size += value.length;
 
       if (size > MAX_SIZE) {
-        await reader.cancel();
+        await reader.cancel().catch(() => {});
 
         controller.error(new Error(TOO_LARGE_MESSAGE));
 
@@ -609,7 +609,7 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
   //       of the content, so we also check the size of the content as we read it.
 
   if (Number(response.headers.get('content-length')) > MAX_SIZE) {
-    await response.body.cancel();
+    await response.body.cancel().catch(() => {});
 
     return rejectedResponse(TOO_LARGE_MESSAGE);
   }
@@ -697,7 +697,7 @@ const forwardRequest = async (targetUrl, contentKind, request) => {
   // An OMEX file needs to be fully read since we need its central directory, which is at the end of the file.
 
   if (!filesAccepted || !isZipFile(head)) {
-    await reader.cancel();
+    await reader.cancel().catch(() => {});
 
     // Note: we only say why the content is not a CSV file if a CSV file is all that the app expects. Otherwise, the
     //       content is likely meant to be some other kind of file, so why it is not a CSV file would be confusing.
