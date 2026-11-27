@@ -60,6 +60,7 @@ let updateState: UpdateState = 'idle';
 let updateDownloadPercent = 0;
 let updateDownloadTransferred = 0;
 let updateDownloadTotal = 0;
+let updateDownloadStarted = false;
 
 export const checkForUpdates = (atStartup: boolean): void => {
   // An update has already been downloaded, but the user cancelled its installation (when asked whether to save the
@@ -101,8 +102,11 @@ export const checkForUpdates = (atStartup: boolean): void => {
   }
 };
 
+// Note: a cancelled download may still report some progress while a new download waits for it to settle (see
+//       downloadAndInstallUpdate()), so we only take progress into account once the new download has started.
+
 autoUpdater.on('download-progress', (info: ProgressInfo) => {
-  if (updateState === 'downloading') {
+  if (updateState === 'downloading' && updateDownloadStarted) {
     updateDownloadPercent = info.percent;
     updateDownloadTransferred = info.transferred;
     updateDownloadTotal = info.total;
@@ -182,6 +186,7 @@ export const downloadAndInstallUpdate = (): void => {
   updateDownloadPercent = 0;
   updateDownloadTransferred = 0;
   updateDownloadTotal = 0;
+  updateDownloadStarted = false;
   updateDownloadCancellationToken = cancellationToken;
 
   const previousDownload = updateDownload;
@@ -207,6 +212,8 @@ export const downloadAndInstallUpdate = (): void => {
       }
 
       try {
+        updateDownloadStarted = true;
+
         await autoUpdater.downloadUpdate(cancellationToken);
 
         if (cancellationToken.cancelled) {
