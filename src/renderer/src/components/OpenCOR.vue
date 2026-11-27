@@ -1659,6 +1659,9 @@ const processFile = async (
   //          releasing, the same native file). Also, a file may be referred to using different paths (e.g., through a
   //          symbolic link), hence we keep track of the canonical path of the files that are being opened (our contents
   //          component does the same for the files that are open, see ContentsComponent.findFileTab()).
+  //          This doesn't apply to a dropped file that has no path, though. Indeed, it is given a new made-up name each
+  //          time it is dropped (see above), since we cannot tell whether two such files are the same file (each drop
+  //          gives us a new File object), so dropping it twice results in two file tabs.
   // Note #2: this may fail (e.g., if the file path cannot be determined), in which case we report the issue so that the
   //          user knows about it and our main process doesn't wait for the file forever (e.g., if the file is being
   //          reopened at startup, see MainWindow.fileOpenedOrNot()).
