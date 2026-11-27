@@ -551,7 +551,12 @@ const onFileTabBarKeyDown = (event: KeyboardEvent): void => {
 };
 
 const openFile = async (file: locApi.File, wait: boolean = false, fileHandle?: FileSystemFileHandle): Promise<void> => {
+  // Note: we retrieve everything that may fail (e.g., if libOpenCOR throws an exception) before adding a file tab for
+  //       the file. Indeed, once it has a file tab, the file is considered open and our main process must be told so,
+  //       which wouldn't happen if something failed in the meantime (see OpenCOR.reportFileIssue()).
+
   const filePath = file.path();
+  const canonicalFilePath = file.canonicalPath();
   const prevActiveFile = activeFile.value;
   const uiJson = file.uiJson();
 
@@ -574,7 +579,7 @@ const openFile = async (file: locApi.File, wait: boolean = false, fileHandle?: F
 
   const fileSelected = selectFile(filePath, wait);
 
-  electronApi?.fileOpened(filePath, file.canonicalPath());
+  electronApi?.fileOpened(filePath, canonicalFilePath);
 
   emit('fileOpened', filePath);
 

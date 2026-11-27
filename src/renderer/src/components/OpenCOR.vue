@@ -1544,7 +1544,8 @@ const reportFileIssue = (
   filePath: string,
   issueMessage: string,
   canonicalFilePath: string = '',
-  toastShown: boolean = true
+  toastShown: boolean = true,
+  fileOpened: boolean = false
 ): void => {
   // Let our main process know about the issue first since it may be waiting for the file (e.g., if the file is being
   // reopened at startup, see MainWindow.fileOpenedOrNot()), so that it doesn't wait forever should reporting the issue
@@ -1556,11 +1557,13 @@ const reportFileIssue = (
   //          shown.
   // Note #3: the file may have got opened before the issue occurred (e.g., if selecting it failed, see
   //          openFileInContents() and fileAlreadyOpen()), in which case our main process has already been told that it
-  //          is open (see ContentsComponent.openFile()). So, we don't tell it otherwise since it would then stop
-  //          letting us save the file (see canSaveFile() in src/main/MainWindow.ts) and forget it as a recent file,
-  //          even though it is still open.
+  //          is open (see ContentsComponent.openFile() and fileAlreadyOpen()). So, we don't tell it otherwise since it
+  //          would then stop letting us save the file (see canSaveFile() in src/main/MainWindow.ts) and forget it as a
+  //          recent file, even though it is still open. Only our caller knows whether our main process has been told
+  //          that the file is open, though. Indeed, the file may have a file tab that has nothing to do with the issue,
+  //          in which case our main process must still be told about the issue.
 
-  if (!contentsRef.value?.hasFile(filePath)) {
+  if (!fileOpened) {
     electronApi?.fileIssue(filePath, canonicalFilePath || filePath);
   }
 
@@ -1821,11 +1824,17 @@ const openFileInContents = async (
 
     await contentsRef.value.openFile(file, wait, fileHandle);
   } catch (error: unknown) {
-    if (!contentsRef.value?.hasFile(filePath)) {
+    // Note: if the file has a file tab, then it is the one that we have just added and our main process has been told
+    //       that the file is open (see ContentsComponent.openFile()). Indeed, the file wasn't open before (see
+    //       processFile()) and it couldn't have been opened in the meantime since it was being opened.
+
+    const fileOpened = contentsRef.value?.hasFile(filePath) ?? false;
+
+    if (!fileOpened) {
       file.release();
     }
 
-    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath);
+    reportFileIssue(filePath, common.formatMessage(common.formatError(error)), canonicalFilePath, true, fileOpened);
   } finally {
     fileNoLongerBeingOpened(canonicalFilePath);
   }
@@ -1903,10 +1912,15 @@ const openProcessedFile = async (
   } catch (error: unknown) {
     console.error('OpenCOR: an unexpected error occurred while opening a file:', common.formatError(error));
 
+    // Note: if the file has a file tab, then our main process has been told that the file is open, be it by
+    //       fileAlreadyOpen() (before selecting it) or by ContentsComponent.openFile().
+
     reportFileIssue(
       fileInfo?.filePath || fileDescription(fileFilePathOrFileContents),
       common.formatMessage(common.formatError(error)),
-      fileInfo?.canonicalFilePath
+      fileInfo?.canonicalFilePath,
+      true,
+      !!fileInfo && (contentsRef.value?.hasFile(fileInfo.filePath) ?? false)
     );
   }
 };
