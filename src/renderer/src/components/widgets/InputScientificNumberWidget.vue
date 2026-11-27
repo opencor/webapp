@@ -352,7 +352,9 @@ const onBlur = () => {
 
   if (!Number.isFinite(parsedValue)) {
     updateInternalValue(props.modelValue);
-    showCorrection(Number.isNaN(parsedValue) ? 'This is not a valid number.' : 'This number is too large.');
+    showCorrection(
+      Number.isNaN(parsedValue) ? 'This is not a valid number.' : 'This number is too large (in magnitude).'
+    );
 
     return;
   }
