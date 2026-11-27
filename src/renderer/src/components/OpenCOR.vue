@@ -928,12 +928,17 @@ const handleAction = (action: string): void => {
     // Note: the file paths are separated by an encoded "|", which may be in upper or lower case. We don't decode the
     //       arguments first since the file paths may be URLs that contain other encoded characters, which must remain
     //       encoded. This means that a URL may itself contain an encoded "|" (e.g., in its query), so we only consider
-    //       an encoded "|" to be a separator if it is followed by the start of a file path, i.e. a URL, an absolute
-    //       path, or a data URL (see zipDataFromDataUrl() in src/renderer/src/common/locCommon.ts).
+    //       an encoded "|" to be a separator if it is followed by the start of a file path, i.e. a URL (with any
+    //       scheme, in any case, so that a URL that we cannot open still gets reported as such), an absolute path, or a
+    //       data URL (see zipDataFromDataUrl() in src/renderer/src/common/locCommon.ts). A relative path is not
+    //       supported.
 
     const isFilePathStart = (text: string): boolean => {
       return (
-        common.isUrl(text) || common.isAbsoluteFilePath(text) || text.startsWith('data:') || text.startsWith('#data:')
+        /^[A-Za-z][A-Za-z\d+.-]*:\/\//.test(text) ||
+        common.isAbsoluteFilePath(text) ||
+        text.startsWith('data:') ||
+        text.startsWith('#data:')
       );
     };
 
